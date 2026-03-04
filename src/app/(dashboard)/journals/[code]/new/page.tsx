@@ -19,7 +19,7 @@ export default async function NewJournalEntryPage({
     notFound();
   }
 
-  const [areas, equipment, employees] = await Promise.all([
+  const [areas, equipment, employees, products] = await Promise.all([
     db.area.findMany({
       where: { organizationId: session.user.organizationId },
       select: { id: true, name: true },
@@ -45,6 +45,22 @@ export default async function NewJournalEntryPage({
         isActive: true,
       },
       select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.product.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        supplier: true,
+        barcode: true,
+        unit: true,
+        storageTemp: true,
+        shelfLifeDays: true,
+      },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -74,6 +90,7 @@ export default async function NewJournalEntryPage({
         areas={areas}
         equipment={equipment}
         employees={employees}
+        products={products}
       />
     </div>
   );

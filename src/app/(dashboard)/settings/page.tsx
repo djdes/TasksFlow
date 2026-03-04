@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Wrench, Users, Bell } from "lucide-react";
+import { Building2, Wrench, Users, Bell, Package } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import {
   Card,
@@ -26,6 +26,12 @@ const settingsCards = [
     description: "Управление сотрудниками и их ролями",
     href: "/settings/users",
     icon: Users,
+  },
+  {
+    title: "Справочник продуктов",
+    description: "Импорт товаров из Excel, iiko, 1С",
+    href: "/settings/products",
+    icon: Package,
   },
   {
     title: "Уведомления",

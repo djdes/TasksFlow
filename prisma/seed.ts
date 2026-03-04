@@ -12,6 +12,8 @@ const journalTemplates = [
     name: "Температурный режим",
     description: "Журнал учёта температурного режима холодильного и морозильного оборудования",
     sortOrder: 1,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [
       { key: "equipmentId", label: "Оборудование", type: "equipment", required: true },
       { key: "temperature", label: "Температура (°C)", type: "number", required: true, step: 0.1 },
@@ -24,6 +26,8 @@ const journalTemplates = [
     name: "Входной контроль сырья",
     description: "Журнал входного контроля поступающего сырья и продуктов",
     sortOrder: 2,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [
       { key: "productName", label: "Наименование продукта", type: "text", required: true },
       { key: "supplier", label: "Поставщик", type: "text", required: true },
@@ -52,6 +56,8 @@ const journalTemplates = [
     name: "Бракераж готовой продукции",
     description: "Журнал бракеража готовой продукции",
     sortOrder: 3,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "productName", label: "Наименование продукта", type: "text", required: true },
       { key: "appearance", label: "Внешний вид", type: "select", required: true, options: [
@@ -88,6 +94,8 @@ const journalTemplates = [
     name: "Гигиенический журнал",
     description: "Журнал осмотра сотрудников на предмет признаков заболеваний",
     sortOrder: 4,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "employeeName", label: "ФИО сотрудника", type: "employee", required: true },
       { key: "noRespiratorySymptoms", label: "Отсутствие признаков ОРЗ", type: "boolean", required: true },
@@ -105,6 +113,8 @@ const journalTemplates = [
     name: "Мониторинг ККТ",
     description: "Журнал мониторинга критических контрольных точек",
     sortOrder: 5,
+    isMandatorySanpin: false,
+    isMandatoryHaccp: true,
     fields: [
       { key: "ccpName", label: "Название ККТ", type: "text", required: true },
       { key: "controlParameter", label: "Параметр контроля", type: "text", required: true },
@@ -120,6 +130,8 @@ const journalTemplates = [
     name: "Уборка и дезинфекция",
     description: "Журнал уборки и санитарной обработки помещений и оборудования",
     sortOrder: 6,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "areaOrObject", label: "Объект уборки", type: "text", required: true },
       { key: "cleaningType", label: "Вид уборки", type: "select", required: true, options: [
@@ -143,6 +155,8 @@ const journalTemplates = [
     name: "Дезинсекция и дератизация",
     description: "Журнал учёта мероприятий по дезинсекции и дератизации",
     sortOrder: 7,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "eventType", label: "Тип мероприятия", type: "select", required: true, options: [
         { value: "disinsection", label: "Дезинсекция (насекомые)" },
@@ -171,6 +185,8 @@ const journalTemplates = [
     name: "Поверка оборудования",
     description: "Журнал метрологической поверки и калибровки измерительного оборудования",
     sortOrder: 8,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "equipmentId", label: "Оборудование", type: "equipment", required: true },
       { key: "calibrationType", label: "Тип", type: "select", required: true, options: [
@@ -194,6 +210,8 @@ const journalTemplates = [
     name: "Списание продукции",
     description: "Журнал учёта списания продукции с истёкшим сроком годности или несоответствующего качества",
     sortOrder: 9,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [
       { key: "productName", label: "Наименование продукции", type: "text", required: true },
       { key: "batchNumber", label: "Номер партии", type: "text", required: false },
@@ -224,6 +242,8 @@ const journalTemplates = [
     name: "Термическая обработка",
     description: "Журнал контроля температуры термической обработки (варка, пастеризация, жарка, запекание)",
     sortOrder: 10,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [
       { key: "productName", label: "Наименование продукции", type: "text", required: true },
       { key: "processType", label: "Вид обработки", type: "select", required: true, options: [
@@ -248,6 +268,8 @@ const journalTemplates = [
     name: "Отгрузка продукции",
     description: "Журнал учёта отгрузки готовой продукции",
     sortOrder: 11,
+    isMandatorySanpin: false,
+    isMandatoryHaccp: false,
     fields: [
       { key: "productName", label: "Наименование продукции", type: "text", required: true },
       { key: "batchNumber", label: "Номер партии", type: "text", required: false },
@@ -276,7 +298,7 @@ async function main() {
   for (const template of journalTemplates) {
     await prisma.journalTemplate.upsert({
       where: { code: template.code },
-      update: { name: template.name, description: template.description, fields: template.fields, sortOrder: template.sortOrder },
+      update: { name: template.name, description: template.description, fields: template.fields, sortOrder: template.sortOrder, isMandatorySanpin: template.isMandatorySanpin, isMandatoryHaccp: template.isMandatoryHaccp },
       create: template,
     });
     console.log(`  Done: ${template.code}: ${template.name}`);

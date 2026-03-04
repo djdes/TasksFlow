@@ -50,6 +50,16 @@ type EmployeeItem = {
   name: string;
 };
 
+type ProductItem = {
+  id: string;
+  name: string;
+  supplier: string | null;
+  barcode: string | null;
+  unit: string;
+  storageTemp: string | null;
+  shelfLifeDays: number | null;
+};
+
 interface DynamicFormProps {
   templateCode: string;
   templateName: string;
@@ -57,6 +67,7 @@ interface DynamicFormProps {
   areas: AreaItem[];
   equipment: EquipmentItem[];
   employees?: EmployeeItem[];
+  products?: ProductItem[];
 }
 
 export function DynamicForm({
@@ -66,6 +77,7 @@ export function DynamicForm({
   areas,
   equipment,
   employees = [],
+  products = [],
 }: DynamicFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<Record<string, unknown>>({});
@@ -83,8 +95,15 @@ export function DynamicForm({
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const hasSensor = !!selectedEquipment?.tuyaDeviceId;
 
-  // Check if this template supports photo OCR
+  // Check if this template supports photo OCR or product catalog
   const supportsPhotoOcr = templateCode === "incoming_control";
+  const supportsProductCatalog =
+    products.length > 0 &&
+    (templateCode === "incoming_control" ||
+      templateCode === "finished_product" ||
+      templateCode === "product_writeoff" ||
+      templateCode === "cooking_temp" ||
+      templateCode === "shipment");
 
   function updateField(key: string, value: unknown) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -202,6 +221,43 @@ export function DynamicForm({
         <div className="space-y-2">
           <Label>Распознать с фото</Label>
           <PhotoCapture onResult={handleOcrResult} />
+        </div>
+      )}
+
+      {/* Product catalog quick-fill */}
+      {supportsProductCatalog && (
+        <div className="space-y-2">
+          <Label>Выбрать из справочника</Label>
+          <Select
+            value=""
+            onValueChange={(productId) => {
+              const product = products.find((p) => p.id === productId);
+              if (!product) return;
+              const updates: Record<string, unknown> = {
+                productName: product.name,
+              };
+              if (product.supplier) updates.supplier = product.supplier;
+              if (product.unit) updates.unit = product.unit;
+              updateMultipleFields(updates);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Быстрый выбор из каталога..." />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.name}
+                  {product.supplier && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      — {product.supplier}
+                    </span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 

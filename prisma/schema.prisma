@@ -20,6 +20,7 @@ model Organization {
   users            User[]
   areas            Area[]
   journalEntries   JournalEntry[]
+  products         Product[]
 }
 
 model User {
@@ -61,14 +62,35 @@ model Equipment {
 }
 
 model JournalTemplate {
-  id          String         @id @default(cuid())
-  code        String         @unique
-  name        String
-  description String?
-  fields      Json
-  isActive    Boolean        @default(true)
-  sortOrder   Int            @default(0)
-  entries     JournalEntry[]
+  id                  String         @id @default(cuid())
+  code                String         @unique
+  name                String
+  description         String?
+  fields              Json
+  isActive            Boolean        @default(true)
+  sortOrder           Int            @default(0)
+  isMandatorySanpin   Boolean        @default(false)
+  isMandatoryHaccp    Boolean        @default(false)
+  entries             JournalEntry[]
+}
+
+model Product {
+  id              String       @id @default(cuid())
+  name            String
+  supplier        String?
+  barcode         String?
+  unit            String       @default("kg")
+  category        String?
+  storageTemp     String?
+  shelfLifeDays   Int?
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId, name])
+  @@index([organizationId, barcode])
 }
 
 model JournalEntry {
