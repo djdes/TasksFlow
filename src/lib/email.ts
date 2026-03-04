@@ -89,6 +89,54 @@ export async function sendWelcomeEmail(params: {
   await sendEmail(to, subject, layout("Добро пожаловать!", body));
 }
 
+export async function sendDeviationAlertEmail(params: {
+  to: string;
+  journalName: string;
+  journalCode: string;
+  deviationType: string;
+  details: string;
+  filledBy: string;
+}) {
+  const { to, journalName, journalCode, deviationType, details, filledBy } = params;
+  const subject = `⚠ ${deviationType} — ${journalName}`;
+
+  const body = `
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:20px;margin:0 0 24px">
+      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#dc2626">${deviationType}</p>
+      <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.6">${details}</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px;width:140px">Журнал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-weight:600">${journalName}</td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Записал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${filledBy}</td></tr>
+      <tr><td style="padding:8px 0;color:#71717a;font-size:13px">Время</td><td style="padding:8px 0;color:#18181b">${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}</td></tr>
+    </table>
+    <a href="${APP_URL}/journals/${journalCode}" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Открыть журнал</a>`;
+
+  await sendEmail(to, subject, layout("Отклонение зафиксировано", body));
+}
+
+export async function sendComplianceReminderEmail(params: {
+  to: string;
+  missingJournals: string[];
+  organizationName: string;
+}) {
+  const { to, missingJournals, organizationName } = params;
+  const subject = `📋 Незаполненные журналы — ${organizationName}`;
+
+  const listHtml = missingJournals
+    .map((j) => `<li style="margin:0 0 4px;color:#18181b;font-size:14px">${j}</li>`)
+    .join("");
+
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Следующие обязательные журналы не были заполнены сегодня:</p>
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:20px;margin:0 0 24px">
+      <ul style="margin:0;padding:0 0 0 20px">${listHtml}</ul>
+    </div>
+    <a href="${APP_URL}/journals" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Заполнить журналы</a>`;
+
+  await sendEmail(to, subject, layout("Напоминание о журналах", body));
+}
+
 export async function sendTemperatureAlertEmail(params: {
   to: string;
   equipmentName: string;

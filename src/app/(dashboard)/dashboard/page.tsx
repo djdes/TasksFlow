@@ -7,6 +7,9 @@ import {
   Wifi,
   User as UserIcon,
   Clock,
+  CheckCircle2,
+  XCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
@@ -103,6 +106,38 @@ export default async function DashboardPage() {
     orderBy: { sortOrder: "asc" },
   });
 
+  // Compliance: check which mandatory journals are filled today
+  const mandatoryTemplates = templates.filter(
+    (t) => t.isMandatorySanpin || t.isMandatoryHaccp
+  );
+  const filledTemplateIds = new Set(
+    recentEntries
+      .filter((e) => e.createdAt >= todayStart)
+      .map((e) => e.template.code)
+  );
+  // Also check from a direct query to be accurate
+  const todayFilledEntries = await db.journalEntry.findMany({
+    where: {
+      organizationId,
+      createdAt: { gte: todayStart },
+    },
+    select: { templateId: true },
+    distinct: ["templateId"],
+  });
+  const filledTodayIds = new Set(todayFilledEntries.map((e) => e.templateId));
+  const complianceItems = mandatoryTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    code: t.code,
+    filled: filledTodayIds.has(t.id),
+    isSanpin: t.isMandatorySanpin,
+    isHaccp: t.isMandatoryHaccp,
+  }));
+  const filledCount = complianceItems.filter((c) => c.filled).length;
+  const compliancePercent = mandatoryTemplates.length > 0
+    ? Math.round((filledCount / mandatoryTemplates.length) * 100)
+    : 100;
+
   const stats = [
     {
       title: "Записей сегодня",
@@ -146,6 +181,53 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Compliance traffic light */}
+      {mandatoryTemplates.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-5 text-muted-foreground" />
+                <CardTitle className="text-base">Соответствие за сегодня</CardTitle>
+              </div>
+              <div className={`text-2xl font-bold ${
+                compliancePercent === 100 ? "text-green-600" :
+                compliancePercent >= 50 ? "text-yellow-600" : "text-red-600"
+              }`}>
+                {compliancePercent}%
+              </div>
+            </div>
+            <CardDescription>
+              Заполнено {filledCount} из {mandatoryTemplates.length} обязательных журналов
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {complianceItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.filled ? `/journals/${item.code}` : `/journals/${item.code}/new`}
+                  className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors ${
+                    item.filled
+                      ? "border-green-200 bg-green-50 hover:bg-green-100"
+                      : "border-red-200 bg-red-50 hover:bg-red-100"
+                  }`}
+                >
+                  {item.filled ? (
+                    <CheckCircle2 className="size-4 shrink-0 text-green-600" />
+                  ) : (
+                    <XCircle className="size-4 shrink-0 text-red-500" />
+                  )}
+                  <span className={item.filled ? "text-green-800" : "text-red-800"}>
+                    {item.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Last 48 hours activity */}
       <div>
