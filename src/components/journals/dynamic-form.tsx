@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PhotoCapture, type OcrResult } from "./photo-capture";
 
 type FieldOption = { value: string; label: string };
 type ShowIfCondition = { field: string; equals: unknown };
@@ -22,7 +23,7 @@ type ShowIfCondition = { field: string; equals: unknown };
 type FieldDef = {
   key: string;
   label: string;
-  type: "text" | "number" | "date" | "boolean" | "select" | "equipment";
+  type: "text" | "number" | "date" | "boolean" | "select" | "equipment" | "employee";
   required?: boolean;
   options?: FieldOption[];
   step?: number;
@@ -44,12 +45,18 @@ type AreaItem = {
   name: string;
 };
 
+type EmployeeItem = {
+  id: string;
+  name: string;
+};
+
 interface DynamicFormProps {
   templateCode: string;
   templateName: string;
   fields: FieldDef[];
   areas: AreaItem[];
   equipment: EquipmentItem[];
+  employees?: EmployeeItem[];
 }
 
 export function DynamicForm({
@@ -58,6 +65,7 @@ export function DynamicForm({
   fields,
   areas,
   equipment,
+  employees = [],
 }: DynamicFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<Record<string, unknown>>({});
@@ -75,8 +83,15 @@ export function DynamicForm({
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const hasSensor = !!selectedEquipment?.tuyaDeviceId;
 
+  // Check if this template supports photo OCR
+  const supportsPhotoOcr = templateCode === "incoming_control";
+
   function updateField(key: string, value: unknown) {
     setFormData((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateMultipleFields(updates: Record<string, unknown>) {
+    setFormData((prev) => ({ ...prev, ...updates }));
   }
 
   function isFieldVisible(field: FieldDef): boolean {
@@ -100,7 +115,6 @@ export function DynamicForm({
         throw new Error(data.error || "Ошибка получения данных с датчика");
       }
 
-      // Auto-fill the temperature field
       updateField("temperature", data.temperature);
       updateField("source", "tuya_sensor");
 
@@ -116,6 +130,28 @@ export function DynamicForm({
     } finally {
       setIsFetchingSensor(false);
     }
+  }
+
+  // Handle OCR result — auto-fill form fields from photo
+  function handleOcrResult(result: OcrResult) {
+    const updates: Record<string, unknown> = {};
+
+    if (result.productName) updates.productName = result.productName;
+    if (result.supplier) updates.supplier = result.supplier;
+    if (result.manufactureDate) updates.manufactureDate = result.manufactureDate;
+    if (result.expiryDate) updates.expiryDate = result.expiryDate;
+    if (result.quantity) updates.quantity = result.quantity;
+    if (result.unit) updates.unit = result.unit;
+    if (result.batchNumber) updates.batchNumber = result.batchNumber;
+
+    // Save OCR metadata
+    updates.ocrUsed = true;
+    updates.ocrConfidence = result.confidence;
+    if (result.barcode) updates.barcode = result.barcode;
+    if (result.storageTemp) updates.storageTemp = result.storageTemp;
+    if (result.composition) updates.composition = result.composition;
+
+    updateMultipleFields(updates);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -158,6 +194,14 @@ export function DynamicForm({
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* Photo OCR for incoming control */}
+      {supportsPhotoOcr && (
+        <div className="space-y-2">
+          <Label>Распознать с фото</Label>
+          <PhotoCapture onResult={handleOcrResult} />
         </div>
       )}
 
@@ -318,6 +362,25 @@ export function DynamicForm({
                       <SelectItem key={item.id} value={item.id}>
                         {item.name}
                         {item.tuyaDeviceId && " (IoT)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {field.type === "employee" && (
+                <Select
+                  value={(formData[field.key] as string) ?? ""}
+                  onValueChange={(value) => updateField(field.key, value)}
+                  required={field.required}
+                >
+                  <SelectTrigger id={field.key} className="w-full">
+                    <SelectValue placeholder="Выберите сотрудника" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.name}>
+                        {emp.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

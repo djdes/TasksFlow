@@ -19,31 +19,40 @@ export default async function NewJournalEntryPage({
     notFound();
   }
 
-  const areas = await db.area.findMany({
-    where: { organizationId: session.user.organizationId },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
-  const equipment = await db.equipment.findMany({
-    where: {
-      area: { organizationId: session.user.organizationId },
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      tempMin: true,
-      tempMax: true,
-      tuyaDeviceId: true,
-    },
-    orderBy: { name: "asc" },
-  });
+  const [areas, equipment, employees] = await Promise.all([
+    db.area.findMany({
+      where: { organizationId: session.user.organizationId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.equipment.findMany({
+      where: {
+        area: { organizationId: session.user.organizationId },
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        tempMin: true,
+        tempMax: true,
+        tuyaDeviceId: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+    db.user.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        isActive: true,
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const fields = template.fields as Array<{
     key: string;
     label: string;
-    type: "text" | "number" | "date" | "boolean" | "select" | "equipment";
+    type: "text" | "number" | "date" | "boolean" | "select" | "equipment" | "employee";
     required?: boolean;
     options?: Array<{ value: string; label: string }>;
     step?: number;
@@ -64,6 +73,7 @@ export default async function NewJournalEntryPage({
         fields={fields}
         areas={areas}
         equipment={equipment}
+        employees={employees}
       />
     </div>
   );
