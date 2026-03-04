@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendInviteEmail } from "@/lib/email";
 
 const inviteUserSchema = z.object({
   name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
@@ -58,6 +59,13 @@ export async function POST(request: Request) {
         phone: validatedData.phone || null,
         organizationId: session.user.organizationId,
       },
+    });
+
+    sendInviteEmail({
+      to: user.email,
+      name: user.name,
+      password: validatedData.password,
+      organizationName: session.user.organizationName,
     });
 
     return NextResponse.json(

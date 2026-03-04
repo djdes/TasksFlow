@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { registerSchema } from "@/lib/validators";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +44,12 @@ export async function POST(request: Request) {
       });
 
       return { organization, user };
+    });
+
+    sendWelcomeEmail({
+      to: result.user.email,
+      name: result.user.name,
+      organizationName: result.organization.name,
     });
 
     return NextResponse.json(

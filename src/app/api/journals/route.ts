@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyOrganization } from "@/lib/telegram";
+import { sendTemperatureAlertEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -77,10 +78,34 @@ export async function POST(request: Request) {
               `Допустимый диапазон: ${rangeStr}°C\n` +
               `Сотрудник: ${session.user.name || session.user.email}`;
 
-            // Send notification in background — don't block the response
+            // Send Telegram notification in background
             notifyOrganization(session.user.organizationId, message).catch(
-              (err) => console.error("Notification error:", err)
+              (err) => console.error("Telegram notification error:", err)
             );
+
+            // Send email alerts to owners/technologists
+            db.user
+              .findMany({
+                where: {
+                  organizationId: session.user.organizationId,
+                  role: { in: ["owner", "technologist"] },
+                  isActive: true,
+                },
+                select: { email: true },
+              })
+              .then((users) => {
+                for (const user of users) {
+                  sendTemperatureAlertEmail({
+                    to: user.email,
+                    equipmentName: equipment.name,
+                    temperature: temp,
+                    tempMin: equipment.tempMin,
+                    tempMax: equipment.tempMax,
+                    filledBy: session.user.name || session.user.email || "",
+                  });
+                }
+              })
+              .catch((err) => console.error("Email alert error:", err));
           }
         }
       } catch (notifError) {
