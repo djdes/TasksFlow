@@ -50,6 +50,7 @@ next-env.d.ts
 _run.py
 _deploy.py
 haccp-deploy.tar
+haccp-deploy.tar.gz
 
 # claude
 .claude/

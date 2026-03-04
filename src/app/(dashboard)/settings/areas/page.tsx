@@ -54,7 +54,7 @@ export default async function AreasSettingsPage() {
                 <TableHead>Название</TableHead>
                 <TableHead>Описание</TableHead>
                 <TableHead>Оборудование</TableHead>
-                {canDelete && <TableHead className="w-[70px]">Действия</TableHead>}
+                {canManage && <TableHead className="w-[100px]">Действия</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -63,13 +63,18 @@ export default async function AreasSettingsPage() {
                   <TableCell className="font-medium">{area.name}</TableCell>
                   <TableCell>{area.description ?? "—"}</TableCell>
                   <TableCell>{area._count.equipment}</TableCell>
-                  {canDelete && (
+                  {canManage && (
                     <TableCell>
-                      <DeleteButton
-                        id={area.id}
-                        endpoint="/api/areas"
-                        entityName={`цех "${area.name}"`}
-                      />
+                      <div className="flex gap-1">
+                        <AreaDialog area={{ id: area.id, name: area.name, description: area.description }} />
+                        {canDelete && (
+                          <DeleteButton
+                            id={area.id}
+                            endpoint="/api/areas"
+                            entityName={`цех "${area.name}"`}
+                          />
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

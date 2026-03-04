@@ -120,7 +120,7 @@ export default async function EquipmentSettingsPage() {
                 <TableHead>Температурный диапазон</TableHead>
                 <TableHead>Серийный номер</TableHead>
                 <TableHead>IoT</TableHead>
-                {canDelete && <TableHead className="w-[70px]">Действия</TableHead>}
+                {canManage && <TableHead className="w-[100px]">Действия</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,13 +180,30 @@ export default async function EquipmentSettingsPage() {
                       );
                     })() : "—"}
                   </TableCell>
-                  {canDelete && (
+                  {canManage && (
                     <TableCell>
-                      <DeleteButton
-                        id={item.id}
-                        endpoint="/api/equipment"
-                        entityName={`оборудование "${item.name}"`}
-                      />
+                      <div className="flex gap-1">
+                        <EquipmentDialog
+                          areas={areas}
+                          equipment={{
+                            id: item.id,
+                            name: item.name,
+                            type: item.type,
+                            areaId: item.area.id,
+                            serialNumber: item.serialNumber,
+                            tempMin: item.tempMin,
+                            tempMax: item.tempMax,
+                            tuyaDeviceId: item.tuyaDeviceId ?? null,
+                          }}
+                        />
+                        {canDelete && (
+                          <DeleteButton
+                            id={item.id}
+                            endpoint="/api/equipment"
+                            entityName={`оборудование "${item.name}"`}
+                          />
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

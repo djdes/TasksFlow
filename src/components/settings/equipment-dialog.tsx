@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,31 +33,44 @@ type AreaOption = {
   name: string;
 };
 
-interface EquipmentDialogProps {
-  areas: AreaOption[];
+interface EquipmentData {
+  id: string;
+  name: string;
+  type: string;
+  areaId: string;
+  serialNumber: string | null;
+  tempMin: number | null;
+  tempMax: number | null;
+  tuyaDeviceId: string | null;
 }
 
-export function EquipmentDialog({ areas }: EquipmentDialogProps) {
+interface EquipmentDialogProps {
+  areas: AreaOption[];
+  equipment?: EquipmentData;
+}
+
+export function EquipmentDialog({ areas, equipment }: EquipmentDialogProps) {
   const router = useRouter();
+  const isEdit = !!equipment;
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
-  const [areaId, setAreaId] = useState("");
-  const [serialNumber, setSerialNumber] = useState("");
-  const [tempMin, setTempMin] = useState("");
-  const [tempMax, setTempMax] = useState("");
-  const [tuyaDeviceId, setTuyaDeviceId] = useState("");
+  const [name, setName] = useState(equipment?.name ?? "");
+  const [type, setType] = useState(equipment?.type ?? "");
+  const [areaId, setAreaId] = useState(equipment?.areaId ?? "");
+  const [serialNumber, setSerialNumber] = useState(equipment?.serialNumber ?? "");
+  const [tempMin, setTempMin] = useState(equipment?.tempMin?.toString() ?? "");
+  const [tempMax, setTempMax] = useState(equipment?.tempMax?.toString() ?? "");
+  const [tuyaDeviceId, setTuyaDeviceId] = useState(equipment?.tuyaDeviceId ?? "");
 
   function resetForm() {
-    setName("");
-    setType("");
-    setAreaId("");
-    setSerialNumber("");
-    setTempMin("");
-    setTempMax("");
-    setTuyaDeviceId("");
+    setName(equipment?.name ?? "");
+    setType(equipment?.type ?? "");
+    setAreaId(equipment?.areaId ?? "");
+    setSerialNumber(equipment?.serialNumber ?? "");
+    setTempMin(equipment?.tempMin?.toString() ?? "");
+    setTempMax(equipment?.tempMax?.toString() ?? "");
+    setTuyaDeviceId(equipment?.tuyaDeviceId ?? "");
     setError(null);
   }
 
@@ -67,8 +80,9 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/equipment", {
-        method: "POST",
+      const url = isEdit ? `/api/equipment/${equipment.id}` : "/api/equipment";
+      const response = await fetch(url, {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
@@ -86,11 +100,11 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
         throw new Error(result.error || "Ошибка при создании");
       }
 
-      resetForm();
+      if (!isEdit) resetForm();
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка при создании");
+      setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
       setIsSubmitting(false);
     }
@@ -105,14 +119,15 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Добавить оборудование
-        </Button>
+        {isEdit ? (
+          <Button variant="ghost" size="sm"><Pencil className="size-4" /></Button>
+        ) : (
+          <Button><Plus className="size-4" />Добавить оборудование</Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Добавить оборудование</DialogTitle>
+          <DialogTitle>{isEdit ? "Редактировать оборудование" : "Добавить оборудование"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -221,7 +236,7 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
               Отмена
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Создание..." : "Создать"}
+              {isSubmitting ? "Сохранение..." : isEdit ? "Сохранить" : "Создать"}
             </Button>
           </div>
         </form>

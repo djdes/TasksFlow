@@ -11,6 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { InviteUserDialog } from "@/components/settings/invite-user-dialog";
+import { EditUserDialog } from "@/components/settings/edit-user-dialog";
+import { DeleteButton } from "@/components/settings/delete-button";
 
 const roleLabels: Record<string, string> = {
   owner: "Владелец",
@@ -63,8 +65,10 @@ export default async function UsersSettingsPage() {
               <TableRow>
                 <TableHead>Имя</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Телефон</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead>Статус</TableHead>
+                {isOwner && <TableHead className="w-[100px]">Действия</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -72,6 +76,7 @@ export default async function UsersSettingsPage() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell className="text-sm">{user.phone ?? "—"}</TableCell>
                   <TableCell>{roleLabels[user.role] ?? user.role}</TableCell>
                   <TableCell>
                     {user.isActive ? (
@@ -80,6 +85,23 @@ export default async function UsersSettingsPage() {
                       <Badge variant="secondary">Неактивен</Badge>
                     )}
                   </TableCell>
+                  {isOwner && (
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <EditUserDialog
+                          user={user}
+                          isSelf={user.id === session.user.id}
+                        />
+                        {user.id !== session.user.id && (
+                          <DeleteButton
+                            id={user.id}
+                            endpoint="/api/users"
+                            entityName={`сотрудника "${user.name}"`}
+                          />
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

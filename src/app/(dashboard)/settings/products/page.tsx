@@ -1,4 +1,4 @@
-import { Package, Trash2 } from "lucide-react";
+import { Package } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ProductImportDialog } from "@/components/settings/product-import-dialog";
+import { ProductDialog } from "@/components/settings/product-dialog";
 import { DeleteProductButton } from "@/components/settings/delete-product-button";
 
 const unitLabels: Record<string, string> = {
@@ -44,7 +45,12 @@ export default async function ProductsSettingsPage() {
             Импортируйте из Excel, iiko или 1С для быстрого заполнения журналов
           </p>
         </div>
-        {canManage && <ProductImportDialog />}
+        {canManage && (
+          <div className="flex gap-2">
+            <ProductDialog />
+            <ProductImportDialog />
+          </div>
+        )}
       </div>
 
       {products.length === 0 ? (
@@ -69,7 +75,7 @@ export default async function ProductsSettingsPage() {
                 <TableHead>Категория</TableHead>
                 <TableHead>Хранение</TableHead>
                 <TableHead>Срок (дн.)</TableHead>
-                {session.user.role === "owner" && <TableHead className="w-12" />}
+                {canManage && <TableHead className="w-[100px]">Действия</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,9 +98,23 @@ export default async function ProductsSettingsPage() {
                   <TableCell>{product.category ?? "—"}</TableCell>
                   <TableCell>{product.storageTemp ?? "—"}</TableCell>
                   <TableCell>{product.shelfLifeDays ?? "—"}</TableCell>
-                  {session.user.role === "owner" && (
+                  {canManage && (
                     <TableCell>
-                      <DeleteProductButton productId={product.id} />
+                      <div className="flex gap-1">
+                        <ProductDialog product={{
+                          id: product.id,
+                          name: product.name,
+                          supplier: product.supplier,
+                          barcode: product.barcode,
+                          unit: product.unit,
+                          category: product.category,
+                          storageTemp: product.storageTemp,
+                          shelfLifeDays: product.shelfLifeDays,
+                        }} />
+                        {session.user.role === "owner" && (
+                          <DeleteProductButton productId={product.id} />
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
