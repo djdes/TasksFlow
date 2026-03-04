@@ -45,3 +45,11 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# deploy helpers (contain credentials)
+_run.py
+_deploy.py
+haccp-deploy.tar
+
+# claude
+.claude/

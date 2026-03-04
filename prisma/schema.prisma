@@ -54,6 +54,7 @@ model Equipment {
   serialNumber    String?
   tempMin         Float?
   tempMax         Float?
+  tuyaDeviceId    String?
   areaId          String
   area            Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
   journalEntries  JournalEntry[]

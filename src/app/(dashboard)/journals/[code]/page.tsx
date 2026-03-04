@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, ClipboardList } from "lucide-react";
+import { Plus, ClipboardList, Wifi } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,16 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
+// Type guard for entry data
+type EntryData = Record<string, unknown>;
+
+function getEntryData(data: unknown): EntryData {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data as EntryData;
+  }
+  return {};
+}
+
 export default async function JournalEntriesPage({
   params,
 }: {
@@ -66,6 +76,8 @@ export default async function JournalEntriesPage({
       equipment: { select: { name: true } },
     },
   });
+
+  const isTempControl = code === "temp_control";
 
   return (
     <div className="space-y-6">
@@ -106,24 +118,63 @@ export default async function JournalEntriesPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Дата</TableHead>
+                {isTempControl && <TableHead>Оборудование</TableHead>}
+                {isTempControl && <TableHead>Температура</TableHead>}
                 <TableHead>Заполнил</TableHead>
                 <TableHead>Участок</TableHead>
+                {isTempControl && <TableHead>Источник</TableHead>}
                 <TableHead>Статус</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                  <TableCell>{entry.filledBy.name}</TableCell>
-                  <TableCell>
-                    {entry.area?.name ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={entry.status} />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {entries.map((entry) => {
+                const data = getEntryData(entry.data);
+                const source = data.source as string | undefined;
+                const isIoT =
+                  source === "tuya_auto" || source === "tuya_sensor";
+                const temp = data.temperature as number | undefined;
+
+                return (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                    {isTempControl && (
+                      <TableCell className="font-medium">
+                        {entry.equipment?.name ?? "—"}
+                      </TableCell>
+                    )}
+                    {isTempControl && (
+                      <TableCell>
+                        {temp != null ? (
+                          <span className="font-mono font-semibold">
+                            {temp}°C
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>{entry.filledBy.name}</TableCell>
+                    <TableCell>{entry.area?.name ?? "—"}</TableCell>
+                    {isTempControl && (
+                      <TableCell>
+                        {isIoT ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            <Wifi className="size-3" />
+                            {source === "tuya_auto" ? "Авто" : "Датчик"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Вручную
+                          </span>
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <StatusBadge status={entry.status} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

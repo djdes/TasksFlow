@@ -35,6 +35,7 @@ export default async function NewJournalEntryPage({
       type: true,
       tempMin: true,
       tempMax: true,
+      tuyaDeviceId: true,
     },
     orderBy: { name: "asc" },
   });

@@ -48,6 +48,7 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
   const [serialNumber, setSerialNumber] = useState("");
   const [tempMin, setTempMin] = useState("");
   const [tempMax, setTempMax] = useState("");
+  const [tuyaDeviceId, setTuyaDeviceId] = useState("");
 
   function resetForm() {
     setName("");
@@ -56,6 +57,7 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
     setSerialNumber("");
     setTempMin("");
     setTempMax("");
+    setTuyaDeviceId("");
     setError(null);
   }
 
@@ -75,6 +77,7 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
           serialNumber: serialNumber || undefined,
           tempMin: tempMin !== "" ? Number(tempMin) : undefined,
           tempMax: tempMax !== "" ? Number(tempMax) : undefined,
+          tuyaDeviceId: tuyaDeviceId || undefined,
         }),
       });
 
@@ -195,6 +198,18 @@ export function EquipmentDialog({ areas }: EquipmentDialogProps) {
                 placeholder="°C"
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="eq-tuya">Tuya Device ID (IoT-датчик)</Label>
+            <Input
+              id="eq-tuya"
+              value={tuyaDeviceId}
+              onChange={(e) => setTuyaDeviceId(e.target.value)}
+              placeholder="например: bf397860f79b0963a0nakc"
+            />
+            <p className="text-xs text-muted-foreground">
+              Если подключён WiFi-датчик температуры Tuya, укажите его Device ID
+            </p>
           </div>
           <div className="flex justify-end gap-2">
             <Button

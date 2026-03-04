@@ -36,6 +36,7 @@ export const equipmentSchema = z.object({
   serialNumber: z.string().optional(),
   tempMin: z.number().optional(),
   tempMax: z.number().optional(),
+  tuyaDeviceId: z.string().optional(),
   areaId: z.string().min(1, "Выберите зону"),
 });
 

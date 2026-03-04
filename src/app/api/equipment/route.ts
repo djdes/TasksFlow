@@ -75,6 +75,7 @@ export async function POST(request: Request) {
         serialNumber: validatedData.serialNumber || null,
         tempMin: validatedData.tempMin ?? null,
         tempMax: validatedData.tempMax ?? null,
+        tuyaDeviceId: validatedData.tuyaDeviceId || null,
         areaId: validatedData.areaId,
       },
     });

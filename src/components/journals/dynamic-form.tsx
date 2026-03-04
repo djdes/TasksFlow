@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Wifi, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ type EquipmentItem = {
   type: string;
   tempMin: number | null;
   tempMax: number | null;
+  tuyaDeviceId?: string | null;
 };
 
 type AreaItem = {
@@ -63,6 +65,15 @@ export function DynamicForm({
   const [equipmentId, setEquipmentId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFetchingSensor, setIsFetchingSensor] = useState(false);
+  const [sensorInfo, setSensorInfo] = useState<{
+    temperature: number;
+    humidity: number | null;
+    timestamp: string;
+  } | null>(null);
+
+  const selectedEquipment = equipment.find((e) => e.id === equipmentId);
+  const hasSensor = !!selectedEquipment?.tuyaDeviceId;
 
   function updateField(key: string, value: unknown) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -71,6 +82,40 @@ export function DynamicForm({
   function isFieldVisible(field: FieldDef): boolean {
     if (!field.showIf) return true;
     return formData[field.showIf.field] === field.showIf.equals;
+  }
+
+  async function fetchFromSensor() {
+    if (!equipmentId) return;
+    setIsFetchingSensor(true);
+    setError(null);
+    setSensorInfo(null);
+
+    try {
+      const res = await fetch(
+        `/api/tuya/device?equipmentId=${equipmentId}`
+      );
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Ошибка получения данных с датчика");
+      }
+
+      // Auto-fill the temperature field
+      updateField("temperature", data.temperature);
+      updateField("source", "tuya_sensor");
+
+      setSensorInfo({
+        temperature: data.temperature,
+        humidity: data.humidity,
+        timestamp: data.timestamp,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Ошибка получения данных"
+      );
+    } finally {
+      setIsFetchingSensor(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -166,19 +211,64 @@ export function DynamicForm({
               )}
 
               {field.type === "number" && (
-                <Input
-                  id={field.key}
-                  type="number"
-                  step={field.step ?? 1}
-                  value={(formData[field.key] as string) ?? ""}
-                  onChange={(e) =>
-                    updateField(
-                      field.key,
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  required={field.required}
-                />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      id={field.key}
+                      type="number"
+                      step={field.step ?? 1}
+                      value={(formData[field.key] as string) ?? ""}
+                      onChange={(e) =>
+                        updateField(
+                          field.key,
+                          e.target.value === "" ? "" : Number(e.target.value)
+                        )
+                      }
+                      required={field.required}
+                    />
+                    {field.key === "temperature" && hasSensor && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={fetchFromSensor}
+                        disabled={isFetchingSensor}
+                        className="shrink-0"
+                      >
+                        {isFetchingSensor ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Wifi className="size-4" />
+                        )}
+                        {isFetchingSensor ? "Получение..." : "С датчика"}
+                      </Button>
+                    )}
+                  </div>
+                  {sensorInfo && field.key === "temperature" && (
+                    <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+                      <div className="flex items-center gap-2 font-medium text-green-800">
+                        <Wifi className="size-4" />
+                        Данные получены с IoT-датчика
+                      </div>
+                      <div className="mt-2 space-y-1 text-green-700">
+                        <p>
+                          Температура:{" "}
+                          <strong>{sensorInfo.temperature}°C</strong>
+                        </p>
+                        {sensorInfo.humidity !== null && (
+                          <p>
+                            Влажность:{" "}
+                            <strong>{sensorInfo.humidity}%</strong>
+                          </p>
+                        )}
+                        <p className="text-xs text-green-600">
+                          {new Date(sensorInfo.timestamp).toLocaleString(
+                            "ru-RU"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {field.type === "date" && (
@@ -216,6 +306,7 @@ export function DynamicForm({
                   onValueChange={(value) => {
                     setEquipmentId(value);
                     updateField(field.key, value);
+                    setSensorInfo(null);
                   }}
                   required={field.required}
                 >
@@ -226,6 +317,7 @@ export function DynamicForm({
                     {equipment.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
                         {item.name}
+                        {item.tuyaDeviceId && " (IoT)"}
                       </SelectItem>
                     ))}
                   </SelectContent>

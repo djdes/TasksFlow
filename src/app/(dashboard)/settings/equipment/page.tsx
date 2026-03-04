@@ -90,6 +90,7 @@ export default async function EquipmentSettingsPage() {
                 <TableHead>Цех</TableHead>
                 <TableHead>Температурный диапазон</TableHead>
                 <TableHead>Серийный номер</TableHead>
+                <TableHead>IoT</TableHead>
                 {canDelete && <TableHead className="w-[70px]">Действия</TableHead>}
               </TableRow>
             </TableHeader>
@@ -105,6 +106,13 @@ export default async function EquipmentSettingsPage() {
                     {formatTempRange(item.tempMin, item.tempMax)}
                   </TableCell>
                   <TableCell>{item.serialNumber ?? "—"}</TableCell>
+                  <TableCell>
+                    {item.tuyaDeviceId ? (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                        Tuya
+                      </span>
+                    ) : "—"}
+                  </TableCell>
                   {canDelete && (
                     <TableCell>
                       <DeleteButton
