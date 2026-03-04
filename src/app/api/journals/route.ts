@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyOrganization } from "@/lib/telegram";
 
 export async function POST(request: Request) {
   try {
@@ -46,6 +47,47 @@ export async function POST(request: Request) {
         status: "submitted",
       },
     });
+
+    // Check temperature out of range for temp_control entries
+    if (templateCode === "temp_control" && equipmentId && data.temperature != null) {
+      try {
+        const equipment = await db.equipment.findUnique({
+          where: { id: equipmentId },
+          select: { name: true, tempMin: true, tempMax: true },
+        });
+
+        if (equipment) {
+          const temp = Number(data.temperature);
+          const isOutOfRange =
+            (equipment.tempMin != null && temp < equipment.tempMin) ||
+            (equipment.tempMax != null && temp > equipment.tempMax);
+
+          if (isOutOfRange) {
+            const rangeStr = [
+              equipment.tempMin != null ? `от ${equipment.tempMin}` : "",
+              equipment.tempMax != null ? `до ${equipment.tempMax}` : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            const message =
+              `<b>Отклонение температуры!</b>\n\n` +
+              `Оборудование: <b>${equipment.name}</b>\n` +
+              `Зафиксировано: <b>${temp}°C</b>\n` +
+              `Допустимый диапазон: ${rangeStr}°C\n` +
+              `Сотрудник: ${session.user.name || session.user.email}`;
+
+            // Send notification in background — don't block the response
+            notifyOrganization(session.user.organizationId, message).catch(
+              (err) => console.error("Notification error:", err)
+            );
+          }
+        }
+      } catch (notifError) {
+        // Don't fail the journal entry creation because of notification errors
+        console.error("Temperature check/notification error:", notifError);
+      }
+    }
 
     return NextResponse.json({ entry }, { status: 201 });
   } catch (error) {
