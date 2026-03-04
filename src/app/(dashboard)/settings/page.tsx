@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Wrench, Users, Bell, Package } from "lucide-react";
+import { Building2, Wrench, Users, Bell, Package, CreditCard, ScrollText } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import {
   Card,
@@ -38,6 +38,18 @@ const settingsCards = [
     description: "Настройка Telegram-уведомлений",
     href: "/settings/notifications",
     icon: Bell,
+  },
+  {
+    title: "Подписка",
+    description: "Управление тарифом и оплатой",
+    href: "/settings/subscription",
+    icon: CreditCard,
+  },
+  {
+    title: "Журнал действий",
+    description: "Аудит всех действий в системе",
+    href: "/settings/audit",
+    icon: ScrollText,
   },
 ];
 

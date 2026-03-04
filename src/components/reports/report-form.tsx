@@ -18,7 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileDown, Loader2 } from "lucide-react";
+import { FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
 
 interface Template {
   id: string;
@@ -42,7 +42,52 @@ export function ReportForm({ templates, areas }: ReportFormProps) {
   const [dateTo, setDateTo] = useState("");
   const [areaId, setAreaId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingExcel, setIsLoadingExcel] = useState(false);
   const [error, setError] = useState("");
+
+  const validateFields = () => {
+    if (!templateCode) { setError("Выберите журнал"); return false; }
+    if (!dateFrom) { setError("Укажите дату начала"); return false; }
+    if (!dateTo) { setError("Укажите дату окончания"); return false; }
+    if (new Date(dateFrom) > new Date(dateTo)) {
+      setError("Дата начала не может быть позже даты окончания");
+      return false;
+    }
+    return true;
+  };
+
+  const handleDownloadExcel = async () => {
+    setError("");
+    if (!validateFields()) return;
+    setIsLoadingExcel(true);
+    try {
+      const params = new URLSearchParams({
+        templateCode,
+        from: dateFrom,
+        to: dateTo,
+      });
+      if (areaId && areaId !== "__all__") params.set("areaId", areaId);
+
+      const response = await fetch(`/api/reports/excel?${params.toString()}`);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Ошибка при формировании отчёта");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `report_${templateCode}_${dateFrom}_${dateTo}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setIsLoadingExcel(false);
+    }
+  };
 
   const handleDownload = async () => {
     setError("");
@@ -178,24 +223,44 @@ export function ReportForm({ templates, areas }: ReportFormProps) {
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          {/* Submit button */}
-          <Button
-            onClick={handleDownload}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Формирование...
-              </>
-            ) : (
-              <>
-                <FileDown className="size-4" />
-                Скачать PDF
-              </>
-            )}
-          </Button>
+          {/* Submit buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleDownload}
+              disabled={isLoading || isLoadingExcel}
+              className="flex-1"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Формирование...
+                </>
+              ) : (
+                <>
+                  <FileDown className="size-4" />
+                  Скачать PDF
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadExcel}
+              disabled={isLoading || isLoadingExcel}
+              className="flex-1"
+            >
+              {isLoadingExcel ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Формирование...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="size-4" />
+                  Скачать Excel
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

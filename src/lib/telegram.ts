@@ -17,7 +17,7 @@ export async function sendTelegramMessage(
   }
 }
 
-export type NotificationType = "temperature" | "deviations" | "compliance";
+export type NotificationType = "temperature" | "deviations" | "compliance" | "expiry";
 
 // Send notification to all owners/technologists of an organization
 export async function notifyOrganization(

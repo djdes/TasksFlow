@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
+import { TemperatureChart } from "@/components/charts/temperature-chart";
 import {
   Card,
   CardContent,
@@ -104,6 +105,15 @@ export default async function DashboardPage() {
   const templates = await db.journalTemplate.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
+  });
+
+  // Equipment with IoT for temperature chart
+  const iotEquipment = await db.equipment.findMany({
+    where: {
+      area: { organizationId },
+      tuyaDeviceId: { not: null },
+    },
+    select: { id: true, name: true, tuyaDeviceId: true },
   });
 
   // Compliance: check which mandatory journals are filled today
@@ -227,6 +237,11 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Temperature chart */}
+      {iotEquipment.length > 0 && (
+        <TemperatureChart equipmentList={iotEquipment} />
       )}
 
       {/* Last 48 hours activity */}

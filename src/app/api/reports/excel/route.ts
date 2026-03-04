@@ -1,0 +1,147 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+import ExcelJS from "exceljs";
+
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+    }
+
+    if (!["owner", "technologist"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const templateCode = searchParams.get("templateCode");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const areaId = searchParams.get("areaId");
+
+    if (!templateCode || !from || !to) {
+      return NextResponse.json({ error: "templateCode, from, to обязательны" }, { status: 400 });
+    }
+
+    const template = await db.journalTemplate.findUnique({
+      where: { code: templateCode },
+    });
+
+    if (!template) {
+      return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
+    }
+
+    const where: Record<string, unknown> = {
+      templateId: template.id,
+      organizationId: session.user.organizationId,
+      createdAt: {
+        gte: new Date(from),
+        lte: new Date(to + "T23:59:59.999Z"),
+      },
+    };
+
+    if (areaId) {
+      where.areaId = areaId;
+    }
+
+    const entries = await db.journalEntry.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        filledBy: { select: { name: true } },
+        area: { select: { name: true } },
+        equipment: { select: { name: true } },
+      },
+    });
+
+    // Parse template fields
+    const fields = template.fields as Array<{
+      key: string;
+      label: string;
+      type: string;
+      options?: Array<{ value: string; label: string }>;
+    }>;
+
+    // Build workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "HACCP-Online";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet(template.name);
+
+    // Columns: Дата, Сотрудник, Участок, Оборудование + dynamic fields
+    const columns: Partial<ExcelJS.Column>[] = [
+      { header: "Дата", key: "date", width: 18 },
+      { header: "Сотрудник", key: "filledBy", width: 20 },
+      { header: "Участок", key: "area", width: 18 },
+      { header: "Оборудование", key: "equipment", width: 18 },
+    ];
+
+    for (const field of fields) {
+      if (field.type === "equipment" || field.type === "employee") continue;
+      columns.push({
+        header: field.label,
+        key: field.key,
+        width: Math.max(field.label.length * 1.5, 14),
+      });
+    }
+
+    sheet.columns = columns;
+
+    // Style header
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF2563EB" },
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+
+    // Add data rows
+    for (const entry of entries) {
+      const data = entry.data as Record<string, unknown>;
+      const row: Record<string, unknown> = {
+        date: entry.createdAt.toLocaleString("ru-RU"),
+        filledBy: entry.filledBy.name,
+        area: entry.area?.name ?? "—",
+        equipment: entry.equipment?.name ?? "—",
+      };
+
+      for (const field of fields) {
+        if (field.type === "equipment" || field.type === "employee") continue;
+        let val = data[field.key];
+        // Resolve select labels
+        if (field.options && typeof val === "string") {
+          const opt = field.options.find((o) => o.value === val);
+          if (opt) val = opt.label;
+        }
+        // Boolean → Да/Нет
+        if (field.type === "boolean") {
+          val = val ? "Да" : "Нет";
+        }
+        row[field.key] = val ?? "—";
+      }
+
+      sheet.addRow(row);
+    }
+
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    const filename = `report_${templateCode}_${from}_${to}.xlsx`;
+
+    return new NextResponse(buffer as ArrayBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error("Excel export error:", error);
+    return NextResponse.json({ error: "Внутренняя ошибка" }, { status: 500 });
+  }
+}

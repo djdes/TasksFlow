@@ -15,12 +15,17 @@ model Organization {
   phone            String?
   subscriptionPlan String         @default("trial")
   subscriptionEnd  DateTime?
+  locale           String         @default("ru")
+  brandColor       String?
+  logoUrl          String?
+  yookassaShopId   String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   users            User[]
   areas            Area[]
   journalEntries   JournalEntry[]
   products         Product[]
+  auditLogs        AuditLog[]
 }
 
 model User {
@@ -113,4 +118,21 @@ model JournalEntry {
 
   @@index([organizationId, templateId, createdAt])
   @@index([filledById])
+}
+
+model AuditLog {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId          String?
+  userName        String?
+  action          String
+  entity          String
+  entityId        String?
+  details         Json?
+  ipAddress       String?
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([entity, entityId])
 }
