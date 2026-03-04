@@ -32,8 +32,9 @@ model User {
   role            String         @default("operator")
   organizationId  String
   organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  telegramChatId  String?
-  isActive        Boolean        @default(true)
+  telegramChatId    String?
+  notificationPrefs Json?
+  isActive          Boolean        @default(true)
   createdAt       DateTime       @default(now())
   journalEntries  JournalEntry[]
 }

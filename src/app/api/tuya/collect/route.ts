@@ -121,7 +121,7 @@ export async function POST(request: Request) {
             `Допустимый диапазон: ${rangeStr}°C\n` +
             `Источник: IoT-датчик (авто)`;
 
-          notifyOrganization(equip.area.organizationId, message).catch(
+          notifyOrganization(equip.area.organizationId, message, ["owner", "technologist"], "temperature").catch(
             (err) => console.error("Telegram notification error:", err)
           );
 

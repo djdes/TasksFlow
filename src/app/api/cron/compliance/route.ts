@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         missingNames.map((n) => `• ${n}`).join("\n") +
         `\n\nВсего не заполнено: ${missingNames.length} из ${mandatoryTemplates.length}`;
 
-      notifyOrganization(org.id, telegramMsg).catch((err) =>
+      notifyOrganization(org.id, telegramMsg, ["owner", "technologist"], "compliance").catch((err) =>
         console.error(`Compliance telegram error (${org.name}):`, err)
       );
 

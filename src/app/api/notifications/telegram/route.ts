@@ -4,6 +4,15 @@ import { parseLinkToken, sendTelegramMessage } from "@/lib/telegram";
 
 export async function POST(request: Request) {
   try {
+    // Verify webhook secret if configured
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const headerSecret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
+      if (headerSecret !== webhookSecret) {
+        return NextResponse.json({ ok: false }, { status: 403 });
+      }
+    }
+
     const update = await request.json();
 
     // We only handle messages
@@ -64,10 +73,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Handle /stop command — unlink Telegram
+    if (text === "/stop" || text.startsWith("/stop ")) {
+      const user = await db.user.findFirst({
+        where: { telegramChatId: chatId },
+      });
+
+      if (!user) {
+        await sendTelegramMessage(
+          chatId,
+          "Ваш аккаунт не привязан к HACCP-Online."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      await db.user.update({
+        where: { id: user.id },
+        data: { telegramChatId: null },
+      });
+
+      await sendTelegramMessage(
+        chatId,
+        "Аккаунт отвязан. Вы больше не будете получать уведомления.\nДля повторной привязки используйте ссылку из настроек HACCP-Online."
+      );
+
+      return NextResponse.json({ ok: true });
+    }
+
     // For any other message, send a help message
     await sendTelegramMessage(
       chatId,
-      "Этот бот отправляет уведомления из HACCP-Online. Для привязки аккаунта используйте ссылку из настроек."
+      "Этот бот отправляет уведомления из HACCP-Online.\n\nКоманды:\n/stop — отвязать аккаунт\n\nДля привязки аккаунта используйте ссылку из настроек."
     );
 
     return NextResponse.json({ ok: true });

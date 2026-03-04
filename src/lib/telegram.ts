@@ -17,11 +17,14 @@ export async function sendTelegramMessage(
   }
 }
 
+export type NotificationType = "temperature" | "deviations" | "compliance";
+
 // Send notification to all owners/technologists of an organization
 export async function notifyOrganization(
   organizationId: string,
   message: string,
-  roles: string[] = ["owner", "technologist"]
+  roles: string[] = ["owner", "technologist"],
+  type?: NotificationType
 ): Promise<void> {
   // Import db here to avoid circular deps
   const { db } = await import("./db");
@@ -33,11 +36,20 @@ export async function notifyOrganization(
       telegramChatId: { not: null },
       isActive: true,
     },
-    select: { telegramChatId: true },
+    select: { telegramChatId: true, notificationPrefs: true },
   });
 
+  // Filter by notification preference if type is specified
+  const filtered = type
+    ? users.filter((u) => {
+        if (!u.notificationPrefs) return true; // null = all enabled
+        const prefs = u.notificationPrefs as Record<string, boolean>;
+        return prefs[type] !== false;
+      })
+    : users;
+
   await Promise.allSettled(
-    users.map((u) => sendTelegramMessage(u.telegramChatId!, message))
+    filtered.map((u) => sendTelegramMessage(u.telegramChatId!, message))
   );
 }
 

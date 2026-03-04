@@ -216,7 +216,7 @@ export async function POST(request: Request) {
               `Допустимый диапазон: ${rangeStr}°C\n` +
               `Сотрудник: ${filledByName}`;
 
-            notifyOrganization(session.user.organizationId, message).catch(
+            notifyOrganization(session.user.organizationId, message, ["owner", "technologist"], "temperature").catch(
               (err) => console.error("Telegram notification error:", err)
             );
 
@@ -260,7 +260,7 @@ export async function POST(request: Request) {
             `Журнал: ${template.name}\n` +
             `Сотрудник: ${filledByName}`;
 
-          notifyOrganization(session.user.organizationId, telegramMsg).catch(
+          notifyOrganization(session.user.organizationId, telegramMsg, ["owner", "technologist"], "deviations").catch(
             (err) => console.error("Telegram deviation alert error:", err)
           );
         }

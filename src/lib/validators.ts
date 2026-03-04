@@ -45,3 +45,17 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type JournalEntryInput = z.infer<typeof journalEntrySchema>;
 export type AreaInput = z.infer<typeof areaSchema>;
 export type EquipmentInput = z.infer<typeof equipmentSchema>;
+
+export const notificationPrefsSchema = z.object({
+  temperature: z.boolean(),
+  deviations: z.boolean(),
+  compliance: z.boolean(),
+});
+
+export type NotificationPrefs = z.infer<typeof notificationPrefsSchema>;
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  temperature: true,
+  deviations: true,
+  compliance: true,
+};
