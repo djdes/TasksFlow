@@ -1,0 +1,48 @@
+# HACCP-Online — Cursor Rules
+
+## Project
+SaaS for HACCP/SanPiN electronic journals at food production facilities (CIS market).
+Private repo: https://github.com/djdes/HACCP-Online
+
+## Stack
+- Next.js 16 App Router, TypeScript, React 19
+- Prisma 7 with @prisma/adapter-pg (PostgreSQL)
+- NextAuth.js 4 (JWT + Credentials)
+- shadcn/ui (new-york style) + TailwindCSS 4
+- Zod v4, Lucide icons, Sonner toasts
+
+## Setup
+```bash
+cp .env.shared .env && npm install && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts && npm run dev
+```
+
+## Key Rules
+- UI text in Russian. Code/comments in English.
+- Page params are Promises in Next.js 16: always `const { code } = await params`
+- Use `sonner` for toasts, never shadcn `toast` (deprecated)
+- Path alias: `@/*` → `./src/*`
+- Prisma 7 requires `@prisma/adapter-pg` pool — see `src/lib/db.ts`
+- Zod v4 (not v3)
+- All data multi-tenant: scope queries by `session.user.organizationId`
+- Three roles: owner > technologist > operator
+- API routes: `getServerSession(authOptions)` → role check → Zod validate → Prisma → NextResponse.json()
+- Notifications (email/Telegram) are fire-and-forget: catch errors, don't fail main operation
+
+## Architecture
+- `(auth)/` — login, register (public)
+- `(dashboard)/` — sidebar layout, protected by `requireAuth()`
+- `src/lib/` — auth.ts, db.ts, validators.ts, email.ts, telegram.ts, tuya.ts, pdf.ts
+- `prisma/schema.prisma` — 6 models: Organization, User, Area, Equipment, JournalTemplate, JournalEntry
+
+## Git Workflow
+Never push to master directly. Use feature branches + PR:
+```bash
+git checkout -b feature/name
+# code...
+git push -u origin feature/name
+gh pr create
+```
+
+## Deployment
+See CLAUDE.md for full deploy script. Server: 192.168.33.3, PM2 on port 3001.
+Secrets in `.env.shared`. Deploy helpers (`_deploy.py`, `_run.py`) are in .gitignore.
