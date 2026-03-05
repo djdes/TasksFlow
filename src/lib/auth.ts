@@ -6,6 +6,23 @@ import { db } from "@/lib/db";
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: 365 * 24 * 60 * 60, // 1 year
+    updateAge: 24 * 60 * 60, // refresh token every 24h
+  },
+  jwt: {
+    maxAge: 365 * 24 * 60 * 60, // 1 year
+  },
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60, // 1 year
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   pages: {
     signIn: "/login",
