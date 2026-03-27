@@ -11,7 +11,7 @@ HACCP-Online — SaaS for electronic HACCP/SanPiN journal keeping at food produc
 ```bash
 git clone https://github.com/djdes/HACCP-Online.git
 cd HACCP-Online
-cp .env.shared .env        # all secrets are in .env.shared
+cp .env.shared .env        # template with empty secrets, fill in real values
 npm install
 npx prisma generate
 npx prisma db push          # create tables in local PostgreSQL
@@ -39,9 +39,9 @@ All secrets are in `.env.shared` (committed to private repo). Copy to `.env` for
 
 | Service | Where |
 |---------|-------|
-| Tuya IoT API | `.env.shared` — TUYA_ACCESS_ID/SECRET, device ID: `bf397860f79b0963a0nakc` |
-| Production DB | `.env.shared` (in comments) — `magday:r15*gRJPulurILWV@localhost:5432/haccp_magday` |
-| Production server SSH | `192.168.33.3:22`, user `magday`, password `r15*gRJPulurILWV` |
+| Tuya IoT API | `.env` — TUYA_ACCESS_ID/SECRET, device ID: `bf397860f79b0963a0nakc` |
+| Production DB | Server `.env` only (not in repo) |
+| Production server SSH | See deployment docs (credentials not stored in repo) |
 | Production app | `https://haccp.magday.ru`, PM2 process `haccp-online`, port 3001 |
 | SMTP (prod) | localhost:25, from `noreply@haccp.magday.ru` |
 
@@ -53,9 +53,9 @@ Create `_deploy.py` locally (it's in `.gitignore`):
 ```python
 import paramiko, sys, os
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-HOST = '192.168.33.3'
-USER = 'magday'
-PASS = 'r15*gRJPulurILWV'
+HOST = os.environ.get('DEPLOY_SSH_HOST', '')
+USER = os.environ.get('DEPLOY_SSH_USER', '')
+PASS = os.environ.get('DEPLOY_SSH_PASS', '')
 REMOTE_DIR = 'www/haccp.magday.ru/app'
 LOCAL_TAR = os.path.join(os.path.dirname(__file__), 'haccp-deploy.tar')
 ssh = paramiko.SSHClient()
