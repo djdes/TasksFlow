@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GitBranch, Plus } from "lucide-react";
+import { GitBranch, Plus } from "lucide-react"; // Link is still used by "Новое изменение" button below
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+
+// NOTE: detail page /changes/[id] is not yet implemented — show title as plain
+// text instead of a link so clicks don't land on a 404.
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   requested: { label: "Заявка", variant: "outline" },
@@ -70,9 +73,7 @@ export default async function ChangesPage() {
                 <TableRow key={c.id}>
                   <TableCell className="font-mono text-muted-foreground">#{c.version}</TableCell>
                   <TableCell>
-                    <Link href={`/changes/${c.id}`} className="font-medium text-primary hover:underline">
-                      {c.title}
-                    </Link>
+                    <span className="font-medium">{c.title}</span>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{TYPE_LABELS[c.changeType] || c.changeType}</Badge>

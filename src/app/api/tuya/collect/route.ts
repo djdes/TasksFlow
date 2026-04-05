@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getDeviceTemperature } from "@/lib/tuya";
-import { notifyOrganization } from "@/lib/telegram";
+import { notifyOrganization, escapeTelegramHtml as esc } from "@/lib/telegram";
 import { sendTemperatureAlertEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
@@ -116,9 +116,9 @@ export async function POST(request: Request) {
 
           const message =
             `<b>Отклонение температуры!</b>\n\n` +
-            `Оборудование: <b>${equip.name}</b>\n` +
+            `Оборудование: <b>${esc(equip.name)}</b>\n` +
             `Зафиксировано: <b>${temperature}°C</b>\n` +
-            `Допустимый диапазон: ${rangeStr}°C\n` +
+            `Допустимый диапазон: ${esc(rangeStr)}°C\n` +
             `Источник: IoT-датчик (авто)`;
 
           notifyOrganization(equip.area.organizationId, message, ["owner", "technologist"], "temperature").catch(

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { notifyOrganization } from "@/lib/telegram";
+import { notifyOrganization, escapeTelegramHtml as esc } from "@/lib/telegram";
 import { sendTemperatureAlertEmail, sendDeviationAlertEmail } from "@/lib/email";
+import { journalEntrySchema } from "@/lib/validators";
 
 // Universal deviation rules for all journal types
 type DeviationRule = {
@@ -22,7 +25,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: "rejected",
       alertType: "Входной контроль: БРАК",
       alertMessage: (d) =>
-        `Продукт <b>${d.productName || "—"}</b> от поставщика <b>${d.supplier || "—"}</b> забракован.\nПричина: ${d.comment || "не указана"}`,
+        `Продукт <b>${esc(d.productName || "—")}</b> от поставщика <b>${esc(d.supplier || "—")}</b> забракован.\nПричина: ${esc(d.comment || "не указана")}`,
     },
   ],
   finished_product: [
@@ -32,7 +35,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: false,
       alertType: "Бракераж: НЕ ДОПУЩЕНО",
       alertMessage: (d) =>
-        `Продукт <b>${d.productName || "—"}</b> не прошёл бракераж.\nЗамечания: ${d.comment || "не указаны"}`,
+        `Продукт <b>${esc(d.productName || "—")}</b> не прошёл бракераж.\nЗамечания: ${esc(d.comment || "не указаны")}`,
     },
   ],
   hygiene: [
@@ -42,7 +45,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: false,
       alertType: "Гигиена: НЕ ДОПУЩЕН К РАБОТЕ",
       alertMessage: (d) =>
-        `Сотрудник <b>${d.employeeName || "—"}</b> не допущен к работе.\nПричина: ${d.symptoms || d.comment || "не указана"}`,
+        `Сотрудник <b>${esc(d.employeeName || "—")}</b> не допущен к работе.\nПричина: ${esc(d.symptoms || d.comment || "не указана")}`,
     },
   ],
   ccp_monitoring: [
@@ -52,7 +55,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: false,
       alertType: "ККТ: ВЫХОД ЗА ПРЕДЕЛЫ",
       alertMessage: (d) =>
-        `Критическая контрольная точка вышла за пределы!\nФакт: ${d.actualValue || "—"}\nДопуск: ${d.criticalLimit || "—"}\nКорректирующее действие: ${d.correctiveAction || "не указано"}`,
+        `Критическая контрольная точка вышла за пределы!\nФакт: ${esc(d.actualValue || "—")}\nДопуск: ${esc(d.criticalLimit || "—")}\nКорректирующее действие: ${esc(d.correctiveAction || "не указано")}`,
     },
   ],
   cleaning: [
@@ -62,7 +65,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: "unsatisfactory",
       alertType: "Уборка: НЕУДОВЛ.",
       alertMessage: (d) =>
-        `Результат уборки неудовлетворительный.\nТип: ${d.cleaningType || "—"}\nЗамечания: ${d.comment || "не указаны"}`,
+        `Результат уборки неудовлетворительный.\nТип: ${esc(d.cleaningType || "—")}\nЗамечания: ${esc(d.comment || "не указаны")}`,
     },
   ],
   cooking_temp: [
@@ -72,7 +75,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: false,
       alertType: "Температура приготовления: ОТКЛОНЕНИЕ",
       alertMessage: (d) =>
-        `Температура приготовления вне нормы!\nПродукт: <b>${d.productName || "—"}</b>\nТемпература: ${d.temperature || "—"}°C\nКорр. действие: ${d.correctiveAction || "не указано"}`,
+        `Температура приготовления вне нормы!\nПродукт: <b>${esc(d.productName || "—")}</b>\nТемпература: ${esc(d.temperature || "—")}°C\nКорр. действие: ${esc(d.correctiveAction || "не указано")}`,
     },
   ],
   shipment: [
@@ -82,7 +85,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: "unsatisfactory",
       alertType: "Отгрузка: НЕУДОВЛ. состояние ТС",
       alertMessage: (d) =>
-        `Неудовлетворительное состояние транспорта!\nТС: ${d.vehicleNumber || "—"}\nЗамечания: ${d.comment || "не указаны"}`,
+        `Неудовлетворительное состояние транспорта!\nТС: ${esc(d.vehicleNumber || "—")}\nЗамечания: ${esc(d.comment || "не указаны")}`,
     },
   ],
   equipment_calibration: [
@@ -92,7 +95,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: "failed",
       alertType: "Поверка: НЕ ПРОЙДЕНА",
       alertMessage: (d) =>
-        `Оборудование не прошло поверку!\nПрибор: <b>${d.instrumentName || "—"}</b>\nЗамечания: ${d.comment || "не указаны"}`,
+        `Оборудование не прошло поверку!\nПрибор: <b>${esc(d.instrumentName || "—")}</b>\nЗамечания: ${esc(d.comment || "не указаны")}`,
     },
   ],
   product_writeoff: [
@@ -102,7 +105,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: undefined,
       alertType: "Списание продукции",
       alertMessage: (d) =>
-        `Списание: <b>${d.productName || "—"}</b>\nКоличество: ${d.quantity || "—"} ${d.unit || ""}\nПричина: ${d.reason || "не указана"}`,
+        `Списание: <b>${esc(d.productName || "—")}</b>\nКоличество: ${esc(d.quantity || "—")} ${esc(d.unit || "")}\nПричина: ${esc(d.reason || "не указана")}`,
     },
   ],
 };
@@ -153,14 +156,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { templateCode, areaId, equipmentId, data } = body;
-
-    if (!templateCode || !data) {
-      return NextResponse.json(
-        { error: "Некорректные данные" },
-        { status: 400 }
-      );
-    }
+    const parsed = journalEntrySchema.parse(body);
+    const { templateCode, areaId, equipmentId, data } = parsed;
 
     const template = await db.journalTemplate.findUnique({
       where: { code: templateCode },
@@ -180,7 +177,8 @@ export async function POST(request: Request) {
         filledById: session.user.id,
         areaId: areaId || null,
         equipmentId: equipmentId || null,
-        data,
+        // Zod-validated as Record<string, unknown>; Prisma accepts any JSON-serialisable value.
+        data: data as Prisma.InputJsonValue,
         status: "submitted",
       },
     });
@@ -211,10 +209,10 @@ export async function POST(request: Request) {
 
             const message =
               `<b>Отклонение температуры!</b>\n\n` +
-              `Оборудование: <b>${equipment.name}</b>\n` +
+              `Оборудование: <b>${esc(equipment.name)}</b>\n` +
               `Зафиксировано: <b>${temp}°C</b>\n` +
-              `Допустимый диапазон: ${rangeStr}°C\n` +
-              `Сотрудник: ${filledByName}`;
+              `Допустимый диапазон: ${esc(rangeStr)}°C\n` +
+              `Сотрудник: ${esc(filledByName)}`;
 
             notifyOrganization(session.user.organizationId, message, ["owner", "technologist"], "temperature").catch(
               (err) => console.error("Telegram notification error:", err)
@@ -254,11 +252,13 @@ export async function POST(request: Request) {
     if (deviations.length > 0) {
       try {
         for (const deviation of deviations) {
+          // deviation.alertType and deviation.details are composed in DEVIATION_RULES
+          // above from already-escaped user data (via esc()), so they're safe to inline.
           const telegramMsg =
             `<b>${deviation.alertType}</b>\n\n` +
             `${deviation.details}\n\n` +
-            `Журнал: ${template.name}\n` +
-            `Сотрудник: ${filledByName}`;
+            `Журнал: ${esc(template.name)}\n` +
+            `Сотрудник: ${esc(filledByName)}`;
 
           notifyOrganization(session.user.organizationId, telegramMsg, ["owner", "technologist"], "deviations").catch(
             (err) => console.error("Telegram deviation alert error:", err)
@@ -297,6 +297,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ entry }, { status: 201 });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: "Некорректные данные", details: error.issues },
+        { status: 400 }
+      );
+    }
     console.error("Journal entry creation error:", error);
     return NextResponse.json(
       { error: "Внутренняя ошибка сервера" },

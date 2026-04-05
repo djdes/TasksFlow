@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar, Plus, CheckCircle2, Clock, FileText } from "lucide-react";
+import { Plus } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
+
+// NOTE: detail page /plans/[id] is not yet implemented — render plan cards
+// without a <Link> wrapper so clicks don't land on a 404.
 
 type PlanItem = { sku: string; targetQuantity: number; actualQuantity?: number; priority?: string };
 
@@ -93,30 +96,28 @@ export default async function PlansPage() {
                   const completion = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
 
                   return (
-                    <Link key={plan.id} href={`/plans/${plan.id}`}>
-                      <div className="rounded-md border p-2 hover:bg-muted/50 transition-colors cursor-pointer space-y-1">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="text-[10px]">
-                            {SHIFT_LABELS[plan.shift] || plan.shift}
-                          </Badge>
-                          <Badge variant={plan.status === "completed" ? "default" : "secondary"} className="text-[10px]">
-                            {plan.status === "draft" ? "Черновик" : plan.status === "active" ? "Активен" : "Выполнен"}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{items.length} SKU</p>
-                        {plan.status !== "draft" && totalTarget > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${completion >= 100 ? "bg-green-500" : completion >= 70 ? "bg-yellow-500" : "bg-red-500"}`}
-                                style={{ width: `${Math.min(completion, 100)}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">{completion}%</p>
-                          </div>
-                        )}
+                    <div key={plan.id} className="rounded-md border p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-[10px]">
+                          {SHIFT_LABELS[plan.shift] || plan.shift}
+                        </Badge>
+                        <Badge variant={plan.status === "completed" ? "default" : "secondary"} className="text-[10px]">
+                          {plan.status === "draft" ? "Черновик" : plan.status === "active" ? "Активен" : "Выполнен"}
+                        </Badge>
                       </div>
-                    </Link>
+                      <p className="text-xs text-muted-foreground">{items.length} SKU</p>
+                      {plan.status !== "draft" && totalTarget > 0 && (
+                        <div className="space-y-0.5">
+                          <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${completion >= 100 ? "bg-green-500" : completion >= 70 ? "bg-yellow-500" : "bg-red-500"}`}
+                              style={{ width: `${Math.min(completion, 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{completion}%</p>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
                 {day.plans.length === 0 && (

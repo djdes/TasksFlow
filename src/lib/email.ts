@@ -1,10 +1,16 @@
 import nodemailer from "nodemailer";
+import { escapeHtml } from "@/lib/html-escape";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "localhost",
   port: Number(process.env.SMTP_PORT) || 25,
   secure: false,
-  tls: { rejectUnauthorized: false },
+  // Allow self-signed certs only for localhost SMTP relays.
+  tls: {
+    rejectUnauthorized: (process.env.SMTP_HOST ?? "localhost") !== "localhost",
+  },
+  connectionTimeout: 5000,
+  socketTimeout: 5000,
 });
 
 const FROM = process.env.SMTP_FROM || "HACCP-Online <noreply@haccp.magday.ru>";
@@ -53,12 +59,12 @@ export async function sendInviteEmail(params: {
   const subject = `Вас пригласили в ${organizationName} — HACCP-Online`;
 
   const body = `
-    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте, <strong>${name}</strong>!</p>
-    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Вас пригласили в организацию <strong>${organizationName}</strong> для ведения электронных журналов ХАССП.</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте, <strong>${escapeHtml(name)}</strong>!</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Вас пригласили в организацию <strong>${escapeHtml(organizationName)}</strong> для ведения электронных журналов ХАССП.</p>
     <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin:0 0 24px">
       <p style="margin:0 0 8px;font-size:13px;color:#71717a">Ваши данные для входа:</p>
-      <p style="margin:0 0 4px;color:#18181b"><strong>Email:</strong> ${to}</p>
-      <p style="margin:0;color:#18181b"><strong>Пароль:</strong> ${password}</p>
+      <p style="margin:0 0 4px;color:#18181b"><strong>Email:</strong> ${escapeHtml(to)}</p>
+      <p style="margin:0;color:#18181b"><strong>Пароль:</strong> ${escapeHtml(password)}</p>
     </div>
     <a href="${APP_URL}/login" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Войти в систему</a>
     <p style="margin:24px 0 0;font-size:13px;color:#a1a1aa">Рекомендуем сменить пароль после первого входа.</p>`;
@@ -75,8 +81,8 @@ export async function sendWelcomeEmail(params: {
   const subject = "Добро пожаловать в HACCP-Online!";
 
   const body = `
-    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте, <strong>${name}</strong>!</p>
-    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Организация <strong>${organizationName}</strong> успешно зарегистрирована. Ваш пробный период — <strong>14 дней</strong> с полным доступом ко всем функциям.</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте, <strong>${escapeHtml(name)}</strong>!</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Организация <strong>${escapeHtml(organizationName)}</strong> успешно зарегистрирована. Ваш пробный период — <strong>14 дней</strong> с полным доступом ко всем функциям.</p>
     <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin:0 0 24px">
       <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#18181b">С чего начать:</p>
       <p style="margin:0 0 8px;color:#3f3f46;font-size:14px">1. Добавьте производственные зоны в <strong>Настройки → Зоны</strong></p>
@@ -102,15 +108,15 @@ export async function sendDeviationAlertEmail(params: {
 
   const body = `
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:20px;margin:0 0 24px">
-      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#dc2626">${deviationType}</p>
-      <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.6">${details}</p>
+      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#dc2626">${escapeHtml(deviationType)}</p>
+      <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.6">${escapeHtml(details)}</p>
     </div>
     <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
-      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px;width:140px">Журнал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-weight:600">${journalName}</td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Записал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${filledBy}</td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px;width:140px">Журнал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-weight:600">${escapeHtml(journalName)}</td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Записал</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${escapeHtml(filledBy)}</td></tr>
       <tr><td style="padding:8px 0;color:#71717a;font-size:13px">Время</td><td style="padding:8px 0;color:#18181b">${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}</td></tr>
     </table>
-    <a href="${APP_URL}/journals/${journalCode}" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Открыть журнал</a>`;
+    <a href="${APP_URL}/journals/${encodeURIComponent(journalCode)}" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Открыть журнал</a>`;
 
   await sendEmail(to, subject, layout("Отклонение зафиксировано", body));
 }
@@ -124,7 +130,7 @@ export async function sendComplianceReminderEmail(params: {
   const subject = `📋 Незаполненные журналы — ${organizationName}`;
 
   const listHtml = missingJournals
-    .map((j) => `<li style="margin:0 0 4px;color:#18181b;font-size:14px">${j}</li>`)
+    .map((j) => `<li style="margin:0 0 4px;color:#18181b;font-size:14px">${escapeHtml(j)}</li>`)
     .join("");
 
   const body = `
@@ -159,11 +165,11 @@ export async function sendTemperatureAlertEmail(params: {
       <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.6">Зафиксировано отклонение температуры. Требуется корректирующее действие.</p>
     </div>
     <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
-      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px;width:140px">Оборудование</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-weight:600">${equipmentName}</td></tr>
-      ${areaName ? `<tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Зона</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${areaName}</td></tr>` : ""}
-      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Факт. температура</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#dc2626;font-weight:700;font-size:18px">${temperature}°C</td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Допустимый диапазон</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${limitsText}</td></tr>
-      <tr><td style="padding:8px 0;color:#71717a;font-size:13px">Записал</td><td style="padding:8px 0;color:#18181b">${filledBy}</td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px;width:140px">Оборудование</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-weight:600">${escapeHtml(equipmentName)}</td></tr>
+      ${areaName ? `<tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Зона</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${escapeHtml(areaName)}</td></tr>` : ""}
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Факт. температура</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#dc2626;font-weight:700;font-size:18px">${escapeHtml(temperature)}°C</td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:13px">Допустимый диапазон</td><td style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b">${escapeHtml(limitsText)}</td></tr>
+      <tr><td style="padding:8px 0;color:#71717a;font-size:13px">Записал</td><td style="padding:8px 0;color:#18181b">${escapeHtml(filledBy)}</td></tr>
     </table>
     <a href="${APP_URL}/journals/temp_control" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Открыть журнал</a>`;
 

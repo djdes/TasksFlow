@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { notifyOrganization } from "@/lib/telegram";
+import { notifyOrganization, escapeTelegramHtml as esc } from "@/lib/telegram";
 import { sendComplianceReminderEmail } from "@/lib/email";
 
 const CRON_SECRET = process.env.CRON_SECRET || "";
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       // Telegram alert
       const telegramMsg =
         `<b>Незаполненные журналы за сегодня</b>\n\n` +
-        missingNames.map((n) => `• ${n}`).join("\n") +
+        missingNames.map((n) => `• ${esc(n)}`).join("\n") +
         `\n\nВсего не заполнено: ${missingNames.length} из ${mandatoryTemplates.length}`;
 
       notifyOrganization(org.id, telegramMsg, ["owner", "technologist"], "compliance").catch((err) =>

@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as XLSX from "xlsx";
 
+// Hard limit on the uploaded spreadsheet to prevent OOM when parsing into memory.
+const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+const MAX_IMPORT_ROWS = 20_000;
+
 // Column name mappings for iiko, 1C, and generic Russian Excel exports
 const COLUMN_MAP: Record<string, string> = {
   // Product name
@@ -104,6 +108,15 @@ export async function POST(request: Request) {
       );
     }
 
+    if (file.size > MAX_IMPORT_BYTES) {
+      return NextResponse.json(
+        {
+          error: `Файл слишком большой (максимум ${MAX_IMPORT_BYTES / 1024 / 1024} MB). Разбейте выгрузку на несколько файлов.`,
+        },
+        { status: 413 }
+      );
+    }
+
     // Parse Excel/CSV
     const bytes = await file.arrayBuffer();
     const workbook = XLSX.read(bytes, { type: "array" });
@@ -115,6 +128,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Файл пустой или не содержит данных" },
         { status: 400 }
+      );
+    }
+
+    if (rawRows.length > MAX_IMPORT_ROWS) {
+      return NextResponse.json(
+        {
+          error: `Слишком много строк (${rawRows.length}). Максимум за один импорт — ${MAX_IMPORT_ROWS}.`,
+        },
+        { status: 413 }
       );
     }
 

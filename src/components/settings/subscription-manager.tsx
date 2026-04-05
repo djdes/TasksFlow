@@ -11,63 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PLANS as PLAN_DEFS } from "@/lib/plans";
 
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  maxUsers: number | null;
-  features: string[];
-}
-
-const PLANS: Plan[] = [
-  {
-    id: "starter",
-    name: "Стартовый",
-    price: 3000,
-    maxUsers: 3,
-    features: [
-      "До 3 пользователей",
-      "Базовые журналы",
-      "PDF-отчёты",
-      "Email-уведомления",
-    ],
-  },
-  {
-    id: "standard",
-    name: "Стандарт",
-    price: 5000,
-    maxUsers: 10,
-    features: [
-      "До 10 пользователей",
-      "Все журналы",
-      "IoT-мониторинг",
-      "Telegram-уведомления",
-      "Excel-экспорт",
-      "Сканер штрих-кодов",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Про",
-    price: 8000,
-    maxUsers: null,
-    features: [
-      "Безлимит пользователей",
-      "Всё из Стандарт",
-      "Приоритетная поддержка",
-      "API-доступ",
-      "White-label",
-      "ФГИС Меркурий",
-    ],
-  },
-];
+// Render plans in a stable presentation order (Стартовый → Стандарт → Про).
+const PLAN_ORDER: Array<keyof typeof PLAN_DEFS> = ["starter", "standard", "pro"];
 
 const PLAN_LABELS: Record<string, string> = {
   trial: "Пробный период",
-  starter: "Стартовый",
-  standard: "Стандарт",
-  pro: "Про",
+  starter: PLAN_DEFS.starter.name,
+  standard: PLAN_DEFS.standard.name,
+  pro: PLAN_DEFS.pro.name,
 };
 
 interface SubscriptionManagerProps {
@@ -155,7 +108,8 @@ export function SubscriptionManager({
 
       {/* Plans grid */}
       <div className="grid gap-4 md:grid-cols-3">
-        {PLANS.map((plan) => {
+        {PLAN_ORDER.map((planId) => {
+          const plan = PLAN_DEFS[planId];
           const isCurrent = currentPlan === plan.id;
           const isPopular = plan.id === "standard";
 
@@ -177,7 +131,7 @@ export function SubscriptionManager({
                 <CardTitle>{plan.name}</CardTitle>
                 <CardDescription>
                   <span className="text-2xl font-bold text-foreground">
-                    {plan.price.toLocaleString("ru-RU")} ₽
+                    {plan.priceRub.toLocaleString("ru-RU")} ₽
                   </span>
                   <span className="text-muted-foreground"> / мес</span>
                 </CardDescription>

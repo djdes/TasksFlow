@@ -6,7 +6,11 @@ import { NextRequest, NextResponse } from "next/server";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+
+  if (!["owner", "technologist"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
 
   const ticket = await db.capaTicket.findUnique({ where: { id } });
   if (!ticket || ticket.organizationId !== session.user.organizationId) {

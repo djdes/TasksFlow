@@ -5,6 +5,11 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
+// Claude vision accepts up to ~5MB per image; larger files are expensive
+// (we pay per token) and open the door to billing-drain DoS.
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -29,18 +34,26 @@ export async function POST(request: Request) {
       );
     }
 
+    if (file.size > MAX_PHOTO_BYTES) {
+      return NextResponse.json(
+        { error: `Файл слишком большой (максимум ${MAX_PHOTO_BYTES / 1024 / 1024} MB)` },
+        { status: 413 }
+      );
+    }
+
+    if (!ALLOWED_MIME.has(file.type)) {
+      return NextResponse.json(
+        { error: "Поддерживаются только JPEG, PNG, WEBP или GIF" },
+        { status: 415 }
+      );
+    }
+
     // Convert to base64
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
+    const mediaType = file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 
-    // Determine media type
-    const mediaType = file.type as
-      | "image/jpeg"
-      | "image/png"
-      | "image/webp"
-      | "image/gif";
-
-    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 30_000 });
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { notifyOrganization } from "@/lib/telegram";
+import { notifyOrganization, escapeTelegramHtml as esc } from "@/lib/telegram";
 import { sendComplianceReminderEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
@@ -65,7 +65,12 @@ export async function POST(request: Request) {
     // Send notifications per org
     for (const [orgId, products] of byOrg) {
       const list = products
-        .map((p) => `- ${p.product} (срок: ${new Date(p.expiryDate).toLocaleDateString("ru-RU")})`)
+        .map(
+          (p) =>
+            `- ${esc(p.product)} (срок: ${esc(
+              new Date(p.expiryDate).toLocaleDateString("ru-RU")
+            )})`
+        )
         .join("\n");
 
       const message =
