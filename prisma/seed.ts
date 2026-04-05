@@ -290,6 +290,229 @@ const journalTemplates = [
       { key: "correctiveAction", label: "Корректирующее действие", type: "text", required: false, showIf: { field: "vehicleCondition", equals: "unsatisfactory" } },
     ],
   },
+
+  // === Журнал здоровья персонала (СанПиН 2.3/2.4.3590-20, п. 2.3) ===
+  // Отдельно от гигиенического: фиксирует мед. книжку, ежедневный осмотр
+  // и температуру тела. Обязателен при приёме смены.
+  {
+    code: "health_check",
+    name: "Журнал здоровья персонала",
+    description: "Ежедневный контроль состояния здоровья сотрудников перед допуском к работе",
+    sortOrder: 12,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "employeeName", label: "Сотрудник", type: "employee", required: true },
+      { key: "bodyTemperature", label: "Температура тела (°C)", type: "number", required: true, step: 0.1 },
+      { key: "noFever", label: "Нет повышенной температуры", type: "boolean", required: true },
+      { key: "noCoughThroat", label: "Нет кашля / боли в горле", type: "boolean", required: true },
+      { key: "noRash", label: "Нет сыпи / гнойничковых поражений", type: "boolean", required: true },
+      { key: "medBookValid", label: "Мед. книжка действующая", type: "boolean", required: true },
+      { key: "medBookExpiry", label: "Срок действия мед. книжки", type: "date", required: false },
+      { key: "admittedToWork", label: "Допуск к работе", type: "select", required: true, options: [
+        { value: "admitted", label: "Допущен" },
+        { value: "suspended", label: "Отстранён" },
+      ]},
+      { key: "suspensionReason", label: "Причина отстранения", type: "text", required: false, showIf: { field: "admittedToWork", equals: "suspended" } },
+    ],
+  },
+
+  // === Контроль бактерицидной УФ-установки (СанПиН 3.3686-21) ===
+  // Часы наработки лампы, замена по ресурсу (обычно 8000 ч).
+  {
+    code: "uv_lamp_control",
+    name: "Контроль бактерицидной установки",
+    description: "Журнал учёта работы и замены бактерицидных УФ-ламп (рециркуляторов, облучателей)",
+    sortOrder: 13,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "lampLocation", label: "Помещение / объект", type: "text", required: true },
+      { key: "lampModel", label: "Модель установки", type: "text", required: false },
+      { key: "operatingHoursStart", label: "Показания счётчика на начало смены (ч)", type: "number", required: true, step: 1 },
+      { key: "operatingHoursEnd", label: "Показания счётчика на конец смены (ч)", type: "number", required: true, step: 1 },
+      { key: "maxHours", label: "Ресурс лампы (ч)", type: "number", required: false, step: 1 },
+      { key: "lampReplaced", label: "Лампа заменена", type: "boolean", required: true },
+      { key: "replacementDate", label: "Дата замены", type: "date", required: false, showIf: { field: "lampReplaced", equals: true } },
+      { key: "newLampSerial", label: "Серийный номер новой лампы", type: "text", required: false, showIf: { field: "lampReplaced", equals: true } },
+      { key: "responsiblePerson", label: "Ответственный", type: "employee", required: true },
+    ],
+  },
+
+  // === Контроль фритюрных жиров (СанПиН 2.3/2.4.3590-20, п. 8.6.6) ===
+  // Органолептика + кислотное число; при превышении норм масло подлежит замене.
+  // Кислотное число > 1.0 мг KOH/г или изменение цвета/запаха → обязательная замена.
+  {
+    code: "fryer_oil",
+    name: "Журнал фритюрных жиров",
+    description: "Контроль качества фритюрных жиров: органолептика, кислотное число, замена",
+    sortOrder: 14,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "equipmentId", label: "Фритюрница", type: "equipment", required: true },
+      { key: "oilType", label: "Тип масла", type: "select", required: true, options: [
+        { value: "vegetable", label: "Растительное" },
+        { value: "palm", label: "Пальмовое" },
+        { value: "blend", label: "Смесь" },
+        { value: "other", label: "Другое" },
+      ]},
+      { key: "color", label: "Цвет", type: "select", required: true, options: [
+        { value: "light_yellow", label: "Светло-жёлтый" },
+        { value: "yellow", label: "Жёлтый" },
+        { value: "dark_yellow", label: "Тёмно-жёлтый" },
+        { value: "brown", label: "Коричневый" },
+      ]},
+      { key: "smell", label: "Запах", type: "select", required: true, options: [
+        { value: "normal", label: "Характерный для масла" },
+        { value: "rancid", label: "Прогорклый / посторонний" },
+      ]},
+      { key: "foamHeight", label: "Высота пены (мм)", type: "number", required: false, step: 1 },
+      { key: "acidNumber", label: "Кислотное число (мг KOH/г)", type: "number", required: false, step: 0.01 },
+      { key: "temperature", label: "Температура масла (°C)", type: "number", required: false, step: 1 },
+      { key: "oilChanged", label: "Произведена замена масла", type: "boolean", required: true },
+      { key: "changeReason", label: "Причина замены", type: "select", required: false, showIf: { field: "oilChanged", equals: true }, options: [
+        { value: "acid_number", label: "Превышение кислотного числа" },
+        { value: "color", label: "Изменение цвета" },
+        { value: "smell", label: "Прогорклый запах" },
+        { value: "scheduled", label: "Плановая замена" },
+      ]},
+      { key: "responsiblePerson", label: "Ответственный", type: "employee", required: true },
+    ],
+  },
+
+  // === График генеральных уборок (СанПиН 2.3/2.4.3590-20, п. 2.12) ===
+  // Не реже 1 раза в месяц; фиксирует плановую и фактическую даты.
+  {
+    code: "general_cleaning",
+    name: "График генеральных уборок",
+    description: "Планирование и учёт генеральных уборок производственных помещений",
+    sortOrder: 15,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "location", label: "Помещение", type: "text", required: true },
+      { key: "scheduledDate", label: "Плановая дата", type: "date", required: true },
+      { key: "actualDate", label: "Фактическая дата", type: "date", required: false },
+      { key: "scopeOfWork", label: "Объём работ", type: "text", required: true },
+      { key: "detergent", label: "Моющее средство", type: "text", required: true },
+      { key: "disinfectant", label: "Дезинфицирующее средство", type: "text", required: false },
+      { key: "concentration", label: "Концентрация раствора (%)", type: "number", required: false, step: 0.1 },
+      { key: "result", label: "Результат", type: "select", required: true, options: [
+        { value: "completed", label: "Выполнено" },
+        { value: "postponed", label: "Перенесено" },
+        { value: "partial", label: "Выполнено частично" },
+      ]},
+      { key: "postponedReason", label: "Причина переноса / замечания", type: "text", required: false, showIf: { field: "result", equals: "postponed" } },
+      { key: "nextScheduledDate", label: "Следующая плановая уборка", type: "date", required: false },
+      { key: "performedBy", label: "Ответственный за выполнение", type: "employee", required: true },
+      { key: "inspectedBy", label: "Проверил", type: "employee", required: false },
+    ],
+  },
+
+  // === Учёт дезинфицирующих средств (СанПиН 2.3/2.4.3590-20, п. 2.13) ===
+  // Приход / расход / утилизация дез. средств, остатки на складе.
+  {
+    code: "disinfectant_usage",
+    name: "Учёт дезинфицирующих средств",
+    description: "Приход, расход и утилизация моющих и дезинфицирующих средств",
+    sortOrder: 16,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "productName", label: "Наименование средства", type: "text", required: true },
+      { key: "operation", label: "Операция", type: "select", required: true, options: [
+        { value: "receipt", label: "Приход" },
+        { value: "issue", label: "Расход" },
+        { value: "disposal", label: "Утилизация" },
+      ]},
+      { key: "quantity", label: "Количество", type: "number", required: true, step: 0.01 },
+      { key: "unit", label: "Единица измерения", type: "select", required: true, options: [
+        { value: "l", label: "л" },
+        { value: "ml", label: "мл" },
+        { value: "kg", label: "кг" },
+        { value: "g", label: "г" },
+        { value: "pcs", label: "шт" },
+      ]},
+      { key: "supplier", label: "Поставщик", type: "text", required: false, showIf: { field: "operation", equals: "receipt" } },
+      { key: "batchNumber", label: "Номер партии", type: "text", required: false },
+      { key: "expiryDate", label: "Срок годности", type: "date", required: false },
+      { key: "purpose", label: "Куда / для чего", type: "text", required: false, showIf: { field: "operation", equals: "issue" } },
+      { key: "disposalReason", label: "Причина утилизации", type: "text", required: false, showIf: { field: "operation", equals: "disposal" } },
+      { key: "balanceAfter", label: "Остаток после операции", type: "number", required: false, step: 0.01 },
+      { key: "responsiblePerson", label: "Ответственный", type: "employee", required: true },
+    ],
+  },
+
+  // === График ППО оборудования ===
+  // Профилактическое обслуживание, отличается от поверки (equipment_calibration).
+  {
+    code: "equipment_maintenance",
+    name: "График ППО оборудования",
+    description: "Планово-предупредительное обслуживание и техническое состояние оборудования",
+    sortOrder: 17,
+    isMandatorySanpin: false,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "equipmentId", label: "Оборудование", type: "equipment", required: true },
+      { key: "maintenanceType", label: "Вид обслуживания", type: "select", required: true, options: [
+        { value: "daily", label: "Ежедневное" },
+        { value: "weekly", label: "Еженедельное" },
+        { value: "monthly", label: "Ежемесячное" },
+        { value: "quarterly", label: "Ежеквартальное" },
+        { value: "annual", label: "Годовое" },
+        { value: "repair", label: "Ремонт" },
+      ]},
+      { key: "scheduledDate", label: "Плановая дата", type: "date", required: true },
+      { key: "actualDate", label: "Фактическая дата", type: "date", required: false },
+      { key: "workPerformed", label: "Выполненные работы", type: "text", required: true },
+      { key: "partsReplaced", label: "Заменённые узлы / запчасти", type: "text", required: false },
+      { key: "servicedByType", label: "Исполнитель", type: "select", required: true, options: [
+        { value: "internal", label: "Собственный персонал" },
+        { value: "external", label: "Сервисная организация" },
+      ]},
+      { key: "servicedByName", label: "ФИО / организация", type: "text", required: true },
+      { key: "result", label: "Результат", type: "select", required: true, options: [
+        { value: "ok", label: "Исправно" },
+        { value: "needs_repair", label: "Требуется ремонт" },
+        { value: "out_of_order", label: "Не эксплуатировать" },
+      ]},
+      { key: "defectsFound", label: "Выявленные дефекты", type: "text", required: false, showIf: { field: "result", equals: "needs_repair" } },
+      { key: "nextMaintenanceDate", label: "Следующее обслуживание", type: "date", required: false },
+    ],
+  },
+
+  // === Журнал инструктажей (охрана труда + санитарные требования) ===
+  // СанПиН 2.3/2.4.3590-20 п. 2.2 требует гигиенического обучения.
+  {
+    code: "staff_training",
+    name: "Журнал инструктажей",
+    description: "Учёт вводных, первичных, повторных и внеплановых инструктажей сотрудников",
+    sortOrder: 18,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [
+      { key: "employeeName", label: "Сотрудник", type: "employee", required: true },
+      { key: "trainingType", label: "Вид инструктажа", type: "select", required: true, options: [
+        { value: "introductory", label: "Вводный" },
+        { value: "primary", label: "Первичный на рабочем месте" },
+        { value: "repeated", label: "Повторный" },
+        { value: "unscheduled", label: "Внеплановый" },
+        { value: "targeted", label: "Целевой" },
+        { value: "hygiene", label: "Гигиеническое обучение" },
+      ]},
+      { key: "topic", label: "Тема инструктажа", type: "text", required: true },
+      { key: "program", label: "Программа / документ", type: "text", required: false },
+      { key: "trainerName", label: "Кто провёл инструктаж", type: "text", required: true },
+      { key: "durationMinutes", label: "Длительность (мин)", type: "number", required: false, step: 5 },
+      { key: "unscheduledReason", label: "Причина внепланового / целевого", type: "text", required: false, showIf: { field: "trainingType", equals: "unscheduled" } },
+      { key: "knowledgeCheck", label: "Проверка знаний", type: "select", required: true, options: [
+        { value: "passed", label: "Пройдена" },
+        { value: "failed", label: "Не пройдена — повторный инструктаж" },
+      ]},
+      { key: "nextTrainingDate", label: "Дата следующего инструктажа", type: "date", required: false },
+    ],
+  },
 ];
 
 async function main() {
