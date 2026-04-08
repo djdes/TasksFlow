@@ -32,6 +32,7 @@ model Organization {
   productionPlans  ProductionPlan[]
   changeRequests   ChangeRequest[]
   staffCompetencies StaffCompetency[]
+  journalDocuments  JournalDocument[]
 }
 
 model User {
@@ -84,6 +85,7 @@ model JournalTemplate {
   isMandatorySanpin   Boolean        @default(false)
   isMandatoryHaccp    Boolean        @default(false)
   entries             JournalEntry[]
+  documents           JournalDocument[]
 }
 
 model Product {
@@ -266,4 +268,46 @@ model StaffCompetency {
 
   @@unique([organizationId, userId, skill])
   @@index([organizationId, userId])
+}
+
+// ============================================================
+// Document-based journals (grid: employees × days)
+// Each JournalDocument = one printable document covering a date range.
+// JournalDocumentEntry = one cell in the grid (employee + date + data).
+// ============================================================
+
+model JournalDocument {
+  id                String                @id @default(cuid())
+  templateId        String
+  template          JournalTemplate       @relation(fields: [templateId], references: [id])
+  organizationId    String
+  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title             String                // e.g. "Гигиенический журнал"
+  dateFrom          DateTime
+  dateTo            DateTime
+  responsibleUserId String?
+  responsibleTitle  String?               // e.g. "Управляющий"
+  status            String                @default("active") // active | closed
+  autoFill          Boolean               @default(false)
+  createdById       String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  entries           JournalDocumentEntry[]
+
+  @@index([organizationId, templateId, status])
+  @@index([organizationId, dateFrom])
+}
+
+model JournalDocumentEntry {
+  id            String          @id @default(cuid())
+  documentId    String
+  document      JournalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  employeeId    String
+  date          DateTime        // the specific day (date-only, truncated to midnight)
+  data          Json            // template-specific: { healthStatus: "healthy"|"day_off"|..., temperatureAbove37: false }
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([documentId, employeeId, date])
+  @@index([documentId, date])
 }
