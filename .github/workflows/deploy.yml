@@ -4,6 +4,9 @@ on:
   push:
     branches: [master]
 
+env:
+  APP_DIR: app
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -31,19 +34,17 @@ jobs:
             --exclude=test.txt \
             .
 
-      - name: Deploy via SSH
+      - name: Prepare app directory
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
           username: ${{ secrets.DEPLOY_SSH_USER }}
           password: ${{ secrets.DEPLOY_SSH_PASS }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
-          script_stop: true
-          timeout: 600s
           script: |
-            echo "=== Connected to server ==="
-            pwd
-            ls -la
+            mkdir -p ${{ env.APP_DIR }}
+            # Backup .env if it exists
+            [ -f ${{ env.APP_DIR }}/.env ] && cp ${{ env.APP_DIR }}/.env ${{ env.APP_DIR }}/.env.bak || true
 
       - name: Upload tarball via SCP
         uses: appleboy/scp-action@v0.1.7
@@ -53,7 +54,7 @@ jobs:
           password: ${{ secrets.DEPLOY_SSH_PASS }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
           source: deploy.tar
-          target: ./
+          target: ${{ env.APP_DIR }}
 
       - name: Run deploy commands
         uses: appleboy/ssh-action@v1
@@ -62,13 +63,16 @@ jobs:
           username: ${{ secrets.DEPLOY_SSH_USER }}
           password: ${{ secrets.DEPLOY_SSH_PASS }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
-          script_stop: true
           timeout: 600s
           command_timeout: 10m
           script: |
             set -e
+            cd ${{ env.APP_DIR }}
+
             echo "=== Extracting tarball ==="
             tar xf deploy.tar && rm deploy.tar
+            # Restore .env from backup if it exists
+            [ -f .env.bak ] && cp .env.bak .env || true
 
             echo "=== Installing dependencies ==="
             source ~/.nvm/nvm.sh 2>/dev/null || true
