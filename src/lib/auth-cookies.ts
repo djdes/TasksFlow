@@ -1,7 +1,5 @@
 export const CUSTOM_SESSION_COOKIE =
-  process.env.NODE_ENV === "production"
-    ? "__Secure-haccp-online.session-token"
-    : "haccp-online.session-token";
+  "haccp-online.session-token";
 
 export const LEGACY_SESSION_COOKIES = [
   "__Secure-next-auth.session-token",
