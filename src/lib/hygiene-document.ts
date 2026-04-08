@@ -14,14 +14,15 @@ export type HygieneEntryData = {
 };
 
 export const HYGIENE_REGISTER_PERIODICITY = [
-  "Ежесменно перед началом смены для сотрудников производства.",
-  "Для остальных сотрудников компании контроль проводится при посещении производственного участка.",
+  "Ежесменно перед началом смены – всех для сотрудников производства;",
+  "для других сотрудников компании – при визите на производственный участок (однократно перед проходом на участок)",
 ];
 
 export const HYGIENE_REGISTER_NOTES = [
-  "В журнал вносятся результаты осмотра и опроса сотрудников о состоянии здоровья, признаках респираторных и кишечных заболеваний.",
-  "Отмечаются сведения об отсутствии гнойничковых заболеваний кожи рук, открытых поверхностей тела и других факторов недопуска.",
-  "Список работников, отражённых в журнале на день осмотра, должен соответствовать числу работников, находящихся в смене.",
+  "осмотра и опроса сотрудников о состоянии здоровья (проявлениях респираторных и кишечных заболеваний и инфекций);",
+  "опроса сотрудников об отсутствии заболеваний верхних дыхательных путей и гнойничковых заболеваний кожи рук и открытых поверхностей тела;",
+  "опроса сотрудников о контактах с людьми, перенесшими желудочно-кишечные инфекции, с больными и вернувшимися из другой страны или субъекта РФ;",
+  "осмотра рук и открытых частей тела сотрудников на наличие гнойничковых заболеваний и нарушений целостности кожного покрова.",
 ];
 
 export const HYGIENE_REGISTER_LEGEND = [
@@ -48,6 +49,27 @@ const MONTH_NAMES = [
 ];
 
 const WEEKDAY_SHORT = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+export const HYGIENE_EXAMPLE_ORGANIZATION = 'ООО "Тест"';
+export const HYGIENE_EXAMPLE_TITLE = "ГИГИЕНИЧЕСКИЙ ЖУРНАЛ";
+export const HYGIENE_EXAMPLE_MONTH = "Апрель 2026 г.";
+export const HYGIENE_EXAMPLE_DATE_FROM = "2026-04-01";
+export const HYGIENE_EXAMPLE_DATE_TO = "2026-04-15";
+
+export type HygieneExampleEmployee = {
+  id: string;
+  number: number;
+  name: string;
+  position: string;
+};
+
+export const HYGIENE_EXAMPLE_EMPLOYEES: HygieneExampleEmployee[] = [
+  { id: "sample-1", number: 1, name: "Иванов И.И.", position: "Управляющий" },
+  { id: "sample-2", number: 2, name: "Петров П.П.", position: "Шеф-повар" },
+  { id: "sample-3", number: 3, name: "Сидоров С.С.", position: "Повар" },
+  { id: "sample-4", number: 4, name: "Антонов А.А.", position: "Повар" },
+  { id: "sample-5", number: 5, name: "Борисов Б.Б.", position: "Официант" },
+];
 
 export function coerceUtcDate(value: Date | string): Date {
   if (value instanceof Date) {
@@ -94,6 +116,10 @@ export function buildDateKeys(dateFrom: Date | string, dateTo: Date | string): s
   }
 
   return dates;
+}
+
+export function buildFixedHygieneExampleDateKeys(): string[] {
+  return buildDateKeys(HYGIENE_EXAMPLE_DATE_FROM, HYGIENE_EXAMPLE_DATE_TO);
 }
 
 export function formatMonthLabel(dateFrom: Date | string, dateTo: Date | string): string {
@@ -158,4 +184,35 @@ export function normalizeHygieneEntryData(data: unknown): HygieneEntryData {
     status,
     temperatureAbove37,
   };
+}
+
+export function buildExampleHygieneEntryMap(): Record<string, HygieneEntryData> {
+  const dateKeys = buildFixedHygieneExampleDateKeys();
+  const map: Record<string, HygieneEntryData> = {};
+
+  function setEntry(
+    employeeId: string,
+    dayNumber: number,
+    data: HygieneEntryData
+  ) {
+    const dateKey = dateKeys[dayNumber - 1];
+    if (!dateKey) return;
+    map[`${employeeId}:${dateKey}`] = data;
+  }
+
+  for (const employee of HYGIENE_EXAMPLE_EMPLOYEES) {
+    for (let day = 1; day <= 8; day += 1) {
+      setEntry(employee.id, day, {
+        status: "healthy",
+        temperatureAbove37: false,
+      });
+    }
+  }
+
+  setEntry("sample-1", 2, {
+    status: "day_off",
+    temperatureAbove37: null,
+  });
+
+  return map;
 }
