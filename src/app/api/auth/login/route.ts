@@ -25,9 +25,25 @@ function appendSessionCookie(
   );
 }
 
+function appendExpiredCookie(response: NextResponse, cookieName: string) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+
+  response.headers.append(
+    "Set-Cookie",
+    `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${secure}`
+  );
+}
+
 function clearLegacyCookies(response: NextResponse) {
+  for (const cookieName of LEGACY_SESSION_COOKIES) {
+    appendExpiredCookie(response, cookieName);
+  }
+
   for (const cookieName of [...ALL_SESSION_COOKIES, ...LEGACY_AUX_COOKIES]) {
     if (cookieName === CUSTOM_SESSION_COOKIE) {
+      continue;
+    }
+    if (LEGACY_SESSION_COOKIES.includes(cookieName)) {
       continue;
     }
     response.cookies.set(cookieName, "", {
