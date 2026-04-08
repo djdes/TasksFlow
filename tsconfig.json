@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "next-auth": ["./src/lib/next-auth-shim.ts"]
     }
   },
   "include": [
