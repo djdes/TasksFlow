@@ -59,18 +59,6 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-async function clearLegacyCaches() {
-  if ("serviceWorker" in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map((registration) => registration.unregister()));
-  }
-
-  if ("caches" in window) {
-    const cacheKeys = await caches.keys();
-    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-  }
-}
-
 export function Header() {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -99,11 +87,6 @@ export function Header() {
         if (cancelled) return;
 
         setBuildInfo(serverBuild);
-
-        if (serverBuild.buildId && serverBuild.buildId !== CLIENT_BUILD_ID) {
-          await clearLegacyCaches();
-          window.location.reload();
-        }
       } catch (error) {
         console.error("Failed to sync build info:", error);
       }
