@@ -37,6 +37,11 @@ import {
   getCleaningDocumentTitle,
 } from "@/lib/cleaning-document";
 import {
+  FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+  getFinishedProductCreatePeriodBounds,
+  getFinishedProductDocumentTitle,
+} from "@/lib/finished-product-document";
+import {
   getHealthDocumentTitle,
   getHygieneCreatePeriodBounds,
   getHygieneDocumentTitle,
@@ -82,6 +87,8 @@ export function CreateDocumentDialog({
         ? getClimateCreatePeriodBounds()
         : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
         ? getCleaningCreatePeriodBounds()
+        : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+        ? getFinishedProductCreatePeriodBounds()
         : getHygieneCreatePeriodBounds(),
     [templateCode]
   );
@@ -103,6 +110,8 @@ export function CreateDocumentDialog({
         ? getClimateDocumentTitle()
         : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
         ? getCleaningDocumentTitle()
+        : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+        ? getFinishedProductDocumentTitle()
         : templateName
   );
   const [dateFrom, setDateFrom] = useState(defaultPeriod.dateFrom);

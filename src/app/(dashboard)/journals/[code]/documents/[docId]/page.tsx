@@ -19,6 +19,11 @@ import {
   normalizeCleaningDocumentConfig,
   normalizeCleaningEntryData,
 } from "@/lib/cleaning-document";
+import { FinishedProductDocumentClient } from "@/components/journals/finished-product-document-client";
+import {
+  FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+  normalizeFinishedProductDocumentConfig,
+} from "@/lib/finished-product-document";
 import { HealthDocumentClient } from "@/components/journals/health-document-client";
 import { HygieneDocumentClient } from "@/components/journals/hygiene-document-client";
 import {
@@ -198,6 +203,21 @@ export default async function JournalDocumentPage({
           date: toDateKey(entry.date),
           data: normalizeCleaningEntryData(entry.data),
         }))}
+      />
+    );
+  }
+
+  if (document.template.code === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <FinishedProductDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        dateTo={toDateKey(document.dateTo)}
+        status={document.status}
+        initialConfig={normalizeFinishedProductDocumentConfig(document.config)}
+        users={employees}
       />
     );
   }

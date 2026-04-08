@@ -16,6 +16,8 @@ import {
   getJournalDocumentPeriodLabel,
   isDocumentTemplate,
 } from "@/lib/journal-document-helpers";
+import { FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE } from "@/lib/finished-product-document";
+import { FinishedProductDocumentsClient } from "@/components/journals/finished-product-documents-client";
 
 export const dynamic = "force-dynamic";
 
@@ -198,6 +200,36 @@ export default async function JournalDocumentsPage({
   }
 
   if (isDocumentTemplate(code)) {
+    if (code === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+      const existingDocument = await db.journalDocument.findFirst({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { dateFrom: "asc" },
+      });
+
+      if (!existingDocument && activeTab === "active") {
+        const currentDate = new Date();
+        const year = currentDate.getUTCFullYear();
+        const month = currentDate.getUTCMonth();
+        const dateFrom = new Date(Date.UTC(year, month, 1));
+        const dateTo = new Date(Date.UTC(year, month + 1, 0));
+
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: getJournalDocumentDefaultTitle(code),
+            dateFrom,
+            dateTo,
+            createdById: session.user.id,
+          },
+        });
+      }
+    }
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -206,6 +238,25 @@ export default async function JournalDocumentsPage({
       },
       orderBy: { dateFrom: "asc" },
     });
+
+    if (code === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+      return (
+        <FinishedProductDocumentsClient
+          activeTab={activeTab}
+          templateCode={code}
+          templateName={template.name}
+          users={orgUsers}
+          documents={documents.map((document) => ({
+            id: document.id,
+            title: document.title || getJournalDocumentDefaultTitle(code),
+            status: document.status as "active" | "closed",
+            responsibleTitle: document.responsibleTitle,
+            periodLabel: getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
+            startedAtLabel: document.dateFrom.toLocaleDateString("ru-RU"),
+          }))}
+        />
+      );
+    }
 
     return (
       <HygieneDocumentsClient
