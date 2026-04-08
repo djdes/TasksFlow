@@ -29,6 +29,46 @@ type Props = {
   initialEntries: { employeeId: string; date: string; data: HygieneEntryData }[];
 };
 
+function HygieneHeader({ pageLabel }: { pageLabel: string }) {
+  return (
+    <table className="hygiene-header w-full border-collapse">
+      <tbody>
+        <tr>
+          <td
+            rowSpan={2}
+            className="w-[270px] border border-black px-8 py-8 text-center text-[22px] font-semibold"
+          >
+            {HYGIENE_EXAMPLE_ORGANIZATION}
+          </td>
+          <td className="border border-black px-8 py-4 text-center text-[18px] uppercase">
+            СИСТЕМА ХАССП
+          </td>
+          <td
+            rowSpan={2}
+            className="w-[170px] border border-black px-8 py-8 text-center text-[18px] uppercase"
+          >
+            {pageLabel}
+          </td>
+        </tr>
+        <tr>
+          <td className="border border-black px-8 py-4 text-center text-[17px] italic uppercase">
+            ГИГИЕНИЧЕСКИЙ ЖУРНАЛ
+          </td>
+        </tr>
+        <tr>
+          <td className="border border-black px-6 py-5 text-center text-[18px] font-semibold">
+            Периодичность контроля
+          </td>
+          <td colSpan={2} className="border border-black px-8 py-5 text-[16px] leading-7">
+            <div>{HYGIENE_REGISTER_PERIODICITY[0]}</div>
+            <div>{HYGIENE_REGISTER_PERIODICITY[1]}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 function makeCellKey(employeeId: string, dateKey: string) {
   return `${employeeId}:${dateKey}`;
 }
@@ -36,6 +76,8 @@ function makeCellKey(employeeId: string, dateKey: string) {
 export function HygieneDocumentClient({}: Props) {
   const dateKeys = buildFixedHygieneExampleDateKeys();
   const entryMap = buildExampleHygieneEntryMap();
+  const firstNote = HYGIENE_REGISTER_NOTES[0];
+  const continuedNotes = HYGIENE_REGISTER_NOTES.slice(1);
 
   return (
     <div className="bg-white text-black">
@@ -62,6 +104,16 @@ export function HygieneDocumentClient({}: Props) {
             max-width: none !important;
             padding: 0 !important;
             margin: 0 !important;
+          }
+
+          .hygiene-page {
+            break-after: page;
+            page-break-after: always;
+          }
+
+          .hygiene-page:last-child {
+            break-after: auto;
+            page-break-after: auto;
           }
 
           .hygiene-grid {
@@ -94,167 +146,172 @@ export function HygieneDocumentClient({}: Props) {
             font-size: 10px !important;
             line-height: 1.2 !important;
           }
+
+          .hygiene-second-page-content {
+            margin-top: 120px !important;
+          }
         }
       `}</style>
 
       <div className="hygiene-sheet mx-auto max-w-[1720px] px-8 py-6">
-        <h1 className="hygiene-title mb-10 text-[60px] font-semibold tracking-[-0.04em]">
-          Гигиенический журнал
-        </h1>
+        <div className="hygiene-page">
+          <h1 className="hygiene-title mb-10 text-[60px] font-semibold tracking-[-0.04em]">
+            Гигиенический журнал
+          </h1>
 
-        <div className="mx-auto max-w-[1380px]">
-          <table className="hygiene-header mb-10 w-full border-collapse">
-            <tbody>
-              <tr>
-                <td
-                  rowSpan={2}
-                  className="w-[270px] border border-black px-8 py-8 text-center text-[22px] font-semibold"
-                >
-                  {HYGIENE_EXAMPLE_ORGANIZATION}
-                </td>
-                <td className="border border-black px-8 py-4 text-center text-[18px] uppercase">
-                  СИСТЕМА ХАССП
-                </td>
-                <td
-                  rowSpan={2}
-                  className="w-[170px] border border-black px-8 py-8 text-center text-[18px] uppercase"
-                >
-                  СТР. 1 ИЗ 1
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-black px-8 py-4 text-center text-[17px] italic uppercase">
-                  ГИГИЕНИЧЕСКИЙ ЖУРНАЛ
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-black px-6 py-5 text-center text-[18px] font-semibold">
-                  Периодичность контроля
-                </td>
-                <td colSpan={2} className="border border-black px-8 py-5 text-[16px] leading-7">
-                  <div>{HYGIENE_REGISTER_PERIODICITY[0]}</div>
-                  <div>{HYGIENE_REGISTER_PERIODICITY[1]}</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="mx-auto max-w-[1380px]">
+            <div className="mb-10">
+              <HygieneHeader pageLabel="СТР. 1 ИЗ 2" />
+            </div>
 
-          <div className="mb-6 text-center text-[34px] font-bold uppercase">
-            {HYGIENE_EXAMPLE_TITLE}
-          </div>
+            <div className="mb-6 text-center text-[34px] font-bold uppercase">
+              {HYGIENE_EXAMPLE_TITLE}
+            </div>
 
-          <table className="hygiene-grid w-full border-collapse text-[15px]">
-            <thead>
-              <tr className="bg-[#f2f2f2]">
-                <th className="w-[72px] border border-black p-2 text-center font-semibold" rowSpan={2}>
-                  № п/п
-                </th>
-                <th className="w-[230px] border border-black p-2 text-center font-semibold" rowSpan={2}>
-                  Ф.И.О. работника
-                </th>
-                <th className="w-[290px] border border-black p-2 text-center font-semibold" rowSpan={2}>
-                  Должность
-                </th>
-                <th className="border border-black p-2 text-center text-[16px] font-semibold" colSpan={15}>
-                  Месяц {HYGIENE_EXAMPLE_MONTH}
-                </th>
-              </tr>
-              <tr className="bg-[#f2f2f2]">
-                {dateKeys.map((dateKey) => (
-                  <th key={dateKey} className="w-[58px] border border-black p-2 text-center font-semibold">
-                    {getDayNumber(dateKey)}
+            <table className="hygiene-grid w-full border-collapse text-[15px]">
+              <thead>
+                <tr className="bg-[#f2f2f2]">
+                  <th
+                    className="w-[72px] border border-black p-2 text-center font-semibold"
+                    rowSpan={2}
+                  >
+                    № п/п
                   </th>
+                  <th
+                    className="w-[230px] border border-black p-2 text-center font-semibold"
+                    rowSpan={2}
+                  >
+                    Ф.И.О. работника
+                  </th>
+                  <th
+                    className="w-[290px] border border-black p-2 text-center font-semibold"
+                    rowSpan={2}
+                  >
+                    Должность
+                  </th>
+                  <th
+                    className="border border-black p-2 text-center text-[16px] font-semibold"
+                    colSpan={15}
+                  >
+                    Месяц {HYGIENE_EXAMPLE_MONTH}
+                  </th>
+                </tr>
+                <tr className="bg-[#f2f2f2]">
+                  {dateKeys.map((dateKey) => (
+                    <th
+                      key={dateKey}
+                      className="w-[58px] border border-black p-2 text-center font-semibold"
+                    >
+                      {getDayNumber(dateKey)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {HYGIENE_EXAMPLE_EMPLOYEES.map((employee) => (
+                  <Fragment key={employee.id}>
+                    <tr>
+                      <td
+                        rowSpan={2}
+                        className="border border-black p-2 text-center align-middle"
+                      >
+                        {employee.number}
+                      </td>
+                      <td className="border border-black p-2 text-center">
+                        {employee.name || ""}
+                      </td>
+                      <td className="border border-black p-2 text-center">
+                        {employee.position || ""}
+                      </td>
+                      {dateKeys.map((dateKey) => {
+                        const entry = entryMap[makeCellKey(employee.id, dateKey)];
+                        const statusMeta = getStatusMeta(entry?.status);
+
+                        return (
+                          <td
+                            key={`${employee.id}:${dateKey}:status`}
+                            className="border border-black p-2 text-center"
+                          >
+                            {statusMeta?.code || ""}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <td colSpan={2} className="border border-black p-2 text-center">
+                        Температура сотрудника более 37°C?
+                      </td>
+                      {dateKeys.map((dateKey) => {
+                        const entry = entryMap[makeCellKey(employee.id, dateKey)];
+
+                        let value = "";
+                        if (entry?.temperatureAbove37 === false) value = "нет";
+                        if (entry?.temperatureAbove37 === true) value = "да";
+                        if (
+                          entry?.temperatureAbove37 === null &&
+                          entry?.status === "day_off"
+                        ) {
+                          value = "-";
+                        }
+
+                        return (
+                          <td
+                            key={`${employee.id}:${dateKey}:temp`}
+                            className="border border-black p-2 text-center"
+                          >
+                            {value}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </Fragment>
                 ))}
-              </tr>
-            </thead>
 
-            <tbody>
-              {HYGIENE_EXAMPLE_EMPLOYEES.map((employee) => (
-                <Fragment key={employee.id}>
-                  <tr>
-                    <td rowSpan={2} className="border border-black p-2 text-center align-middle">
-                      {employee.number}
-                    </td>
-                    <td className="border border-black p-2 text-center">
-                      {employee.name || ""}
-                    </td>
-                    <td className="border border-black p-2 text-center">
-                      {employee.position || ""}
-                    </td>
-                    {dateKeys.map((dateKey) => {
-                      const entry = entryMap[makeCellKey(employee.id, dateKey)];
-                      const statusMeta = getStatusMeta(entry?.status);
+                <tr>
+                  <td colSpan={2} className="border border-black p-2 text-center">
+                    Должность ответственного за контроль
+                  </td>
+                  <td className="border border-black p-2 text-center">Управляющий</td>
+                  {dateKeys.map((dateKey) => (
+                    <td key={`blank:${dateKey}`} className="border border-black p-2" />
+                  ))}
+                </tr>
+              </tbody>
+            </table>
 
-                      return (
-                        <td
-                          key={`${employee.id}:${dateKey}:status`}
-                          className="border border-black p-2 text-center"
-                        >
-                          {statusMeta?.code || ""}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                  <tr>
-                    <td colSpan={2} className="border border-black p-2 text-center">
-                      Температура сотрудника более 37°C?
-                    </td>
-                    {dateKeys.map((dateKey) => {
-                      const entry = entryMap[makeCellKey(employee.id, dateKey)];
+            <div className="hygiene-notes mt-8 text-[16px] leading-7">
+              <div className="font-semibold">В журнал регистрируются результаты:</div>
+              <div>- {firstNote}</div>
+            </div>
+          </div>
+        </div>
 
-                      let value = "";
-                      if (entry?.temperatureAbove37 === false) value = "нет";
-                      if (entry?.temperatureAbove37 === true) value = "да";
-                      if (
-                        entry?.temperatureAbove37 === null &&
-                        entry?.status === "day_off"
-                      ) {
-                        value = "-";
-                      }
+        <div className="hygiene-page">
+          <div className="mx-auto max-w-[1380px]">
+            <HygieneHeader pageLabel="СТР. 2 ИЗ 2" />
 
-                      return (
-                        <td
-                          key={`${employee.id}:${dateKey}:temp`}
-                          className="border border-black p-2 text-center"
-                        >
-                          {value}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                </Fragment>
-              ))}
-
-              <tr>
-                <td colSpan={2} className="border border-black p-2 text-center">
-                  Должность ответственного за контроль
-                </td>
-                <td className="border border-black p-2 text-center">Управляющий</td>
-                {dateKeys.map((dateKey) => (
-                  <td key={`blank:${dateKey}`} className="border border-black p-2" />
+            <div className="hygiene-second-page-content">
+              <div className="hygiene-notes text-[16px] leading-7">
+                {continuedNotes.map((note) => (
+                  <div key={note}>- {note}</div>
                 ))}
-              </tr>
-            </tbody>
-          </table>
-
-          <div className="hygiene-notes mt-8 text-[16px] leading-7">
-            <div className="font-semibold">В журнал регистрируются результаты:</div>
-            {HYGIENE_REGISTER_NOTES.map((note) => (
-              <div key={note}>- {note}</div>
-            ))}
-          </div>
-
-          <div className="hygiene-reminder mt-6 text-[16px] font-semibold leading-7">
-            Список работников, отмеченных в журнале на день осмотра, должен соответствовать числу работников на этот день в смену
-          </div>
-
-          <div className="hygiene-legend mt-8 text-[16px] leading-7">
-            <div className="font-semibold italic underline">Условные обозначения:</div>
-            {HYGIENE_REGISTER_LEGEND.map((item) => (
-              <div key={item} className="italic">
-                {item}
               </div>
-            ))}
+
+              <div className="hygiene-reminder mt-8 text-[16px] font-semibold leading-7">
+                Список работников, отмеченных в журнале на день осмотра, должен соответствовать
+                числу работников на этот день в смену
+              </div>
+
+              <div className="hygiene-legend mt-10 text-[16px] leading-7">
+                <div className="font-semibold italic underline">Условные обозначения:</div>
+                {HYGIENE_REGISTER_LEGEND.map((item) => (
+                  <div key={item} className="italic">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
