@@ -86,6 +86,9 @@ jobs:
             echo "=== Pushing schema to DB ==="
             npx prisma db push 2>&1 | tail -5
 
+            echo "=== Seeding journal templates ==="
+            npx tsx prisma/seed.ts 2>&1 | tail -20
+
             echo "=== Building ==="
             npm run build 2>&1 | tail -10
 
