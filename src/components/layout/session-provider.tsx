@@ -7,5 +7,9 @@ export function AuthSessionProvider({
 }: {
   children: React.ReactNode;
 }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
+      {children}
+    </SessionProvider>
+  );
 }

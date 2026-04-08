@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -44,12 +43,6 @@ const navItems = [
 const CLIENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 const CLIENT_BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME ?? "";
 
-type BuildInfo = {
-  buildId: string;
-  buildTime: string;
-  fullBuildId: string;
-};
-
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -62,42 +55,10 @@ function getInitials(name: string): string {
 export function Header() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [buildInfo, setBuildInfo] = useState<BuildInfo>({
-    buildId: CLIENT_BUILD_ID,
-    buildTime: CLIENT_BUILD_TIME,
-    fullBuildId: CLIENT_BUILD_ID,
-  });
 
   const userName = session?.user?.name ?? "Пользователь";
   const userEmail = session?.user?.email ?? "";
   const organizationName = session?.user?.organizationName ?? "";
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function syncBuildInfo() {
-      try {
-        const response = await fetch(`/api/build-info?ts=${Date.now()}`, {
-          cache: "no-store",
-          headers: { "cache-control": "no-store" },
-        });
-        if (!response.ok) return;
-
-        const serverBuild = (await response.json()) as BuildInfo;
-        if (cancelled) return;
-
-        setBuildInfo(serverBuild);
-      } catch (error) {
-        console.error("Failed to sync build info:", error);
-      }
-    }
-
-    syncBuildInfo();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-30 border-b bg-white">
@@ -105,14 +66,14 @@ export function Header() {
         <Link href="/dashboard" className="shrink-0 flex items-baseline gap-1.5">
           <span className="text-lg font-bold text-primary">HACCP-Online</span>
           <span
-            className="text-[10px] text-muted-foreground/60 font-mono"
-            title={`Build: ${buildInfo.buildTime}`}
+            className="text-[10px] font-mono text-muted-foreground/60"
+            title={`Build: ${CLIENT_BUILD_TIME}`}
           >
-            {buildInfo.buildId}
+            {CLIENT_BUILD_ID}
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 flex-1">
+        <nav className="hidden flex-1 items-center gap-1 md:flex">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -170,7 +131,7 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
-        <span className="hidden lg:inline text-sm text-muted-foreground">
+        <span className="hidden text-sm text-muted-foreground lg:inline">
           {organizationName}
         </span>
 

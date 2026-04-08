@@ -6,20 +6,47 @@ import { db } from "@/lib/db";
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
-    maxAge: 365 * 24 * 60 * 60, // 1 year
-    updateAge: 24 * 60 * 60, // refresh token every 24h
+    maxAge: 365 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
   jwt: {
-    maxAge: 365 * 24 * 60 * 60, // 1 year
+    maxAge: 365 * 24 * 60 * 60,
   },
   cookies: {
     sessionToken: {
-      name: "next-auth.session-token",
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-haccp-online.session-token"
+          : "haccp-online.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        maxAge: 365 * 24 * 60 * 60, // 1 year
+        maxAge: 365 * 24 * 60 * 60,
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Host-haccp-online.csrf-token"
+          : "haccp-online.csrf-token",
+      options: {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-haccp-online.callback-url"
+          : "haccp-online.callback-url",
+      options: {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
         secure: process.env.NODE_ENV === "production",
       },
     },
@@ -71,7 +98,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const u = user as unknown as {
+        const u = user as {
           id: string;
           role: string;
           organizationId: string;
@@ -86,10 +113,10 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.organizationId = token.organizationId;
-        session.user.organizationName = token.organizationName;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.organizationId = token.organizationId as string;
+        session.user.organizationName = token.organizationName as string;
       }
       return session;
     },
