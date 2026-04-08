@@ -68,7 +68,7 @@ jobs:
           timeout: 600s
           command_timeout: 10m
           script: |
-            set -e
+            set -eo pipefail
             cd ${{ env.APP_DIR }}
 
             echo "=== Extracting tarball ==="

@@ -10,6 +10,12 @@ import {
   CLIMATE_DOCUMENT_TEMPLATE_CODE,
   getDefaultClimateDocumentConfig,
 } from "@/lib/climate-document";
+import {
+  buildCleaningConfigFromAreas,
+  CLEANING_DOCUMENT_TEMPLATE_CODE,
+  getDefaultCleaningResponsibleIds,
+} from "@/lib/cleaning-document";
+import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -50,17 +56,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const {
-    templateCode,
-    title,
-    dateFrom,
-    dateTo,
-    responsibleUserId,
-    responsibleTitle,
-  } = body;
+  const { templateCode, title, dateFrom, dateTo, responsibleUserId, responsibleTitle } = body;
 
   if (!templateCode || !dateFrom || !dateTo) {
-    return NextResponse.json({ error: "templateCode, dateFrom, dateTo обязательны" }, { status: 400 });
+    return NextResponse.json(
+      { error: "templateCode, dateFrom, dateTo обязательны" },
+      { status: 400 }
+    );
   }
 
   const template = await db.journalTemplate.findUnique({ where: { code: templateCode } });
@@ -87,12 +89,55 @@ export async function POST(request: Request) {
         )
       : undefined;
 
+  const cleaningUsers =
+    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? await db.user.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            role: true,
+          },
+          orderBy: [{ role: "asc" }, { id: "asc" }],
+        })
+      : [];
+
+  const cleaningAreas =
+    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? await db.area.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: { name: "asc" },
+        })
+      : [];
+
+  const cleaningDefaults =
+    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? getDefaultCleaningResponsibleIds(cleaningUsers)
+      : null;
+
   const initialConfig =
     templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
       ? coldEquipmentConfig
       : templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE
       ? getDefaultClimateDocumentConfig()
+      : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? buildCleaningConfigFromAreas(cleaningAreas, cleaningDefaults || undefined)
       : undefined;
+
+  const cleaningControlRole =
+    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? cleaningUsers.find(
+          (user) => user.id === (responsibleUserId || cleaningDefaults?.responsibleControlUserId)
+        )?.role || null
+      : null;
 
   const doc = await db.journalDocument.create({
     data: {
@@ -102,8 +147,16 @@ export async function POST(request: Request) {
       config: initialConfig ?? undefined,
       dateFrom: new Date(dateFrom),
       dateTo: new Date(dateTo),
-      responsibleUserId: responsibleUserId || null,
-      responsibleTitle: responsibleTitle || null,
+      responsibleUserId:
+        responsibleUserId ||
+        (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+          ? cleaningDefaults?.responsibleControlUserId || null
+          : null),
+      responsibleTitle:
+        responsibleTitle ||
+        (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+          ? getHygienePositionLabel(cleaningControlRole || "owner")
+          : null),
       createdById: session.user.id,
     },
   });

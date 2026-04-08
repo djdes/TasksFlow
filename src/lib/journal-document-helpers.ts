@@ -38,10 +38,12 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   if (templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
     return getColdEquipmentDocumentTitle();
   }
+  if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
+    return getClimateDocumentTitle();
+  }
   if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
     return getCleaningDocumentTitle();
   }
-  if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) return getClimateDocumentTitle();
   return getHygieneDocumentTitle();
 }
 

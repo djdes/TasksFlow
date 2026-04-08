@@ -88,17 +88,14 @@ export function CreateDocumentDialog({
   const isStaffJournal = isStaffDocumentTemplate(templateCode);
   const isCleaningJournal = templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE;
   const responsibleTitleOptions = useMemo(
-    () =>
-      isStaffJournal
-        ? getStaffJournalResponsibleTitleOptions(users)
-        : [],
+    () => (isStaffJournal ? getStaffJournalResponsibleTitleOptions(users) : []),
     [isStaffJournal, users]
   );
 
   const [title, setTitle] = useState(
     templateCode === "hygiene"
       ? getHygieneDocumentTitle()
-        : templateCode === "health_check"
+      : templateCode === "health_check"
         ? getHealthDocumentTitle()
         : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
         ? getColdEquipmentDocumentTitle()
@@ -124,9 +121,7 @@ export function CreateDocumentDialog({
       const selectedResponsibleUser =
         responsibleUserId ||
         users.find((user) =>
-          isStaffJournal
-            ? getHygienePositionLabel(user.role) === responsibleTitle
-            : false
+          isStaffJournal ? getHygienePositionLabel(user.role) === responsibleTitle : false
         )?.id;
 
       const res = await fetch("/api/journal-documents", {
@@ -216,7 +211,9 @@ export function CreateDocumentDialog({
 
               <div className="space-y-3 rounded-3xl border border-[#dfe1ec] px-8 py-6">
                 <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
-                <div className="text-[22px] leading-[1.35] text-black">{HYGIENE_PERIODICITY_TEXT}</div>
+                <div className="text-[22px] leading-[1.35] text-black">
+                  {HYGIENE_PERIODICITY_TEXT}
+                </div>
               </div>
 
               <div className="hidden">

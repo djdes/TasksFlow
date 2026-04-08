@@ -13,6 +13,12 @@ import {
   normalizeClimateDocumentConfig,
   normalizeClimateEntryData,
 } from "@/lib/climate-document";
+import { CleaningDocumentClient } from "@/components/journals/cleaning-document-client";
+import {
+  CLEANING_DOCUMENT_TEMPLATE_CODE,
+  normalizeCleaningDocumentConfig,
+  normalizeCleaningEntryData,
+} from "@/lib/cleaning-document";
 import { HealthDocumentClient } from "@/components/journals/health-document-client";
 import { HygieneDocumentClient } from "@/components/journals/hygiene-document-client";
 import {
@@ -32,7 +38,7 @@ export default async function JournalDocumentPage({
   const { code, docId } = await params;
   const session = await requireAuth();
 
-  const [document, organization, employees] = await Promise.all([
+  const [document, organization, employees, areas] = await Promise.all([
     db.journalDocument.findUnique({
       where: { id: docId },
       include: {
@@ -53,6 +59,13 @@ export default async function JournalDocumentPage({
       },
       select: { id: true, name: true, role: true, email: true },
       orderBy: [{ role: "asc" }, { name: "asc" }],
+    }),
+    db.area.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -159,6 +172,31 @@ export default async function JournalDocumentPage({
           employeeId: entry.employeeId,
           date: toDateKey(entry.date),
           data: normalizeClimateEntryData(entry.data),
+        }))}
+      />
+    );
+  }
+
+  if (document.template.code === CLEANING_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <CleaningDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        dateTo={toDateKey(document.dateTo)}
+        responsibleTitle={document.responsibleTitle}
+        responsibleUserId={document.responsibleUserId}
+        status={document.status}
+        autoFill={document.autoFill}
+        employees={enrichedEmployees}
+        areas={areas}
+        config={normalizeCleaningDocumentConfig(document.config)}
+        initialEntries={document.entries.map((entry) => ({
+          id: entry.id,
+          employeeId: entry.employeeId,
+          date: toDateKey(entry.date),
+          data: normalizeCleaningEntryData(entry.data),
         }))}
       />
     );

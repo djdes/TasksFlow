@@ -2,8 +2,6 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { HygieneDocumentsClient } from "@/components/journals/hygiene-documents-client";
-import { COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/cold-equipment-document";
-import { CLIMATE_DOCUMENT_TEMPLATE_CODE } from "@/lib/climate-document";
 import {
   buildDateKeys,
   buildExampleHygieneEntryMap,
@@ -206,11 +204,7 @@ export default async function JournalDocumentsPage({
         templateId: template.id,
         status: activeTab,
       },
-      orderBy:
-        code === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
-        code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
-          ? { dateFrom: "desc" }
-          : { dateFrom: "asc" },
+      orderBy: { dateFrom: "asc" },
     });
 
     return (

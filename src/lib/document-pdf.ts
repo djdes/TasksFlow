@@ -3,30 +3,13 @@ import { jsPDF } from "jspdf";
 import autoTable, { type CellDef, type RowInput } from "jspdf-autotable";
 import { db } from "@/lib/db";
 import {
-  COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
-  getColdEquipmentDocumentTitle,
-  getColdEquipmentFilePrefix,
-  normalizeColdEquipmentDocumentConfig,
-  normalizeColdEquipmentEntryData,
-  type ColdEquipmentDocumentConfig,
-} from "@/lib/cold-equipment-document";
-import {
-  getClimateDateLabel,
-  getClimateDocumentTitle,
-  getClimateFilePrefix,
-  getClimatePeriodicityText,
-  normalizeClimateDocumentConfig,
-  normalizeClimateEntryData,
-  type ClimateDocumentConfig,
-} from "@/lib/climate-document";
-import {
   buildHygieneExampleEmployees,
   buildDateKeys,
   formatMonthLabel,
   getDayNumber,
   getHealthDocumentTitle,
   getHygieneDocumentTitle,
-  getHygieneUserPositionLabel,
+  getHygienePositionLabel,
   getStatusMeta,
   getWeekdayShort,
   HYGIENE_REGISTER_LEGEND,
@@ -166,10 +149,7 @@ function drawTitle(doc: jsPDF, title: string) {
   doc.text(title, 14, 15);
 }
 
-function getPrintableUsers(
-  users: { id: string; name: string; role: string; email?: string | null }[],
-  employeeIds: string[]
-) {
+function getPrintableUsers(users: { id: string; name: string; role: string }[], employeeIds: string[]) {
   const uniqueIds = [...new Set(employeeIds)];
   return users
     .filter((user) => uniqueIds.includes(user.id))
@@ -177,7 +157,7 @@ function getPrintableUsers(
       id: user.id,
       number: index + 1,
       name: user.name,
-      position: getHygieneUserPositionLabel(user),
+      position: getHygienePositionLabel(user.role),
     }));
 }
 
@@ -484,370 +464,6 @@ function drawHealthPdf(doc: jsPDF, params: {
   doc.text(HEALTH_REGISTER_REMINDER, 14, cursorY);
 }
 
-function drawClimateDocumentMeta(doc: jsPDF, params: {
-  organizationName: string;
-  title: string;
-  dateFrom: Date | string;
-  dateTo: Date | string;
-}) {
-  const x = 36;
-  const y = 28;
-  const leftWidth = 34;
-  const middleWidth = 92;
-  const rightWidth = 38;
-  const height = 22;
-
-  doc.setLineWidth(0.25);
-  doc.rect(x, y, leftWidth + middleWidth + rightWidth, height);
-  doc.line(x + leftWidth, y, x + leftWidth, y + height);
-  doc.line(x + leftWidth + middleWidth, y, x + leftWidth + middleWidth, y + height);
-  doc.line(x + leftWidth, y + 11, x + leftWidth + middleWidth + rightWidth, y + 11);
-
-  doc.setFont("JournalUnicode", "bold");
-  drawCenteredText(doc, params.organizationName, x, y, leftWidth, height, leftWidth - 4);
-
-  doc.setFont("JournalUnicode", "normal");
-  drawCenteredText(doc, "СИСТЕМА ХАССП", x + leftWidth, y, middleWidth, 11, middleWidth - 8);
-  doc.setFont("JournalUnicode", "italic");
-  drawCenteredText(doc, params.title.toUpperCase(), x + leftWidth, y + 11, middleWidth, 11, middleWidth - 8);
-
-  doc.setFont("JournalUnicode", "bold");
-  doc.text(`Начат ${getClimateDateLabel(params.dateFrom)}`, x + leftWidth + middleWidth + 2, y + 6);
-  doc.text(`Окончен ${getClimateDateLabel(params.dateTo)}`, x + leftWidth + middleWidth + 2, y + 16);
-}
-
-function buildClimateNormsBody(config: ClimateDocumentConfig): RowInput[] {
-  const rooms = config.rooms.filter(
-    (room) => room.temperature.enabled || room.humidity.enabled
-  );
-
-  return [
-    ...rooms.map((room) => [
-      {
-        content: room.name,
-        styles: { halign: "left" as const, valign: "middle" as const, fontStyle: "bold" as const },
-      },
-      room.temperature.enabled
-        ? `от ${room.temperature.min ?? "—"}°C до ${room.temperature.max ?? "—"}°C`
-        : "—",
-      room.humidity.enabled
-        ? `от ${room.humidity.min ?? "—"}% до ${room.humidity.max ?? "—"}%`
-        : "—",
-    ]),
-    [
-      {
-        content: "Частота контроля",
-        colSpan: 2,
-        styles: { halign: "left" as const, valign: "middle" as const, fontStyle: "bold" as const },
-      },
-      getClimatePeriodicityText(config),
-    ],
-  ];
-}
-
-function buildClimateHead(config: ClimateDocumentConfig): RowInput[] {
-  const rooms = config.rooms.filter(
-    (room) => room.temperature.enabled || room.humidity.enabled
-  );
-  const totalColumns = rooms.reduce((sum, room) => {
-    const metricCount = Number(room.temperature.enabled) + Number(room.humidity.enabled);
-    return sum + config.controlTimes.length * metricCount;
-  }, 0);
-
-  return [
-    [
-      { content: "Дата", rowSpan: 3, styles: { halign: "center", valign: "middle" } },
-      {
-        content: "Точки контроля",
-        colSpan: totalColumns,
-        styles: { halign: "center", valign: "middle" },
-      },
-      { content: "Ответственный", rowSpan: 3, styles: { halign: "center", valign: "middle" } },
-    ],
-    rooms.flatMap((room) => {
-      const metricCount = Number(room.temperature.enabled) + Number(room.humidity.enabled);
-      return [
-        {
-          content: room.name,
-          colSpan: config.controlTimes.length * metricCount,
-          styles: { halign: "center", valign: "middle" },
-        },
-      ];
-    }),
-    rooms.flatMap((room) =>
-      config.controlTimes.flatMap((time) => {
-        const cells: CellDef[] = [];
-        if (room.temperature.enabled) {
-          cells.push({ content: `${time}\nT, °C`, styles: { halign: "center" } });
-        }
-        if (room.humidity.enabled) {
-          cells.push({ content: `${time}\nВВ, %`, styles: { halign: "center" } });
-        }
-        return cells;
-      })
-    ),
-  ];
-}
-
-function buildClimateBody(params: {
-  config: ClimateDocumentConfig;
-  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
-  users: { id: string; name: string; role: string }[];
-}): RowInput[] {
-  const rooms = params.config.rooms.filter(
-    (room) => room.temperature.enabled || room.humidity.enabled
-  );
-  const userMap = Object.fromEntries(params.users.map((user) => [user.id, user]));
-
-  return params.entries.map((entry) => {
-    const normalized = normalizeClimateEntryData(entry.data);
-    const user = userMap[entry.employeeId];
-    const responsible = user
-      ? `${user.name}${normalized.responsibleTitle ? `\n${normalized.responsibleTitle}` : ""}`
-      : normalized.responsibleTitle || "";
-
-    return [
-      centerCell(getClimateDateLabel(entry.date)),
-      ...rooms.flatMap((room) =>
-        params.config.controlTimes.flatMap((time) => {
-          const measurement = normalized.measurements[room.id]?.[time];
-          const cells: CellDef[] = [];
-          if (room.temperature.enabled) {
-            cells.push(centerCell(measurement?.temperature != null ? String(measurement.temperature) : ""));
-          }
-          if (room.humidity.enabled) {
-            cells.push(centerCell(measurement?.humidity != null ? String(measurement.humidity) : ""));
-          }
-          return cells;
-        })
-      ),
-      {
-        content: responsible,
-        styles: { halign: "center" as const, valign: "middle" as const },
-      },
-    ];
-  });
-}
-
-function drawClimatePdf(doc: jsPDF, params: {
-  organizationName: string;
-  title: string;
-  dateFrom: Date | string;
-  dateTo: Date | string;
-  config: ClimateDocumentConfig;
-  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
-  users: { id: string; name: string; role: string }[];
-}) {
-  drawTitle(doc, getClimateDocumentTitle());
-  drawClimateDocumentMeta(doc, params);
-
-  autoTable(doc, {
-    startY: 56,
-    head: [[
-      { content: "Нормы условий", styles: { halign: "center", valign: "middle" } },
-      { content: "Температура (T)", styles: { halign: "center", valign: "middle" } },
-      { content: "Влажность воздуха (ВВ)", styles: { halign: "center", valign: "middle" } },
-    ]],
-    body: buildClimateNormsBody(params.config),
-    theme: "grid",
-    styles: {
-      font: "JournalUnicode",
-      fontSize: 8,
-      cellPadding: 1.8,
-      lineColor: [0, 0, 0],
-      textColor: [0, 0, 0],
-      overflow: "linebreak",
-    },
-    headStyles: {
-      fillColor: [242, 242, 242],
-      textColor: [0, 0, 0],
-      fontStyle: "bold",
-      lineColor: [0, 0, 0],
-    },
-    margin: { left: 36, right: 36 },
-  });
-
-  const normsEndY =
-    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 90;
-
-  doc.setFont("JournalUnicode", "bold");
-  doc.setFontSize(14);
-  doc.text(params.title.toUpperCase(), doc.internal.pageSize.getWidth() / 2, normsEndY + 12, {
-    align: "center",
-  });
-
-  autoTable(doc, {
-    startY: normsEndY + 18,
-    head: buildClimateHead(params.config),
-    body: buildClimateBody(params),
-    theme: "grid",
-    styles: {
-      font: "JournalUnicode",
-      fontSize: 7.4,
-      cellPadding: 1.2,
-      lineColor: [0, 0, 0],
-      textColor: [0, 0, 0],
-      overflow: "linebreak",
-    },
-    headStyles: {
-      fillColor: [242, 242, 242],
-      textColor: [0, 0, 0],
-      fontStyle: "bold",
-      lineColor: [0, 0, 0],
-    },
-    margin: { left: 14, right: 14 },
-  });
-}
-
-function buildColdEquipmentResponsibleCodes(
-  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[]
-) {
-  const codeMap: Record<string, string> = {};
-
-  [...new Set(entries.map((entry) => entry.employeeId))]
-    .filter(Boolean)
-    .forEach((employeeId, index) => {
-      codeMap[employeeId] = `С${index + 1}`;
-    });
-
-  return codeMap;
-}
-
-function buildColdEquipmentHead(dateKeys: string[], monthLabel: string): RowInput[] {
-  return [
-    [
-      { content: "☐", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-      {
-        content: "Наименование или номер ХО",
-        rowSpan: 2,
-        styles: { halign: "center", valign: "middle" },
-      },
-      {
-        content: `Месяц ${monthLabel}`,
-        colSpan: dateKeys.length,
-        styles: { halign: "center", valign: "middle" },
-      },
-    ],
-    dateKeys.map((dateKey) => ({
-      content: `${getDayNumber(dateKey)}\n${getWeekdayShort(dateKey)}.`,
-      styles: { halign: "center" },
-    })),
-  ];
-}
-
-function buildColdEquipmentBody(params: {
-  config: ColdEquipmentDocumentConfig;
-  dateKeys: string[];
-  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
-  users: { id: string; name: string; role: string }[];
-  responsibleUserId: string | null;
-}) {
-  const entryMap = Object.fromEntries(
-    params.entries.map((entry) => [toDateKey(entry.date), normalizeColdEquipmentEntryData(entry.data)])
-  ) as Record<string, ReturnType<typeof normalizeColdEquipmentEntryData>>;
-
-  const codeMap = buildColdEquipmentResponsibleCodes(params.entries);
-  const body: RowInput[] = [
-    [
-      centerCell(""),
-      {
-        content: "Температура, °C",
-        colSpan: params.dateKeys.length + 1,
-        styles: { halign: "center", valign: "middle", fontStyle: "bold" as const },
-      },
-    ],
-  ];
-
-  params.config.equipment.forEach((item) => {
-    body.push([
-      centerCell(""),
-      {
-        content: item.name,
-        styles: { halign: "left" as const, valign: "middle" as const },
-      },
-      ...params.dateKeys.map((dateKey) => {
-        const value = entryMap[dateKey]?.temperatures[item.id];
-        return centerCell(value != null ? String(value) : "");
-      }),
-    ]);
-  });
-
-  const userMap = Object.fromEntries(params.users.map((user) => [user.id, user]));
-  const legend = Object.entries(codeMap)
-    .map(([employeeId, code]) => {
-      const user = userMap[employeeId];
-      return user ? `${code} - ${user.name}` : null;
-    })
-    .filter((item): item is string => item !== null)
-    .join("\n");
-
-  body.push([
-    centerCell(""),
-    {
-      content: legend ? `Ответственный за снятие показателей\n${legend}` : "Ответственный за снятие показателей",
-      styles: { halign: "left" as const, valign: "middle" as const, fontSize: 6.7 },
-    },
-    ...params.dateKeys.map((dateKey) => {
-      const entry = params.entries.find((item) => toDateKey(item.date) === dateKey);
-      const employeeId = entry?.employeeId || params.responsibleUserId || "";
-      return centerCell(employeeId ? codeMap[employeeId] || "" : "");
-    }),
-  ]);
-
-  return body;
-}
-
-function drawColdEquipmentPdf(doc: jsPDF, params: {
-  organizationName: string;
-  title: string;
-  monthLabel: string;
-  dateKeys: string[];
-  config: ColdEquipmentDocumentConfig;
-  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
-  users: { id: string; name: string; role: string }[];
-  responsibleUserId: string | null;
-}) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-
-  drawTitle(doc, getColdEquipmentDocumentTitle());
-  drawJournalHeader(doc, {
-    organizationName: params.organizationName,
-    pageLabel: "СТР. 1 ИЗ 1",
-    journalLabel: "Журнал контроля температурного режима холодильного и морозильного оборудования",
-    withPeriodicity: false,
-  });
-
-  doc.setFont("JournalUnicode", "bold");
-  doc.setFontSize(13);
-  doc.text(params.title.toUpperCase(), pageWidth / 2, 70, { align: "center" });
-
-  autoTable(doc, {
-    startY: 76,
-    head: buildColdEquipmentHead(params.dateKeys, params.monthLabel),
-    body: buildColdEquipmentBody(params),
-    theme: "grid",
-    styles: {
-      font: "JournalUnicode",
-      fontSize: 6.2,
-      cellPadding: 1.1,
-      lineColor: [0, 0, 0],
-      textColor: [0, 0, 0],
-      overflow: "linebreak",
-    },
-    headStyles: {
-      fillColor: [242, 242, 242],
-      textColor: [0, 0, 0],
-      fontStyle: "bold",
-      lineColor: [0, 0, 0],
-    },
-    margin: { left: 14, right: 14 },
-    columnStyles: {
-      0: { cellWidth: 7 },
-      1: { cellWidth: 78 },
-    },
-  });
-}
-
 function renderWrappedTextBlock(
   doc: jsPDF,
   lines: string[],
@@ -894,7 +510,7 @@ export async function generateJournalDocumentPdf(params: {
       organizationId,
       isActive: true,
     },
-    select: { id: true, name: true, role: true, email: true },
+    select: { id: true, name: true, role: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 
@@ -913,8 +529,6 @@ export async function generateJournalDocumentPdf(params: {
   const monthLabel = formatMonthLabel(document.dateFrom, document.dateTo);
   const employeeIds = document.entries.map((entry) => entry.employeeId);
   const entryMap: Record<string, Record<string, unknown>> = {};
-  const coldEquipmentConfig = normalizeColdEquipmentDocumentConfig(document.config);
-  const climateConfig = normalizeClimateDocumentConfig(document.config);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -931,35 +545,6 @@ export async function generateJournalDocumentPdf(params: {
       employeeIds,
       entryMap,
     });
-  } else if (templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
-    drawColdEquipmentPdf(doc, {
-      organizationName,
-      title: document.title || getColdEquipmentDocumentTitle(),
-      monthLabel,
-      dateKeys,
-      config: coldEquipmentConfig,
-      entries: document.entries.map((entry) => ({
-        employeeId: entry.employeeId,
-        date: entry.date,
-        data: (entry.data as Record<string, unknown>) || {},
-      })),
-      users,
-      responsibleUserId: document.responsibleUserId,
-    });
-  } else if (templateCode === "climate_control") {
-    drawClimatePdf(doc, {
-      organizationName,
-      title: document.title || getClimateDocumentTitle(),
-      dateFrom: document.dateFrom,
-      dateTo: document.dateTo,
-      config: climateConfig,
-      entries: document.entries.map((entry) => ({
-        employeeId: entry.employeeId,
-        date: entry.date,
-        data: (entry.data as Record<string, unknown>) || {},
-      })),
-      users,
-    });
   } else {
     drawHygienePdf(doc, {
       organizationName,
@@ -974,14 +559,7 @@ export async function generateJournalDocumentPdf(params: {
   }
 
   const buffer = Buffer.from(doc.output("arraybuffer"));
-  const prefix =
-    templateCode === "health_check"
-      ? "health-journal"
-      : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
-        ? getColdEquipmentFilePrefix()
-      : templateCode === "climate_control"
-        ? getClimateFilePrefix()
-        : "hygiene-journal";
+  const prefix = templateCode === "health_check" ? "health-journal" : "hygiene-journal";
 
   return {
     buffer,
