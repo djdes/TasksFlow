@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -60,6 +59,11 @@ type HeaderProps = {
 
 export function Header({ userName, userEmail, organizationName }: HeaderProps) {
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b bg-white">
@@ -154,7 +158,7 @@ export function Header({ userName, userEmail, organizationName }: HeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 size-4" />
               Выйти
             </DropdownMenuItem>
