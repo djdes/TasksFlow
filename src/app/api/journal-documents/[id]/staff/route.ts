@@ -64,6 +64,20 @@ export async function POST(
   const defaultData = getDefaultEntryDataForTemplate(document.template.code);
 
   if (action === "apply_auto_fill") {
+    const allRows = users.flatMap((user) =>
+      dateKeys.map((dateKey) => ({
+        documentId,
+        employeeId: user.id,
+        date: new Date(dateKey),
+        data: defaultData,
+      }))
+    );
+
+    const created = await db.journalDocumentEntry.createMany({
+      data: allRows,
+      skipDuplicates: true,
+    });
+
     const rowsToUpdate = document.entries.filter((entry) => isEntryDataEmpty(entry.data));
 
     await Promise.all(
@@ -75,7 +89,7 @@ export async function POST(
       )
     );
 
-    return NextResponse.json({ updated: rowsToUpdate.length });
+    return NextResponse.json({ updated: rowsToUpdate.length, created: created.count });
   }
 
   let targetUserIds: string[] = [];
