@@ -18,6 +18,8 @@ jobs:
 
       - name: Create deploy tarball
         run: |
+          echo "${{ github.sha }}" > .build-sha
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .build-time
           tar cf deploy.tar \
             --exclude=node_modules \
             --exclude=.next \

@@ -1,18 +1,34 @@
 import type { NextConfig } from "next";
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
 
-function getGitCommit(): string {
+function getBuildId(): string {
+  // CI writes .build-sha before tarball
   try {
-    return execSync("git rev-parse --short HEAD").toString().trim();
+    const sha = readFileSync(".build-sha", "utf-8").trim();
+    return sha.slice(0, 7);
   } catch {
-    return "dev";
+    // Fallback: local dev with git
+    try {
+      return execSync("git rev-parse --short HEAD").toString().trim();
+    } catch {
+      return "dev";
+    }
+  }
+}
+
+function getBuildTime(): string {
+  try {
+    return readFileSync(".build-time", "utf-8").trim();
+  } catch {
+    return new Date().toISOString();
   }
 }
 
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_BUILD_ID: getGitCommit(),
-    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+    NEXT_PUBLIC_BUILD_ID: getBuildId(),
+    NEXT_PUBLIC_BUILD_TIME: getBuildTime(),
   },
 };
 
