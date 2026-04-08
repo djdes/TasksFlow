@@ -52,23 +52,106 @@ const WEEKDAY_SHORT = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 export const HYGIENE_EXAMPLE_ORGANIZATION = 'ООО "Тест"';
 export const HYGIENE_EXAMPLE_TITLE = "ГИГИЕНИЧЕСКИЙ ЖУРНАЛ";
-export const HYGIENE_EXAMPLE_MONTH = "Апрель 2026 г.";
-export const HYGIENE_EXAMPLE_DATE_FROM = "2026-04-01";
-export const HYGIENE_EXAMPLE_DATE_TO = "2026-04-15";
+export const HYGIENE_EXAMPLE_MONTH = "Апрель 2025 г.";
+export const HYGIENE_EXAMPLE_DATE_FROM = "2025-04-01";
+export const HYGIENE_EXAMPLE_DATE_TO = "2025-04-15";
 
 export type HygieneExampleEmployee = {
   id: string;
   number: number;
-  name: string;
-  position: string;
+  name: string | null;
+  position: string | null;
 };
 
 export const HYGIENE_EXAMPLE_EMPLOYEES: HygieneExampleEmployee[] = [
   { id: "sample-1", number: 1, name: "Иванов И.И.", position: "Управляющий" },
-  { id: "sample-2", number: 2, name: "Петров П.П.", position: "Шеф-повар" },
-  { id: "sample-3", number: 3, name: "Сидоров С.С.", position: "Повар" },
-  { id: "sample-4", number: 4, name: "Антонов А.А.", position: "Повар" },
-  { id: "sample-5", number: 5, name: "Борисов Б.Б.", position: "Официант" },
+  { id: "sample-2", number: 2, name: null, position: null },
+  { id: "sample-3", number: 3, name: null, position: null },
+  { id: "sample-4", number: 4, name: null, position: null },
+  { id: "sample-5", number: 5, name: null, position: null },
+  { id: "sample-6", number: 6, name: null, position: null },
+  { id: "sample-7", number: 7, name: null, position: null },
+];
+
+export type HygieneSampleDocument = {
+  id: string;
+  title: string;
+  status: "active" | "closed";
+  responsibleTitle: string | null;
+  periodLabel: string;
+};
+
+export const HYGIENE_SAMPLE_DOCUMENTS: HygieneSampleDocument[] = [
+  {
+    id: "sample-active-1",
+    title: "Гигиенический журнал",
+    status: "active",
+    responsibleTitle: "Управляющий",
+    periodLabel: "Апрель с 1 по 15",
+  },
+  {
+    id: "sample-closed-1",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Апрель с 16 по 30",
+  },
+  {
+    id: "sample-closed-2",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Май с 1 по 15",
+  },
+  {
+    id: "sample-closed-3",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Май с 16 по 31",
+  },
+  {
+    id: "sample-closed-4",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Июнь с 1 по 15",
+  },
+  {
+    id: "sample-closed-5",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Июнь с 16 по 30",
+  },
+  {
+    id: "sample-closed-6",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Июль с 1 по 15",
+  },
+  {
+    id: "sample-closed-7",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Июль с 16 по 31",
+  },
+  {
+    id: "sample-closed-8",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Август с 1 по 15",
+  },
+  {
+    id: "sample-closed-9",
+    title: "Гигиенический журнал",
+    status: "closed",
+    responsibleTitle: null,
+    periodLabel: "Август с 16 по 31",
+  },
 ];
 
 export function coerceUtcDate(value: Date | string): Date {
@@ -200,19 +283,46 @@ export function buildExampleHygieneEntryMap(): Record<string, HygieneEntryData> 
     map[`${employeeId}:${dateKey}`] = data;
   }
 
-  for (const employee of HYGIENE_EXAMPLE_EMPLOYEES) {
-    for (let day = 1; day <= 8; day += 1) {
-      setEntry(employee.id, day, {
-        status: "healthy",
-        temperatureAbove37: false,
-      });
+  function fillRange(
+    employeeId: string,
+    from: number,
+    to: number,
+    data: HygieneEntryData
+  ) {
+    for (let day = from; day <= to; day += 1) {
+      setEntry(employeeId, day, data);
     }
   }
 
-  setEntry("sample-1", 2, {
-    status: "day_off",
-    temperatureAbove37: null,
-  });
+  fillRange("sample-1", 1, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-1", 10, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-1", 12, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-2", 1, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-2", 10, 10, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-2", 11, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-3", 1, 6, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-3", 7, 8, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-3", 9, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-3", 10, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-3", 12, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-4", 1, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-4", 10, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-4", 12, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-5", 1, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-5", 10, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-5", 12, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-6", 1, 10, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-6", 11, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-6", 12, 15, { status: "healthy", temperatureAbove37: false });
+
+  fillRange("sample-7", 1, 9, { status: "healthy", temperatureAbove37: false });
+  fillRange("sample-7", 10, 11, { status: "day_off", temperatureAbove37: null });
+  fillRange("sample-7", 12, 15, { status: "healthy", temperatureAbove37: false });
 
   return map;
 }

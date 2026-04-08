@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface Props {
   templateCode: string;
   templateName: string;
   users: { id: string; name: string; role: string }[];
+  triggerClassName?: string;
+  triggerLabel?: string;
+  triggerIcon?: ReactNode;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,13 +37,19 @@ const ROLE_LABELS: Record<string, string> = {
   operator: "Оператор",
 };
 
-export function CreateDocumentDialog({ templateCode, templateName, users }: Props) {
+export function CreateDocumentDialog({
+  templateCode,
+  templateName,
+  users,
+  triggerClassName,
+  triggerLabel = "Создать документ",
+  triggerIcon,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Default period: full month for hygiene journal, otherwise half-month
   const now = new Date();
   const day = now.getDate();
   const year = now.getFullYear();
@@ -49,16 +59,21 @@ export function CreateDocumentDialog({ templateCode, templateName, users }: Prop
   let defaultTo: string;
 
   if (templateCode === "hygiene") {
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    defaultFrom = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-    defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    if (day <= 15) {
+      defaultFrom = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+      defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-15`;
+    } else {
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      defaultFrom = `${year}-${String(month + 1).padStart(2, "0")}-16`;
+      defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
   } else if (day <= 15) {
     defaultFrom = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-15`;
   } else {
     const lastDay = new Date(year, month + 1, 0).getDate();
     defaultFrom = `${year}-${String(month + 1).padStart(2, "0")}-16`;
-    defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-${lastDay}`;
+    defaultTo = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
   }
 
   const [dateFrom, setDateFrom] = useState(defaultFrom);
@@ -103,9 +118,9 @@ export function CreateDocumentDialog({ templateCode, templateName, users }: Prop
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Создать документ
+        <Button className={cn(triggerClassName)}>
+          {triggerIcon || <Plus className="size-4" />}
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -144,18 +159,23 @@ export function CreateDocumentDialog({ templateCode, templateName, users }: Prop
 
           <div className="space-y-2">
             <Label>Ответственный</Label>
-            <Select value={responsibleUserId} onValueChange={(v) => {
-              setResponsibleUserId(v);
-              const user = users.find((u) => u.id === v);
-              if (user) setResponsibleTitle(ROLE_LABELS[user.role] || user.role);
-            }}>
+            <Select
+              value={responsibleUserId}
+              onValueChange={(value) => {
+                setResponsibleUserId(value);
+                const user = users.find((item) => item.id === value);
+                if (user) {
+                  setResponsibleTitle(ROLE_LABELS[user.role] || user.role);
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Выберите ответственного..." />
               </SelectTrigger>
               <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name} ({ROLE_LABELS[u.role] || u.role})
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} ({ROLE_LABELS[user.role] || user.role})
                   </SelectItem>
                 ))}
               </SelectContent>

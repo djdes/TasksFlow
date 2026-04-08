@@ -1,15 +1,43 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, BookOpen } from "lucide-react";
+import { BookOpenText, Ellipsis, Plus } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 import { CreateDocumentDialog } from "@/components/journals/create-document-dialog";
+import { HYGIENE_SAMPLE_DOCUMENTS } from "@/lib/hygiene-document";
+
+function DemoDocumentRow({
+  href,
+  title,
+  responsibleTitle,
+  periodLabel,
+}: {
+  href: string;
+  title: string;
+  responsibleTitle: string | null;
+  periodLabel: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="grid grid-cols-[1.8fr_320px_290px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-colors hover:bg-[#fbfbff]"
+    >
+      <div className="text-[20px] font-semibold tracking-[-0.02em] text-black">{title}</div>
+      <div className="border-l border-[#e6e6f0] px-10">
+        <div className="text-[14px] text-[#84849a]">Должность ответственного</div>
+        <div className="mt-2 text-[18px] font-semibold text-black">{responsibleTitle || ""}</div>
+      </div>
+      <div className="border-l border-[#e6e6f0] px-10">
+        <div className="text-[14px] text-[#84849a]">Период</div>
+        <div className="mt-2 text-[18px] font-semibold text-black">{periodLabel}</div>
+      </div>
+      <div className="flex items-center justify-center text-[#5b66ff]">
+        <Ellipsis className="size-8" />
+      </div>
+    </Link>
+  );
+}
 
 export default async function JournalDocumentsPage({
   params,
@@ -32,16 +60,6 @@ export default async function JournalDocumentsPage({
 
   const activeTab = tab === "closed" ? "closed" : "active";
 
-  const documents = await db.journalDocument.findMany({
-    where: {
-      organizationId: session.user.organizationId,
-      templateId: template.id,
-      status: activeTab,
-    },
-    orderBy: { dateFrom: "desc" },
-  });
-
-  // Load org users for the create dialog
   const orgUsers = await db.user.findMany({
     where: {
       organizationId: session.user.organizationId,
@@ -51,46 +69,113 @@ export default async function JournalDocumentsPage({
     orderBy: { name: "asc" },
   });
 
-  function formatPeriod(from: Date, to: Date): string {
-    const months = [
-      "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
-    ];
-    const month = months[from.getMonth()] || "";
-    const dayFrom = from.getDate();
-    const dayTo = to.getDate();
-    return `${month} с ${dayFrom} по ${dayTo}`;
+  if (code === "hygiene") {
+    const visibleDocs = HYGIENE_SAMPLE_DOCUMENTS.filter((doc) => doc.status === activeTab);
+    const heading =
+      activeTab === "closed"
+        ? "Гигиенический журнал (Закрытые!!!)"
+        : "Гигиенический журнал";
+
+    return (
+      <div className="space-y-14">
+        <div className="flex items-center justify-between">
+          <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">
+            {heading}
+          </h1>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              asChild
+            >
+              <Link href="/sanpin">
+                <BookOpenText className="size-6" />
+                Инструкция
+              </Link>
+            </Button>
+            {activeTab === "active" && (
+              <CreateDocumentDialog
+                templateCode={code}
+                templateName={template.name}
+                users={orgUsers}
+                triggerClassName="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerLabel="Создать документ"
+                triggerIcon={<Plus className="size-7" />}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="border-b border-[#d9d9e4]">
+          <div className="flex gap-12 text-[18px]">
+            <Link
+              href={`/journals/${code}`}
+              className={`relative pb-5 ${
+                activeTab === "active"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  : "text-[#7c7c93]"
+              }`}
+            >
+              Активные
+            </Link>
+            <Link
+              href={`/journals/${code}?tab=closed`}
+              className={`relative pb-5 ${
+                activeTab === "closed"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  : "text-[#7c7c93]"
+              }`}
+            >
+              Закрытые
+            </Link>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {visibleDocs.map((doc) => (
+            <DemoDocumentRow
+              key={doc.id}
+              href={`/journals/${code}/documents/${doc.id}`}
+              title={doc.title}
+              responsibleTitle={doc.responsibleTitle}
+              periodLabel={doc.periodLabel}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  const canCreate = ["owner", "technologist"].includes(session.user.role);
+  const documents = await db.journalDocument.findMany({
+    where: {
+      organizationId: session.user.organizationId,
+      templateId: template.id,
+      status: activeTab,
+    },
+    orderBy: { dateFrom: "desc" },
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{template.name}</h1>
-          {template.description && (
-            <p className="mt-1 text-muted-foreground">{template.description}</p>
-          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
             <Link href="/sanpin">
-              <BookOpen className="size-4" />
+              <BookOpenText className="size-4" />
               Инструкция
             </Link>
           </Button>
-          {canCreate && (
-            <CreateDocumentDialog
-              templateCode={code}
-              templateName={template.name}
-              users={orgUsers}
-            />
-          )}
+          <CreateDocumentDialog
+            templateCode={code}
+            templateName={template.name}
+            users={orgUsers}
+          />
         </div>
       </div>
 
-      {/* Tabs: Активные / Закрытые */}
       <div className="flex border-b">
         <Link
           href={`/journals/${code}`}
@@ -114,49 +199,17 @@ export default async function JournalDocumentsPage({
         </Link>
       </div>
 
-      {/* Document list */}
-      {documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-          <FileText className="size-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">
-            {activeTab === "active" ? "Нет активных документов" : "Нет закрытых документов"}
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {activeTab === "active"
-              ? "Создайте первый документ для ведения журнала"
-              : "Закрытые документы появятся здесь"}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {documents.map((doc) => (
-            <Link key={doc.id} href={`/journals/${code}/documents/${doc.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <FileText className="size-5 text-muted-foreground" />
-                    <p className="font-medium">{doc.title}</p>
-                  </div>
-                  <div className="flex items-center gap-6 text-sm">
-                    {doc.responsibleTitle && (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Должность ответственного</p>
-                        <p className="font-medium">{doc.responsibleTitle}</p>
-                      </div>
-                    )}
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Период</p>
-                      <p className="font-medium">{formatPeriod(doc.dateFrom, doc.dateTo)}</p>
-                    </div>
-                    {doc.status === "closed" && <Badge variant="secondary">Закрыт</Badge>}
-                    <span className="text-muted-foreground">•••</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+      <div className="space-y-3">
+        {documents.map((doc) => (
+          <Link
+            key={doc.id}
+            href={`/journals/${code}/documents/${doc.id}`}
+            className="block rounded-xl border p-4"
+          >
+            {doc.title}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

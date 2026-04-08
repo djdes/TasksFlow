@@ -6,7 +6,14 @@ import { db } from "@/lib/db";
 import { HygieneDocumentClient } from "@/components/journals/hygiene-document-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { normalizeHygieneEntryData, toDateKey } from "@/lib/hygiene-document";
+import {
+  HYGIENE_EXAMPLE_DATE_FROM,
+  HYGIENE_EXAMPLE_DATE_TO,
+  HYGIENE_EXAMPLE_ORGANIZATION,
+  HYGIENE_EXAMPLE_TITLE,
+  normalizeHygieneEntryData,
+  toDateKey,
+} from "@/lib/hygiene-document";
 
 export default async function JournalDocumentPage({
   params,
@@ -40,15 +47,35 @@ export default async function JournalDocumentPage({
     }),
   ]);
 
+  const isHygieneSampleRoute = code === "hygiene" && !document;
+
   if (
-    !document ||
-    document.organizationId !== session.user.organizationId ||
-    document.template.code !== code
+    !isHygieneSampleRoute &&
+    (!document ||
+      document.organizationId !== session.user.organizationId ||
+      document.template.code !== code)
   ) {
     notFound();
   }
 
-  if (document.template.code === "hygiene") {
+  if (code === "hygiene" && !document) {
+    return (
+      <HygieneDocumentClient
+        documentId={docId}
+        title={HYGIENE_EXAMPLE_TITLE}
+        organizationName={organization?.name || HYGIENE_EXAMPLE_ORGANIZATION}
+        dateFrom={HYGIENE_EXAMPLE_DATE_FROM}
+        dateTo={HYGIENE_EXAMPLE_DATE_TO}
+        responsibleTitle="Управляющий"
+        responsibleName={null}
+        status="active"
+        employees={employees}
+        initialEntries={[]}
+      />
+    );
+  }
+
+  if (document && document.template.code === "hygiene") {
     const responsibleUser = employees.find(
       (employee) => employee.id === document.responsibleUserId
     );
@@ -71,6 +98,10 @@ export default async function JournalDocumentPage({
         }))}
       />
     );
+  }
+
+  if (!document) {
+    notFound();
   }
 
   return (
