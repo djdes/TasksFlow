@@ -11,6 +11,20 @@ import {
 
 const MAX_AGE = 365 * 24 * 60 * 60;
 
+function appendSessionCookie(
+  response: NextResponse,
+  cookieName: string,
+  token: string
+) {
+  const expires = new Date(Date.now() + MAX_AGE * 1000).toUTCString();
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+
+  response.headers.append(
+    "Set-Cookie",
+    `${cookieName}=${token}; Path=/; Expires=${expires}; Max-Age=${MAX_AGE}; HttpOnly; SameSite=Lax${secure}`
+  );
+}
+
 function clearLegacyCookies(response: NextResponse) {
   for (const cookieName of [...ALL_SESSION_COOKIES, ...LEGACY_AUX_COOKIES]) {
     if (cookieName === CUSTOM_SESSION_COOKIE) {
@@ -88,13 +102,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
     });
     for (const cookieName of LEGACY_SESSION_COOKIES) {
-      response.cookies.set(cookieName, token, {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        maxAge: MAX_AGE,
-        secure: process.env.NODE_ENV === "production",
-      });
+      appendSessionCookie(response, cookieName, token);
     }
 
     return response;
