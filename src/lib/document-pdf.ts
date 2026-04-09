@@ -21,10 +21,12 @@ import {
 } from "@/lib/cold-equipment-document";
 import {
   CLEANING_DOCUMENT_TEMPLATE_CODE,
+  ACTIVITY_LABELS,
   getCleaningDocumentTitle,
   getCleaningFilePrefix,
   normalizeCleaningDocumentConfig,
   normalizeCleaningEntryData,
+  type CleaningActivityType,
 } from "@/lib/cleaning-document";
 import {
   FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
@@ -77,6 +79,11 @@ import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
+import {
+  TRAINING_PLAN_TEMPLATE_CODE,
+  TRAINING_PLAN_HEADING,
+  normalizeTrainingPlanConfig,
+} from "@/lib/training-plan-document";
 import {
   buildHygieneExampleEmployees,
   buildDateKeys,
@@ -862,50 +869,51 @@ function drawCleaningPdf(doc: jsPDF, params: {
   config: any;
   entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
 }) {
-  drawTitle(doc, getCleaningDocumentTitle());
+  const config = normalizeCleaningDocumentConfig(params.config);
+
+  // ── Header ───────────────────────────────────────────────────────────────────
   drawClimateMetaTable(doc, {
     organizationName: params.organizationName,
-    title: params.title,
+    title: getCleaningDocumentTitle(),
     dateFrom: params.dateFrom,
     dateTo: params.dateTo,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows: Array<{ id: string; name: string }> = Array.isArray(params.config.rows)
-    ? params.config.rows
-    : [];
-  const dateKeys = buildDateKeys(params.dateFrom, params.dateTo);
-  const entryMap = new Map<string, string>();
-  params.entries.forEach((entry) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = entry.data as any;
-    const mark = typeof data.mark === "string" ? data.mark : null;
-    const code = mark === "routine" ? "Т" : mark === "general" ? "Г" : "";
-    entryMap.set(`${entry.employeeId}:${toDateKey(entry.date)}`, code);
-  });
+  // ── Procedure info table ─────────────────────────────────────────────────────
+  const periodicityLines = [
+    `Дезинфекция — ${config.periodicity.disinfectionPerDay} раз(а) в день`,
+    ...(config.ventilationEnabled
+      ? [`Проветривание — ${config.periodicity.ventilationPerDay} раз(а) в день`]
+      : []),
+    `Влажная уборка — ${config.periodicity.wetCleaningPerDay} раз(а) в день`,
+  ].join("\n");
 
-  const head: RowInput[] = [[
-    { content: "Помещение", styles: { halign: "center" as const, valign: "middle" as const } },
-    ...dateKeys.map((key) => ({
-      content: String(getDayNumber(key)),
-      styles: { halign: "center" as const, valign: "middle" as const },
-    })),
-  ]];
+  const procedureLines = [
+    config.procedure.surfaces ? `Поверхности: ${config.procedure.surfaces}` : null,
+    config.procedure.ventilationRooms ? `Помещения (проветривание): ${config.procedure.ventilationRooms}` : null,
+    config.procedure.wetCleaningRooms ? `Помещения (влажная уборка): ${config.procedure.wetCleaningRooms}` : null,
+    config.procedure.detergent ? `Дезинфицирующее средство: ${config.procedure.detergent}` : null,
+  ].filter(Boolean).join("\n");
 
-  const body: RowInput[] = rows.map((row) => [
-    { content: row.name, styles: { halign: "left", valign: "middle" } },
-    ...dateKeys.map((key) => centerCell(entryMap.get(`${row.id}:${key}`) || "")),
-  ]);
+  const responsibleLines = config.responsiblePersons.map((p) => p.title).join("\n");
 
   autoTable(doc, {
-    startY: 66,
-    head,
-    body,
+    startY: 62,
+    head: [[
+      { content: "Процедура", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
+      { content: "Периодичность", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
+      { content: "Ответственные лица", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
+    ]],
+    body: [[
+      { content: procedureLines, styles: { halign: "left" as const, valign: "top" as const } },
+      { content: periodicityLines, styles: { halign: "left" as const, valign: "top" as const } },
+      { content: responsibleLines, styles: { halign: "left" as const, valign: "top" as const } },
+    ]],
     theme: "grid",
     styles: {
       font: "JournalUnicode",
-      fontSize: 7,
-      cellPadding: 1.1,
+      fontSize: 8,
+      cellPadding: 2,
       lineColor: [0, 0, 0],
       textColor: [0, 0, 0],
       overflow: "linebreak",
@@ -918,8 +926,154 @@ function drawCleaningPdf(doc: jsPDF, params: {
     },
     margin: { left: 10, right: 10 },
     columnStyles: {
-      0: { cellWidth: 75 },
+      0: { cellWidth: 110 },
+      1: { cellWidth: 80 },
     },
+  });
+
+  // ── Section title ────────────────────────────────────────────────────────────
+  const afterInfoTable = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 100;
+  const titleY = afterInfoTable + 8;
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(11);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.text("ЧЕК-ЛИСТ УБОРКИ И ПРОВЕТРИВАНИЯ ПОМЕЩЕНИЙ", pageWidth / 2, titleY, { align: "center" });
+  doc.setFont("JournalUnicode", "normal");
+
+  // ── Main data table ──────────────────────────────────────────────────────────
+  const activityTypes: CleaningActivityType[] = config.ventilationEnabled
+    ? ["disinfection", "ventilation", "wetCleaning"]
+    : ["disinfection", "wetCleaning"];
+
+  // Build entry map: dateKey → activity type → { times, responsibleName }
+  const entryMap = new Map<string, Map<CleaningActivityType, { times: string[]; responsibleName: string }>>();
+  params.entries.forEach((entry) => {
+    const dateKey = toDateKey(entry.date);
+    const data = normalizeCleaningEntryData(entry.data);
+    const actMap = new Map<CleaningActivityType, { times: string[]; responsibleName: string }>();
+    data.activities.forEach((act) => {
+      actMap.set(act.type, { times: act.times, responsibleName: act.responsibleName });
+    });
+    entryMap.set(dateKey, actMap);
+  });
+
+  const dateKeys = buildDateKeys(params.dateFrom, params.dateTo);
+
+  // Determine max time columns per activity (from schedule + actual entries)
+  const maxTimesPerActivity: Record<CleaningActivityType, number> = {
+    disinfection: 1,
+    ventilation: 1,
+    wetCleaning: 1,
+  };
+  activityTypes.forEach((type) => {
+    const schedCount = config.schedule[type].times.length;
+    let maxFromEntries = 0;
+    dateKeys.forEach((dk) => {
+      const times = entryMap.get(dk)?.get(type)?.times ?? [];
+      if (times.length > maxFromEntries) maxFromEntries = times.length;
+    });
+    maxTimesPerActivity[type] = Math.max(schedCount, maxFromEntries, 1);
+  });
+
+  const totalTimeCols = activityTypes.reduce((sum, t) => sum + maxTimesPerActivity[t], 0);
+
+  // Header row 1
+  const headRow1: CellDef[] = [
+    { content: "Дата", rowSpan: 3, styles: { halign: "center" as const, valign: "middle" as const } },
+    { content: "Время", colSpan: totalTimeCols, styles: { halign: "center" as const, valign: "middle" as const } },
+    { content: "ФИО ответственного лица", rowSpan: 3, styles: { halign: "center" as const, valign: "middle" as const } },
+  ];
+
+  // Header row 2: activity labels spanning their time columns
+  const headRow2: CellDef[] = activityTypes.map((type) => ({
+    content: ACTIVITY_LABELS[type],
+    colSpan: maxTimesPerActivity[type],
+    styles: { halign: "center" as const, valign: "middle" as const },
+  }));
+
+  // Header row 3: slot numbers within each activity
+  const headRow3: CellDef[] = activityTypes.flatMap((type) =>
+    Array.from({ length: maxTimesPerActivity[type] }, (_, i) => ({
+      content: String(i + 1),
+      styles: { halign: "center" as const, valign: "middle" as const },
+    }))
+  );
+
+  const head: RowInput[] = [headRow1, headRow2, headRow3];
+
+  // Body: each date produces activityTypes.length sub-rows
+  const body: RowInput[] = [];
+  dateKeys.forEach((dk) => {
+    const [year, month, day] = dk.split("-");
+    const dateLabel = `${day}.${month}.${year}`;
+    const actMap = entryMap.get(dk);
+
+    activityTypes.forEach((type, actIndex) => {
+      const act = actMap?.get(type);
+      const timeCells: CellDef[] = Array.from(
+        { length: maxTimesPerActivity[type] },
+        (_, i) => centerCell(act?.times[i] ?? "")
+      );
+
+      const row: CellDef[] = [];
+
+      if (actIndex === 0) {
+        row.push({
+          content: dateLabel,
+          rowSpan: activityTypes.length,
+          styles: { halign: "center" as const, valign: "middle" as const },
+        });
+      }
+
+      row.push(...timeCells);
+
+      if (actIndex === 0) {
+        row.push({
+          content: act?.responsibleName ?? "",
+          rowSpan: activityTypes.length,
+          styles: { halign: "center" as const, valign: "middle" as const },
+        });
+      }
+
+      body.push(row);
+    });
+  });
+
+  // Column widths
+  const timeColWidth = 14;
+  const colStyles: Record<number, { cellWidth: number }> = {
+    0: { cellWidth: 18 },
+  };
+  let colOffset = 1;
+  activityTypes.forEach((type) => {
+    for (let i = 0; i < maxTimesPerActivity[type]; i++) {
+      colStyles[colOffset + i] = { cellWidth: timeColWidth };
+    }
+    colOffset += maxTimesPerActivity[type];
+  });
+  colStyles[colOffset] = { cellWidth: 40 };
+
+  autoTable(doc, {
+    startY: titleY + 6,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.5,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    columnStyles: colStyles,
   });
 }
 
@@ -1232,6 +1386,98 @@ function drawAcceptancePdf(doc: jsPDF, params: {
     },
     bodyStyles: {
       lineWidth: 0.2,
+    },
+  });
+}
+
+function drawTrainingPlanPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  config: ReturnType<typeof normalizeTrainingPlanConfig>;
+}) {
+  const cfg = params.config;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+  const headerRight = pageWidth - 24;
+
+  drawTitle(doc, params.title || "План обучения");
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: "ПЛАН ОБУЧЕНИЯ ПЕРСОНАЛА",
+    withPeriodicity: false,
+  });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(10);
+  doc.text("УТВЕРЖДАЮ", headerRight, 60, { align: "right" });
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(9);
+  doc.text(cfg.approveRole || "", headerRight, 66, { align: "right" });
+  doc.line(headerRight - 52, 70, headerRight, 70);
+  doc.text(cfg.approveEmployee || "", headerRight, 74, { align: "right" });
+  doc.text(
+    `« ${cfg.documentDate.slice(8, 10)} » ${new Date(cfg.documentDate).toLocaleDateString("ru-RU", { month: "long" })} ${cfg.year} г.`,
+    headerRight - 6, 80, { align: "center" }
+  );
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(11);
+  doc.text(`ПЛАН ОБУЧЕНИЯ ПЕРСОНАЛА НА ${cfg.year} Г.`, centerX, 90, { align: "center" });
+
+  const topics = cfg.topics;
+  const head: RowInput[] = [
+    [
+      { content: "№ п/п", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      { content: "Должностная единица,\nподлежащая обучению", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      { content: "Требуется обучение по теме:", colSpan: topics.length, styles: { halign: "center", valign: "middle" } },
+    ],
+    topics.map((t) => ({ content: t.name, styles: { halign: "center", valign: "middle" } })),
+  ];
+
+  const body: RowInput[] = cfg.rows.map((row, index) => [
+    centerCell(String(index + 1)),
+    centerCell(row.positionName),
+    ...topics.map((topic) => {
+      const cell = row.cells[topic.id];
+      if (!cell || !cell.required) return centerCell("");
+      return centerCell(cell.date ? `✓ ${cell.date}` : "✓");
+    }),
+  ]);
+
+  if (body.length === 0) {
+    for (let i = 0; i < 3; i++) {
+      body.push(Array(2 + topics.length).fill(centerCell("")));
+    }
+  }
+
+  const topicColWidth = topics.length > 0 ? Math.min(30, (pageWidth - 80) / topics.length) : 30;
+
+  autoTable(doc, {
+    startY: 96,
+    margin: { left: 24, right: 24 },
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 8,
+      cellPadding: 1.2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      lineWidth: 0.2,
+      fontStyle: "bold",
+    },
+    bodyStyles: { lineWidth: 0.2 },
+    columnStyles: {
+      0: { cellWidth: 14 },
+      1: { cellWidth: 46 },
     },
   });
 }
@@ -2011,6 +2257,12 @@ export async function generateJournalDocumentPdf(params: {
       title: document.title || SANITATION_DAY_DOCUMENT_TITLE,
       config: normalizeSanitationDayConfig(document.config),
     });
+  } else if (templateCode === TRAINING_PLAN_TEMPLATE_CODE) {
+    drawTrainingPlanPdf(doc, {
+      organizationName,
+      title: document.title || TRAINING_PLAN_HEADING,
+      config: normalizeTrainingPlanConfig(document.config),
+    });
   } else if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
     drawAcceptancePdf(doc, {
       organizationName,
@@ -2100,6 +2352,8 @@ export async function generateJournalDocumentPdf(params: {
             ? getFinishedProductFilePrefix()
             : templateCode === SANITATION_DAY_TEMPLATE_CODE
               ? "general-cleaning-schedule"
+            : templateCode === TRAINING_PLAN_TEMPLATE_CODE
+              ? "training-plan"
             : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
               ? "acceptance-journal"
             : templateCode === FRYER_OIL_TEMPLATE_CODE
