@@ -30,6 +30,27 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_ID: getBuildId(),
     NEXT_PUBLIC_BUILD_TIME: getBuildTime(),
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          },
+          {
+            key: "Pragma",
+            value: "no-cache",
+          },
+          {
+            key: "Expires",
+            value: "0",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
