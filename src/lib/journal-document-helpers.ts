@@ -31,6 +31,10 @@ import {
   SANITATION_DAY_TEMPLATE_CODE,
   SANITATION_DAY_DOCUMENT_TITLE,
 } from "@/lib/sanitation-day-document";
+import {
+  MED_BOOK_TEMPLATE_CODE,
+  MED_BOOK_DOCUMENT_TITLE,
+} from "@/lib/med-book-document";
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -40,6 +44,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
     templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
     templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === MED_BOOK_TEMPLATE_CODE ||
     isTrackedDocumentTemplate(templateCode)
   );
 }
@@ -64,6 +69,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
     return SANITATION_DAY_DOCUMENT_TITLE;
+  }
+  if (templateCode === MED_BOOK_TEMPLATE_CODE) {
+    return MED_BOOK_DOCUMENT_TITLE;
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);

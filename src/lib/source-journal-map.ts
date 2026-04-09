@@ -18,7 +18,7 @@ export const SOURCE_JOURNAL_MAP: SourceJournalMapItem[] = [
   { sourceSlug: "brakery1journal", localCode: null, status: "new", notes: "separate perishables rejection journal" },
   { sourceSlug: "acceptance1journal", localCode: "incoming_control", status: "mapped" },
   { sourceSlug: "deepfatjournal", localCode: "fryer_oil", status: "mapped" },
-  { sourceSlug: "medbook", localCode: null, status: "new" },
+  { sourceSlug: "medbook", localCode: "med_books", status: "mapped" },
   { sourceSlug: "eduplan", localCode: null, status: "new" },
   { sourceSlug: "edujournal", localCode: null, status: "new" },
   { sourceSlug: "disinfectjournal", localCode: "disinfectant_usage", status: "mapped" },
@@ -47,7 +47,12 @@ export function getSourceJournalMapBySlug(sourceSlug: string) {
   return SOURCE_JOURNAL_MAP.find((item) => item.sourceSlug === sourceSlug);
 }
 
+const SHORT_ALIASES: Record<string, string> = {
+  uv: "uv_lamp_runtime",
+};
+
 export function resolveJournalCodeAlias(codeOrSlug: string) {
+  if (SHORT_ALIASES[codeOrSlug]) return SHORT_ALIASES[codeOrSlug];
   const sourceItem = getSourceJournalMapBySlug(codeOrSlug);
   if (!sourceItem) return codeOrSlug;
   if (!sourceItem.localCode) return codeOrSlug;
