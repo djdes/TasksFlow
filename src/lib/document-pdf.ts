@@ -13,6 +13,26 @@ import {
   type ClimateDocumentConfig,
 } from "@/lib/climate-document";
 import {
+  COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
+  getColdEquipmentDocumentTitle,
+  getColdEquipmentFilePrefix,
+  normalizeColdEquipmentDocumentConfig,
+  normalizeColdEquipmentEntryData,
+} from "@/lib/cold-equipment-document";
+import {
+  CLEANING_DOCUMENT_TEMPLATE_CODE,
+  getCleaningDocumentTitle,
+  getCleaningFilePrefix,
+  normalizeCleaningDocumentConfig,
+  normalizeCleaningEntryData,
+} from "@/lib/cleaning-document";
+import {
+  FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+  getFinishedProductDocumentTitle,
+  getFinishedProductFilePrefix,
+  normalizeFinishedProductDocumentConfig,
+} from "@/lib/finished-product-document";
+import {
   buildHygieneExampleEmployees,
   buildDateKeys,
   formatMonthLabel,
@@ -724,6 +744,192 @@ function drawClimatePdf(doc: jsPDF, params: {
   });
 }
 
+function drawColdEquipmentPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeColdEquipmentDocumentConfig>;
+  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
+}) {
+  drawTitle(doc, getColdEquipmentDocumentTitle());
+  drawClimateMetaTable(doc, {
+    organizationName: params.organizationName,
+    title: params.title,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+
+  const equipment = params.config.equipment;
+  const head: RowInput[] = [[
+    { content: "Дата", styles: { halign: "center", valign: "middle" } },
+    ...equipment.map((item) => ({
+      content: `${item.name}\n(${item.min ?? "—"}...${item.max ?? "—"}°C)`,
+      styles: { halign: "center", valign: "middle" },
+    })),
+    { content: "Ответственный", styles: { halign: "center", valign: "middle" } },
+  ]];
+
+  const body: RowInput[] = params.entries.map((entry) => {
+    const data = normalizeColdEquipmentEntryData(entry.data);
+    return [
+      centerCell(getClimateDateLabel(entry.date)),
+      ...equipment.map((item) =>
+        centerCell(
+          data.temperatures[item.id] != null ? String(data.temperatures[item.id]) : ""
+        )
+      ),
+      centerCell(data.responsibleTitle || ""),
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+}
+
+function drawCleaningPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeCleaningDocumentConfig>;
+  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
+}) {
+  drawTitle(doc, getCleaningDocumentTitle());
+  drawClimateMetaTable(doc, {
+    organizationName: params.organizationName,
+    title: params.title,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+
+  const rows = params.config.rows;
+  const dateKeys = buildDateKeys(params.dateFrom, params.dateTo);
+  const entryMap = new Map<string, string>();
+  params.entries.forEach((entry) => {
+    const mark = normalizeCleaningEntryData(entry.data).mark;
+    const code = mark === "routine" ? "Т" : mark === "general" ? "Г" : "";
+    entryMap.set(`${entry.employeeId}:${toDateKey(entry.date)}`, code);
+  });
+
+  const head: RowInput[] = [[
+    { content: "Помещение", styles: { halign: "center", valign: "middle" } },
+    ...dateKeys.map((key) => ({
+      content: String(getDayNumber(key)),
+      styles: { halign: "center", valign: "middle" },
+    })),
+  ]];
+
+  const body: RowInput[] = rows.map((row) => [
+    { content: row.name, styles: { halign: "left", valign: "middle" } },
+    ...dateKeys.map((key) => centerCell(entryMap.get(`${row.id}:${key}`) || "")),
+  ]);
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    columnStyles: {
+      0: { cellWidth: 75 },
+    },
+  });
+}
+
+function drawFinishedProductPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeFinishedProductDocumentConfig>;
+}) {
+  drawTitle(doc, getFinishedProductDocumentTitle());
+  drawClimateMetaTable(doc, {
+    organizationName: params.organizationName,
+    title: params.title,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+
+  const head: RowInput[] = [[
+    centerCell("№"),
+    centerCell("Дата/время"),
+    centerCell("Продукция"),
+    centerCell("Органолептика"),
+    centerCell("T продукта"),
+    centerCell("Корректирующие действия"),
+    centerCell("Ответственный"),
+    centerCell("Проверил"),
+  ]];
+
+  const body: RowInput[] = params.config.rows.map((row, index) => [
+    centerCell(String(index + 1)),
+    centerCell(row.productionDateTime || ""),
+    { content: row.productName || "", styles: { halign: "left", valign: "middle" } },
+    centerCell(row.organoleptic || ""),
+    centerCell(row.productTemp || ""),
+    { content: row.correctiveAction || "", styles: { halign: "left", valign: "middle" } },
+    centerCell(row.responsiblePerson || ""),
+    centerCell(row.inspectorName || ""),
+  ]);
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+}
+
 function renderWrappedTextBlock(
   doc: jsPDF,
   lines: string[],
@@ -790,6 +996,9 @@ export async function generateJournalDocumentPdf(params: {
   const employeeIds = document.entries.map((entry) => entry.employeeId);
   const entryMap: Record<string, Record<string, unknown>> = {};
   const climateConfig = normalizeClimateDocumentConfig(document.config);
+  const coldConfig = normalizeColdEquipmentDocumentConfig(document.config);
+  const cleaningConfig = normalizeCleaningDocumentConfig(document.config);
+  const finishedConfig = normalizeFinishedProductDocumentConfig(document.config);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -827,6 +1036,40 @@ export async function generateJournalDocumentPdf(params: {
       })),
       users,
     });
+  } else if (templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
+    drawColdEquipmentPdf(doc, {
+      organizationName,
+      title: document.title || getColdEquipmentDocumentTitle(),
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: coldConfig,
+      entries: document.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        date: entry.date,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+    });
+  } else if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
+    drawCleaningPdf(doc, {
+      organizationName,
+      title: document.title || getCleaningDocumentTitle(),
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: cleaningConfig,
+      entries: document.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        date: entry.date,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+    });
+  } else if (templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+    drawFinishedProductPdf(doc, {
+      organizationName,
+      title: document.title || getFinishedProductDocumentTitle(),
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: finishedConfig,
+    });
   } else {
     drawHygienePdf(doc, {
       organizationName,
@@ -846,7 +1089,13 @@ export async function generateJournalDocumentPdf(params: {
       ? "health-journal"
       : templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE
         ? getClimateFilePrefix()
-        : "hygiene-journal";
+        : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+          ? getColdEquipmentFilePrefix()
+          : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+            ? getCleaningFilePrefix()
+            : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+              ? getFinishedProductFilePrefix()
+              : "hygiene-journal";
 
   return {
     buffer,

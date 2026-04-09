@@ -118,3 +118,7 @@ export function getFinishedProductPeriodLabel(
   const to = new Date(dateTo);
   return `${from.toLocaleDateString("ru-RU")} - ${to.toLocaleDateString("ru-RU")}`;
 }
+
+export function getFinishedProductFilePrefix() {
+  return "finished-product-journal";
+}
