@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { DynamicForm } from "@/components/journals/dynamic-form";
 import { isDocumentTemplate } from "@/lib/journal-document-helpers";
+import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 
 export default async function NewJournalEntryPage({
   params,
@@ -10,17 +11,18 @@ export default async function NewJournalEntryPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
+  const resolvedCode = resolveJournalCodeAlias(code);
   const session = await requireAuth();
 
   const template = await db.journalTemplate.findUnique({
-    where: { code },
+    where: { code: resolvedCode },
   });
 
   if (!template) {
     notFound();
   }
 
-  if (isDocumentTemplate(code)) {
+  if (isDocumentTemplate(resolvedCode)) {
     notFound();
   }
 
@@ -89,7 +91,7 @@ export default async function NewJournalEntryPage({
       </div>
 
       <DynamicForm
-        templateCode={code}
+        templateCode={resolvedCode}
         templateName={template.name}
         fields={fields}
         areas={areas}

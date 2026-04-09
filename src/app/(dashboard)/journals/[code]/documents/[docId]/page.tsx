@@ -40,6 +40,7 @@ import {
   parseRegisterFields,
 } from "@/lib/register-document";
 import { isTrackedDocumentTemplate } from "@/lib/tracked-document";
+import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,7 @@ export default async function JournalDocumentPage({
   params: Promise<{ code: string; docId: string }>;
 }) {
   const { code, docId } = await params;
+  const resolvedCode = resolveJournalCodeAlias(code);
   const session = await requireAuth();
 
   const [document, organization, employees, areas, equipment] = await Promise.all([
@@ -115,7 +117,7 @@ export default async function JournalDocumentPage({
   if (
     !document ||
     document.organizationId !== session.user.organizationId ||
-    document.template.code !== code
+    document.template.code !== resolvedCode
   ) {
     notFound();
   }

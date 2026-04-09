@@ -43,6 +43,18 @@ type Props = {
   includedEmployeeIds: string[];
 };
 
+async function requestJson(url: string, init: RequestInit) {
+  const response = await fetch(url, init);
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      (result && typeof result.error === "string" && result.error) ||
+        "Операция не выполнена"
+    );
+  }
+  return result;
+}
+
 function AddEmployeeDialog({
   open,
   onOpenChange,
@@ -74,7 +86,7 @@ function AddEmployeeDialog({
 
     setIsSubmitting(true);
     try {
-      await fetch(`/api/journal-documents/${documentId}/staff`, {
+      await requestJson(`/api/journal-documents/${documentId}/staff`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -85,6 +97,8 @@ function AddEmployeeDialog({
 
       onOpenChange(false);
       router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Ошибка добавления сотрудника");
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +195,7 @@ function FillFromStaffDialog({
   async function handleSubmit() {
     setIsSubmitting(true);
     try {
-      await fetch(`/api/journal-documents/${documentId}/staff`, {
+      await requestJson(`/api/journal-documents/${documentId}/staff`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -192,6 +206,8 @@ function FillFromStaffDialog({
 
       onOpenChange(false);
       router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Ошибка заполнения из списка");
     } finally {
       setIsSubmitting(false);
     }
@@ -275,7 +291,7 @@ function JournalSettingsDialog({
   async function handleSave() {
     setIsSubmitting(true);
     try {
-      await fetch(`/api/journal-documents/${documentId}`, {
+      await requestJson(`/api/journal-documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -286,6 +302,8 @@ function JournalSettingsDialog({
 
       onOpenChange(false);
       router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек журнала");
     } finally {
       setIsSubmitting(false);
     }
@@ -365,18 +383,19 @@ export function StaffJournalToolbar({
   }, [autoFill]);
 
   async function handleAutoFill(value: boolean) {
+    const previous = checked;
     setChecked(value);
     setIsSwitching(true);
 
     try {
-      await fetch(`/api/journal-documents/${documentId}`, {
+      await requestJson(`/api/journal-documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ autoFill: value }),
       });
 
       if (value) {
-        await fetch(`/api/journal-documents/${documentId}/staff`, {
+        await requestJson(`/api/journal-documents/${documentId}/staff`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "apply_auto_fill" }),
@@ -384,6 +403,9 @@ export function StaffJournalToolbar({
       }
 
       router.refresh();
+    } catch (error) {
+      setChecked(previous);
+      window.alert(error instanceof Error ? error.message : "Ошибка автозаполнения");
     } finally {
       setIsSwitching(false);
     }

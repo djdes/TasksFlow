@@ -24,9 +24,26 @@ import { CLIMATE_DOCUMENT_TEMPLATE_CODE } from "@/lib/climate-document";
 import { COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/cold-equipment-document";
 import { CLEANING_DOCUMENT_TEMPLATE_CODE } from "@/lib/cleaning-document";
 import { TrackedDocumentsClient } from "@/components/journals/tracked-documents-client";
-import { isTrackedDocumentTemplate } from "@/lib/tracked-document";
+import {
+  getTrackedDocumentCreateMode,
+  isSourceStyleTrackedTemplate,
+  isTrackedDocumentTemplate,
+} from "@/lib/tracked-document";
+import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 
 export const dynamic = "force-dynamic";
+const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
+  "daily_rejection",
+  "raw_storage_control",
+  "defrosting_control",
+]);
+
+type TrackedTemplateField = {
+  key: string;
+  type?: string;
+  label?: string;
+  options?: Array<{ value: string; label: string }>;
+};
 
 async function ensureStaffJournalSampleDocuments({
   templateCode,
@@ -141,6 +158,155 @@ async function ensureStaffJournalSampleDocuments({
   }
 }
 
+function toDateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function toSourceDateLabel(value: Date) {
+  return value.toLocaleDateString("ru-RU").replaceAll(".", "-");
+}
+
+function buildTrackedDemoValue(field: TrackedTemplateField, rowIndex: number) {
+  switch (field.type) {
+    case "boolean":
+      return true;
+    case "number":
+      return rowIndex + 1;
+    case "date":
+      return toDateKey(new Date());
+    case "select":
+      return field.options?.[0]?.value ?? "";
+    default:
+      return `${field.label || field.key} ${rowIndex + 1}`.trim();
+  }
+}
+
+function getTrackedMeta(templateCode: string, dateFrom: Date, dateTo: Date) {
+  if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
+    return {
+      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaValue: toSourceDateLabel(dateFrom),
+    };
+  }
+
+  if (!isSourceStyleTrackedTemplate(templateCode)) {
+    return {
+      metaLabel: "РџРµСЂРёРѕРґ",
+      metaValue: getJournalDocumentPeriodLabel(templateCode, dateFrom, dateTo),
+    };
+  }
+
+  const mode = getTrackedDocumentCreateMode(templateCode);
+  if (mode === "staff") {
+    return {
+      metaLabel: "РџРµСЂРёРѕРґ",
+      metaValue: getJournalDocumentPeriodLabel(templateCode, dateFrom, dateTo),
+    };
+  }
+
+  if (mode === "uv") {
+    return {
+      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaValue: toSourceDateLabel(dateFrom),
+    };
+  }
+
+  return {
+    metaLabel: "Р”Р°С‚Р° РґРѕРєСѓРјРµРЅС‚Р°",
+    metaValue: toSourceDateLabel(dateFrom),
+  };
+}
+
+async function ensureSourceStyleTrackedSampleDocuments({
+  templateCode,
+  templateId,
+  organizationId,
+  users,
+  createdById,
+  templateFields,
+}: {
+  templateCode: string;
+  templateId: string;
+  organizationId: string;
+  users: { id: string; name: string; role: string; email?: string | null }[];
+  createdById: string;
+  templateFields: TrackedTemplateField[];
+}) {
+  if (!SOURCE_STYLE_TRACKED_DEMO_CODES.has(templateCode)) return;
+
+  const activeUser =
+    users.find((user) => user.role === "owner") ||
+    users.find((user) => user.role === "technologist") ||
+    users[0];
+
+  if (!activeUser) return;
+
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const activeFrom = new Date(Date.UTC(year, month, 1));
+  const activeTo = new Date(Date.UTC(year, month + 1, 0));
+  const closedFrom = new Date(Date.UTC(year, month - 1, 1));
+  const closedTo = new Date(Date.UTC(year, month, 0));
+
+  const existing = await db.journalDocument.findMany({
+    where: {
+      organizationId,
+      templateId,
+      status: {
+        in: ["active", "closed"],
+      },
+    },
+    select: {
+      status: true,
+    },
+  });
+
+  const hasStatus = new Set(existing.map((item) => item.status));
+  const baseData = Object.fromEntries(
+    templateFields.map((field, index) => [field.key, buildTrackedDemoValue(field, index)])
+  );
+  const defaultTitle = getJournalDocumentDefaultTitle(templateCode);
+
+  const configs = [
+    { status: "active" as const, dateFrom: activeFrom, dateTo: activeTo },
+    { status: "closed" as const, dateFrom: closedFrom, dateTo: closedTo },
+  ];
+
+  for (const config of configs) {
+    if (hasStatus.has(config.status)) continue;
+
+    const created = await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: defaultTitle,
+        status: config.status,
+        dateFrom: config.dateFrom,
+        dateTo: config.dateTo,
+        responsibleUserId: activeUser.id,
+        responsibleTitle: getHygieneDefaultResponsibleTitle(users),
+        createdById,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await db.journalDocumentEntry.createMany({
+      data: [
+        {
+          documentId: created.id,
+          employeeId: activeUser.id,
+          date: config.dateFrom,
+          data: baseData,
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+}
+
 export default async function JournalDocumentsPage({
   params,
   searchParams,
@@ -149,11 +315,12 @@ export default async function JournalDocumentsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { code } = await params;
+  const resolvedCode = resolveJournalCodeAlias(code);
   const { tab } = await searchParams;
   const session = await requireAuth();
 
   const template = await db.journalTemplate.findUnique({
-    where: { code },
+    where: { code: resolvedCode },
   });
 
   if (!template) {
@@ -171,9 +338,9 @@ export default async function JournalDocumentsPage({
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 
-  if (code === "hygiene" || code === "health_check") {
+  if (resolvedCode === "hygiene" || resolvedCode === "health_check") {
     await ensureStaffJournalSampleDocuments({
-      templateCode: code,
+      templateCode: resolvedCode,
       organizationId: session.user.organizationId,
       templateId: template.id,
       users: orgUsers,
@@ -192,22 +359,35 @@ export default async function JournalDocumentsPage({
     return (
       <HygieneDocumentsClient
         activeTab={activeTab}
-        templateCode={code}
+        templateCode={resolvedCode}
         templateName={template.name}
         users={orgUsers}
         documents={documents.map((document) => ({
           id: document.id,
-          title: document.title || getJournalDocumentDefaultTitle(code),
+          title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
           status: document.status as "active" | "closed",
           responsibleTitle: document.responsibleTitle,
-          periodLabel: getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
+          periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
         }))}
       />
     );
   }
 
-  if (isDocumentTemplate(code)) {
-    if (code === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+  if (isDocumentTemplate(resolvedCode)) {
+    const parsedTemplateFields = Array.isArray(template.fields)
+      ? (template.fields as TrackedTemplateField[])
+      : [];
+
+    await ensureSourceStyleTrackedSampleDocuments({
+      templateCode: resolvedCode,
+      templateId: template.id,
+      organizationId: session.user.organizationId,
+      users: orgUsers,
+      createdById: session.user.id,
+      templateFields: parsedTemplateFields,
+    });
+
+    if (resolvedCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
       const existingDocument = await db.journalDocument.findFirst({
         where: {
           organizationId: session.user.organizationId,
@@ -228,7 +408,7 @@ export default async function JournalDocumentsPage({
           data: {
             templateId: template.id,
             organizationId: session.user.organizationId,
-            title: getJournalDocumentDefaultTitle(code),
+            title: getJournalDocumentDefaultTitle(resolvedCode),
             dateFrom,
             dateTo,
             createdById: session.user.id,
@@ -246,19 +426,19 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "asc" },
     });
 
-    if (code === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
+    if (resolvedCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
       return (
         <FinishedProductDocumentsClient
           activeTab={activeTab}
-          templateCode={code}
+          templateCode={resolvedCode}
           templateName={template.name}
           users={orgUsers}
           documents={documents.map((document) => ({
             id: document.id,
-            title: document.title || getJournalDocumentDefaultTitle(code),
+            title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
             status: document.status as "active" | "closed",
             responsibleTitle: document.responsibleTitle,
-            periodLabel: getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
+            periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
             startedAtLabel: document.dateFrom.toLocaleDateString("ru-RU"),
           }))}
         />
@@ -266,29 +446,25 @@ export default async function JournalDocumentsPage({
     }
 
     if (
-      code === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
-      code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
-      code === CLEANING_DOCUMENT_TEMPLATE_CODE ||
-      isTrackedDocumentTemplate(code)
+      resolvedCode === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
+      resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
+      resolvedCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
+      isTrackedDocumentTemplate(resolvedCode)
     ) {
       return (
         <TrackedDocumentsClient
           activeTab={activeTab}
-          templateCode={code}
+          templateCode={resolvedCode}
           templateName={template.name}
           heading={template.name}
           users={orgUsers}
           documents={documents.map((document) => ({
             id: document.id,
-            title: document.title || getJournalDocumentDefaultTitle(code),
+            title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
             status: document.status as "active" | "closed",
             responsibleTitle: document.responsibleTitle,
-            periodLabel: getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
-            metaLabel: code === CLIMATE_DOCUMENT_TEMPLATE_CODE ? "Дата начала" : "Период",
-            metaValue:
-              code === CLIMATE_DOCUMENT_TEMPLATE_CODE
-                ? document.dateFrom.toLocaleDateString("ru-RU")
-                : getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
+            periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
+            ...getTrackedMeta(resolvedCode, document.dateFrom, document.dateTo),
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             dateTo: document.dateTo.toISOString().slice(0, 10),
             config:
@@ -303,15 +479,15 @@ export default async function JournalDocumentsPage({
     return (
       <HygieneDocumentsClient
         activeTab={activeTab}
-        templateCode={code}
+        templateCode={resolvedCode}
         templateName={template.name}
         users={orgUsers}
         documents={documents.map((document) => ({
           id: document.id,
-          title: document.title || getJournalDocumentDefaultTitle(code),
+          title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
           status: document.status as "active" | "closed",
           responsibleTitle: document.responsibleTitle,
-          periodLabel: getJournalDocumentPeriodLabel(code, document.dateFrom, document.dateTo),
+          periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
         }))}
       />
     );
@@ -342,7 +518,7 @@ export default async function JournalDocumentsPage({
           ) : null}
         </div>
         <Link
-          href={`/journals/${code}/new`}
+          href={`/journals/${resolvedCode}/new`}
           className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="size-4" />
@@ -359,7 +535,7 @@ export default async function JournalDocumentsPage({
           {entries.map((entry) => (
             <Link
               key={entry.id}
-              href={`/journals/${code}/${entry.id}`}
+              href={`/journals/${resolvedCode}/${entry.id}`}
               className="block rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
             >
               <div className="flex items-start justify-between gap-3">
@@ -382,3 +558,4 @@ export default async function JournalDocumentsPage({
     </div>
   );
 }
+

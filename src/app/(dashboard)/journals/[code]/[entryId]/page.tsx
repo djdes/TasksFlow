@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EntryApprovalActions } from "@/components/journals/entry-approval";
+import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "\u2014";
@@ -102,6 +103,7 @@ export default async function EntryDetailPage({
   params: Promise<{ code: string; entryId: string }>;
 }) {
   const { code, entryId } = await params;
+  const resolvedCode = resolveJournalCodeAlias(code);
   const session = await requireAuth();
 
   const entry = await db.journalEntry.findUnique({
@@ -134,7 +136,7 @@ export default async function EntryDetailPage({
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={`/journals/${code}`}>
+          <Link href={`/journals/${resolvedCode}`}>
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
@@ -230,7 +232,7 @@ export default async function EntryDetailPage({
         entryId={entry.id}
         currentStatus={entry.status}
         userRole={session.user.role}
-        journalCode={code}
+        journalCode={resolvedCode}
       />
     </div>
   );

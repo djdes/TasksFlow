@@ -89,6 +89,18 @@ function makeCellKey(employeeId: string, dateKey: string) {
   return `${employeeId}:${dateKey}`;
 }
 
+async function requestJson(url: string, init: RequestInit) {
+  const response = await fetch(url, init);
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      (result && typeof result.error === "string" && result.error) ||
+        "Операция не выполнена"
+    );
+  }
+  return result;
+}
+
 function getHealthMeasures(
   employeeId: string,
   dateKeys: string[],
@@ -149,12 +161,13 @@ export function HealthDocumentClient(props: Props) {
 
   async function handleDeleteSelected() {
     if (selectedEmployeeIds.length === 0) return;
+    if (status !== "active") return;
 
     setIsDeleting(true);
     try {
       await Promise.all(
         selectedEmployeeIds.map((employeeId) =>
-          fetch(`/api/journal-documents/${documentId}/entries`, {
+          requestJson(`/api/journal-documents/${documentId}/entries`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ employeeId }),
@@ -163,15 +176,18 @@ export function HealthDocumentClient(props: Props) {
       );
       setSelectedEmployeeIds([]);
       router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Ошибка удаления строк");
     } finally {
       setIsDeleting(false);
     }
   }
 
   async function handleSaveSettings() {
+    if (status !== "active") return;
     setIsSavingSettings(true);
     try {
-      await fetch(`/api/journal-documents/${documentId}`, {
+      await requestJson(`/api/journal-documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -182,6 +198,8 @@ export function HealthDocumentClient(props: Props) {
       });
       setSettingsOpen(false);
       router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
     } finally {
       setIsSavingSettings(false);
     }
@@ -270,7 +288,7 @@ export function HealthDocumentClient(props: Props) {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            {selectedCount > 0 && (
+            {status === "active" && selectedCount > 0 && (
               <>
                 <Button
                   type="button"
@@ -295,7 +313,8 @@ export function HealthDocumentClient(props: Props) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => status === "active" && setSettingsOpen(true)}
+              disabled={status !== "active"}
               className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             >
               <Settings2 className="size-4" />
@@ -322,9 +341,12 @@ export function HealthDocumentClient(props: Props) {
                 >
                   <HealthCheckbox
                     checked={allSelected}
-                    onCheckedChange={(checked) =>
-                      setSelectedEmployeeIds(checked ? rosterUsers.map((employee) => employee.id) : [])
-                    }
+                    onCheckedChange={(checked) => {
+                      if (status !== "active") return;
+                      setSelectedEmployeeIds(
+                        checked ? rosterUsers.map((employee) => employee.id) : []
+                      );
+                    }}
                   />
                 </th>
                 <th
@@ -383,7 +405,10 @@ export function HealthDocumentClient(props: Props) {
                       {employee.name ? (
                         <HealthCheckbox
                           checked={selectedEmployeeIds.includes(employee.id)}
-                          onCheckedChange={(checked) => toggleEmployee(employee.id, checked)}
+                          onCheckedChange={(checked) => {
+                            if (status !== "active") return;
+                            toggleEmployee(employee.id, checked);
+                          }}
                         />
                       ) : null}
                     </td>
