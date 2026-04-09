@@ -39,6 +39,10 @@ import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
   PERISHABLE_REJECTION_DOCUMENT_TITLE,
 } from "@/lib/perishable-rejection-document";
+import {
+  TRAINING_PLAN_TEMPLATE_CODE,
+  TRAINING_PLAN_DOCUMENT_TITLE,
+} from "@/lib/training-plan-document";
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -50,6 +54,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
     templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE ||
     templateCode === MED_BOOK_TEMPLATE_CODE ||
+    templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     isTrackedDocumentTemplate(templateCode)
   );
 }
@@ -80,6 +85,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === MED_BOOK_TEMPLATE_CODE) {
     return MED_BOOK_DOCUMENT_TITLE;
+  }
+  if (templateCode === TRAINING_PLAN_TEMPLATE_CODE) {
+    return TRAINING_PLAN_DOCUMENT_TITLE;
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);

@@ -48,6 +48,8 @@ import {
 import { isTrackedDocumentTemplate } from "@/lib/tracked-document";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 import { SANITATION_DAY_TEMPLATE_CODE } from "@/lib/sanitation-day-document";
+import { TRAINING_PLAN_TEMPLATE_CODE } from "@/lib/training-plan-document";
+import { TrainingPlanDocumentClient } from "@/components/journals/training-plan-document-client";
 import { UvLampRuntimeDocumentClient } from "@/components/journals/uv-lamp-runtime-document-client";
 import {
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
@@ -287,6 +289,19 @@ export default async function JournalDocumentPage({
   if (document.template.code === SANITATION_DAY_TEMPLATE_CODE) {
     return (
       <SanitationDayDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        status={document.status}
+        users={enrichedEmployees}
+        config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === TRAINING_PLAN_TEMPLATE_CODE) {
+    return (
+      <TrainingPlanDocumentClient
         documentId={document.id}
         title={document.title}
         organizationName={organization?.name || 'ООО "Тест"'}

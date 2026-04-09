@@ -20,7 +20,7 @@ export const SOURCE_JOURNAL_MAP: SourceJournalMapItem[] = [
   { sourceSlug: "deepfatjournal", localCode: "fryer_oil", status: "mapped" },
   { sourceSlug: "medbook", localCode: "med_books", status: "mapped" },
   { sourceSlug: "eduplan", localCode: null, status: "new" },
-  { sourceSlug: "edujournal", localCode: null, status: "new" },
+  { sourceSlug: "edujournal", localCode: "training_plan", status: "mapped" },
   { sourceSlug: "disinfectjournal", localCode: "disinfectant_usage", status: "mapped" },
   { sourceSlug: "sanitationdaycheklist", localCode: "sanitary_day_control", status: "mapped" },
   { sourceSlug: "preventiveequipment", localCode: "equipment_maintenance", status: "mapped" },
