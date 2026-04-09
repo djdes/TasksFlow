@@ -57,34 +57,38 @@ export function TrackedDocumentsClient({
   }
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
-            asChild
-          >
-            <Link href="/sanpin">
-              <BookOpenText className="size-6" />
-              Инструкция
-            </Link>
-          </Button>
-          {activeTab === "active" && (
-            <CreateDocumentDialog
-              templateCode={templateCode}
-              templateName={templateName}
-              users={users}
-              triggerClassName="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] font-medium text-white hover:bg-[#4c58ff]"
-              triggerLabel="Создать документ"
-              triggerIcon={<Plus className="size-7" />}
-            />
-          )}
+    <div className="space-y-8">
+      <div className="rounded-[28px] bg-white p-8 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-black">{heading}</h1>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                className="h-12 rounded-2xl border-[#e6e9f5] px-5 text-[16px] text-black shadow-none"
+                asChild
+              >
+                <Link href="/sanpin">
+                  <BookOpenText className="size-5" />
+                  Инструкция
+                </Link>
+              </Button>
+              {activeTab === "active" && (
+                <CreateDocumentDialog
+                  templateCode={templateCode}
+                  templateName={templateName}
+                  users={users}
+                  triggerClassName="h-12 rounded-2xl bg-[#5b66ff] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
+                  triggerLabel="Создать документ"
+                  triggerIcon={<Plus className="size-5" />}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="border-b border-[#d9d9e4]">
+      <div className="border-b border-[#d9dce8]">
         <div className="flex gap-12 text-[18px]">
           <Link
             href={`/journals/${templateCode}`}
@@ -110,13 +114,19 @@ export function TrackedDocumentsClient({
       </div>
 
       <div className="space-y-4">
+        {documents.length === 0 && (
+          <div className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[17px] text-[#7d8196]">
+            Документов пока нет
+          </div>
+        )}
+
         {documents.map((document) => {
           const href = `/journals/${templateCode}/documents/${document.id}`;
 
           return (
             <div
               key={document.id}
-              className="grid grid-cols-[1.8fr_300px_240px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
+              className="grid grid-cols-[1.8fr_300px_240px_48px] items-center rounded-[26px] border border-[#eceef5] bg-white px-6 py-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
             >
               <Link href={href} className="text-[20px] font-semibold tracking-[-0.02em] text-black">
                 {document.title}

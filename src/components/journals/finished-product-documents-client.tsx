@@ -114,6 +114,12 @@ export function FinishedProductDocumentsClient({
       </div>
 
       <div className="space-y-4">
+        {documents.length === 0 && (
+          <div className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[17px] text-[#7d8196]">
+            Документов пока нет
+          </div>
+        )}
+
         {documents.map((document) => (
           <div
             key={document.id}
