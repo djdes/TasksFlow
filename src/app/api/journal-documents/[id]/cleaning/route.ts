@@ -3,20 +3,11 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  buildCleaningAutoFillRows,
   CLEANING_DOCUMENT_TEMPLATE_CODE,
-  createEmptyCleaningEntryData,
   normalizeCleaningDocumentConfig,
+  buildCleaningAutoFillEntries,
 } from "@/lib/cleaning-document";
 import { toDateKey } from "@/lib/hygiene-document";
-
-type CleaningAction = "apply_auto_fill" | "save_cell" | "sync_rows";
-
-function toDateOnly(value: string) {
-  const date = new Date(value);
-  date.setUTCHours(0, 0, 0, 0);
-  return date;
-}
 
 export async function POST(
   request: Request,
@@ -29,16 +20,15 @@ export async function POST(
 
   const { id } = await params;
   const body = (await request.json().catch(() => ({}))) as {
-    action?: CleaningAction;
-    rowId?: string;
-    date?: string;
-    mark?: "routine" | "general" | null;
-    removedRowIds?: string[];
+    action?: string;
   };
 
-  const action = body.action;
-  if (!action) {
-    return NextResponse.json({ error: "Не указано действие" }, { status: 400 });
+  if (body.action !== "apply_auto_fill") {
+    return NextResponse.json({ error: "Неверное действие" }, { status: 400 });
+  }
+
+  if (!["owner", "technologist"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
   const document = await db.journalDocument.findUnique({
@@ -46,7 +36,7 @@ export async function POST(
     include: {
       template: true,
       entries: {
-        orderBy: [{ employeeId: "asc" }, { date: "asc" }],
+        orderBy: [{ date: "asc" }],
       },
     },
   });
@@ -63,117 +53,45 @@ export async function POST(
     return NextResponse.json({ error: "Документ закрыт" }, { status: 400 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const config = normalizeCleaningDocumentConfig(document.config) as any;
+  const config = normalizeCleaningDocumentConfig(document.config);
 
-  if (action === "save_cell") {
-    if (!body.rowId || !body.date) {
-      return NextResponse.json({ error: "rowId и date обязательны" }, { status: 400 });
-    }
-
-    const hasRow = Array.isArray(config.rows)
-      ? config.rows.some((row: { id: string }) => row.id === body.rowId)
-      : true;
-    if (!hasRow) {
-      return NextResponse.json({ error: "Строка не найдена в конфигурации" }, { status: 400 });
-    }
-
-    const dateKey = body.date;
-    const documentFrom = toDateKey(document.dateFrom);
-    const documentTo = toDateKey(document.dateTo);
-    if (dateKey < documentFrom || dateKey > documentTo) {
-      return NextResponse.json({ error: "Дата вне периода документа" }, { status: 400 });
-    }
-
-    const date = toDateOnly(dateKey);
-
-    if (!body.mark) {
-      const result = await db.journalDocumentEntry.deleteMany({
-        where: {
-          documentId: document.id,
-          employeeId: body.rowId,
-          date,
-        },
-      });
-
-      return NextResponse.json({ deleted: result.count });
-    }
-
-    const entry = await db.journalDocumentEntry.upsert({
-      where: {
-        documentId_employeeId_date: {
-          documentId: document.id,
-          employeeId: body.rowId,
-          date,
-        },
-      },
-      update: {
-        data: createEmptyCleaningEntryData(body.mark),
-      },
-      create: {
-        documentId: document.id,
-        employeeId: body.rowId,
-        date,
-        data: createEmptyCleaningEntryData(body.mark),
-      },
-    });
-
-    return NextResponse.json({ entry });
-  }
-
-  if (!["owner", "technologist"].includes(session.user.role)) {
-    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
-  }
-
-  if (action === "sync_rows") {
-    const removedRowIds = Array.isArray(body.removedRowIds)
-      ? body.removedRowIds.filter((item): item is string => typeof item === "string")
-      : [];
-
-    if (removedRowIds.length === 0) {
-      return NextResponse.json({ deleted: 0 });
-    }
-
-    const result = await db.journalDocumentEntry.deleteMany({
-      where: {
-        documentId: document.id,
-        employeeId: {
-          in: removedRowIds,
-        },
-      },
-    });
-
-    return NextResponse.json({ deleted: result.count });
-  }
-
-  const generatedRows = buildCleaningAutoFillRows({
-    config,
-    dateFrom: document.dateFrom,
-    dateTo: document.dateTo,
+  // Load org users for resolving responsible names
+  const orgUsers = await db.user.findMany({
+    where: { organizationId: session.user.organizationId },
+    select: { id: true, name: true },
   });
 
-  const existingKeys = new Set(
-    document.entries.map((entry) => `${entry.employeeId}:${toDateKey(entry.date)}`)
+  const users = orgUsers.map((u) => ({ id: u.id, name: u.name ?? "" }));
+
+  const generatedEntries = buildCleaningAutoFillEntries({
+    config,
+    dateFrom: toDateKey(document.dateFrom),
+    dateTo: toDateKey(document.dateTo),
+    users,
+  });
+
+  // Build a set of existing date keys
+  const existingDateKeys = new Set(
+    document.entries.map((entry) => toDateKey(entry.date))
   );
 
-  const rowsToCreate = generatedRows
-    .filter((row) => !existingKeys.has(`${row.employeeId}:${toDateKey(row.date)}`))
-    .map((row) => ({
+  const sentinelEmployeeId = users[0]?.id ?? "system";
+
+  const toCreate = generatedEntries
+    .filter((entry) => !existingDateKeys.has(entry.date))
+    .map((entry) => ({
       documentId: document.id,
-      employeeId: row.employeeId,
-      date: row.date,
-      data: row.data,
+      employeeId: sentinelEmployeeId,
+      date: new Date(entry.date),
+      data: entry.data,
     }));
 
-  if (rowsToCreate.length > 0) {
+  if (toCreate.length > 0) {
     await db.journalDocumentEntry.createMany({
-      data: rowsToCreate,
+      data: toCreate,
       skipDuplicates: true,
     });
   }
 
-  return NextResponse.json({
-    created: rowsToCreate.length,
-    updated: 0,
-  });
+  return NextResponse.json({ created: toCreate.length });
 }
