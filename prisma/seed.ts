@@ -23,8 +23,8 @@ const journalTemplates = [
   },
   {
     code: "incoming_control",
-    name: "Входной контроль сырья",
-    description: "Журнал входного контроля поступающего сырья и продуктов",
+    name: "Журнал приемки и входного контроля продукции",
+    description: "Журнал приемки и входного контроля поступающего сырья и продуктов",
     sortOrder: 2,
     isMandatorySanpin: true,
     isMandatoryHaccp: true,
