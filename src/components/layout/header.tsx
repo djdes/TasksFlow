@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -59,6 +60,30 @@ type HeaderProps = {
 
 export function Header({ userName, userEmail, organizationName }: HeaderProps) {
   const pathname = usePathname();
+  const [buildInfo, setBuildInfo] = useState({
+    buildId: CLIENT_BUILD_ID,
+    buildTime: CLIENT_BUILD_TIME,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/build-info", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.buildId) {
+          setBuildInfo({
+            buildId: data.buildId,
+            buildTime: data.buildTime || "",
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -72,9 +97,9 @@ export function Header({ userName, userEmail, organizationName }: HeaderProps) {
           <span className="text-lg font-bold text-primary">HACCP-Online</span>
           <span
             className="text-[10px] font-mono text-muted-foreground/60"
-            title={`Build: ${CLIENT_BUILD_TIME}`}
+            title={`Build: ${buildInfo.buildTime}`}
           >
-            {CLIENT_BUILD_ID}
+            {buildInfo.buildId}
           </span>
         </Link>
 
