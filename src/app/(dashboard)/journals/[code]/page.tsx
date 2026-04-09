@@ -20,6 +20,7 @@ import { FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE } from "@/lib/finished-product-
 import { FinishedProductDocumentsClient } from "@/components/journals/finished-product-documents-client";
 import { CLIMATE_DOCUMENT_TEMPLATE_CODE } from "@/lib/climate-document";
 import { COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/cold-equipment-document";
+import { CLEANING_DOCUMENT_TEMPLATE_CODE } from "@/lib/cleaning-document";
 import { TrackedDocumentsClient } from "@/components/journals/tracked-documents-client";
 
 export const dynamic = "force-dynamic";
@@ -263,7 +264,8 @@ export default async function JournalDocumentsPage({
 
     if (
       code === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
-      code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+      code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
+      code === CLEANING_DOCUMENT_TEMPLATE_CODE
     ) {
       return (
         <TrackedDocumentsClient
