@@ -762,12 +762,12 @@ function drawColdEquipmentPdf(doc: jsPDF, params: {
 
   const equipment = params.config.equipment;
   const head: RowInput[] = [[
-    { content: "Дата", styles: { halign: "center", valign: "middle" } },
+    { content: "Дата", styles: { halign: "center" as const, valign: "middle" as const } },
     ...equipment.map((item) => ({
       content: `${item.name}\n(${item.min ?? "—"}...${item.max ?? "—"}°C)`,
-      styles: { halign: "center", valign: "middle" },
+      styles: { halign: "center" as const, valign: "middle" as const },
     })),
-    { content: "Ответственный", styles: { halign: "center", valign: "middle" } },
+    { content: "Ответственный", styles: { halign: "center" as const, valign: "middle" as const } },
   ]];
 
   const body: RowInput[] = params.entries.map((entry) => {
@@ -832,10 +832,10 @@ function drawCleaningPdf(doc: jsPDF, params: {
   });
 
   const head: RowInput[] = [[
-    { content: "Помещение", styles: { halign: "center", valign: "middle" } },
+    { content: "Помещение", styles: { halign: "center" as const, valign: "middle" as const } },
     ...dateKeys.map((key) => ({
       content: String(getDayNumber(key)),
-      styles: { halign: "center", valign: "middle" },
+      styles: { halign: "center" as const, valign: "middle" as const },
     })),
   ]];
 
