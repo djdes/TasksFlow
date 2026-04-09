@@ -25,6 +25,8 @@ import {
   buildRegisterDocumentConfigFromUsers,
   isRegisterDocumentTemplate,
 } from "@/lib/register-document";
+import { SANITATION_DAY_TEMPLATE_CODE, getSanitationDayDefaultConfig } from "@/lib/sanitation-day-document";
+import { TRAINING_PLAN_TEMPLATE_CODE, getTrainingPlanDefaultConfig } from "@/lib/training-plan-document";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -156,6 +158,10 @@ export async function POST(request: Request) {
       ? buildFinishedProductConfigFromUsers(allUsers)
       : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
       ? getAcceptanceDocumentDefaultConfig(allUsers)
+      : templateCode === SANITATION_DAY_TEMPLATE_CODE
+      ? getSanitationDayDefaultConfig()
+      : templateCode === TRAINING_PLAN_TEMPLATE_CODE
+      ? getTrainingPlanDefaultConfig()
       : isRegisterDocumentTemplate(templateCode)
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;
