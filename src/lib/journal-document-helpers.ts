@@ -27,6 +27,10 @@ import {
   getTrackedDocumentTitle,
   isTrackedDocumentTemplate,
 } from "@/lib/tracked-document";
+import {
+  SANITATION_DAY_TEMPLATE_CODE,
+  SANITATION_DAY_DOCUMENT_TITLE,
+} from "@/lib/sanitation-day-document";
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -57,6 +61,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
     return getCleaningDocumentTitle();
+  }
+  if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
+    return SANITATION_DAY_DOCUMENT_TITLE;
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);

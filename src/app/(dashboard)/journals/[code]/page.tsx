@@ -29,7 +29,24 @@ import {
   isSourceStyleTrackedTemplate,
   isTrackedDocumentTemplate,
 } from "@/lib/tracked-document";
+import { UvLampRuntimeDocumentsClient } from "@/components/journals/uv-lamp-runtime-documents-client";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
+import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE } from "@/lib/acceptance-document";
+import {
+  SANITATION_DAY_SOURCE_SLUG,
+  SANITATION_DAY_TEMPLATE_CODE,
+  SANITATION_DAY_DOCUMENT_TITLE,
+  getSanitationDayDefaultConfig,
+  getSanitationDocumentDateLabel,
+  getSanitationApproveLabel,
+} from "@/lib/sanitation-day-document";
+import { SanitationDayDocumentsClient } from "@/components/journals/sanitation-day-documents-client";
+import {
+  UV_LAMP_RUNTIME_TEMPLATE_CODE,
+  buildUvRuntimeDocumentTitle,
+  formatRuDateDash,
+  normalizeUvRuntimeDocumentConfig,
+} from "@/lib/uv-lamp-runtime-document";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -182,6 +199,13 @@ function buildTrackedDemoValue(field: TrackedTemplateField, rowIndex: number) {
 }
 
 function getTrackedMeta(templateCode: string, dateFrom: Date, dateTo: Date) {
+  if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    return {
+      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaValue: toSourceDateLabel(dateFrom),
+    };
+  }
+
   if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
     return {
       metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
@@ -303,6 +327,53 @@ async function ensureSourceStyleTrackedSampleDocuments({
         },
       ],
       skipDuplicates: true,
+    });
+  }
+}
+
+async function ensureSanitationDaySampleDocuments(params: {
+  templateId: string;
+  organizationId: string;
+  createdById: string;
+}) {
+  const { templateId, organizationId, createdById } = params;
+  const currentYearDate = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+  const previousYearDate = new Date(
+    Date.UTC(new Date().getUTCFullYear() - 1, 0, 1)
+  );
+
+  const existing = await db.journalDocument.findMany({
+    where: {
+      templateId,
+      organizationId,
+    },
+    select: {
+      status: true,
+    },
+  });
+
+  const statuses = new Set(existing.map((item) => item.status));
+  const docsToCreate: Array<{ status: "active" | "closed"; date: Date }> = [];
+
+  if (!statuses.has("active")) {
+    docsToCreate.push({ status: "active", date: currentYearDate });
+  }
+  if (!statuses.has("closed")) {
+    docsToCreate.push({ status: "closed", date: previousYearDate });
+  }
+
+  for (const doc of docsToCreate) {
+    await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: SANITATION_DAY_DOCUMENT_TITLE,
+        status: doc.status,
+        dateFrom: doc.date,
+        dateTo: doc.date,
+        createdById,
+        config: getSanitationDayDefaultConfig(doc.date),
+      },
     });
   }
 }
@@ -440,6 +511,49 @@ export default async function JournalDocumentsPage({
             responsibleTitle: document.responsibleTitle,
             periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
             startedAtLabel: document.dateFrom.toLocaleDateString("ru-RU"),
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            dateTo: document.dateTo.toISOString().slice(0, 10),
+            config: document.config,
+          }))}
+        />
+      );
+    }
+
+    if (resolvedCode === SANITATION_DAY_TEMPLATE_CODE) {
+      await ensureSanitationDaySampleDocuments({
+        templateId: template.id,
+        organizationId: session.user.organizationId,
+        createdById: session.user.id,
+      });
+
+      const sanitationDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return (
+        <SanitationDayDocumentsClient
+          routeCode={code === SANITATION_DAY_SOURCE_SLUG ? code : resolvedCode}
+          templateCode={resolvedCode}
+          activeTab={activeTab}
+          users={orgUsers}
+          documents={sanitationDocuments.map((document) => ({
+            id: document.id,
+            title: document.title || SANITATION_DAY_DOCUMENT_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            dateTo: document.dateTo.toISOString().slice(0, 10),
+            config: document.config,
+            periodLabel: getSanitationDocumentDateLabel(
+              document.dateFrom.toISOString().slice(0, 10)
+            ),
+            responsibleTitle: getSanitationApproveLabel("", ""),
+            metaLabel: "",
+            metaValue: "",
           }))}
         />
       );
@@ -451,12 +565,45 @@ export default async function JournalDocumentsPage({
       resolvedCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
       isTrackedDocumentTemplate(resolvedCode)
     ) {
+      if (resolvedCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
+        return (
+          <UvLampRuntimeDocumentsClient
+            activeTab={activeTab}
+            routeCode={code}
+            templateCode={resolvedCode}
+            templateName={template.name}
+            users={orgUsers}
+            documents={documents.map((document) => {
+              const config = normalizeUvRuntimeDocumentConfig(document.config);
+              return {
+                id: document.id,
+                title: document.title || buildUvRuntimeDocumentTitle(config),
+                status: document.status as "active" | "closed",
+                responsibleTitle: document.responsibleTitle,
+                responsibleUserId: document.responsibleUserId,
+                dateFrom: document.dateFrom.toISOString().slice(0, 10),
+                config:
+                  document.config && typeof document.config === "object" && !Array.isArray(document.config)
+                    ? (document.config as Record<string, unknown>)
+                    : null,
+                periodLabel: formatRuDateDash(document.dateFrom),
+              };
+            })}
+          />
+        );
+      }
+
+      const trackedHeading =
+        resolvedCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+          ? "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё Рё РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ РїСЂРѕРґСѓРєС†РёРё"
+          : template.name;
+
       return (
         <TrackedDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
           templateName={template.name}
-          heading={template.name}
+          heading={trackedHeading}
           users={orgUsers}
           documents={documents.map((document) => ({
             id: document.id,

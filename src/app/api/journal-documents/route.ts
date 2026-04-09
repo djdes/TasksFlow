@@ -20,6 +20,7 @@ import {
   buildFinishedProductConfigFromUsers,
 } from "@/lib/finished-product-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
+import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE, getAcceptanceDocumentDefaultConfig } from "@/lib/acceptance-document";
 import {
   buildRegisterDocumentConfigFromUsers,
   isRegisterDocumentTemplate,
@@ -153,6 +154,8 @@ export async function POST(request: Request) {
       ? buildCleaningConfigFromAreas(cleaningAreas, cleaningDefaults || undefined)
       : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
       ? buildFinishedProductConfigFromUsers(allUsers)
+      : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+      ? getAcceptanceDocumentDefaultConfig(allUsers)
       : isRegisterDocumentTemplate(templateCode)
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;

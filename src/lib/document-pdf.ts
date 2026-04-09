@@ -38,6 +38,26 @@ import {
   type TrackedDocumentTemplateCode,
 } from "@/lib/tracked-document";
 import {
+  UV_LAMP_RUNTIME_TEMPLATE_CODE,
+  formatRuDateDash,
+  normalizeUvRuntimeDocumentConfig,
+  normalizeUvRuntimeEntryData,
+} from "@/lib/uv-lamp-runtime-document";
+import {
+  SANITATION_DAY_TEMPLATE_CODE,
+  SANITATION_DAY_DOCUMENT_TITLE,
+  SANITATION_MONTHS,
+  normalizeSanitationDayConfig,
+} from "@/lib/sanitation-day-document";
+import {
+  getRegisterDocumentFilePrefix,
+  getRegisterDocumentTitle,
+  isRegisterDocumentTemplate,
+  normalizeRegisterDocumentConfig,
+  parseRegisterFields,
+  type RegisterField,
+} from "@/lib/register-document";
+import {
   buildHygieneExampleEmployees,
   buildDateKeys,
   formatMonthLabel,
@@ -892,27 +912,51 @@ function drawFinishedProductPdf(doc: jsPDF, params: {
     dateTo: params.dateTo,
   });
 
-  const head: RowInput[] = [[
+  const headRow: RowInput = [
     centerCell("№"),
-    centerCell("Дата/время"),
-    centerCell("Продукция"),
-    centerCell("Органолептика"),
-    centerCell("T продукта"),
-    centerCell("Корректирующие действия"),
-    centerCell("Ответственный"),
-    centerCell("Проверил"),
-  ]];
+    centerCell("Дата/время изготовления"),
+    centerCell("Время снятия бракеража"),
+    centerCell(
+      params.config.fieldNameMode === "semi"
+        ? "Наименование полуфабриката"
+        : "Наименование блюд (изделий)"
+    ),
+    centerCell("Органолептическая оценка"),
+  ];
+  if (params.config.showProductTemp) headRow.push(centerCell("T продукта"));
+  if (params.config.showCorrectiveAction) headRow.push(centerCell("Корректирующие действия"));
+  if (params.config.showOxygenLevel) headRow.push(centerCell("Остаточный кислород, %"));
+  headRow.push(centerCell("Разрешение к реализации"));
+  if (params.config.showCourierTime) headRow.push(centerCell("Передача курьеру"));
+  headRow.push(centerCell("Ответственный"));
+  headRow.push(
+    centerCell(
+      params.config.inspectorMode === "commission_signatures"
+        ? "Подписи комиссии"
+        : "ФИО лица, проводившего бракераж"
+    )
+  );
+  const head: RowInput[] = [headRow];
 
-  const body: RowInput[] = params.config.rows.map((row, index) => [
-    centerCell(String(index + 1)),
-    centerCell(row.productionDateTime || ""),
-    { content: row.productName || "", styles: { halign: "left", valign: "middle" } },
-    centerCell(row.organoleptic || ""),
-    centerCell(row.productTemp || ""),
-    { content: row.correctiveAction || "", styles: { halign: "left", valign: "middle" } },
-    centerCell(row.responsiblePerson || ""),
-    centerCell(row.inspectorName || ""),
-  ]);
+  const body: RowInput[] = params.config.rows.map((row, index) => {
+    const line: RowInput = [
+      centerCell(String(index + 1)),
+      centerCell(row.productionDateTime || ""),
+      centerCell(row.rejectionTime || ""),
+      { content: row.productName || "", styles: { halign: "left", valign: "middle" } },
+      centerCell(row.organoleptic || ""),
+    ];
+    if (params.config.showProductTemp) line.push(centerCell(row.productTemp || ""));
+    if (params.config.showCorrectiveAction) {
+      line.push({ content: row.correctiveAction || "", styles: { halign: "left", valign: "middle" } });
+    }
+    if (params.config.showOxygenLevel) line.push(centerCell(row.oxygenLevel || ""));
+    line.push(centerCell(row.releasePermissionTime || ""));
+    if (params.config.showCourierTime) line.push(centerCell(row.courierTransferTime || ""));
+    line.push(centerCell(row.responsiblePerson || ""));
+    line.push(centerCell(row.inspectorName || ""));
+    return line;
+  });
 
   autoTable(doc, {
     startY: 66,
@@ -935,6 +979,13 @@ function drawFinishedProductPdf(doc: jsPDF, params: {
     },
     margin: { left: 10, right: 10 },
   });
+
+  if (params.config.footerNote) {
+    const y = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 66;
+    doc.setFont("JournalUnicode", "normal");
+    doc.setFontSize(9);
+    doc.text(params.config.footerNote, 10, y + 8);
+  }
 }
 
 type TrackedField = {
@@ -979,8 +1030,141 @@ function getTrackedFieldValue(field: TrackedField, value: unknown) {
   return String(value);
 }
 
+function getRegisterFieldValue(
+  field: RegisterField,
+  value: string,
+  users: { id: string; name: string; role: string }[],
+  equipment: { id: string; name: string }[]
+) {
+  if (!value) return "";
+
+  if (field.type === "employee") {
+    return users.find((user) => user.id === value)?.name || value;
+  }
+
+  if (field.type === "equipment") {
+    return equipment.find((item) => item.id === value)?.name || value;
+  }
+
+  if (field.type === "select") {
+    return field.options.find((option) => option.value === value)?.label || value;
+  }
+
+  return value;
+}
+
+function isRegisterFieldVisible(
+  field: RegisterField,
+  values: Record<string, string>
+) {
+  if (!field.showIf) return true;
+  return values[field.showIf.field] === field.showIf.equals;
+}
+
 function getTrackedFilePrefix(templateCode: string) {
   return `journal-${templateCode.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
+}
+
+function drawSanitationDayPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  config: ReturnType<typeof normalizeSanitationDayConfig>;
+}) {
+  const cfg = params.config;
+  drawTitle(doc, params.title || SANITATION_DAY_DOCUMENT_TITLE);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: "ГРАФИК И УЧЕТ ГЕНЕРАЛЬНЫХ УБОРОК",
+    withPeriodicity: false,
+  });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(10);
+  doc.text("УТВЕРЖДАЮ", 274, 63);
+  doc.setFont("JournalUnicode", "normal");
+  doc.text(cfg.approveRole || "", 274, 69);
+  doc.text(cfg.approveEmployee || "", 274, 75);
+  doc.line(222, 72, 270, 72);
+  doc.text(
+    `« ${cfg.documentDate.slice(8, 10)} » ${new Date(cfg.documentDate).toLocaleDateString("ru-RU", { month: "long" })} ${cfg.year} г.`,
+    246,
+    80
+  );
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  doc.text(
+    `График и учет генеральных уборок на предприятии в ${cfg.year} г.`,
+    148,
+    95,
+    { align: "center" }
+  );
+
+  const head: RowInput[] = [
+    [
+      { content: "Помещение", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      { content: "", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      {
+        content: "График",
+        colSpan: SANITATION_MONTHS.length,
+        styles: { halign: "center", valign: "middle" },
+      },
+    ],
+    SANITATION_MONTHS.map((item) => ({ content: item.short, styles: { halign: "center" } })),
+  ];
+
+  const body: RowInput[] = [];
+  for (const row of cfg.rows) {
+    body.push([
+      { content: row.roomName || "", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      { content: "План", styles: { halign: "center", valign: "middle" } },
+      ...SANITATION_MONTHS.map((month) => centerCell(row.plan[month.key] || "")),
+    ]);
+    body.push([
+      { content: "Факт", styles: { halign: "center", valign: "middle" } },
+      ...SANITATION_MONTHS.map((month) => centerCell(row.fact[month.key] || "")),
+    ]);
+  }
+
+  body.push([
+    {
+      content: `Ответственный: ${cfg.responsibleRole}, ${cfg.responsibleEmployee}`,
+      colSpan: 2,
+      styles: { halign: "center", valign: "middle" },
+    },
+    ...SANITATION_MONTHS.map(() => centerCell("")),
+  ]);
+
+  autoTable(doc, {
+    startY: 102,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 8,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      lineWidth: 0.2,
+      fontStyle: "bold",
+    },
+    bodyStyles: {
+      lineWidth: 0.2,
+    },
+    columnStyles: {
+      0: { cellWidth: 66 },
+      1: { cellWidth: 28 },
+      ...Object.fromEntries(SANITATION_MONTHS.map((_, index) => [index + 2, { cellWidth: 12.5 }])),
+    },
+  });
 }
 
 function drawTrackedPdf(doc: jsPDF, params: {
@@ -1013,6 +1197,148 @@ function drawTrackedPdf(doc: jsPDF, params: {
     centerCell(userMap[entry.employeeId] || ""),
     ...params.fields.map((field) =>
       centerCell(getTrackedFieldValue(field, entry.data[field.key]))
+    ),
+  ]);
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+}
+
+function drawUvRuntimePdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeUvRuntimeDocumentConfig>;
+  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
+  users: { id: string; name: string; role: string }[];
+}) {
+  drawTitle(doc, "Журнал учета работы");
+  drawClimateMetaTable(doc, {
+    organizationName: params.organizationName,
+    title: params.title,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+
+  const userMap = Object.fromEntries(params.users.map((user) => [user.id, user.name]));
+  const rows = [...params.entries].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const head: RowInput[] = [[
+    centerCell("№"),
+    centerCell("Дата"),
+    centerCell("Время включения"),
+    centerCell("Время выключения"),
+    centerCell("Показание счетчика, ч"),
+    centerCell("Ответственный"),
+  ]];
+
+  const body: RowInput[] = rows.map((entry, index) => {
+    const data = normalizeUvRuntimeEntryData(entry.data);
+    return [
+      centerCell(String(index + 1)),
+      centerCell(formatRuDateDash(entry.date)),
+      centerCell(data.startTime || ""),
+      centerCell(data.endTime || ""),
+      centerCell(data.counterValue || ""),
+      centerCell(userMap[entry.employeeId] || ""),
+    ];
+  });
+
+  body.unshift([
+    {
+      content: `Бактерицидная установка №${params.config.lampNumber}. ${params.config.areaName}`,
+      colSpan: 6,
+      styles: { halign: "left", fontStyle: "bold" },
+    },
+  ]);
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 8,
+      cellPadding: 1.2,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    columnStyles: {
+      0: { cellWidth: 14 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 40 },
+      3: { cellWidth: 40 },
+      4: { cellWidth: 42 },
+      5: { cellWidth: 90 },
+    },
+  });
+}
+
+function drawRegisterPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  fields: RegisterField[];
+  config: ReturnType<typeof normalizeRegisterDocumentConfig>;
+  users: { id: string; name: string; role: string }[];
+  equipment: { id: string; name: string }[];
+}) {
+  drawTitle(doc, params.title);
+  drawClimateMetaTable(doc, {
+    organizationName: params.organizationName,
+    title: params.title,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+
+  const head: RowInput[] = [[
+    centerCell("№"),
+    ...params.fields.map((field) => centerCell(field.label)),
+  ]];
+
+  const body: RowInput[] = params.config.rows.map((row, index) => [
+    centerCell(String(index + 1)),
+    ...params.fields.map((field) =>
+      centerCell(
+        isRegisterFieldVisible(field, row.values)
+          ? getRegisterFieldValue(
+              field,
+              row.values[field.key] || "",
+              params.users,
+              params.equipment
+            )
+          : ""
+      )
     ),
   ]);
 
@@ -1088,6 +1414,15 @@ export async function generateJournalDocumentPdf(params: {
     select: { id: true, name: true, role: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
+  const equipment = await db.equipment.findMany({
+    where: {
+      area: {
+        organizationId,
+      },
+    },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   const doc = new jsPDF({
     orientation: "landscape",
@@ -1108,7 +1443,10 @@ export async function generateJournalDocumentPdf(params: {
   const coldConfig = normalizeColdEquipmentDocumentConfig(document.config);
   const cleaningConfig = normalizeCleaningDocumentConfig(document.config);
   const finishedConfig = normalizeFinishedProductDocumentConfig(document.config);
+  const uvRuntimeConfig = normalizeUvRuntimeDocumentConfig(document.config);
   const trackedFields = getTrackedFields(document.template.fields);
+  const registerFields = parseRegisterFields(document.template.fields);
+  const registerConfig = normalizeRegisterDocumentConfig(document.config, registerFields);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -1180,6 +1518,37 @@ export async function generateJournalDocumentPdf(params: {
       dateTo: document.dateTo,
       config: finishedConfig,
     });
+  } else if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
+    drawSanitationDayPdf(doc, {
+      organizationName,
+      title: document.title || SANITATION_DAY_DOCUMENT_TITLE,
+      config: normalizeSanitationDayConfig(document.config),
+    });
+  } else if (isRegisterDocumentTemplate(templateCode)) {
+    drawRegisterPdf(doc, {
+      organizationName,
+      title: document.title || getRegisterDocumentTitle(templateCode),
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      fields: registerFields,
+      config: registerConfig,
+      users,
+      equipment,
+    });
+  } else if (templateCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
+    drawUvRuntimePdf(doc, {
+      organizationName,
+      title: document.title || getTrackedDocumentTitle(templateCode),
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: uvRuntimeConfig,
+      entries: document.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        date: entry.date,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+      users,
+    });
   } else if (isTrackedDocumentTemplate(templateCode)) {
     drawTrackedPdf(doc, {
       organizationName,
@@ -1219,8 +1588,12 @@ export async function generateJournalDocumentPdf(params: {
           ? getColdEquipmentFilePrefix()
           : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
             ? getCleaningFilePrefix()
-            : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
-              ? getFinishedProductFilePrefix()
+          : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+            ? getFinishedProductFilePrefix()
+            : templateCode === SANITATION_DAY_TEMPLATE_CODE
+              ? "general-cleaning-schedule"
+            : isRegisterDocumentTemplate(templateCode)
+                ? getRegisterDocumentFilePrefix(templateCode)
               : isTrackedDocumentTemplate(templateCode)
                 ? getTrackedFilePrefix(templateCode)
               : "hygiene-journal";

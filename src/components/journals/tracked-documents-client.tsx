@@ -8,6 +8,7 @@ import { CreateDocumentDialog } from "@/components/journals/create-document-dial
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,10 @@ import {
   getTrackedDocumentCreateMode,
   isSourceStyleTrackedTemplate,
 } from "@/lib/tracked-document";
+import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  normalizeAcceptanceDocumentConfig,
+} from "@/lib/acceptance-document";
 
 type JournalListDocument = {
   id: string;
@@ -75,6 +80,8 @@ function EditTrackedDocumentDialog({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [areaName, setAreaName] = useState("");
+  const [showPackagingField, setShowPackagingField] = useState(false);
+  const [responsibleUserId, setResponsibleUserId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const responsibleOptions = useMemo(
@@ -84,6 +91,7 @@ function EditTrackedDocumentDialog({
 
   const createMode = getTrackedDocumentCreateMode(templateCode);
   const isSourceStyle = isSourceStyleTrackedTemplate(templateCode);
+  const isAcceptance = templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE;
 
   useEffect(() => {
     if (!open || !document) return;
@@ -98,6 +106,9 @@ function EditTrackedDocumentDialog({
         ? document.config.areaName
         : ""
     );
+    const acceptanceConfig = normalizeAcceptanceDocumentConfig(document.config, users);
+    setShowPackagingField(acceptanceConfig.showPackagingComplianceField);
+    setResponsibleUserId(acceptanceConfig.defaultResponsibleUserId || "");
   }, [document, open, responsibleOptions]);
 
   async function handleSave() {
@@ -113,6 +124,16 @@ function EditTrackedDocumentDialog({
           dateFrom,
           dateTo,
           config: areaName.trim() ? { ...(document.config || {}), areaName: areaName.trim() } : document.config,
+          ...(isAcceptance
+            ? {
+                config: {
+                  ...normalizeAcceptanceDocumentConfig(document.config, users),
+                  showPackagingComplianceField: showPackagingField,
+                  defaultResponsibleUserId: responsibleUserId || null,
+                  defaultResponsibleTitle: responsibleTitle || null,
+                },
+              }
+            : {}),
         }),
       });
 
@@ -189,7 +210,7 @@ function EditTrackedDocumentDialog({
           ) : (
             <div className="space-y-3">
               <Label htmlFor="tracked-edit-date-from" className="text-[18px] text-[#73738a]">
-                {createMode === "uv" ? "Дата начала" : "Дата документа"}
+                {createMode === "uv" || isAcceptance ? "Дата начала" : "Дата документа"}
               </Label>
               <Input
                 id="tracked-edit-date-from"
@@ -199,6 +220,35 @@ function EditTrackedDocumentDialog({
                 className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
               />
             </div>
+          )}
+
+          {isAcceptance && (
+            <>
+              <div className="space-y-3">
+                <Label className="text-[18px] text-[#73738a]">Добавить поля</Label>
+                <div className="flex items-center gap-3">
+                  <Switch checked={showPackagingField} onCheckedChange={setShowPackagingField} />
+                  <span className="text-[14px]">
+                    Соответствие внешнего вида упаковки, маркировки требованиям НД
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+                <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
+                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                    <SelectValue placeholder="- Выберите значение -" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
 
           {isSourceStyle && createMode === "staff" && (

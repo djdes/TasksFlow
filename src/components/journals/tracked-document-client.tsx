@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Printer, Settings2, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Printer, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,8 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { getHygienePositionLabel } from "@/lib/hygiene-document";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type EmployeeItem = {
   id: string;
@@ -53,8 +58,8 @@ type Props = {
   organizationName: string;
   dateFrom: string;
   dateTo: string;
-  responsibleTitle: string | null;
-  responsibleUserId: string | null;
+  responsibleTitle?: string | null;
+  responsibleUserId?: string | null;
   status: string;
   employees: EmployeeItem[];
   fields: FieldItem[];
@@ -73,227 +78,18 @@ function fieldValueToString(value: unknown) {
 }
 
 function isSelectLikeField(field: FieldItem) {
-  return field.type === "select" || field.type === "employee" || field.type === "equipment";
+  return (
+    field.type === "select" ||
+    field.type === "employee" ||
+    field.type === "equipment"
+  );
 }
 
-function getSortedEntries(entries: EntryItem[]) {
-  return [...entries].sort((left, right) => {
-    if (left.date !== right.date) return left.date.localeCompare(right.date);
-    return left.employeeId.localeCompare(right.employeeId);
+function sortedEntries(entries: EntryItem[]) {
+  return [...entries].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.employeeId.localeCompare(b.employeeId);
   });
-}
-
-function AddRowDialog({
-  open,
-  onOpenChange,
-  employees,
-  defaultEmployeeId,
-  onCreate,
-}: {
-  open: boolean;
-  onOpenChange: (value: boolean) => void;
-  employees: EmployeeItem[];
-  defaultEmployeeId: string;
-  onCreate: (params: { employeeId: string; date: string }) => Promise<void>;
-}) {
-  const [date, setDate] = useState("");
-  const [employeeId, setEmployeeId] = useState(defaultEmployeeId);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const today = new Date();
-    const todayLabel = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-      today.getDate()
-    ).padStart(2, "0")}`;
-    setDate(todayLabel);
-    setEmployeeId(defaultEmployeeId);
-  }, [defaultEmployeeId, open]);
-
-  async function handleSubmit() {
-    setIsSubmitting(true);
-    try {
-      await onCreate({ employeeId, date });
-      onOpenChange(false);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка создания строки");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
-        <DialogHeader className="border-b px-12 py-10">
-          <DialogTitle className="text-[32px] font-medium text-black">Добавление новой строки</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-7 px-12 py-10">
-          <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
-                <SelectValue placeholder="Выберите сотрудника" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !date || !employeeId}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
-            >
-              {isSubmitting ? "Создание..." : "Создать"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function JournalSettingsDialog({
-  open,
-  onOpenChange,
-  title,
-  responsibleTitle,
-  responsibleUserId,
-  employees,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (value: boolean) => void;
-  title: string;
-  responsibleTitle: string | null;
-  responsibleUserId: string | null;
-  employees: EmployeeItem[];
-  onSave: (params: {
-    title: string;
-    responsibleTitle: string | null;
-    responsibleUserId: string | null;
-  }) => Promise<void>;
-}) {
-  const titleOptions = useMemo(
-    () => [...new Set(employees.map((employee) => getHygienePositionLabel(employee.role)))],
-    [employees]
-  );
-
-  const [name, setName] = useState(title);
-  const [position, setPosition] = useState(responsibleTitle || titleOptions[0] || "");
-  const [userId, setUserId] = useState(responsibleUserId || employees[0]?.id || "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setName(title);
-    setPosition(responsibleTitle || titleOptions[0] || "");
-    setUserId(responsibleUserId || employees[0]?.id || "");
-  }, [employees, open, responsibleTitle, responsibleUserId, title, titleOptions]);
-
-  async function handleSave() {
-    setIsSubmitting(true);
-    try {
-      await onSave({
-        title: name.trim(),
-        responsibleTitle: position || null,
-        responsibleUserId: userId || null,
-      });
-      onOpenChange(false);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
-        <DialogHeader className="border-b px-14 py-12">
-          <DialogTitle className="text-[32px] font-medium text-black">Настройки журнала</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-8 px-14 py-12">
-          <div className="space-y-3">
-            <Label htmlFor="journal-title" className="sr-only">
-              Название журнала
-            </Label>
-            <Input
-              id="journal-title"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="h-22 rounded-3xl border-[#dfe1ec] px-8 text-[24px]"
-            />
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
-              <Select value={position} onValueChange={setPosition}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
-                  <SelectValue placeholder="Выберите должность" />
-                </SelectTrigger>
-                <SelectContent>
-                  {titleOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник по умолчанию</Label>
-              <Select value={userId} onValueChange={setUserId}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
-                  <SelectValue placeholder="Выберите сотрудника" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={isSubmitting || !name.trim()}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
-            >
-              {isSubmitting ? "Сохранение..." : "Сохранить"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 export function TrackedDocumentClient({
@@ -310,35 +106,43 @@ export function TrackedDocumentClient({
   initialEntries,
 }: Props) {
   const router = useRouter();
-  const [documentTitle, setDocumentTitle] = useState(title);
-  const [entries, setEntries] = useState(getSortedEntries(initialEntries));
+  const [entries, setEntries] = useState(sortedEntries(initialEntries));
   const [isCreating, setIsCreating] = useState(false);
-  const [addRowOpen, setAddRowOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addRowOpen, setAddRowOpen] = useState(false);
+  const [titleInput, setTitleInput] = useState(title);
+  const [responsibleUserIdInput, setResponsibleUserIdInput] = useState(
+    responsibleUserId || employees[0]?.id || ""
+  );
+  const [responsibleTitleInput, setResponsibleTitleInput] = useState(
+    responsibleTitle || ""
+  );
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [newEmployeeId, setNewEmployeeId] = useState(employees[0]?.id || "");
+  const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
-    setEntries(getSortedEntries(initialEntries));
+    setEntries(sortedEntries(initialEntries));
   }, [initialEntries]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    setTitleInput(title);
+    setResponsibleUserIdInput(responsibleUserId || employees[0]?.id || "");
+    setResponsibleTitleInput(responsibleTitle || "");
+  }, [settingsOpen, title, responsibleUserId, responsibleTitle, employees]);
+
+  useEffect(() => {
+    if (!addRowOpen) return;
+    setNewEmployeeId(employees[0]?.id || "");
+    setNewDate(new Date().toISOString().slice(0, 10));
+  }, [addRowOpen, employees]);
 
   const employeeMap = useMemo(
     () => Object.fromEntries(employees.map((item) => [item.id, item])),
     [employees]
   );
-
-  async function persistDocument(body: Record<string, unknown>) {
-    const response = await fetch(`/api/journal-documents/${documentId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const result = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(result?.error || "Не удалось обновить документ");
-    }
-
-    return result;
-  }
+  const allSelected = entries.length > 0 && selectedRowIds.length === entries.length;
 
   async function saveEntry(nextEntry: EntryItem) {
     const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
@@ -353,61 +157,99 @@ export function TrackedDocumentClient({
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.entry) {
-      throw new Error(result?.error || "Не удалось сохранить строку");
+      throw new Error(result?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ СЃС‚СЂРѕРєСѓ");
     }
 
     setEntries((current) => {
       const withoutCurrent = current.filter((item) => item.id !== nextEntry.id);
-      return getSortedEntries([
+      return sortedEntries([
         ...withoutCurrent,
-        {
-          ...nextEntry,
-          id: result.entry.id,
-        },
+        { ...nextEntry, id: result.entry.id },
       ]);
     });
   }
 
-  async function createEntry(params: { employeeId: string; date: string }) {
-    if (!params.employeeId || !params.date) {
-      throw new Error("Заполните дату и сотрудника");
-    }
-
+  async function createEntry(employeeId: string, date: string) {
     setIsCreating(true);
     try {
       const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId: params.employeeId,
-          date: params.date,
+          employeeId,
+          date,
           data: {},
         }),
       });
 
       const result = await response.json().catch(() => null);
       if (!response.ok || !result?.entry) {
-        throw new Error(result?.error || "Не удалось добавить строку");
+        throw new Error(result?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РґРѕР±Р°РІРёС‚СЊ СЃС‚СЂРѕРєСѓ");
       }
 
       setEntries((current) =>
-        getSortedEntries([
+        sortedEntries([
           ...current,
           {
             id: result.entry.id,
-            employeeId: params.employeeId,
-            date: params.date,
+            employeeId,
+            date,
             data: {},
           },
         ])
       );
+      setAddRowOpen(false);
     } finally {
       setIsCreating(false);
     }
   }
 
+  async function fillForToday() {
+    if (employees.length === 0) return;
+    setIsCreating(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await Promise.all(
+        employees.map((employee) =>
+          fetch(`/api/journal-documents/${documentId}/entries`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeId: employee.id,
+              date: today,
+              data: {},
+            }),
+          })
+        )
+      );
+      router.refresh();
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function saveSettings() {
+    const response = await fetch(`/api/journal-documents/${documentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: titleInput.trim() || title,
+        responsibleUserId: responsibleUserIdInput || null,
+        responsibleTitle: responsibleTitleInput.trim() || null,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(result?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё");
+    }
+
+    setSettingsOpen(false);
+    router.refresh();
+  }
+
   async function removeEntry(entryId: string) {
-    if (!window.confirm("Удалить строку?")) return;
+    if (!window.confirm("РЈРґР°Р»РёС‚СЊ СЃС‚СЂРѕРєСѓ?")) return;
 
     const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
       method: "DELETE",
@@ -416,24 +258,32 @@ export function TrackedDocumentClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить строку");
+      window.alert("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СЃС‚СЂРѕРєСѓ");
       return;
     }
 
     setEntries((current) => current.filter((item) => item.id !== entryId));
+    setSelectedRowIds((current) => current.filter((id) => id !== entryId));
   }
 
-  async function handleSaveSettings(params: {
-    title: string;
-    responsibleTitle: string | null;
-    responsibleUserId: string | null;
-  }) {
-    await persistDocument(params);
-    setDocumentTitle(params.title);
-    router.refresh();
-  }
+  async function removeSelectedEntries() {
+    if (selectedRowIds.length === 0) return;
+    if (!window.confirm("РЈРґР°Р»РёС‚СЊ РІС‹Р±СЂР°РЅРЅС‹Рµ СЃС‚СЂРѕРєРё?")) return;
 
-  const defaultEmployeeId = responsibleUserId || employees[0]?.id || "";
+    const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedRowIds }),
+    });
+
+    if (!response.ok) {
+      window.alert("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СЃС‚СЂРѕРєРё");
+      return;
+    }
+
+    setEntries((current) => current.filter((item) => !selectedRowIds.includes(item.id)));
+    setSelectedRowIds([]);
+  }
 
   return (
     <div className="space-y-8">
@@ -441,22 +291,67 @@ export function TrackedDocumentClient({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <div className="text-[16px] text-[#84849a]">{organizationName}</div>
-            <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.03em] text-black">{documentTitle}</h1>
+            <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.03em] text-black">
+              {title}
+            </h1>
             <div className="mt-2 text-[16px] text-[#84849a]">
-              Период: {formatDateLabel(dateFrom)} - {formatDateLabel(dateTo)}
+              РџРµСЂРёРѕРґ: {formatDateLabel(dateFrom)} - {formatDateLabel(dateTo)}
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
             {status === "active" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    disabled={isCreating || employees.length === 0}
+                    className="h-12 rounded-2xl bg-[#5b66ff] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
+                  >
+                    <Plus className="size-5" />
+                    Р”РѕР±Р°РІРёС‚СЊ
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="min-w-[260px] rounded-2xl border-0 p-2 shadow-xl"
+                >
+                  <DropdownMenuItem
+                    className="h-12 rounded-xl px-3 text-[15px] text-[#5464ff]"
+                    onSelect={() => setAddRowOpen(true)}
+                  >
+                    Р”РѕР±Р°РІРёС‚СЊ СЃС‚СЂРѕРєСѓ
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="h-12 rounded-xl px-3 text-[15px] text-[#5464ff]"
+                    onSelect={() => {
+                      fillForToday().catch((error) =>
+                        window.alert(
+                          error instanceof Error ? error.message : "РћС€РёР±РєР° Р°РІС‚РѕР·Р°РїРѕР»РЅРµРЅРёСЏ"
+                        )
+                      );
+                    }}
+                  >
+                    Р—Р°РїРѕР»РЅРёС‚СЊ Р·Р° СЃРµРіРѕРґРЅСЏ
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {status === "active" && selectedRowIds.length > 0 && (
               <Button
                 type="button"
-                onClick={() => setAddRowOpen(true)}
-                disabled={isCreating || employees.length === 0}
-                className="h-12 rounded-2xl bg-[#5b66ff] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
+                variant="outline"
+                onClick={() =>
+                  removeSelectedEntries().catch((error) =>
+                    window.alert(error instanceof Error ? error.message : "Ошибка удаления строк")
+                  )
+                }
+                className="h-12 rounded-2xl border-[#ffd7d3] px-5 text-[16px] text-[#ff3b30] hover:bg-[#fff3f2]"
               >
-                <Plus className="size-5" />
-                Добавить строку
+                <Trash2 className="size-5" />
+                Удалить ({selectedRowIds.length})
               </Button>
             )}
 
@@ -467,17 +362,19 @@ export function TrackedDocumentClient({
               className="h-12 rounded-2xl border-[#e6e9f5] px-5 text-[16px] text-black shadow-none"
             >
               <Settings2 className="size-5" />
-              Настройки
+              РќР°СЃС‚СЂРѕР№РєРё
             </Button>
 
             <Button
               type="button"
               variant="outline"
-              onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
+              onClick={() =>
+                window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")
+              }
               className="h-12 rounded-2xl border-[#e6e9f5] px-5 text-[16px] text-black shadow-none"
             >
               <Printer className="size-5" />
-              Печать
+              РџРµС‡Р°С‚СЊ
             </Button>
           </div>
         </div>
@@ -487,21 +384,57 @@ export function TrackedDocumentClient({
         <table className="min-w-[1200px] w-full border-collapse text-[15px]">
           <thead>
             <tr className="bg-[#f7f8fd]">
-              <th className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]">Дата</th>
-              <th className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]">Ответственный</th>
+              {status === "active" && (
+                <th className="w-[52px] border border-[#eceef5] px-2 py-3 text-center">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(checked) =>
+                      setSelectedRowIds(checked === true ? entries.map((entry) => entry.id) : [])
+                    }
+                    disabled={entries.length === 0}
+                  />
+                </th>
+              )}
+              <th className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]">
+                Р”Р°С‚Р°
+              </th>
+              <th className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]">
+                РЎРѕС‚СЂСѓРґРЅРёРє
+              </th>
               {fields.map((field) => (
-                <th key={field.key} className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]">
+                <th
+                  key={field.key}
+                  className="border border-[#eceef5] px-4 py-3 text-left font-medium text-[#5b6075]"
+                >
                   {field.label}
                 </th>
               ))}
               {status === "active" && (
-                <th className="border border-[#eceef5] px-4 py-3 text-center font-medium text-[#5b6075]">Действия</th>
+                <th className="border border-[#eceef5] px-4 py-3 text-center font-medium text-[#5b6075]">
+                  Р”РµР№СЃС‚РІРёСЏ
+                </th>
               )}
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.id} className="hover:bg-[#fbfbfe]">
+                {status === "active" && (
+                  <td className="border border-[#eceef5] p-2 text-center align-top">
+                    <div className="flex h-10 items-center justify-center">
+                      <Checkbox
+                        checked={selectedRowIds.includes(entry.id)}
+                        onCheckedChange={(checked) =>
+                          setSelectedRowIds((current) =>
+                            checked === true
+                              ? [...new Set([...current, entry.id])]
+                              : current.filter((id) => id !== entry.id)
+                          )
+                        }
+                      />
+                    </div>
+                  </td>
+                )}
                 <td className="border border-[#eceef5] p-2 align-top">
                   {status === "active" ? (
                     <Input
@@ -513,12 +446,16 @@ export function TrackedDocumentClient({
                           ...entry,
                           date: event.target.value,
                         }).catch((error) =>
-                          window.alert(error instanceof Error ? error.message : "Ошибка сохранения")
+                          window.alert(
+                            error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ"
+                          )
                         )
                       }
                     />
                   ) : (
-                    <div className="px-2 py-2 text-[15px] text-black">{formatDateLabel(entry.date)}</div>
+                    <div className="px-2 py-2 text-[15px] text-black">
+                      {formatDateLabel(entry.date)}
+                    </div>
                   )}
                 </td>
 
@@ -528,12 +465,14 @@ export function TrackedDocumentClient({
                       value={entry.employeeId}
                       onValueChange={(value) => {
                         saveEntry({ ...entry, employeeId: value }).catch((error) =>
-                          window.alert(error instanceof Error ? error.message : "Ошибка сохранения")
+                          window.alert(
+                            error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ"
+                          )
                         );
                       }}
                     >
                       <SelectTrigger className="h-10 rounded-xl border-[#dfe1ec]">
-                        <SelectValue placeholder="Сотрудник" />
+                        <SelectValue placeholder="РЎРѕС‚СЂСѓРґРЅРёРє" />
                       </SelectTrigger>
                       <SelectContent>
                         {employees.map((employee) => (
@@ -544,7 +483,9 @@ export function TrackedDocumentClient({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="px-2 py-2 text-[15px] text-black">{employeeMap[entry.employeeId]?.name || ""}</div>
+                    <div className="px-2 py-2 text-[15px] text-black">
+                      {employeeMap[entry.employeeId]?.name || ""}
+                    </div>
                   )}
                 </td>
 
@@ -553,9 +494,14 @@ export function TrackedDocumentClient({
                   const stringValue = fieldValueToString(value);
 
                   return (
-                    <td key={`${entry.id}:${field.key}`} className="border border-[#eceef5] p-2 align-top">
+                    <td
+                      key={`${entry.id}:${field.key}`}
+                      className="border border-[#eceef5] p-2 align-top"
+                    >
                       {status !== "active" ? (
-                        <div className="px-2 py-2 text-[15px] text-black">{stringValue || "—"}</div>
+                        <div className="px-2 py-2 text-[15px] text-black">
+                          {stringValue || "-"}
+                        </div>
                       ) : field.type === "boolean" ? (
                         <div className="flex h-10 items-center px-2">
                           <Checkbox
@@ -568,7 +514,9 @@ export function TrackedDocumentClient({
                                   [field.key]: checked === true,
                                 },
                               }).catch((error) =>
-                                window.alert(error instanceof Error ? error.message : "Ошибка сохранения")
+                                window.alert(
+                                  error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ"
+                                )
                               );
                             }}
                           />
@@ -584,20 +532,14 @@ export function TrackedDocumentClient({
                                 [field.key]: nextValue,
                               },
                             }).catch((error) =>
-                              window.alert(error instanceof Error ? error.message : "Ошибка сохранения")
+                              window.alert(
+                                error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ"
+                              )
                             );
                           }}
                         >
                           <SelectTrigger className="h-10 rounded-xl border-[#dfe1ec]">
-                            <SelectValue
-                              placeholder={
-                                field.type === "employee"
-                                  ? "Выберите сотрудника"
-                                  : field.type === "equipment"
-                                    ? "Выберите оборудование"
-                                    : "Выберите"
-                              }
-                            />
+                            <SelectValue placeholder="Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ" />
                           </SelectTrigger>
                           <SelectContent>
                             {field.options.map((option) => (
@@ -609,7 +551,13 @@ export function TrackedDocumentClient({
                         </Select>
                       ) : (
                         <Input
-                          type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                          type={
+                            field.type === "number"
+                              ? "number"
+                              : field.type === "date"
+                                ? "date"
+                                : "text"
+                          }
                           defaultValue={stringValue}
                           className="h-10 rounded-xl border-[#dfe1ec]"
                           onBlur={(event) =>
@@ -620,7 +568,9 @@ export function TrackedDocumentClient({
                                 [field.key]: event.target.value,
                               },
                             }).catch((error) =>
-                              window.alert(error instanceof Error ? error.message : "Ошибка сохранения")
+                              window.alert(
+                                error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ"
+                              )
                             )
                           }
                         />
@@ -638,7 +588,7 @@ export function TrackedDocumentClient({
                       className="h-10 rounded-xl border-[#ffd7d3] px-3 text-[#ff3b30] hover:bg-[#fff3f2]"
                     >
                       <Trash2 className="size-4" />
-                      Удалить
+                      РЈРґР°Р»РёС‚СЊ
                     </Button>
                   </td>
                 )}
@@ -648,10 +598,10 @@ export function TrackedDocumentClient({
             {entries.length === 0 && (
               <tr>
                 <td
-                  colSpan={status === "active" ? fields.length + 3 : fields.length + 2}
+                  colSpan={status === "active" ? fields.length + 4 : fields.length + 2}
                   className="border border-[#eceef5] p-8 text-center text-[16px] text-[#7d8196]"
                 >
-                  Пока нет строк. Добавьте первую запись.
+                  РџРѕРєР° РЅРµС‚ СЃС‚СЂРѕРє. Р”РѕР±Р°РІСЊС‚Рµ РїРµСЂРІСѓСЋ Р·Р°РїРёСЃСЊ.
                 </td>
               </tr>
             )}
@@ -659,23 +609,142 @@ export function TrackedDocumentClient({
         </table>
       </div>
 
-      <AddRowDialog
-        open={addRowOpen}
-        onOpenChange={setAddRowOpen}
-        employees={employees}
-        defaultEmployeeId={defaultEmployeeId}
-        onCreate={createEntry}
-      />
+      <Dialog open={addRowOpen} onOpenChange={setAddRowOpen}>
+        <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+          <DialogHeader className="border-b px-12 py-10">
+            <DialogTitle className="text-[32px] font-medium text-black">
+              Р”РѕР±Р°РІРёС‚СЊ СЃС‚СЂРѕРєСѓ
+            </DialogTitle>
+          </DialogHeader>
 
-      <JournalSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title={documentTitle}
-        responsibleTitle={responsibleTitle}
-        responsibleUserId={responsibleUserId}
-        employees={employees}
-        onSave={handleSaveSettings}
-      />
+          <div className="space-y-7 px-12 py-10">
+            <div className="space-y-3">
+              <Label className="text-[18px] text-[#73738a]">Р”Р°С‚Р°</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(event) => setNewDate(event.target.value)}
+                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-[18px] text-[#73738a]">РЎРѕС‚СЂСѓРґРЅРёРє</Label>
+              <Select value={newEmployeeId} onValueChange={setNewEmployeeId}>
+                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                  <SelectValue placeholder="Р’С‹Р±РµСЂРёС‚Рµ СЃРѕС‚СЂСѓРґРЅРёРєР°" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                onClick={() =>
+                  createEntry(newEmployeeId, newDate).catch((error) =>
+                    window.alert(
+                      error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ СЃС‚СЂРѕРєРё"
+                    )
+                  )
+                }
+                disabled={isCreating || !newDate || !newEmployeeId}
+                className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              >
+                {isCreating ? "РЎРѕР·РґР°РЅРёРµ..." : "РЎРѕР·РґР°С‚СЊ"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
+          <DialogHeader className="border-b px-14 py-12">
+            <DialogTitle className="text-[32px] font-medium text-black">
+              РќР°СЃС‚СЂРѕР№РєРё Р¶СѓСЂРЅР°Р»Р°
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-8 px-14 py-12">
+            <div className="space-y-3">
+              <Label htmlFor="journal-title" className="text-[18px] text-[#73738a]">
+                РќР°Р·РІР°РЅРёРµ Р¶СѓСЂРЅР°Р»Р°
+              </Label>
+              <Input
+                id="journal-title"
+                value={titleInput}
+                onChange={(event) => setTitleInput(event.target.value)}
+                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <Label className="text-[18px] text-[#73738a]">Ответственный</Label>
+                <Select
+                  value={responsibleUserIdInput}
+                  onValueChange={(value) => setResponsibleUserIdInput(value)}
+                >
+                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                    <SelectValue placeholder="Выберите сотрудника" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="journal-responsible-title" className="text-[18px] text-[#73738a]">
+                  Должность ответственного
+                </Label>
+                <Input
+                  id="journal-responsible-title"
+                  value={responsibleTitleInput}
+                  onChange={(event) => setResponsibleTitleInput(event.target.value)}
+                  className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                  placeholder="Например: Технолог"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                onClick={() =>
+                  saveSettings().catch((error) =>
+                    window.alert(
+                      error instanceof Error ? error.message : "РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє"
+                    )
+                  )
+                }
+                className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              >
+                РЎРѕС…СЂР°РЅРёС‚СЊ
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+
+
+
+
+
+
+

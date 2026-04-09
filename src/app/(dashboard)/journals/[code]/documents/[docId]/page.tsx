@@ -26,6 +26,8 @@ import {
   normalizeFinishedProductDocumentConfig,
 } from "@/lib/finished-product-document";
 import { RegisterDocumentClient } from "@/components/journals/register-document-client";
+import { AcceptanceDocumentClient } from "@/components/journals/acceptance-document-client";
+import { SanitationDayDocumentClient } from "@/components/journals/sanitation-day-document-client";
 import { HealthDocumentClient } from "@/components/journals/health-document-client";
 import { HygieneDocumentClient } from "@/components/journals/hygiene-document-client";
 import {
@@ -35,12 +37,24 @@ import {
   toDateKey,
 } from "@/lib/hygiene-document";
 import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  normalizeAcceptanceDocumentConfig,
+} from "@/lib/acceptance-document";
+import {
   isRegisterDocumentTemplate,
   normalizeRegisterDocumentConfig,
   parseRegisterFields,
 } from "@/lib/register-document";
 import { isTrackedDocumentTemplate } from "@/lib/tracked-document";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
+import { SANITATION_DAY_TEMPLATE_CODE } from "@/lib/sanitation-day-document";
+import { UvLampRuntimeDocumentClient } from "@/components/journals/uv-lamp-runtime-document-client";
+import {
+  UV_LAMP_RUNTIME_TEMPLATE_CODE,
+  buildUvRuntimeDocumentTitle,
+  normalizeUvRuntimeDocumentConfig,
+  toIsoDate,
+} from "@/lib/uv-lamp-runtime-document";
 
 export const dynamic = "force-dynamic";
 
@@ -197,10 +211,61 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === SANITATION_DAY_TEMPLATE_CODE) {
+    return (
+      <SanitationDayDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        status={document.status}
+        users={enrichedEmployees}
+        config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <AcceptanceDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        dateTo={toDateKey(document.dateTo)}
+        status={document.status}
+        users={enrichedEmployees}
+        config={normalizeAcceptanceDocumentConfig(document.config, enrichedEmployees)}
+      />
+    );
+  }
+
   if (
     isTrackedDocumentTemplate(document.template.code) &&
     !isRegisterDocumentTemplate(document.template.code)
   ) {
+    if (document.template.code === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
+      const uvConfig = normalizeUvRuntimeDocumentConfig(document.config);
+      return (
+        <UvLampRuntimeDocumentClient
+          documentId={document.id}
+          title={document.title || buildUvRuntimeDocumentTitle(uvConfig)}
+          status={document.status}
+          dateFrom={toIsoDate(document.dateFrom)}
+          dateTo={toIsoDate(document.dateTo)}
+          responsibleTitle={document.responsibleTitle}
+          responsibleUserId={document.responsibleUserId}
+          users={enrichedEmployees}
+          config={uvConfig}
+          initialEntries={document.entries.map((entry) => ({
+            id: entry.id,
+            employeeId: entry.employeeId,
+            date: toIsoDate(entry.date),
+            data: ((entry.data as Record<string, unknown>) || {}) as Record<string, unknown>,
+          }))}
+        />
+      );
+    }
+
     const fields = Array.isArray(document.template.fields)
       ? (document.template.fields as Array<Record<string, unknown>>)
           .map((field): TrackedField | null => {

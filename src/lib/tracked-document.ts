@@ -1,4 +1,5 @@
 export const TRACKED_DOCUMENT_TEMPLATE_CODES = [
+  "incoming_control",
   "pest_control",
   "equipment_calibration",
   "product_writeoff",
@@ -20,15 +21,22 @@ export const TRACKED_DOCUMENT_TEMPLATE_CODES = [
   "water_temperature_control",
   "dishwashing_control",
   "inventory_sanitation",
+  "critical_limit_check",
+  "supplier_audit",
+  "traceability_test",
 ] as const;
 
 export type TrackedDocumentTemplateCode =
   (typeof TRACKED_DOCUMENT_TEMPLATE_CODES)[number];
 
 export const SOURCE_STYLE_TRACKED_TEMPLATE_CODES = [
+  "incoming_control",
   "hand_hygiene_control",
   "waste_disposal_control",
   "uv_lamp_runtime",
+  "daily_rejection",
+  "raw_storage_control",
+  "defrosting_control",
 ] as const;
 
 export type SourceStyleTrackedTemplateCode =
@@ -46,7 +54,8 @@ export function isSourceStyleTrackedTemplate(templateCode: string) {
   );
 }
 
-const TRACKED_DOCUMENT_TITLES: Record<TrackedDocumentTemplateCode, string> = {
+const TRACKED_DOCUMENT_TITLES: Partial<Record<TrackedDocumentTemplateCode, string>> = {
+  incoming_control: "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё",
   pest_control: "Журнал учета дезинфекции, дезинсекции и дератизации",
   equipment_calibration: "График поверки средств измерений",
   product_writeoff: "Акт забраковки",
@@ -75,8 +84,16 @@ export function getTrackedDocumentTitle(templateCode: string) {
 }
 
 export function getTrackedDocumentCreateMode(templateCode: string) {
+  if (templateCode === "incoming_control") return "acceptance";
   if (templateCode === "hand_hygiene_control") return "staff";
   if (templateCode === "uv_lamp_runtime") return "uv";
-  if (templateCode === "waste_disposal_control") return "dated";
+  if (
+    templateCode === "waste_disposal_control" ||
+    templateCode === "daily_rejection" ||
+    templateCode === "raw_storage_control" ||
+    templateCode === "defrosting_control"
+  ) {
+    return "dated";
+  }
   return "default";
 }

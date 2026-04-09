@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wifi, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,17 +73,19 @@ interface DynamicFormProps {
 
 export function DynamicForm({
   templateCode,
-  templateName,
+  templateName: _templateName,
   fields,
   areas,
   equipment,
   employees = [],
   products = [],
 }: DynamicFormProps) {
+  void _templateName;
   const router = useRouter();
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [areaId, setAreaId] = useState<string>("");
   const [equipmentId, setEquipmentId] = useState<string>("");
+  const [catalogProductId, setCatalogProductId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFetchingSensor, setIsFetchingSensor] = useState(false);
@@ -95,6 +97,11 @@ export function DynamicForm({
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const hasSensor = !!selectedEquipment?.tuyaDeviceId;
+  const selectedCatalogProduct = products.find((p) => p.id === catalogProductId);
+  const isJournal7to9 =
+    templateCode === "pest_control" ||
+    templateCode === "equipment_calibration" ||
+    templateCode === "product_writeoff";
 
   // Check if this template supports photo OCR or product catalog
   const supportsPhotoOcr = templateCode === "incoming_control";
@@ -105,6 +112,55 @@ export function DynamicForm({
       templateCode === "product_writeoff" ||
       templateCode === "cooking_temp" ||
       templateCode === "shipment");
+
+  useEffect(() => {
+    if (templateCode !== "pest_control") return;
+    setFormData((prev) => ({
+      ...prev,
+      eventType: prev.eventType ?? "disinsection",
+      method: prev.method ?? "chemical",
+      result: prev.result ?? "effective",
+    }));
+  }, [templateCode]);
+
+  useEffect(() => {
+    if (templateCode !== "product_writeoff") return;
+    setFormData((prev) => ({
+      ...prev,
+      reason: prev.reason ?? "expired",
+      disposalMethod: prev.disposalMethod ?? "disposal",
+    }));
+  }, [templateCode]);
+
+  useEffect(() => {
+    if (templateCode !== "equipment_calibration") return;
+    const today = new Date().toISOString().slice(0, 10);
+    setFormData((prev) => ({
+      ...prev,
+      calibrationType: prev.calibrationType ?? "verification",
+      calibrationDate: prev.calibrationDate ?? today,
+      result: prev.result ?? "passed",
+    }));
+  }, [templateCode]);
+
+  useEffect(() => {
+    if (templateCode !== "equipment_calibration") return;
+    const calibrationDateValue = formData.calibrationDate;
+    if (typeof calibrationDateValue !== "string" || calibrationDateValue.length < 10) return;
+    if (!selectedEquipment) return;
+
+    const baseDate = new Date(calibrationDateValue);
+    if (Number.isNaN(baseDate.getTime())) return;
+
+    const next = new Date(baseDate);
+    const monthsDelta = selectedEquipment.type === "thermometer" ? 24 : 12;
+    next.setMonth(next.getMonth() + monthsDelta);
+
+    setFormData((prev) => ({
+      ...prev,
+      nextCalibrationDate: next.toISOString().slice(0, 10),
+    }));
+  }, [templateCode, formData.calibrationDate, selectedEquipment]);
 
   function updateField(key: string, value: unknown) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -230,8 +286,9 @@ export function DynamicForm({
         <div className="space-y-2">
           <Label>Выбрать из справочника</Label>
           <Select
-            value=""
+            value={catalogProductId}
             onValueChange={(productId) => {
+              setCatalogProductId(productId);
               const product = products.find((p) => p.id === productId);
               if (!product) return;
               const updates: Record<string, unknown> = {
@@ -239,6 +296,9 @@ export function DynamicForm({
               };
               if (product.supplier) updates.supplier = product.supplier;
               if (product.unit) updates.unit = product.unit;
+              if (templateCode === "product_writeoff" && formData.quantity == null) {
+                updates.quantity = 1;
+              }
               updateMultipleFields(updates);
             }}
           >
@@ -259,10 +319,15 @@ export function DynamicForm({
               ))}
             </SelectContent>
           </Select>
+          {templateCode === "product_writeoff" && selectedCatalogProduct?.storageTemp && (
+            <p className="text-xs text-muted-foreground">
+              Температура хранения: {selectedCatalogProduct.storageTemp}
+            </p>
+          )}
         </div>
       )}
 
-      {areas.length > 0 && (
+      {areas.length > 0 && !isJournal7to9 && (
         <div className="space-y-2">
           <Label htmlFor="area">Участок</Label>
           <Select value={areaId} onValueChange={setAreaId}>
@@ -416,6 +481,8 @@ export function DynamicForm({
                   onValueChange={(value) => {
                     setEquipmentId(value);
                     updateField(field.key, value);
+                    const eq = equipment.find((item) => item.id === value);
+                    if (eq) updateField("equipmentName", eq.name);
                     setSensorInfo(null);
                   }}
                   required={field.required}

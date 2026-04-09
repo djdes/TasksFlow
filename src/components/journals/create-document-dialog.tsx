@@ -4,6 +4,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,6 +43,10 @@ import {
   getFinishedProductDocumentTitle,
 } from "@/lib/finished-product-document";
 import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  getAcceptanceDocumentDefaultConfig,
+} from "@/lib/acceptance-document";
+import {
   getRegisterDocumentCreatePeriodBounds,
   getRegisterDocumentTitle,
   isRegisterDocumentTemplate,
@@ -60,6 +65,10 @@ import {
   getTrackedDocumentTitle,
   isSourceStyleTrackedTemplate,
 } from "@/lib/tracked-document";
+import {
+  UV_LAMP_RUNTIME_TEMPLATE_CODE,
+  buildUvRuntimeDocumentTitle,
+} from "@/lib/uv-lamp-runtime-document";
 
 interface Props {
   templateCode: string;
@@ -110,6 +119,8 @@ export function CreateDocumentDialog({
   const isClimateJournal = templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE;
   const isColdEquipmentJournal = templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE;
   const isSourceStyleTrackedJournal = isSourceStyleTrackedTemplate(templateCode);
+  const isAcceptanceJournal = templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE;
+  const isUvRuntimeJournal = templateCode === UV_LAMP_RUNTIME_TEMPLATE_CODE;
   const trackedCreateMode = getTrackedDocumentCreateMode(templateCode);
   const usesFixedDocumentTitle = isClimateJournal || isColdEquipmentJournal;
   const showDateFields = !isColdEquipmentJournal;
@@ -148,6 +159,16 @@ export function CreateDocumentDialog({
     isStaffJournal || isSourceStyleTrackedJournal ? responsibleTitleOptions[0] || "" : ""
   );
   const [trackedAreaName, setTrackedAreaName] = useState("");
+  const [trackedLampNumber] = useState("1");
+  const [fpFieldNameMode, setFpFieldNameMode] = useState<"dish" | "semi">("dish");
+  const [fpInspectorMode, setFpInspectorMode] = useState<"inspector_name" | "commission_signatures">(
+    "inspector_name"
+  );
+  const [fpShowProductTemp, setFpShowProductTemp] = useState(false);
+  const [fpShowCorrectiveAction, setFpShowCorrectiveAction] = useState(false);
+  const [fpShowOxygenLevel, setFpShowOxygenLevel] = useState(false);
+  const [fpShowCourierTime, setFpShowCourierTime] = useState(false);
+  const [fpFooterNote, setFpFooterNote] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -156,6 +177,7 @@ export function CreateDocumentDialog({
 
     try {
       const selectedResponsibleUser =
+        (isAcceptanceJournal ? responsibleUserId : "") ||
         responsibleUserId ||
         users.find((user) =>
           isStaffJournal || isSourceStyleTrackedJournal
@@ -168,15 +190,42 @@ export function CreateDocumentDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           templateCode,
-          title: title.trim(),
+          title: isUvRuntimeJournal
+            ? buildUvRuntimeDocumentTitle({
+                lampNumber: trackedLampNumber.trim() || "1",
+                areaName: trackedAreaName.trim() || "Журнал учета работы",
+              })
+            : title.trim(),
           dateFrom,
           dateTo,
           responsibleUserId: selectedResponsibleUser || undefined,
           responsibleTitle: isCleaningJournal ? undefined : responsibleTitle || undefined,
           config:
-            isSourceStyleTrackedJournal && trackedAreaName.trim()
-              ? { areaName: trackedAreaName.trim() }
-              : undefined,
+            isAcceptanceJournal
+              ? {
+                  ...getAcceptanceDocumentDefaultConfig(users),
+                  showPackagingComplianceField: fpShowCorrectiveAction,
+                  defaultResponsibleTitle: responsibleTitle || null,
+                  defaultResponsibleUserId: selectedResponsibleUser || null,
+                }
+              : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+              ? {
+                  fieldNameMode: fpFieldNameMode,
+                  inspectorMode: fpInspectorMode,
+                  showProductTemp: fpShowProductTemp,
+                  showCorrectiveAction: fpShowCorrectiveAction,
+                  showOxygenLevel: fpShowOxygenLevel,
+                  showCourierTime: fpShowCourierTime,
+                  footerNote: fpFooterNote.trim(),
+                }
+              : isSourceStyleTrackedJournal && (trackedAreaName.trim() || isUvRuntimeJournal)
+                ? isUvRuntimeJournal
+                  ? {
+                      lampNumber: trackedLampNumber.trim() || "1",
+                      areaName: trackedAreaName.trim() || "Журнал учета работы",
+                    }
+                  : { areaName: trackedAreaName.trim() }
+                : undefined,
         }),
       });
 
@@ -286,7 +335,9 @@ export function CreateDocumentDialog({
               ) : (
                 <div className="space-y-3">
                   <Label htmlFor="tracked-date-from" className="text-[18px] text-[#73738a]">
-                    {trackedCreateMode === "uv" ? "Дата начала" : "Дата документа"}
+                    {trackedCreateMode === "uv" || isAcceptanceJournal
+                      ? "Дата начала"
+                      : "Дата документа"}
                   </Label>
                   <Input
                     id="tracked-date-from"
@@ -297,6 +348,36 @@ export function CreateDocumentDialog({
                     required
                   />
                 </div>
+              )}
+
+              {isAcceptanceJournal && (
+                <>
+                  <div className="space-y-3">
+                    <Label className="text-[18px] text-[#73738a]">Добавить поля</Label>
+                    <label className="flex items-center gap-3 text-[15px]">
+                      <Checkbox
+                        checked={fpShowCorrectiveAction}
+                        onCheckedChange={(checked) => setFpShowCorrectiveAction(checked === true)}
+                      />
+                      "Соответствие внешнего вида упаковки, маркировки требованиям НД"
+                    </label>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+                    <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
+                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                        <SelectValue placeholder="- Выберите значение -" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
               )}
 
               <div className="hidden">
@@ -404,6 +485,96 @@ export function CreateDocumentDialog({
                 <div className="rounded-xl border border-[#dfe1ec] px-4 py-3 text-sm text-muted-foreground">
                   Ответственных за уборку и контроль можно настроить внутри документа.
                 </div>
+              )}
+
+              {templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE && (
+                <>
+                  <div className="space-y-2 rounded-xl border border-[#dfe1ec] p-4">
+                    <Label>Название поля</Label>
+                    <div className="space-y-2 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={fpFieldNameMode === "dish"}
+                          onChange={() => setFpFieldNameMode("dish")}
+                        />
+                        Наименование блюд (изделий)
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={fpFieldNameMode === "semi"}
+                          onChange={() => setFpFieldNameMode("semi")}
+                        />
+                        Наименование полуфабриката
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-[#dfe1ec] p-4">
+                    <Label>Добавить поля</Label>
+                    <div className="space-y-2 text-sm">
+                      <label className="flex items-center gap-2">
+                        <Checkbox
+                          checked={fpShowProductTemp}
+                          onCheckedChange={(checked) => setFpShowProductTemp(checked === true)}
+                        />
+                        Т°С внутри продукта и корректирующие действия
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <Checkbox
+                          checked={fpShowCorrectiveAction}
+                          onCheckedChange={(checked) => setFpShowCorrectiveAction(checked === true)}
+                        />
+                        Примечание
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <Checkbox
+                          checked={fpShowOxygenLevel}
+                          onCheckedChange={(checked) => setFpShowOxygenLevel(checked === true)}
+                        />
+                        Остаточный уровень кислорода, % об.
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <Checkbox
+                          checked={fpShowCourierTime}
+                          onCheckedChange={(checked) => setFpShowCourierTime(checked === true)}
+                        />
+                        Время передачи блюд курьеру
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-[#dfe1ec] p-4">
+                    <Label>Название поля</Label>
+                    <div className="space-y-2 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={fpInspectorMode === "inspector_name"}
+                          onChange={() => setFpInspectorMode("inspector_name")}
+                        />
+                        ФИО лица, проводившего бракераж
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={fpInspectorMode === "commission_signatures"}
+                          onChange={() => setFpInspectorMode("commission_signatures")}
+                        />
+                        Подписи членов бракеражной комиссии
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Input
+                      value={fpFooterNote}
+                      onChange={(e) => setFpFooterNote(e.target.value)}
+                      placeholder="Примечание: (внизу, после таблицы)"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex justify-end gap-2 pt-2">

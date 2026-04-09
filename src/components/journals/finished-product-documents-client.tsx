@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   DocumentActionsMenu,
   EmptyDocumentsState,
   JournalTabs,
   JournalTopBar,
 } from "@/components/journals/document-list-ui";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { normalizeFinishedProductDocumentConfig } from "@/lib/finished-product-document";
 
 type JournalListDocument = {
   id: string;
@@ -16,6 +23,9 @@ type JournalListDocument = {
   responsibleTitle: string | null;
   periodLabel: string;
   startedAtLabel: string;
+  dateFrom: string;
+  dateTo: string;
+  config?: unknown;
 };
 
 type Props = {
@@ -34,20 +44,74 @@ export function FinishedProductDocumentsClient({
   documents,
 }: Props) {
   const router = useRouter();
+  const [editingDocument, setEditingDocument] = useState<JournalListDocument | null>(null);
+  const [title, setTitle] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [fieldNameMode, setFieldNameMode] = useState<"dish" | "semi">("dish");
+  const [inspectorMode, setInspectorMode] = useState<"inspector_name" | "commission_signatures">(
+    "inspector_name"
+  );
+  const [showProductTemp, setShowProductTemp] = useState(false);
+  const [showCorrectiveAction, setShowCorrectiveAction] = useState(false);
+  const [showOxygenLevel, setShowOxygenLevel] = useState(false);
+  const [showCourierTime, setShowCourierTime] = useState(false);
+  const [footerNote, setFooterNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  async function handleDelete(documentId: string, title: string) {
-    if (!window.confirm(`Удалить документ "${title}"?`)) return;
+  useEffect(() => {
+    if (!editingDocument) return;
+    const cfg = normalizeFinishedProductDocumentConfig(editingDocument.config);
+    setTitle(editingDocument.title);
+    setDateFrom(editingDocument.dateFrom);
+    setFieldNameMode(cfg.fieldNameMode);
+    setInspectorMode(cfg.inspectorMode);
+    setShowProductTemp(cfg.showProductTemp);
+    setShowCorrectiveAction(cfg.showCorrectiveAction);
+    setShowOxygenLevel(cfg.showOxygenLevel);
+    setShowCourierTime(cfg.showCourierTime);
+    setFooterNote(cfg.footerNote);
+  }, [editingDocument]);
 
-    const response = await fetch(`/api/journal-documents/${documentId}`, {
-      method: "DELETE",
-    });
-
+  async function handleDelete(documentId: string, titleValue: string) {
+    if (!window.confirm(`Удалить документ "${titleValue}"?`)) return;
+    const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
       window.alert("Не удалось удалить документ");
       return;
     }
-
     router.refresh();
+  }
+
+  async function saveSettings() {
+    if (!editingDocument) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/journal-documents/${editingDocument.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          dateFrom,
+          config: {
+            ...(normalizeFinishedProductDocumentConfig(editingDocument.config) || {}),
+            fieldNameMode,
+            inspectorMode,
+            showProductTemp,
+            showCorrectiveAction,
+            showOxygenLevel,
+            showCourierTime,
+            footerNote,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error();
+      setEditingDocument(null);
+      router.refresh();
+    } catch {
+      window.alert("Не удалось сохранить настройки");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -59,45 +123,118 @@ export function FinishedProductDocumentsClient({
         templateName={templateName}
         users={users}
       />
-
       <JournalTabs activeTab={activeTab} templateCode={templateCode} />
-
       <div className="space-y-4">
         {documents.length === 0 && <EmptyDocumentsState />}
-
         {documents.map((document) => (
           <div
             key={document.id}
-            className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
+            className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
           >
-            <div className="flex items-start justify-between gap-4">
-              <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0 flex-1">
-                <div className="text-[24px] font-semibold tracking-[-0.02em] text-black">
-                  {document.title}
-                </div>
-              </Link>
-
-              <DocumentActionsMenu
-                size="sm"
-                onEdit={() => router.push(`/journals/${templateCode}/documents/${document.id}`)}
-                onPrint={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
-                onDelete={() => handleDelete(document.id, document.title)}
-              />
-            </div>
-
-            <Link
-              href={`/journals/${templateCode}/documents/${document.id}`}
-              className="mt-4 flex items-center justify-between gap-4 rounded-2xl bg-[#fbfbfe] px-5 py-4"
-            >
-              <div>
-                <div className="text-[14px] text-[#85889b]">Дата начала</div>
-                <div className="mt-1 text-[18px] font-medium text-black">{document.startedAtLabel}</div>
-              </div>
-              <div className="text-[14px] text-[#5b66ff]">Открыть</div>
+            <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
+              <div className="text-[36px] leading-none tracking-tight text-black">{document.title}</div>
             </Link>
+            <Link href={`/journals/${templateCode}/documents/${document.id}`} className="justify-self-end pr-2">
+              <div className="text-[14px] text-[#85889b]">Дата начала</div>
+              <div className="text-[30px] leading-none text-black">{document.startedAtLabel}</div>
+            </Link>
+            <DocumentActionsMenu
+              size="sm"
+              onEdit={() => setEditingDocument(document)}
+              onPrint={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
+              onDelete={() => handleDelete(document.id, document.title)}
+            />
           </div>
         ))}
       </div>
+
+      <Dialog open={!!editingDocument} onOpenChange={(open) => !open && setEditingDocument(null)}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-6 py-5">
+            <div className="space-y-2">
+              <Label>Название документа</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Дата начала</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="space-y-2 rounded-xl border p-3">
+              <Label>Название поля</Label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={fieldNameMode === "dish"}
+                  onChange={() => setFieldNameMode("dish")}
+                />
+                Наименование блюд (изделий)
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={fieldNameMode === "semi"}
+                  onChange={() => setFieldNameMode("semi")}
+                />
+                Наименование полуфабриката
+              </label>
+            </div>
+            <div className="space-y-2 rounded-xl border p-3">
+              <Label>Добавить поля</Label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={showProductTemp} onCheckedChange={(v) => setShowProductTemp(v === true)} />
+                Т°С внутри продукта
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={showCorrectiveAction}
+                  onCheckedChange={(v) => setShowCorrectiveAction(v === true)}
+                />
+                Корректирующие действия
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={showOxygenLevel} onCheckedChange={(v) => setShowOxygenLevel(v === true)} />
+                Остаточный уровень кислорода, % об.
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={showCourierTime} onCheckedChange={(v) => setShowCourierTime(v === true)} />
+                Время передачи блюд курьеру
+              </label>
+            </div>
+            <div className="space-y-2 rounded-xl border p-3">
+              <Label>Название поля</Label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={inspectorMode === "inspector_name"}
+                  onChange={() => setInspectorMode("inspector_name")}
+                />
+                ФИО лица, проводившего бракераж
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={inspectorMode === "commission_signatures"}
+                  onChange={() => setInspectorMode("commission_signatures")}
+                />
+                Подписи членов бракеражной комиссии
+              </label>
+            </div>
+            <Input
+              value={footerNote}
+              onChange={(e) => setFooterNote(e.target.value)}
+              placeholder="Примечание: (внизу, после таблицы)"
+            />
+            <div className="flex justify-end">
+              <Button onClick={saveSettings} disabled={isSaving}>
+                {isSaving ? "Сохранение..." : "Сохранить"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
