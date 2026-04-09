@@ -34,6 +34,8 @@ import {
 } from "@/lib/climate-document";
 import {
   CLEANING_DOCUMENT_TEMPLATE_CODE,
+  CLEANING_PAGE_TITLE,
+  defaultCleaningDocumentConfig,
   getCleaningCreatePeriodBounds,
   getCleaningDocumentTitle,
 } from "@/lib/cleaning-document";
@@ -145,10 +147,10 @@ export function CreateDocumentDialog({
 
   const responsibleTitleOptions = useMemo(
     () =>
-      isStaffJournal || isSourceStyleTrackedJournal
+      isStaffJournal || isSourceStyleTrackedJournal || isCleaningJournal
         ? getStaffJournalResponsibleTitleOptions(users)
         : [],
-    [isStaffJournal, isSourceStyleTrackedJournal, users]
+    [isStaffJournal, isSourceStyleTrackedJournal, isCleaningJournal, users]
   );
 
   const [title, setTitle] = useState(
@@ -178,7 +180,7 @@ export function CreateDocumentDialog({
   const [dateTo, setDateTo] = useState(defaultPeriod.dateTo);
   const [responsibleUserId, setResponsibleUserId] = useState("");
   const [responsibleTitle, setResponsibleTitle] = useState(
-    isStaffJournal || isSourceStyleTrackedJournal ? responsibleTitleOptions[0] || "" : ""
+    isStaffJournal || isSourceStyleTrackedJournal || isCleaningJournal ? responsibleTitleOptions[0] || "" : ""
   );
   const [trackedAreaName, setTrackedAreaName] = useState("");
   const [trackedLampNumber, setTrackedLampNumber] = useState("1");
@@ -192,6 +194,7 @@ export function CreateDocumentDialog({
   const [fpShowCourierTime, setFpShowCourierTime] = useState(false);
   const [fpFooterNote, setFpFooterNote] = useState("");
   const [medBookIncludeVaccinations, setMedBookIncludeVaccinations] = useState(true);
+  const [cleaningVentilation, setCleaningVentilation] = useState(true);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -203,7 +206,7 @@ export function CreateDocumentDialog({
         (isAcceptanceJournal ? responsibleUserId : "") ||
         responsibleUserId ||
         users.find((user) =>
-          isStaffJournal || isSourceStyleTrackedJournal
+          isStaffJournal || isSourceStyleTrackedJournal || isCleaningJournal
             ? getHygienePositionLabel(user.role) === responsibleTitle
             : false
         )?.id;
@@ -223,8 +226,13 @@ export function CreateDocumentDialog({
           dateFrom,
           dateTo,
           responsibleUserId: selectedResponsibleUser || undefined,
-          responsibleTitle: isCleaningJournal ? undefined : responsibleTitle || undefined,
-          config: isMedBookJournal
+          responsibleTitle: responsibleTitle || undefined,
+          config: isCleaningJournal
+            ? {
+                ...defaultCleaningDocumentConfig(),
+                ventilationEnabled: cleaningVentilation,
+              }
+            : isMedBookJournal
             ? {
                 includeVaccinations: medBookIncludeVaccinations,
               }
@@ -275,7 +283,7 @@ export function CreateDocumentDialog({
     }
   }
 
-  const isCompactSourceModal = isStaffJournal || isSourceStyleTrackedJournal || isMedBookJournal || isPerishableRejectionJournal;
+  const isCompactSourceModal = isStaffJournal || isSourceStyleTrackedJournal || isMedBookJournal || isPerishableRejectionJournal || isCleaningJournal;
   const showDateTo = !isClimateJournal && !isColdEquipmentJournal;
 
   return (
@@ -381,7 +389,54 @@ export function CreateDocumentDialog({
                 </div>
               )}
 
-              {!isMedBookJournal && !isPerishableRejectionJournal && (
+              {isCleaningJournal && (
+                <>
+                  <div className="space-y-3">
+                    <Label htmlFor="cleaning-date-from" className="text-[18px] text-[#73738a]">
+                      Дата начала
+                    </Label>
+                    <Input
+                      id="cleaning-date-from"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 text-[16px]">
+                      <input
+                        type="checkbox"
+                        checked={cleaningVentilation}
+                        onChange={(e) => setCleaningVentilation(e.target.checked)}
+                        className="size-5 rounded accent-[#5b66ff]"
+                      />
+                      Проветривание
+                    </label>
+                    <p className="text-[14px] text-[#73738a]">
+                      Если у вас есть окна и возможность проветривать помещение
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+                    <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
+                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                        <SelectValue placeholder="- Выберите значение -" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {responsibleTitleOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              {!isMedBookJournal && !isPerishableRejectionJournal && !isCleaningJournal && (
               <div className="space-y-3">
                 <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
                 <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
@@ -399,7 +454,7 @@ export function CreateDocumentDialog({
               </div>
               )}
 
-              {!isMedBookJournal && !isPerishableRejectionJournal && (isStaffJournal || trackedCreateMode === "staff" ? (
+              {!isMedBookJournal && !isPerishableRejectionJournal && !isCleaningJournal && (isStaffJournal || trackedCreateMode === "staff" ? (
                 <div className="space-y-2 rounded-2xl border border-[#dfe1ec] px-5 py-4">
                   <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
                   <div className="text-[22px] leading-[1.35] text-black">
