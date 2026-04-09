@@ -1071,7 +1071,17 @@ function drawSanitationDayPdf(doc: jsPDF, params: {
   config: ReturnType<typeof normalizeSanitationDayConfig>;
 }) {
   const cfg = params.config;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+
+  // --- Margins aligned with header (24mm each side) ---
+  const marginLeft = 24;
+  const headerRight = pageWidth - 24;
+
+  // --- Title ---
   drawTitle(doc, params.title || SANITATION_DAY_DOCUMENT_TITLE);
+
+  // --- Header table ---
   drawJournalHeader(doc, {
     organizationName: params.organizationName,
     pageLabel: "СТР. 1 ИЗ 1",
@@ -1079,31 +1089,38 @@ function drawSanitationDayPdf(doc: jsPDF, params: {
     withPeriodicity: false,
   });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const rightX = pageWidth - 14;
-
+  // --- Approval block (right-aligned to header edge) ---
   doc.setFont("JournalUnicode", "bold");
   doc.setFontSize(10);
-  doc.text("УТВЕРЖДАЮ", rightX, 63, { align: "right" });
+  doc.text("УТВЕРЖДАЮ", headerRight, 60, { align: "right" });
   doc.setFont("JournalUnicode", "normal");
-  doc.text(cfg.approveRole || "", rightX, 69, { align: "right" });
-  doc.line(rightX - 52, 72, rightX - 2, 72);
-  doc.text(cfg.approveEmployee || "", rightX, 75, { align: "right" });
+  doc.setFontSize(9);
+  doc.text(cfg.approveRole || "", headerRight, 66, { align: "right" });
+  doc.line(headerRight - 52, 70, headerRight, 70);
+  doc.text(cfg.approveEmployee || "", headerRight, 74, { align: "right" });
   doc.text(
     `« ${cfg.documentDate.slice(8, 10)} » ${new Date(cfg.documentDate).toLocaleDateString("ru-RU", { month: "long" })} ${cfg.year} г.`,
-    rightX,
+    headerRight - 6,
     80,
-    { align: "right" }
-  );
-
-  doc.setFont("JournalUnicode", "bold");
-  doc.setFontSize(12);
-  doc.text(
-    `График и учет генеральных уборок на предприятии в ${cfg.year} г.`,
-    148,
-    95,
     { align: "center" }
   );
+
+  // --- Centered subtitle ---
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(11);
+  doc.text(
+    `График и учет генеральных уборок на предприятии в ${cfg.year} г.`,
+    centerX,
+    90,
+    { align: "center" }
+  );
+
+  // --- Data table (centered on page) ---
+  const roomColWidth = 60;
+  const typeColWidth = 22;
+  const monthColWidth = 13.5;
+  const tableWidth = roomColWidth + typeColWidth + 12 * monthColWidth;
+  const tableMargin = Math.round((pageWidth - tableWidth) / 2);
 
   const head: RowInput[] = [
     [
@@ -1135,20 +1152,21 @@ function drawSanitationDayPdf(doc: jsPDF, params: {
     {
       content: `Ответственный: ${cfg.responsibleRole}, ${cfg.responsibleEmployee}`,
       colSpan: 2,
-      styles: { halign: "center", valign: "middle" },
+      styles: { halign: "left", valign: "middle" },
     },
     ...SANITATION_MONTHS.map(() => centerCell("")),
   ]);
 
   autoTable(doc, {
-    startY: 102,
+    startY: 96,
+    margin: { left: tableMargin, right: tableMargin },
     head,
     body,
     theme: "grid",
     styles: {
       font: "JournalUnicode",
       fontSize: 8,
-      cellPadding: 1.1,
+      cellPadding: 1.2,
       lineColor: [0, 0, 0],
       lineWidth: 0.2,
       textColor: [0, 0, 0],
@@ -1164,9 +1182,9 @@ function drawSanitationDayPdf(doc: jsPDF, params: {
       lineWidth: 0.2,
     },
     columnStyles: {
-      0: { cellWidth: 66 },
-      1: { cellWidth: 28 },
-      ...Object.fromEntries(SANITATION_MONTHS.map((_, index) => [index + 2, { cellWidth: 12.5 }])),
+      0: { cellWidth: roomColWidth },
+      1: { cellWidth: typeColWidth },
+      ...Object.fromEntries(SANITATION_MONTHS.map((_, index) => [index + 2, { cellWidth: monthColWidth }])),
     },
   });
 }
