@@ -74,6 +74,10 @@ import {
   type RegisterField,
 } from "@/lib/register-document";
 import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  normalizeAcceptanceDocumentConfig,
+} from "@/lib/acceptance-document";
+import {
   buildHygieneExampleEmployees,
   buildDateKeys,
   formatMonthLabel,
@@ -1081,6 +1085,151 @@ function getTrackedFilePrefix(templateCode: string) {
   return `journal-${templateCode.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
 }
 
+function formatAcceptanceDateRu(dateKey: string) {
+  if (!dateKey) return "";
+  const [y, m, d] = dateKey.split("-");
+  if (!y || !m || !d) return dateKey;
+  return `${d}-${m}-${y}`;
+}
+
+function drawAcceptancePdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  config: ReturnType<typeof normalizeAcceptanceDocumentConfig>;
+  users: { id: string; name: string; role: string }[];
+}) {
+  const cfg = params.config;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+
+  drawTitle(doc, params.title || "Журнал приемки");
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: "ЖУРНАЛ ПРИЕМКИ И ВХОДНОГО КОНТРОЛЯ ПРОДУКЦИИ",
+    withPeriodicity: false,
+  });
+
+  const dateFromStr = params.dateFrom instanceof Date
+    ? formatAcceptanceDateRu(params.dateFrom.toISOString().slice(0, 10))
+    : formatAcceptanceDateRu(String(params.dateFrom).slice(0, 10));
+
+  // Date info in header right cell
+  const headerRight = pageWidth - 24;
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(9);
+  doc.text(`Начат  ${dateFromStr}`, headerRight, 32, { align: "right" });
+  doc.text("Окончен ________", headerRight, 38, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(11);
+  doc.text("ЖУРНАЛ ПРИЕМКИ И ВХОДНОГО КОНТРОЛЯ ПРОДУКЦИИ", centerX, 60, { align: "center" });
+
+  const showPackaging = cfg.showPackagingComplianceField;
+
+  const headRow1: CellDef[] = [
+    { content: "Дата\nпоставки", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Наименование\nпродукции", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Годен до", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Производитель/\nпоставщик", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "ТТН,\nдокументы\nсоответствия", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Объем,\nномер\nпартии,\nдата\nпр-ва", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Внутр-яя\nтемп-ра\nпродукта (для\nскоропор\nтящихся и\nзамороженных\nпродуктов)", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Соответствие\nтовара\nсопроводи\nтельной\nдокументации", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+  ];
+
+  if (showPackaging) {
+    headRow1.push({
+      content: "Соответствие\nвнешнего\nвида\nупаковки,\nмаркировки\nтребованиям\nНД",
+      rowSpan: 2,
+      styles: { halign: "center", valign: "middle" },
+    });
+  }
+
+  headRow1.push(
+    { content: "Принять/\nОтклонить,\nП/О", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Корректирующие\nдействия для\nзабракованного\nтовара", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    { content: "Ответственный", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+  );
+
+  const head: RowInput[] = [headRow1];
+
+  const userMap = new Map(params.users.map((u) => [u.id, u.name]));
+
+  const rows = cfg.sortByExpiry
+    ? [...cfg.rows].sort((a, b) => a.expiryDate.localeCompare(b.expiryDate))
+    : cfg.rows;
+
+  const body: RowInput[] = rows.map((row) => {
+    const batchParts = [row.batchVolume, row.batchNumber, formatAcceptanceDateRu(row.productionDate)]
+      .filter(Boolean)
+      .join("\n");
+
+    const cells: CellDef[] = [
+      centerCell(formatAcceptanceDateRu(row.dateSupply)),
+      centerCell(row.productName),
+      centerCell(formatAcceptanceDateRu(row.expiryDate)),
+      centerCell([row.manufacturer, row.supplier].filter(Boolean).join("\n")),
+      centerCell(row.ttnDocs),
+      centerCell(batchParts),
+      centerCell(row.innerTemperature ? `${row.innerTemperature}°C` : ""),
+      centerCell(row.docsCompliance === "yes" ? "Да" : "Нет"),
+    ];
+
+    if (showPackaging) {
+      cells.push(centerCell(row.packagingCompliance === "yes" ? "Да" : "Нет"));
+    }
+
+    cells.push(
+      centerCell(row.decision === "accept" ? "П" : "О"),
+      centerCell(row.correctiveAction),
+      centerCell(userMap.get(row.responsibleUserId) || ""),
+    );
+
+    return cells;
+  });
+
+  if (body.length === 0) {
+    const emptyColCount = showPackaging ? 12 : 11;
+    for (let i = 0; i < 3; i++) {
+      body.push(Array(emptyColCount).fill(centerCell("")));
+    }
+  }
+
+  const baseColCount = showPackaging ? 12 : 11;
+  const monthColWidth = showPackaging
+    ? (pageWidth - 28) / baseColCount
+    : (pageWidth - 28) / baseColCount;
+
+  autoTable(doc, {
+    startY: 66,
+    margin: { left: 14, right: 14 },
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 6.5,
+      cellPadding: 1,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      lineWidth: 0.2,
+      fontStyle: "bold",
+      fontSize: 6,
+    },
+    bodyStyles: {
+      lineWidth: 0.2,
+    },
+  });
+}
+
 function drawSanitationDayPdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -1856,6 +2005,14 @@ export async function generateJournalDocumentPdf(params: {
       title: document.title || SANITATION_DAY_DOCUMENT_TITLE,
       config: normalizeSanitationDayConfig(document.config),
     });
+  } else if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    drawAcceptancePdf(doc, {
+      organizationName,
+      title: document.title || "Журнал приемки",
+      dateFrom: document.dateFrom,
+      config: normalizeAcceptanceDocumentConfig(document.config, users),
+      users,
+    });
   } else if (isRegisterDocumentTemplate(templateCode)) {
     drawRegisterPdf(doc, {
       organizationName,
@@ -1937,6 +2094,8 @@ export async function generateJournalDocumentPdf(params: {
             ? getFinishedProductFilePrefix()
             : templateCode === SANITATION_DAY_TEMPLATE_CODE
               ? "general-cleaning-schedule"
+            : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+              ? "acceptance-journal"
             : templateCode === FRYER_OIL_TEMPLATE_CODE
               ? getFryerOilFilePrefix()
             : isRegisterDocumentTemplate(templateCode)

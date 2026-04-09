@@ -669,35 +669,56 @@ export function AcceptanceDocumentClient(props: Props) {
     await persist(title, dateFrom, { ...config, rows: nextRows });
   }
 
-  async function handleImportFile(file: File) {
-    const text = await file.text();
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line !== "");
-    if (lines.length <= 1) return;
-
-    const rowsFromFile = lines.slice(1).map((line) => {
-      const columns = line.split(";").map((item) => item.trim());
-      return createAcceptanceRow({
-        dateSupply: columns[0] || new Date().toISOString().slice(0, 10),
-        productName: columns[1] || "",
-        expiryDate: columns[2] || "",
-        manufacturer: columns[3] || "",
-        supplier: columns[4] || "",
-        ttnDocs: columns[5] || "",
-        batchVolume: columns[6] || "",
-        batchNumber: columns[7] || "",
-        productionDate: columns[8] || "",
-        innerTemperature: columns[9] || "",
-        docsCompliance: columns[10] === "0" ? "no" : "yes",
-        packagingCompliance: columns[11] === "0" ? "no" : "yes",
-        decision: columns[12] === "reject" ? "reject" : "accept",
-        correctiveAction: columns[13] || "",
-        responsibleUserId: config.defaultResponsibleUserId || "",
-      });
+  function parseColumnsToRow(columns: string[]) {
+    return createAcceptanceRow({
+      dateSupply: columns[0] || new Date().toISOString().slice(0, 10),
+      productName: columns[1] || "",
+      expiryDate: columns[2] || "",
+      manufacturer: columns[3] || "",
+      supplier: columns[4] || "",
+      ttnDocs: columns[5] || "",
+      batchVolume: columns[6] || "",
+      batchNumber: columns[7] || "",
+      innerTemperature: columns[8] || "",
+      docsCompliance: columns[9] === "0" ? "no" : "yes",
+      packagingCompliance: columns[10] === "0" ? "no" : "yes",
+      decision: columns[11] === "0" ? "reject" : "accept",
+      correctiveAction: columns[12] || "",
+      responsibleUserId: config.defaultResponsibleUserId || "",
     });
+  }
 
+  async function handleImportFile(file: File) {
+    const isExcel = /\.xlsx?$/i.test(file.name);
+
+    let rowsFromFile: ReturnType<typeof createAcceptanceRow>[] = [];
+
+    if (isExcel) {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) return;
+      const jsonRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
+      if (jsonRows.length <= 1) return;
+      rowsFromFile = jsonRows.slice(1).map((row) => {
+        const columns = row.map((cell) => (cell == null ? "" : String(cell).trim()));
+        return parseColumnsToRow(columns);
+      });
+    } else {
+      const text = await file.text();
+      const lines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "");
+      if (lines.length <= 1) return;
+      rowsFromFile = lines.slice(1).map((line) => {
+        const columns = line.split(";").map((item) => item.trim());
+        return parseColumnsToRow(columns);
+      });
+    }
+
+    if (rowsFromFile.length === 0) return;
     await persist(title, dateFrom, { ...config, rows: [...config.rows, ...rowsFromFile] });
   }
 
@@ -825,7 +846,7 @@ export function AcceptanceDocumentClient(props: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.txt"
+          accept=".csv,.txt,.xlsx,.xls"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];
