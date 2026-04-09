@@ -329,10 +329,12 @@ export function getColdEquipmentCreatePeriodBounds(referenceDate = new Date()) {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth();
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const currentDay = date.getUTCDate();
+  const isFirstHalf = currentDay <= 15;
 
   return {
-    dateFrom: `${year}-${String(month + 1).padStart(2, "0")}-01`,
-    dateTo: `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+    dateFrom: `${year}-${String(month + 1).padStart(2, "0")}-${isFirstHalf ? "01" : "16"}`,
+    dateTo: `${year}-${String(month + 1).padStart(2, "0")}-${String(isFirstHalf ? 15 : lastDay).padStart(2, "0")}`,
   };
 }
 
