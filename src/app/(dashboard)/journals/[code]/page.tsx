@@ -55,6 +55,8 @@ import {
   formatRuDateDash,
   normalizeUvRuntimeDocumentConfig,
 } from "@/lib/uv-lamp-runtime-document";
+import { FryerOilDocumentsClient } from "@/components/journals/fryer-oil-documents-client";
+import { FRYER_OIL_TEMPLATE_CODE } from "@/lib/fryer-oil-document";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -62,6 +64,7 @@ const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
   "raw_storage_control",
   "defrosting_control",
   "uv_lamp_runtime",
+  "fryer_oil",
 ]);
 
 type TrackedTemplateField = {
@@ -307,6 +310,7 @@ async function ensureSourceStyleTrackedSampleDocuments({
   ];
 
   const isUv = templateCode === UV_LAMP_RUNTIME_TEMPLATE_CODE;
+  const isFryerOil = templateCode === FRYER_OIL_TEMPLATE_CODE;
   const uvConfig = isUv
     ? {
         lampNumber: "1",
@@ -336,7 +340,7 @@ async function ensureSourceStyleTrackedSampleDocuments({
         responsibleUserId: activeUser.id,
         responsibleTitle: getHygieneDefaultResponsibleTitle(users),
         createdById,
-        ...(uvConfig ? { config: uvConfig } : {}),
+        ...(uvConfig ? { config: uvConfig } : isFryerOil ? { config: { lists: { fatTypes: ["Подсолнечное масло", "Пальмовое масло", "Рапсовое масло", "Фритюрный жир"], equipmentTypes: ["Фритюрница настольная", "Фритюрница напольная", "Жарочный шкаф"], productTypes: ["Картофель фри", "Пельмени", "Вареники", "Рыба в кляре", "Куриные наггетсы"] } } } : {}),
       },
       select: {
         id: true,
@@ -364,6 +368,28 @@ async function ensureSourceStyleTrackedSampleDocuments({
         data: entryData,
         skipDuplicates: true,
       });
+    } else if (isFryerOil) {
+      const sampleEntries = [
+        {
+          documentId: created.id,
+          employeeId: activeUser.id,
+          date: config.dateFrom,
+          data: {
+            startDate: config.dateFrom.toISOString().slice(0, 10),
+            startHour: 9, startMinute: 0,
+            fatType: "Подсолнечное масло",
+            qualityStart: 5,
+            equipmentType: "Фритюрница настольная",
+            productType: "Картофель фри",
+            endHour: 11, endMinute: 30,
+            qualityEnd: 4,
+            carryoverKg: 2.5,
+            disposedKg: 0,
+            controllerName: activeUser.name,
+          },
+        },
+      ];
+      await db.journalDocumentEntry.createMany({ data: sampleEntries, skipDuplicates: true });
     } else {
       await db.journalDocumentEntry.createMany({
         data: [
@@ -712,6 +738,25 @@ export default async function JournalDocumentsPage({
       resolvedCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
       isTrackedDocumentTemplate(resolvedCode)
     ) {
+      if (resolvedCode === FRYER_OIL_TEMPLATE_CODE) {
+        return (
+          <FryerOilDocumentsClient
+            activeTab={activeTab}
+            routeCode={code}
+            templateCode={resolvedCode}
+            templateName={template.name}
+            users={orgUsers}
+            documents={documents.map((document) => ({
+              id: document.id,
+              title: document.title || "Журнал учета использования фритюрных жиров",
+              status: document.status as "active" | "closed",
+              responsibleTitle: document.responsibleTitle,
+              dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            }))}
+          />
+        );
+      }
+
       if (resolvedCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
         return (
           <UvLampRuntimeDocumentsClient
