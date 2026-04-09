@@ -57,6 +57,12 @@ import {
 } from "@/lib/uv-lamp-runtime-document";
 import { FryerOilDocumentsClient } from "@/components/journals/fryer-oil-documents-client";
 import { FRYER_OIL_TEMPLATE_CODE } from "@/lib/fryer-oil-document";
+import { PerishableRejectionDocumentsClient } from "@/components/journals/perishable-rejection-documents-client";
+import {
+  PERISHABLE_REJECTION_TEMPLATE_CODE,
+  PERISHABLE_REJECTION_DOCUMENT_TITLE,
+  getDefaultPerishableRejectionConfig,
+} from "@/lib/perishable-rejection-document";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -612,6 +618,62 @@ export default async function JournalDocumentsPage({
           id: doc.id,
           title: doc.title || MED_BOOK_DOCUMENT_TITLE,
           status: doc.status as "active" | "closed",
+        }))}
+      />
+    );
+  }
+
+  if (resolvedCode === PERISHABLE_REJECTION_TEMPLATE_CODE) {
+    const existingCount = await db.journalDocument.count({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+      },
+    });
+
+    if (existingCount === 0) {
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth();
+      const dateFrom = new Date(Date.UTC(year, month, 1));
+      const dateTo = new Date(Date.UTC(year, month + 1, 0));
+
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: "Журнал бракеража",
+          status: "active",
+          dateFrom,
+          dateTo,
+          createdById: session.user.id,
+          config: getDefaultPerishableRejectionConfig(),
+        },
+      });
+    }
+
+    const documents = await db.journalDocument.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+        status: activeTab,
+      },
+      orderBy: { dateFrom: "asc" },
+    });
+
+    return (
+      <PerishableRejectionDocumentsClient
+        activeTab={activeTab}
+        templateCode={resolvedCode}
+        templateName={template.name}
+        users={orgUsers}
+        documents={documents.map((doc) => ({
+          id: doc.id,
+          title: doc.title || "Журнал бракеража",
+          status: doc.status as "active" | "closed",
+          startedAtLabel: doc.dateFrom.toLocaleDateString("ru-RU").replaceAll(".", "-"),
+          dateFrom: doc.dateFrom.toISOString().slice(0, 10),
+          config: doc.config,
         }))}
       />
     );

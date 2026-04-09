@@ -67,6 +67,11 @@ import {
   normalizeFryerOilDocumentConfig,
   normalizeFryerOilEntryData,
 } from "@/lib/fryer-oil-document";
+import { PerishableRejectionDocumentClient } from "@/components/journals/perishable-rejection-document-client";
+import {
+  PERISHABLE_REJECTION_TEMPLATE_CODE,
+  normalizePerishableRejectionConfig,
+} from "@/lib/perishable-rejection-document";
 
 export const dynamic = "force-dynamic";
 
@@ -237,6 +242,20 @@ export default async function JournalDocumentPage({
         config={medConfig}
         employees={enrichedEmployees}
         initialRows={medRows}
+      />
+    );
+  }
+
+  if (document.template.code === PERISHABLE_REJECTION_TEMPLATE_CODE) {
+    return (
+      <PerishableRejectionDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        initialConfig={normalizePerishableRejectionConfig(document.config)}
+        users={enrichedEmployees}
       />
     );
   }
