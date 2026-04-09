@@ -617,11 +617,11 @@ async function main() {
     }
 
     const productSeeds = [
-      { name: "Куриное филе", unit: "kg", supplier: "ООО АгроПоставка", shelfLifeDays: 5, storageTemp: 4 },
-      { name: "Молоко пастеризованное", unit: "l", supplier: "АО МолТорг", shelfLifeDays: 7, storageTemp: 6 },
-      { name: "Салат Айсберг", unit: "kg", supplier: "Ферма Грин", shelfLifeDays: 4, storageTemp: 5 },
-      { name: "Лосось охлажденный", unit: "kg", supplier: "РыбСнаб", shelfLifeDays: 3, storageTemp: 2 },
-      { name: "Масло подсолнечное", unit: "l", supplier: "ТД Маслоторг", shelfLifeDays: 180, storageTemp: 20 },
+      { name: "Куриное филе", unit: "kg", supplier: "ООО АгроПоставка", shelfLifeDays: 5, storageTemp: "+2...+4°C" },
+      { name: "Молоко пастеризованное", unit: "l", supplier: "АО МолТорг", shelfLifeDays: 7, storageTemp: "+2...+6°C" },
+      { name: "Салат Айсберг", unit: "kg", supplier: "Ферма Грин", shelfLifeDays: 4, storageTemp: "+2...+5°C" },
+      { name: "Лосось охлажденный", unit: "kg", supplier: "РыбСнаб", shelfLifeDays: 3, storageTemp: "0...+2°C" },
+      { name: "Масло подсолнечное", unit: "l", supplier: "ТД Маслоторг", shelfLifeDays: 180, storageTemp: "+18...+25°C" },
     ];
 
     for (const product of productSeeds) {
