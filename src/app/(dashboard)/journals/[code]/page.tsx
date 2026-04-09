@@ -31,6 +31,13 @@ import {
 } from "@/lib/tracked-document";
 import { UvLampRuntimeDocumentsClient } from "@/components/journals/uv-lamp-runtime-documents-client";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
+import { MedBookDocumentsClient } from "@/components/journals/med-book-documents-client";
+import {
+  MED_BOOK_TEMPLATE_CODE,
+  MED_BOOK_DOCUMENT_TITLE,
+  getDefaultMedBookConfig,
+  emptyMedBookEntry,
+} from "@/lib/med-book-document";
 import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE } from "@/lib/acceptance-document";
 import {
   SANITATION_DAY_SOURCE_SLUG,
@@ -44,6 +51,7 @@ import { SanitationDayDocumentsClient } from "@/components/journals/sanitation-d
 import {
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
   buildUvRuntimeDocumentTitle,
+  defaultUvSpecification,
   formatRuDateDash,
   normalizeUvRuntimeDocumentConfig,
 } from "@/lib/uv-lamp-runtime-document";
@@ -53,6 +61,7 @@ const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
   "daily_rejection",
   "raw_storage_control",
   "defrosting_control",
+  "uv_lamp_runtime",
 ]);
 
 type TrackedTemplateField = {
@@ -297,37 +306,77 @@ async function ensureSourceStyleTrackedSampleDocuments({
     { status: "closed" as const, dateFrom: closedFrom, dateTo: closedTo },
   ];
 
+  const isUv = templateCode === UV_LAMP_RUNTIME_TEMPLATE_CODE;
+  const uvConfig = isUv
+    ? {
+        lampNumber: "1",
+        areaName: "Журнал учета работы",
+        spec: {
+          ...defaultUvSpecification(),
+          commissioningDate: `${year}-07-01`,
+        },
+      }
+    : undefined;
+
   for (const config of configs) {
     if (hasStatus.has(config.status)) continue;
+
+    const docTitle = isUv && uvConfig
+      ? buildUvRuntimeDocumentTitle(uvConfig)
+      : defaultTitle;
 
     const created = await db.journalDocument.create({
       data: {
         templateId,
         organizationId,
-        title: defaultTitle,
+        title: docTitle,
         status: config.status,
         dateFrom: config.dateFrom,
         dateTo: config.dateTo,
         responsibleUserId: activeUser.id,
         responsibleTitle: getHygieneDefaultResponsibleTitle(users),
         createdById,
+        ...(uvConfig ? { config: uvConfig } : {}),
       },
       select: {
         id: true,
       },
     });
 
-    await db.journalDocumentEntry.createMany({
-      data: [
-        {
+    if (isUv) {
+      // Create UV sample entries - daily entries for the period
+      const entryData: { documentId: string; employeeId: string; date: Date; data: object }[] = [];
+      const d = new Date(config.dateFrom);
+      const end = new Date(config.dateTo);
+      while (d <= end) {
+        entryData.push({
           documentId: created.id,
           employeeId: activeUser.id,
-          date: config.dateFrom,
-          data: baseData,
-        },
-      ],
-      skipDuplicates: true,
-    });
+          date: new Date(d),
+          data: {
+            startTime: `10:0${Math.floor(Math.random() * 6)}`,
+            endTime: `18:0${Math.floor(Math.random() * 6)}`,
+          },
+        });
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      await db.journalDocumentEntry.createMany({
+        data: entryData,
+        skipDuplicates: true,
+      });
+    } else {
+      await db.journalDocumentEntry.createMany({
+        data: [
+          {
+            documentId: created.id,
+            employeeId: activeUser.id,
+            date: config.dateFrom,
+            data: baseData,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
   }
 }
 
@@ -439,6 +488,104 @@ export default async function JournalDocumentsPage({
           status: document.status as "active" | "closed",
           responsibleTitle: document.responsibleTitle,
           periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
+        }))}
+      />
+    );
+  }
+
+  if (resolvedCode === MED_BOOK_TEMPLATE_CODE) {
+    // Auto-seed one active sample document if none exist
+    const existingCount = await db.journalDocument.count({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+      },
+    });
+
+    if (existingCount === 0) {
+      const now = new Date();
+      const doc = await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: MED_BOOK_DOCUMENT_TITLE,
+          status: "active",
+          dateFrom: now,
+          dateTo: now,
+          createdById: session.user.id,
+          config: getDefaultMedBookConfig(),
+        },
+      });
+
+      // Add sample entries for each org user
+      if (orgUsers.length > 0) {
+        const positionLabels: Record<string, string> = {
+          owner: "Управляющий",
+          technologist: "Шеф-повар",
+          operator: "Повар",
+        };
+
+        const sampleExamDate = "2025-04-19";
+        const sampleExamExpiry = "2026-04-19";
+        const expiredExamDate = "2025-03-25";
+        const expiredExamExpiry = "2026-03-25";
+
+        await db.journalDocumentEntry.createMany({
+          data: orgUsers.slice(0, 5).map((user) => ({
+            documentId: doc.id,
+            employeeId: user.id,
+            date: now,
+            data: {
+              ...emptyMedBookEntry(positionLabels[user.role] || "Сотрудник"),
+              birthDate: "2010-03-19",
+              gender: "female" as const,
+              hireDate: "2025-03-19",
+              examinations: {
+                "Гинеколог": { date: sampleExamDate, expiryDate: sampleExamExpiry },
+                "Стоматолог": { date: null, expiryDate: null },
+                "Психиатр": { date: expiredExamDate, expiryDate: expiredExamExpiry },
+                "Оториноларинголог": { date: null, expiryDate: null },
+                "Терапевт": { date: "2025-06-14", expiryDate: "2026-06-14" },
+                "Невролог": { date: "2025-06-14", expiryDate: "2026-06-14" },
+                "Нарколог": { date: "2025-06-14", expiryDate: "2026-06-14" },
+                "Флюорография": { date: expiredExamDate, expiryDate: expiredExamExpiry },
+              },
+              vaccinations: {
+                "Дифтерия": { type: "refusal" as const },
+                "Дизентерия Зонне": { type: "done" as const, dose: "V1", date: "2024-01-01", expiryDate: "2025-01-01" },
+                "Краснуха": { type: "refusal" as const },
+                "Гепатит B": { type: "refusal" as const },
+                "Гепатит A": { type: "refusal" as const },
+                "Грипп": { type: "refusal" as const },
+                "Коронавирус": { type: "done" as const, dose: "V1", date: "2025-04-01", expiryDate: null },
+              },
+              note: null,
+            },
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    const documents = await db.journalDocument.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+        status: activeTab,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return (
+      <MedBookDocumentsClient
+        activeTab={activeTab}
+        templateCode={resolvedCode}
+        templateName={template.name}
+        users={orgUsers}
+        documents={documents.map((doc) => ({
+          id: doc.id,
+          title: doc.title || MED_BOOK_DOCUMENT_TITLE,
+          status: doc.status as "active" | "closed",
         }))}
       />
     );
