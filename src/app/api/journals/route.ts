@@ -50,7 +50,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
   ],
   ccp_monitoring: [
     {
-      field: "withinLimits",
+      field: "withinLimit",
       condition: "equals",
       value: false,
       alertType: "ККТ: ВЫХОД ЗА ПРЕДЕЛЫ",
@@ -95,7 +95,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: "failed",
       alertType: "Поверка: НЕ ПРОЙДЕНА",
       alertMessage: (d) =>
-        `Оборудование не прошло поверку!\nПрибор: <b>${esc(d.instrumentName || "—")}</b>\nЗамечания: ${esc(d.comment || "не указаны")}`,
+        `Оборудование не прошло поверку!\nПрибор: <b>${esc(d.equipmentName || "—")}</b>\nСвидетельство: ${esc(d.certificateNumber || "не указано")}\nЗамечания: ${esc(d.correctiveAction || "не указаны")}`,
     },
   ],
   product_writeoff: [
@@ -105,7 +105,7 @@ const DEVIATION_RULES: Record<string, DeviationRule[]> = {
       value: undefined,
       alertType: "Списание продукции",
       alertMessage: (d) =>
-        `Списание: <b>${esc(d.productName || "—")}</b>\nКоличество: ${esc(d.quantity || "—")} ${esc(d.unit || "")}\nПричина: ${esc(d.reason || "не указана")}`,
+        `Списание: <b>${esc(d.productName || "—")}</b>\nКоличество: ${esc(d.quantity || "—")} ${esc(d.unit || "")}\nПричина: ${esc(d.reason || "не указана")}\nСпособ: ${esc(d.disposalMethod || "не указан")}`,
     },
   ],
 };
