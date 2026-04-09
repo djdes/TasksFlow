@@ -40,9 +40,6 @@ const navItems = [
   { label: "Настройки", href: "/settings", icon: Settings },
 ];
 
-const CLIENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
-const CLIENT_BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME ?? "";
-
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -61,8 +58,8 @@ type HeaderProps = {
 export function Header({ userName, userEmail, organizationName }: HeaderProps) {
   const pathname = usePathname();
   const [buildInfo, setBuildInfo] = useState({
-    buildId: CLIENT_BUILD_ID,
-    buildTime: CLIENT_BUILD_TIME,
+    buildId: "...",
+    buildTime: "",
   });
 
   useEffect(() => {
