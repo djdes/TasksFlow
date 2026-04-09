@@ -37,6 +37,7 @@ export const SOURCE_STYLE_TRACKED_TEMPLATE_CODES = [
   "daily_rejection",
   "raw_storage_control",
   "defrosting_control",
+  "fryer_oil",
 ] as const;
 
 export type SourceStyleTrackedTemplateCode =
