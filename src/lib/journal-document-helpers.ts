@@ -40,6 +40,10 @@ import {
   GLASS_LIST_TEMPLATE_CODE,
 } from "@/lib/glass-list-document";
 import {
+  GLASS_CONTROL_DOCUMENT_TITLE,
+  GLASS_CONTROL_TEMPLATE_CODE,
+} from "@/lib/glass-control-document";
+import {
   AUDIT_PLAN_DOCUMENT_TITLE,
   AUDIT_PLAN_TEMPLATE_CODE,
 } from "@/lib/audit-plan-document";
@@ -75,6 +79,10 @@ import {
   TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
   getTraceabilityDocumentTitle,
 } from "@/lib/traceability-document";
+import {
+  INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+} from "@/lib/intensive-cooling-document";
 import {
   getScanJournalConfig,
   isScanOnlyDocumentTemplate as isScanOnlyDocumentTemplateFromConfig,
@@ -142,11 +150,13 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE ||
     templateCode === MED_BOOK_TEMPLATE_CODE ||
     templateCode === GLASS_LIST_TEMPLATE_CODE ||
+    templateCode === GLASS_CONTROL_TEMPLATE_CODE ||
     templateCode === AUDIT_PLAN_TEMPLATE_CODE ||
     templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE ||
     templateCode === PPE_ISSUANCE_TEMPLATE_CODE ||
     templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === INTENSIVE_COOLING_TEMPLATE_CODE ||
     templateCode === DISINFECTANT_TEMPLATE_CODE ||
     isScanOnlyJournalTemplate(templateCode) ||
     isTrackedDocumentTemplate(templateCode)
@@ -194,6 +204,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   if (templateCode === GLASS_LIST_TEMPLATE_CODE) {
     return GLASS_LIST_DOCUMENT_TITLE;
   }
+  if (templateCode === GLASS_CONTROL_TEMPLATE_CODE) {
+    return GLASS_CONTROL_DOCUMENT_TITLE;
+  }
   if (templateCode === AUDIT_PLAN_TEMPLATE_CODE) {
     return AUDIT_PLAN_DOCUMENT_TITLE;
   }
@@ -208,6 +221,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
     return PPE_ISSUANCE_DOCUMENT_TITLE;
+  }
+  if (templateCode === INTENSIVE_COOLING_TEMPLATE_CODE) {
+    return INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME;
   }
   if (templateCode === "critical_limit_check") {
     return "Журнал учета критических показателей";

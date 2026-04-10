@@ -77,6 +77,8 @@ import { DISINFECTANT_TEMPLATE_CODE } from "@/lib/disinfectant-document";
 import { DisinfectantDocumentClient } from "@/components/journals/disinfectant-document-client";
 import { BREAKDOWN_HISTORY_TEMPLATE_CODE } from "@/lib/breakdown-history-document";
 import { BreakdownHistoryDocumentClient } from "@/components/journals/breakdown-history-document-client";
+import { ACCIDENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/accident-document";
+import { AccidentDocumentClient } from "@/components/journals/accident-document-client";
 import { UvLampRuntimeDocumentClient } from "@/components/journals/uv-lamp-runtime-document-client";
 import {
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
@@ -106,6 +108,12 @@ import {
   GLASS_LIST_TEMPLATE_CODE,
   normalizeGlassListConfig,
 } from "@/lib/glass-list-document";
+import { GlassControlDocumentClient } from "@/components/journals/glass-control-document-client";
+import {
+  GLASS_CONTROL_TEMPLATE_CODE,
+  normalizeGlassControlConfig,
+  normalizeGlassControlEntryData,
+} from "@/lib/glass-control-document";
 import { StaffTrainingDocumentClient } from "@/components/journals/staff-training-document-client";
 import {
   STAFF_TRAINING_TEMPLATE_CODE,
@@ -361,6 +369,32 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === GLASS_CONTROL_TEMPLATE_CODE) {
+    return (
+      <GlassControlDocumentClient
+        documentId={document.id}
+        routeCode={code}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        dateTo={toDateKey(document.dateTo)}
+        responsibleTitle={document.responsibleTitle}
+        responsibleUserId={document.responsibleUserId}
+        status={document.status}
+        autoFill={document.autoFill}
+        users={enrichedEmployees}
+        config={normalizeGlassControlConfig(document.config)}
+        initialEntries={document.entries.map((entry) => ({
+          id: entry.id,
+          employeeId: entry.employeeId,
+          date: toDateKey(entry.date),
+          data: normalizeGlassControlEntryData(entry.data),
+        }))}
+        itemSuggestions={equipment.map((item) => item.name)}
+      />
+    );
+  }
+
   if (document.template.code === STAFF_TRAINING_TEMPLATE_CODE) {
     return (
       <StaffTrainingDocumentClient
@@ -536,6 +570,19 @@ export default async function JournalDocumentPage({
   if (document.template.code === BREAKDOWN_HISTORY_TEMPLATE_CODE) {
     return (
       <BreakdownHistoryDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <AccidentDocumentClient
         documentId={document.id}
         title={document.title}
         organizationName={organization?.name || 'ООО "Тест"'}

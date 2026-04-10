@@ -55,6 +55,13 @@ import {
   normalizeGlassControlEntryData,
 } from "@/lib/glass-control-document";
 import {
+  formatPestControlDate,
+  formatPestControlRowDate,
+  normalizePestControlEntryData,
+  PEST_CONTROL_DOCUMENT_TITLE,
+  PEST_CONTROL_TEMPLATE_CODE,
+} from "@/lib/pest-control-document";
+import {
   getTrackedDocumentTitle,
   isTrackedDocumentTemplate,
   type TrackedDocumentTemplateCode,
@@ -1663,6 +1670,112 @@ function drawProductWriteoffPdf(doc: jsPDF, params: {
   });
 }
 
+function drawGlassListPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date;
+  config: ReturnType<typeof normalizeGlassListConfig>;
+  responsibleName: string;
+}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const config = params.config;
+  const documentDate = config.documentDate || params.dateFrom.toISOString().slice(0, 10);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(22);
+  doc.text(params.title || "РџРµСЂРµС‡РµРЅСЊ РёР·РґРµР»РёР№", 14, 18);
+
+  const x = 42;
+  const y = 34;
+  const width = pageWidth - 84;
+  const leftWidth = 38;
+  const rightWidth = 22;
+  const middleWidth = width - leftWidth - rightWidth;
+
+  doc.setLineWidth(0.2);
+  doc.rect(x, y, width, 22);
+  doc.line(x + leftWidth, y, x + leftWidth, y + 22);
+  doc.line(x + leftWidth + middleWidth, y, x + leftWidth + middleWidth, y + 22);
+  doc.line(x + leftWidth, y + 11, x + leftWidth + middleWidth, y + 11);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  drawCenteredText(doc, params.organizationName, x, y, leftWidth, 22, leftWidth - 6);
+
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(11);
+  drawCenteredText(doc, "РЎРРЎРўР•РњРђ РҐРђРЎРЎРџ", x + leftWidth, y, middleWidth, 11, middleWidth - 6);
+
+  doc.setFont("JournalUnicode", "italic");
+  drawCenteredText(
+    doc,
+    "РџР•Р Р•Р§Р•РќР¬ РР—Р”Р•Р›РР™ РР— РЎРўР•РљР›Рђ Р РҐР РЈРџРљРћР“Рћ РџР›РђРЎРўРРљРђ",
+    x + leftWidth,
+    y + 11,
+    middleWidth,
+    11,
+    middleWidth - 10
+  );
+  drawCenteredText(doc, "РЎРўР . 1 РР— 1", x + leftWidth + middleWidth, y, rightWidth, 22, rightWidth - 4);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  doc.text("РЈРўР’Р•Р Р–Р”РђР®", pageWidth - 36, 72, { align: "right" });
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(11);
+  doc.text(config.responsibleTitle || "РЈРїСЂР°РІР»СЏСЋС‰РёР№", pageWidth - 36, 80, { align: "right" });
+  doc.text(`____________________ ${params.responsibleName}`, pageWidth - 36, 88, { align: "right" });
+  doc.text(`В« ${formatGlassListDateLong(documentDate)} Рі.`, pageWidth - 36, 96, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(14);
+  doc.text(
+    "РџР•Р Р•Р§Р•РќР¬ РР—Р”Р•Р›РР™ РР— РЎРўР•РљР›Рђ Р РҐР РЈРџРљРћР“Рћ РџР›РђРЎРўРРљРђ",
+    pageWidth / 2,
+    106,
+    { align: "center" }
+  );
+
+  autoTable(doc, {
+    startY: 114,
+    margin: { left: 42, right: 42 },
+    head: [[
+      "",
+      "РњРµСЃС‚Рѕ СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ\n(СѓС‡Р°СЃС‚РѕРє)",
+      "РќР°РёРјРµРЅРѕРІР°РЅРёРµ РѕР±СЉРµРєС‚Р° РєРѕРЅС‚СЂРѕР»СЏ (РїСЂРµРґРјРµС‚Р°)",
+      "РљРѕР»-РІРѕ",
+    ]],
+    body: (config.rows.length > 0 ? config.rows : [{ id: "empty", location: "", itemName: "", quantity: "" }]).map(
+      (row) => ["", row.location || config.location || "", row.itemName || "", row.quantity || ""]
+    ),
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 10,
+      cellPadding: 2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [239, 239, 239],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      halign: "center",
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
+    columnStyles: {
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 34, halign: "center" },
+      2: { cellWidth: 94, halign: "center" },
+      3: { cellWidth: 18, halign: "center" },
+    },
+  });
+}
+
 function formatBreakdownDateRu(dateKey: string) {
   if (!dateKey) return "";
   const [y, m, d] = dateKey.split("-");
@@ -2315,6 +2428,153 @@ function drawTrackedPdf(doc: jsPDF, params: {
   });
 }
 
+function drawPestControlPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string | null;
+  entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
+  users: { id: string; name: string; role: string }[];
+}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const startDate =
+    params.dateFrom instanceof Date
+      ? params.dateFrom.toISOString().slice(0, 10)
+      : String(params.dateFrom).slice(0, 10);
+  const endDate =
+    params.dateTo instanceof Date
+      ? params.dateTo.toISOString().slice(0, 10)
+      : typeof params.dateTo === "string"
+        ? params.dateTo.slice(0, 10)
+        : "";
+  const userMap = Object.fromEntries(params.users.map((user) => [user.id, user.name]));
+
+  drawTitle(doc, params.title || PEST_CONTROL_DOCUMENT_TITLE);
+
+  const x = 24;
+  const y = 28;
+  const width = pageWidth - 48;
+  const leftWidth = 56;
+  const rightWidth = 32;
+  const middleWidth = width - leftWidth - rightWidth;
+  const topHeight = 10;
+  const secondHeight = 10;
+
+  doc.setLineWidth(0.25);
+  doc.rect(x, y, width, topHeight + secondHeight);
+  doc.line(x + leftWidth, y, x + leftWidth, y + topHeight + secondHeight);
+  doc.line(x + leftWidth + middleWidth, y, x + leftWidth + middleWidth, y + topHeight + secondHeight);
+  doc.line(x + leftWidth, y + topHeight, x + width, y + topHeight);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(10);
+  drawCenteredText(doc, params.organizationName, x + 3, y, leftWidth - 6, topHeight + secondHeight, leftWidth - 10);
+
+  doc.setFont("JournalUnicode", "normal");
+  drawCenteredText(doc, "СИСТЕМА ХАССП", x + leftWidth, y, middleWidth, topHeight, middleWidth - 10);
+
+  doc.setFont("JournalUnicode", "italic");
+  drawCenteredText(doc, (params.title || PEST_CONTROL_DOCUMENT_TITLE).toUpperCase(), x + leftWidth, y + topHeight, middleWidth, secondHeight, middleWidth - 12);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(9);
+  doc.text(`Начат   ${formatPestControlDate(startDate)}`, x + leftWidth + middleWidth + 2, y + 5);
+  doc.text("Окончен __________", x + leftWidth + middleWidth + 2, y + 10);
+  if (endDate && endDate !== startDate) {
+    doc.setFont("JournalUnicode", "normal");
+    doc.text(formatPestControlDate(endDate), x + width - 2, y + 10, { align: "right" });
+    doc.setFont("JournalUnicode", "bold");
+  }
+  doc.setFont("JournalUnicode", "normal");
+  doc.text("СТР. 1 ИЗ 1", x + width - 2, y + 16, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(14);
+  doc.text(
+    (params.title || PEST_CONTROL_DOCUMENT_TITLE).toUpperCase(),
+    pageWidth / 2,
+    58,
+    { align: "center" }
+  );
+
+  const bodyRows = params.entries
+    .map((entry) => {
+      const normalized = normalizePestControlEntryData(entry.data, entry.date.toISOString().slice(0, 10), params.users, entry.employeeId);
+      const acceptedEmployeeName =
+        userMap[normalized.acceptedEmployeeId] ||
+        userMap[entry.employeeId] ||
+        "";
+
+      return [
+        "",
+        formatPestControlRowDate(
+          normalized.performedDate,
+          normalized.performedHour,
+          normalized.performedMinute,
+          normalized.timeSpecified
+        ),
+        normalized.event,
+        normalized.areaOrVolume,
+        normalized.treatmentProduct,
+        normalized.note,
+        normalized.performedBy,
+        [normalized.acceptedRole, acceptedEmployeeName].filter(Boolean).join(", "),
+      ];
+    });
+
+  bodyRows.push(["", "", "", "", "", "", "", ""]);
+
+  autoTable(doc, {
+    startY: 66,
+    margin: { left: 24, right: 24 },
+    head: [[
+      "",
+      "Дата и время\nпроведения",
+      "Мероприятие\n(вид, место)",
+      "Площадь и\n(или) объем",
+      "Средство обработки",
+      "Примечание",
+      "Кем проведено",
+      "ФИО принявшего\nработы",
+    ]],
+    body: bodyRows,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 8.6,
+      cellPadding: 1.6,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      halign: "center",
+      valign: "middle",
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
+    bodyStyles: {
+      halign: "center",
+      valign: "middle",
+    },
+    columnStyles: {
+      0: { cellWidth: 7, halign: "center" },
+      1: { cellWidth: 24, halign: "center" },
+      2: { cellWidth: 34, halign: "center" },
+      3: { cellWidth: 22, halign: "center" },
+      4: { cellWidth: 31, halign: "center" },
+      5: { cellWidth: 56, halign: "center" },
+      6: { cellWidth: 31, halign: "center" },
+      7: { cellWidth: 33, halign: "center" },
+    },
+  });
+}
+
 function drawEquipmentCleaningPdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -2395,7 +2655,6 @@ function drawEquipmentCleaningPdf(doc: jsPDF, params: {
     tableLineColor: [0, 0, 0],
     tableLineWidth: 0.2,
     styles: {
-      font: "JournalUnicode",
       font: currentFont,
       textColor: [0, 0, 0],
       lineColor: [0, 0, 0],
@@ -3353,6 +3612,34 @@ export async function generateJournalDocumentPdf(params: {
       dateFrom: document.dateFrom,
       config: normalizeProductWriteoffConfig(document.config),
     });
+  } else if (templateCode === GLASS_LIST_TEMPLATE_CODE) {
+    const glassListConfig = normalizeGlassListConfig(document.config);
+    drawGlassListPdf(doc, {
+      organizationName,
+      title: document.title || "РџРµСЂРµС‡РµРЅСЊ РёР·РґРµР»РёР№",
+      dateFrom: document.dateFrom,
+      config: glassListConfig,
+      responsibleName:
+        users.find((user) => user.id === (document.responsibleUserId || glassListConfig.responsibleUserId))
+          ?.name || "РРІР°РЅРѕРІ Р.Р.",
+    });
+  } else if (templateCode === GLASS_CONTROL_TEMPLATE_CODE) {
+    drawGlassControlPdf(doc, {
+      organizationName,
+      title: document.title || GLASS_CONTROL_PAGE_TITLE,
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      status: document.status,
+      responsibleName:
+        users.find((user) => user.id === document.responsibleUserId)?.name || "",
+      config: normalizeGlassControlConfig(document.config),
+      entries: document.entries.map((entry) => ({
+        date: entry.date,
+        employeeId: entry.employeeId,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+      users,
+    });
   } else if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
     drawSanitationDayPdf(doc, {
       organizationName,
@@ -3466,6 +3753,19 @@ export async function generateJournalDocumentPdf(params: {
       })),
       users,
     });
+  } else if (templateCode === PEST_CONTROL_TEMPLATE_CODE) {
+    drawPestControlPdf(doc, {
+      organizationName,
+      title: document.title || PEST_CONTROL_DOCUMENT_TITLE,
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      entries: document.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        date: entry.date,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+      users,
+    });
   } else if (isTrackedDocumentTemplate(templateCode)) {
     drawTrackedPdf(doc, {
       organizationName,
@@ -3509,6 +3809,12 @@ export async function generateJournalDocumentPdf(params: {
             ? getFinishedProductFilePrefix()
             : templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
               ? getProductWriteoffFilePrefix()
+            : templateCode === PEST_CONTROL_TEMPLATE_CODE
+              ? "pest-control-journal"
+            : templateCode === GLASS_LIST_TEMPLATE_CODE
+              ? getGlassListFilePrefix()
+            : templateCode === GLASS_CONTROL_TEMPLATE_CODE
+              ? getGlassControlFilePrefix()
             : templateCode === SANITATION_DAY_TEMPLATE_CODE
               ? "general-cleaning-schedule"
             : templateCode === TRAINING_PLAN_TEMPLATE_CODE

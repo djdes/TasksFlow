@@ -39,7 +39,7 @@ export const SOURCE_JOURNAL_MAP: SourceJournalMapItem[] = [
   { sourceSlug: "equipcleanjournal", localCode: "inventory_sanitation", status: "candidate" },
   { sourceSlug: "intensivecoolingjournal", localCode: "critical_limit_check", status: "candidate" },
   { sourceSlug: "glasslist", localCode: "glass_items_list", status: "mapped" },
-  { sourceSlug: "glassjournal", localCode: "allergen_control", status: "candidate" },
+  { sourceSlug: "glassjournal", localCode: "glass_control", status: "mapped" },
   { sourceSlug: "deratization1journal", localCode: "pest_control", status: "mapped" },
 ];
 

@@ -68,6 +68,14 @@ import {
 } from "@/lib/breakdown-history-document";
 import { BreakdownHistoryDocumentsClient } from "@/components/journals/breakdown-history-documents-client";
 import {
+  ACCIDENT_DOCUMENT_TEMPLATE_CODE,
+  ACCIDENT_DOCUMENT_SOURCE_SLUG,
+  ACCIDENT_DOCUMENT_TITLE,
+  buildAccidentDocumentDemoConfig,
+} from "@/lib/accident-document";
+import { AccidentDocumentsClient } from "@/components/journals/accident-documents-client";
+import { IntensiveCoolingDocumentsClient } from "@/components/journals/intensive-cooling-documents-client";
+import {
   TRAINING_PLAN_TEMPLATE_CODE,
   TRAINING_PLAN_SOURCE_SLUG,
   TRAINING_PLAN_DOCUMENT_TITLE,
@@ -84,22 +92,6 @@ import {
   normalizeAuditPlanConfig,
 } from "@/lib/audit-plan-document";
 import { AuditPlanDocumentsClient } from "@/components/journals/audit-plan-documents-client";
-import {
-  AUDIT_PROTOCOL_DOCUMENT_TITLE,
-  AUDIT_PROTOCOL_SOURCE_SLUG,
-  AUDIT_PROTOCOL_TEMPLATE_CODE,
-  getDefaultAuditProtocolConfig,
-  normalizeAuditProtocolConfig,
-} from "@/lib/audit-protocol-document";
-import { AuditProtocolDocumentsClient } from "@/components/journals/audit-protocol-documents-client";
-import {
-  AUDIT_REPORT_DOCUMENT_TITLE,
-  AUDIT_REPORT_SOURCE_SLUG,
-  AUDIT_REPORT_TEMPLATE_CODE,
-  getDefaultAuditReportConfig,
-  normalizeAuditReportConfig,
-} from "@/lib/audit-report-document";
-import { AuditReportDocumentsClient } from "@/components/journals/audit-report-documents-client";
 import {
   DISINFECTANT_TEMPLATE_CODE,
   DISINFECTANT_SOURCE_SLUG,
@@ -176,6 +168,14 @@ import {
   normalizeMetalImpurityConfig,
 } from "@/lib/metal-impurity-document";
 import { MetalImpurityDocumentsClient } from "@/components/journals/metal-impurity-documents-client";
+import {
+  createIntensiveCoolingRow,
+  getDefaultIntensiveCoolingConfig,
+  getResponsibleTitleByRole,
+  INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
+  INTENSIVE_COOLING_SOURCE_SLUG,
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+} from "@/lib/intensive-cooling-document";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -1816,56 +1816,6 @@ export default async function JournalDocumentsPage({
       );
     }
 
-    if (resolvedCode === AUDIT_PROTOCOL_TEMPLATE_CODE) {
-      const protocolDocuments = await db.journalDocument.findMany({
-        where: {
-          organizationId: session.user.organizationId,
-          templateId: template.id,
-          status: activeTab,
-        },
-        orderBy: { createdAt: "asc" },
-      });
-
-      return (
-        <AuditProtocolDocumentsClient
-          routeCode={code === AUDIT_PROTOCOL_SOURCE_SLUG ? code : resolvedCode}
-          activeTab={activeTab}
-          documents={protocolDocuments.map((document) => ({
-            id: document.id,
-            title: document.title || AUDIT_PROTOCOL_DOCUMENT_TITLE,
-            status: document.status as "active" | "closed",
-            dateFrom: document.dateFrom.toISOString().slice(0, 10),
-            config: normalizeAuditProtocolConfig(document.config ?? getDefaultAuditProtocolConfig()),
-          }))}
-        />
-      );
-    }
-
-    if (resolvedCode === AUDIT_REPORT_TEMPLATE_CODE) {
-      const reportDocuments = await db.journalDocument.findMany({
-        where: {
-          organizationId: session.user.organizationId,
-          templateId: template.id,
-          status: activeTab,
-        },
-        orderBy: { createdAt: "asc" },
-      });
-
-      return (
-        <AuditReportDocumentsClient
-          routeCode={code === AUDIT_REPORT_SOURCE_SLUG ? code : resolvedCode}
-          activeTab={activeTab}
-          documents={reportDocuments.map((document) => ({
-            id: document.id,
-            title: document.title || AUDIT_REPORT_DOCUMENT_TITLE,
-            status: document.status as "active" | "closed",
-            dateFrom: document.dateFrom.toISOString().slice(0, 10),
-            config: normalizeAuditReportConfig(document.config ?? getDefaultAuditReportConfig()),
-          }))}
-        />
-      );
-    }
-
     if (resolvedCode === METAL_IMPURITY_TEMPLATE_CODE) {
       const metalDocuments = await db.journalDocument.findMany({
         where: {
@@ -1932,6 +1882,63 @@ export default async function JournalDocumentsPage({
             status: document.status as "active" | "closed",
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             config: document.config,
+          }))}
+        />
+      );
+    }
+
+    if (resolvedCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+      const existingAccidentDocuments = await db.journalDocument.findMany({
+        where: { templateId: template.id, organizationId: session.user.organizationId },
+        select: { status: true },
+      });
+      const accidentStatuses = new Set(existingAccidentDocuments.map((d) => d.status));
+
+      if (!accidentStatuses.has("active")) {
+        const areaNames = (
+          await db.area.findMany({
+            where: { organizationId: session.user.organizationId },
+            select: { name: true },
+            orderBy: { name: "asc" },
+          })
+        ).map((item) => item.name);
+
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: ACCIDENT_DOCUMENT_TITLE,
+            status: "active",
+            dateFrom: new Date("2021-10-01"),
+            dateTo: new Date("2021-10-01"),
+            createdById: session.user.id,
+            config: buildAccidentDocumentDemoConfig({
+              areaNames,
+              userNames: orgUsers.map((user) => user.name),
+            }),
+          },
+        });
+      }
+
+      const accidentDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return (
+        <AccidentDocumentsClient
+          routeCode={code === ACCIDENT_DOCUMENT_SOURCE_SLUG ? code : resolvedCode}
+          templateCode={resolvedCode}
+          activeTab={activeTab}
+          documents={accidentDocuments.map((document) => ({
+            id: document.id,
+            title: document.title || ACCIDENT_DOCUMENT_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
           }))}
         />
       );

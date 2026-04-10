@@ -512,6 +512,7 @@ const journalTemplates = [
 ];
 
 const additionalJournalTemplates = [
+  { code: "accident_journal", name: "Журнал учета аварий", description: "Журнал регистрации аварий, их последствий и корректирующих мероприятий", sortOrder: 32, isMandatorySanpin: true, isMandatoryHaccp: true, fields: [] },
   { code: "sanitary_day_control", name: "Чек-лист (памятка) проведения санитарного дня", description: "Чек-лист проведения санитарного дня", sortOrder: 21, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
   { code: "hand_hygiene_control", name: "Контроль гигиены рук", description: "Проверка соблюдения процедур гигиены рук", sortOrder: 22, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [{ key: "employeeName", label: "Сотрудник", type: "employee", required: true }, { key: "hasViolations", label: "Есть нарушения", type: "boolean", required: true }, { key: "comment", label: "Комментарий", type: "text", required: false }] },
   { code: "waste_disposal_control", name: "Контроль утилизации отходов", description: "Учёт вывоза и утилизации пищевых отходов", sortOrder: 23, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [{ key: "wasteType", label: "Тип отходов", type: "text", required: true }, { key: "quantity", label: "Количество", type: "number", required: true, step: 0.01 }, { key: "contractor", label: "Подрядчик", type: "text", required: false }] },
@@ -531,6 +532,7 @@ const additionalJournalTemplates = [
   { code: "audit_protocol", name: "Протокол внутреннего аудита", description: "Протокол внутреннего аудита с секциями требований, отметками да/нет и примечаниями", sortOrder: 37, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [] },
   { code: "audit_report", name: "Отчет о внутреннем аудите", description: "Отчет по результатам внутреннего аудита с несоответствиями, корректирующими действиями и подписями", sortOrder: 38, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [] },
   { code: "metal_impurity", name: "Журнал учета металлопримесей", description: "Журнал учета металлопримесей в сырье с таблицей записей, настройками и справочниками", sortOrder: 39, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
+  { code: "glass_control", name: "Журнал контроля изделий из стекла и хрупкого пластика", description: "Журнал контроля изделий из стекла и хрупкого пластика с настройками документа, таблицей проверок и печатью", sortOrder: 40, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
   { code: "med_books", name: "Медицинские книжки", description: "Журнал учёта медицинских книжек, осмотров и прививок сотрудников", sortOrder: 36, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
   { code: "perishable_rejection", name: "Бракераж скоропортящейся пищевой продукции", description: "Журнал бракеража скоропортящейся пищевой продукции", sortOrder: 37, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
   { code: "audit_plan_scan", name: "Журнал аудита - План", description: "Шаблон журнала сканирования для плана аудита", sortOrder: 39, isMandatorySanpin: false, isMandatoryHaccp: false, fields: [] },
