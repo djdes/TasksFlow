@@ -508,17 +508,6 @@ function AddRowDialog(props: {
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
   const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
-  useEffect(() => {
-    if (!props.open) return;
-    setDate(toIsoDate(new Date()));
-    setStartHour("10");
-    setStartMin("00");
-    setEndHour("18");
-    setEndMin("00");
-    setResponsibleTitle(props.defaultResponsibleTitle);
-    setEmployeeId(props.defaultEmployeeId);
-  }, [props.open, props.defaultEmployeeId, props.defaultResponsibleTitle]);
-
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto rounded-[24px] border-0 p-0">
@@ -1259,16 +1248,19 @@ export function UvLampRuntimeDocumentClient(props: Props) {
         onSave={handleSaveSpec}
       />
 
-      <AddRowDialog
-        open={addRowOpen}
-        onOpenChange={setAddRowOpen}
-        users={props.users}
-        defaultEmployeeId={fallbackEmployeeId}
-        defaultResponsibleTitle={props.responsibleTitle || "Управляющий"}
-        onAdd={(data) => {
-          handleAddRow(data).catch(() => window.alert("Ошибка добавления строки"));
-        }}
-      />
+      {addRowOpen && (
+        <AddRowDialog
+          key={`uv-row-${fallbackEmployeeId}-${props.responsibleTitle || "default"}`}
+          open={addRowOpen}
+          onOpenChange={setAddRowOpen}
+          users={props.users}
+          defaultEmployeeId={fallbackEmployeeId}
+          defaultResponsibleTitle={props.responsibleTitle || "Управляющий"}
+          onAdd={(data) => {
+            handleAddRow(data).catch(() => window.alert("Ошибка добавления строки"));
+          }}
+        />
+      )}
     </div>
   );
 }

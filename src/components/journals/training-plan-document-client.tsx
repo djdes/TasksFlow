@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import {
   createEmptyTrainingRow,
+  createTrainingTopic,
   getTrainingPlanApproveLabel,
   normalizeTrainingPlanConfig,
   type TrainingCell,
@@ -343,11 +344,11 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
   }
 
   async function addTopic(name: string) {
-    const id = `topic-${Math.random().toString(36).slice(2, 9)}`;
-    const topics = [...normalized.topics, { id, name }];
+    const topic = createTrainingTopic(name);
+    const topics = [...normalized.topics, topic];
     const rows = normalized.rows.map((row) => ({
       ...row,
-      cells: { ...row.cells, [id]: { required: false, date: "" } },
+      cells: { ...row.cells, [topic.id]: { required: false, date: "" } },
     }));
     await patchConfig({ ...normalized, topics, rows });
   }

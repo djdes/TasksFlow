@@ -304,7 +304,7 @@ function DeleteDialog(props: {
         <DialogHeader className="border-b px-8 py-6">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[24px] font-semibold text-black">
-              Удаление документа "{props.title}"
+              Удаление документа &quot;{props.title}&quot;
             </DialogTitle>
             <button
               type="button"

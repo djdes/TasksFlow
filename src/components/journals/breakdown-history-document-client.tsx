@@ -67,13 +67,8 @@ function RowDialog(props: {
   initialRow: BreakdownRow | null;
   onSave: (row: BreakdownRow) => Promise<void>;
 }) {
-  const [row, setRow] = useState<BreakdownRow>(() => createBreakdownRow());
+  const [row, setRow] = useState<BreakdownRow>(() => props.initialRow || createBreakdownRow());
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!props.open) return;
-    setRow(props.initialRow || createBreakdownRow());
-  }, [props.initialRow, props.open]);
 
   function setValue<K extends keyof BreakdownRow>(key: K, value: BreakdownRow[K]) {
     setRow((current) => ({ ...current, [key]: value }));
@@ -250,12 +245,6 @@ function SettingsDialog(props: {
   const [dateFrom, setDateFrom] = useState(props.dateFrom);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!props.open) return;
-    setTitle(props.title);
-    setDateFrom(props.dateFrom);
-  }, [props.open, props.title, props.dateFrom]);
-
   async function handleSave() {
     setIsSubmitting(true);
     try {
@@ -378,7 +367,7 @@ function FinishDialog(props: {
 
 export function BreakdownHistoryDocumentClient(props: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [config, setConfig] = useState(() =>
     normalizeBreakdownHistoryDocumentConfig(props.config)
   );
@@ -389,16 +378,6 @@ export function BreakdownHistoryDocumentClient(props: Props) {
   const [finishOpen, setFinishOpen] = useState(false);
   const [rowDialogOpen, setRowDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<BreakdownRow | null>(null);
-
-  useEffect(() => {
-    setConfig(normalizeBreakdownHistoryDocumentConfig(props.config));
-  }, [props.config]);
-
-  useEffect(() => {
-    setTitle(props.title);
-    setDateFrom(props.dateFrom);
-  }, [props.dateFrom, props.title]);
-
   const rows = useMemo(() => config.rows, [config.rows]);
   const allSelected = rows.length > 0 && selectedRowIds.length === rows.length;
   const isActive = props.status === "active";
@@ -662,23 +641,29 @@ export function BreakdownHistoryDocumentClient(props: Props) {
       </div>
 
       {/* Dialogs */}
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title={title}
-        dateFrom={dateFrom}
-        onSave={handleSaveSettings}
-      />
+      {settingsOpen && (
+        <SettingsDialog
+          key={`${title}:${dateFrom}`}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title={title}
+          dateFrom={dateFrom}
+          onSave={handleSaveSettings}
+        />
+      )}
 
-      <RowDialog
-        open={rowDialogOpen}
-        onOpenChange={(open) => {
-          setRowDialogOpen(open);
-          if (!open) setEditingRow(null);
-        }}
-        initialRow={editingRow}
-        onSave={handleSaveRow}
-      />
+      {rowDialogOpen && (
+        <RowDialog
+          key={editingRow?.id || "new-breakdown-row"}
+          open={rowDialogOpen}
+          onOpenChange={(open) => {
+            setRowDialogOpen(open);
+            if (!open) setEditingRow(null);
+          }}
+          initialRow={editingRow}
+          onSave={handleSaveRow}
+        />
+      )}
 
       <FinishDialog
         open={finishOpen}

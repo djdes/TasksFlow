@@ -453,7 +453,7 @@ function FinishDialog(props: { open: boolean; onOpenChange: (open: boolean) => v
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[640px] rounded-[28px] border-0 p-0">
-        <DialogHeader className="border-b px-8 py-6"><div className="flex items-center justify-between gap-4"><DialogTitle className="text-[28px] font-semibold tracking-[-0.03em] text-black">Закончить журнал "{props.title}"</DialogTitle><button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}><X className="size-7" /></button></div></DialogHeader>
+        <DialogHeader className="border-b px-8 py-6"><div className="flex items-center justify-between gap-4"><DialogTitle className="text-[28px] font-semibold tracking-[-0.03em] text-black">Закончить журнал &quot;{props.title}&quot;</DialogTitle><button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}><X className="size-7" /></button></div></DialogHeader>
         <div className="space-y-4 px-8 py-8"><div className="text-[17px] leading-7 text-[#505469]">Документ станет доступен только для чтения.</div><div className="flex justify-end"><Button type="button" onClick={finish} disabled={loading} className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4654ff]">{loading ? "Сохранение..." : "Закончить"}</Button></div></div>
       </DialogContent>
     </Dialog>

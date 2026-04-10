@@ -251,12 +251,6 @@ function AddRowDialog(props: {
   const [date, setDate] = useState(toIsoDate(new Date()));
   const [userId, setUserId] = useState(props.defaultUserId);
 
-  useEffect(() => {
-    if (!props.open) return;
-    setDate(toIsoDate(new Date()));
-    setUserId(props.defaultUserId);
-  }, [props.open, props.defaultUserId]);
-
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto rounded-[24px] border-0 p-0">
@@ -329,12 +323,6 @@ function AddResponsibleDialog(props: {
 }) {
   const [userId, setUserId] = useState("");
   const [title, setTitle] = useState("Повар");
-
-  useEffect(() => {
-    if (!props.open) return;
-    setUserId("");
-    setTitle("Повар");
-  }, [props.open]);
 
   const availableUsers = props.users.filter((u) => !props.existingUserIds.has(u.id));
 
@@ -418,16 +406,9 @@ function EditResponsibleDialog(props: {
   onSave: (person: CleaningResponsiblePerson) => void;
   onDelete: (userId: string) => void;
 }) {
-  const [userId, setUserId] = useState("");
-  const [title, setTitle] = useState("");
+  const [userId, setUserId] = useState(props.person?.userId || "");
+  const [title, setTitle] = useState(props.person?.title || "");
   const [wantDelete, setWantDelete] = useState(false);
-
-  useEffect(() => {
-    if (!props.open || !props.person) return;
-    setUserId(props.person.userId);
-    setTitle(props.person.title);
-    setWantDelete(false);
-  }, [props.open, props.person]);
 
   if (!props.person) return null;
 
@@ -538,14 +519,6 @@ function AddPeriodicityDialog(props: {
   const [rooms, setRooms] = useState("");
   const [frequency, setFrequency] = useState("3");
   const [note, setNote] = useState("");
-
-  useEffect(() => {
-    if (!props.open) return;
-    setSurfaces("");
-    setRooms("");
-    setFrequency("3");
-    setNote("");
-  }, [props.open]);
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
@@ -1442,35 +1415,48 @@ export function CleaningDocumentClient(props: Props) {
         onSave={handleSettingsSave}
       />
 
-      <AddRowDialog
-        open={addRowOpen}
-        onOpenChange={setAddRowOpen}
-        users={users}
-        defaultUserId={fallbackUserId}
-        onAdd={handleAddEntry}
-      />
+      {addRowOpen && (
+        <AddRowDialog
+          key={`row-${fallbackUserId}`}
+          open={addRowOpen}
+          onOpenChange={setAddRowOpen}
+          users={users}
+          defaultUserId={fallbackUserId}
+          onAdd={handleAddEntry}
+        />
+      )}
 
-      <AddResponsibleDialog
-        open={addResponsibleOpen}
-        onOpenChange={setAddResponsibleOpen}
-        users={users}
-        existingUserIds={existingResponsibleUserIds}
-        onAdd={handleAddResponsible}
-      />
+      {addResponsibleOpen && (
+        <AddResponsibleDialog
+          key={`responsible-${users.length}-${existingResponsibleUserIds.size}`}
+          open={addResponsibleOpen}
+          onOpenChange={setAddResponsibleOpen}
+          users={users}
+          existingUserIds={existingResponsibleUserIds}
+          onAdd={handleAddResponsible}
+        />
+      )}
 
-      <EditResponsibleDialog
-        open={!!editingResponsible}
-        onOpenChange={(v) => { if (!v) setEditingResponsible(null); }}
-        person={editingResponsible}
-        users={users}
-        onSave={handleEditResponsible}
-        onDelete={handleDeleteResponsible}
-      />
+      {!!editingResponsible && (
+        <EditResponsibleDialog
+          key={`edit-${editingResponsible.userId}-${editingResponsible.title}`}
+          open={!!editingResponsible}
+          onOpenChange={(v) => {
+            if (!v) setEditingResponsible(null);
+          }}
+          person={editingResponsible}
+          users={users}
+          onSave={handleEditResponsible}
+          onDelete={handleDeleteResponsible}
+        />
+      )}
 
-      <AddPeriodicityDialog
-        open={addPeriodicityOpen}
-        onOpenChange={setAddPeriodicityOpen}
-        onSave={(data) => {
+      {addPeriodicityOpen && (
+        <AddPeriodicityDialog
+          key="periodicity"
+          open={addPeriodicityOpen}
+          onOpenChange={setAddPeriodicityOpen}
+          onSave={(data) => {
           const nextConfig: CleaningDocumentConfig = {
             ...config,
             procedure: {
@@ -1482,8 +1468,9 @@ export function CleaningDocumentClient(props: Props) {
           saveConfig(nextConfig).catch((err) => {
             window.alert(err instanceof Error ? err.message : "Ошибка");
           });
-        }}
-      />
+          }}
+        />
+      )}
     </div>
   );
 }

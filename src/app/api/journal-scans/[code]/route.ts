@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { requireAuth } from "@/lib/auth-helpers";
 import { getScanJournalConfig } from "@/lib/scan-journal-config";
 
 function getContentType(fileName: string) {
@@ -14,6 +15,8 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ code: string }> }
 ) {
+  await requireAuth();
+
   const { code } = await params;
   const url = new URL(request.url);
   const requestedPage = Number.parseInt(url.searchParams.get("page") || "1", 10);
@@ -32,11 +35,9 @@ export async function GET(
       name: string;
     }[];
   } catch {
-    return NextResponse.json(
-      { error: "РџР°РєРѕРґ РјРЅРёРІРµС‚Р°Р·РёС‚Рµ РЅРµ РЅР°Р№РґРµРЅР°" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Папка со сканами не найдена" }, { status: 404 });
   }
+
   const imageEntries = entries
     .filter((entry) => entry.isFile())
     .filter((entry) => /\.(jpe?g|png|webp)$/i.test(entry.name))
@@ -44,7 +45,7 @@ export async function GET(
       file: entry.name,
       order: Number((entry.name.match(/^\s*(\d+)/) || [])[1] || Number.POSITIVE_INFINITY),
     }))
-    .sort((a, b) => (a.order - b.order) || a.file.localeCompare(b.file));
+    .sort((a, b) => a.order - b.order || a.file.localeCompare(b.file));
 
   if (page > imageEntries.length || imageEntries.length === 0) {
     return NextResponse.json({ error: "Страница не найдена" }, { status: 404 });
@@ -58,7 +59,7 @@ export async function GET(
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": getContentType(fileName),
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "private, max-age=3600",
       },
     });
   } catch {

@@ -191,12 +191,6 @@ function AddItemDialog(props: {
   const [zoneId, setZoneId] = useState(props.zones[0]?.id || "");
   const [text, setText] = useState("");
 
-  useEffect(() => {
-    if (!props.open) return;
-    setZoneId(props.zones[0]?.id || "");
-    setText("");
-  }, [props.open, props.zones]);
-
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto rounded-[24px] border-0 p-0">
@@ -266,14 +260,8 @@ function EditItemDialog(props: {
   item: SdcItem | null;
   onSave: (itemId: string, zoneId: string, text: string) => void;
 }) {
-  const [zoneId, setZoneId] = useState("");
-  const [text, setText] = useState("");
-
-  useEffect(() => {
-    if (!props.open || !props.item) return;
-    setZoneId(props.item.zoneId);
-    setText(props.item.text);
-  }, [props.open, props.item]);
+  const [zoneId, setZoneId] = useState(props.item?.zoneId || "");
+  const [text, setText] = useState(props.item?.text || "");
 
   if (!props.item) return null;
 
@@ -349,14 +337,6 @@ function EditZonesDialog(props: {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [newName, setNewName] = useState("");
-
-  useEffect(() => {
-    if (!props.open) return;
-    setZones(props.zones.map((z) => ({ ...z })));
-    setSelected(new Set());
-    setEditingId(null);
-    setNewName("");
-  }, [props.open, props.zones]);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -965,25 +945,34 @@ export function SanitaryDayChecklistDocumentClient({
         dateFrom={entryDate}
         onSaved={() => router.refresh()}
       />
-      <AddItemDialog
-        open={addItemOpen}
-        onOpenChange={setAddItemOpen}
-        zones={config.zones}
-        onAdd={handleAddItem}
-      />
-      <EditItemDialog
-        open={editItemOpen}
-        onOpenChange={setEditItemOpen}
-        zones={config.zones}
-        item={editingItem}
-        onSave={handleEditItem}
-      />
-      <EditZonesDialog
-        open={editZonesOpen}
-        onOpenChange={setEditZonesOpen}
-        zones={config.zones}
-        onSave={handleSaveZones}
-      />
+      {addItemOpen && (
+        <AddItemDialog
+          key={`add-item-${config.zones[0]?.id || "empty"}`}
+          open={addItemOpen}
+          onOpenChange={setAddItemOpen}
+          zones={config.zones}
+          onAdd={handleAddItem}
+        />
+      )}
+      {editItemOpen && (
+        <EditItemDialog
+          key={`edit-item-${editingItem?.id || "empty"}`}
+          open={editItemOpen}
+          onOpenChange={setEditItemOpen}
+          zones={config.zones}
+          item={editingItem}
+          onSave={handleEditItem}
+        />
+      )}
+      {editZonesOpen && (
+        <EditZonesDialog
+          key={`edit-zones-${config.zones.map((zone) => zone.id).join("-")}`}
+          open={editZonesOpen}
+          onOpenChange={setEditZonesOpen}
+          zones={config.zones}
+          onSave={handleSaveZones}
+        />
+      )}
     </div>
   );
 }

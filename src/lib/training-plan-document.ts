@@ -28,6 +28,13 @@ function createId() {
   return `tp-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export function createTrainingTopic(name: string) {
+  return {
+    id: createId(),
+    name,
+  };
+}
+
 function safeText(value: unknown) {
   return typeof value === "string" ? value : "";
 }

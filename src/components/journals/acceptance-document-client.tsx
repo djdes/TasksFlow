@@ -341,19 +341,14 @@ function EditListsDialog(props: {
   config: AcceptanceDocumentConfig;
   setConfig: (config: AcceptanceDocumentConfig) => void;
 }) {
-  const [products, setProducts] = useState<string[]>([]);
-  const [manufacturers, setManufacturers] = useState<string[]>([]);
-  const [suppliers, setSuppliers] = useState<string[]>([]);
+  const [products, setProducts] = useState<string[]>([...props.config.products]);
+  const [manufacturers, setManufacturers] = useState<string[]>([
+    ...props.config.manufacturers,
+  ]);
+  const [suppliers, setSuppliers] = useState<string[]>([...props.config.suppliers]);
   const [newProduct, setNewProduct] = useState("");
   const [newManufacturer, setNewManufacturer] = useState("");
   const [newSupplier, setNewSupplier] = useState("");
-
-  useEffect(() => {
-    if (!props.open) return;
-    setProducts([...props.config.products]);
-    setManufacturers([...props.config.manufacturers]);
-    setSuppliers([...props.config.suppliers]);
-  }, [props.open, props.config]);
 
   function addItem(list: string[], setList: (l: string[]) => void, value: string, setInput: (v: string) => void) {
     const v = value.trim();
@@ -806,7 +801,19 @@ export function AcceptanceDocumentClient(props: Props) {
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} title={title} dateFrom={dateFrom} users={props.users} config={config} onSave={async (params) => { await persist(params.title, params.dateFrom, params.config); }} />
-      <EditListsDialog open={editListsOpen} onOpenChange={setEditListsOpen} config={config} setConfig={(c) => { persist(title, dateFrom, c).catch((e) => window.alert(e instanceof Error ? e.message : "Ошибка")); }} />
+      {editListsOpen && (
+        <EditListsDialog
+          key={`${config.products.join("|")}::${config.manufacturers.join("|")}::${config.suppliers.join("|")}`}
+          open={editListsOpen}
+          onOpenChange={setEditListsOpen}
+          config={config}
+          setConfig={(c) => {
+            persist(title, dateFrom, c).catch((e) =>
+              window.alert(e instanceof Error ? e.message : "Ошибка")
+            );
+          }}
+        />
+      )}
       <RowDialog open={rowDialogOpen} onOpenChange={(open) => { setRowDialogOpen(open); if (!open) setEditingRow(null); }} users={props.users} config={config} initialRow={editingRow} onSave={handleSaveRow} />
       <IikoDialog open={iikoOpen} onOpenChange={setIikoOpen} />
     </div>

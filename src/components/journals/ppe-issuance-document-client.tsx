@@ -383,7 +383,7 @@ function CloseDialog(props: {
         <DialogHeader className="border-b px-8 py-6">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[24px] font-semibold text-black">
-              Закончить журнал "{props.title}"
+              Закончить журнал &quot;{props.title}&quot;
             </DialogTitle>
             <button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}>
               <X className="size-7" />
@@ -413,15 +413,6 @@ export function PpeIssuanceDocumentClient(props: Props) {
   const [rowDialogOpen, setRowDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<PpeIssuanceRow | null>(null);
-
-  useEffect(() => {
-    setConfig(normalizePpeIssuanceConfig(props.config, props.users));
-  }, [props.config, props.users]);
-
-  useEffect(() => {
-    setTitle(props.title || PPE_ISSUANCE_DOCUMENT_TITLE);
-    setDateFrom(props.dateFrom);
-  }, [props.dateFrom, props.title]);
 
   const rows = config.rows;
   const isClosed = props.status === "closed";
