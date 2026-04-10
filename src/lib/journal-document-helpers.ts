@@ -19,6 +19,11 @@ import {
   getCleaningPeriodLabel,
 } from "@/lib/cleaning-document";
 import {
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  getEquipmentCleaningDocumentTitle,
+  getEquipmentCleaningPeriodLabel,
+} from "@/lib/equipment-cleaning-document";
+import {
   FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
   getFinishedProductDocumentTitle,
   getFinishedProductPeriodLabel,
@@ -145,6 +150,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
     templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
     templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE ||
     templateCode === EQUIPMENT_MAINTENANCE_TEMPLATE_CODE ||
     templateCode === STAFF_TRAINING_TEMPLATE_CODE ||
     templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE ||
@@ -185,6 +191,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
     return getCleaningDocumentTitle();
+  }
+  if (templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    return getEquipmentCleaningDocumentTitle();
   }
   if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
     return SANITATION_DAY_DOCUMENT_TITLE;
@@ -261,6 +270,10 @@ export function getJournalDocumentPeriodLabel(
 
   if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
     return getCleaningPeriodLabel(dateFrom, dateTo);
+  }
+
+  if (templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    return getEquipmentCleaningPeriodLabel(dateFrom);
   }
 
   return getHygienePeriodLabel(dateFrom, dateTo);

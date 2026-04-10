@@ -29,6 +29,12 @@ import {
   defaultCleaningDocumentConfig,
   buildCleaningAutoFillEntries,
 } from "@/lib/cleaning-document";
+import {
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  getEquipmentCleaningDocumentTitle,
+  getEquipmentCleaningPeriodLabel,
+  normalizeEquipmentCleaningConfig,
+} from "@/lib/equipment-cleaning-document";
 import { TrackedDocumentsClient } from "@/components/journals/tracked-documents-client";
 import {
   getTrackedDocumentCreateMode,
@@ -75,6 +81,7 @@ import {
   buildAccidentDocumentDemoConfig,
 } from "@/lib/accident-document";
 import { AccidentDocumentsClient } from "@/components/journals/accident-documents-client";
+import { EquipmentCleaningDocumentsClient } from "@/components/journals/equipment-cleaning-documents-client";
 import { IntensiveCoolingDocumentsClient } from "@/components/journals/intensive-cooling-documents-client";
 import {
   TRAINING_PLAN_TEMPLATE_CODE,
@@ -2150,6 +2157,37 @@ export default async function JournalDocumentsPage({
               users: orgUsers,
             }),
           }))}
+        />
+      );
+    }
+
+    if (resolvedCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+      const equipmentCleaningDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return (
+        <EquipmentCleaningDocumentsClient
+          activeTab={activeTab}
+          templateCode={resolvedCode}
+          templateName={template.name}
+          users={orgUsers}
+          documents={equipmentCleaningDocuments.map((document) => {
+            const config = normalizeEquipmentCleaningConfig(document.config);
+            return {
+              id: document.id,
+              title: document.title || getEquipmentCleaningDocumentTitle(),
+              status: document.status as "active" | "closed",
+              startedAtLabel: getEquipmentCleaningPeriodLabel(document.dateFrom),
+              dateFrom: document.dateFrom.toISOString().slice(0, 10),
+              fieldVariant: config.fieldVariant,
+            };
+          })}
         />
       );
     }

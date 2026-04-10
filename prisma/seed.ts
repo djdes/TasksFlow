@@ -511,6 +511,29 @@ const journalTemplates = [
   { code: "ppe_issuance", name: "Журнал учета выдачи СИЗ", description: "Журнал учета выдачи средств индивидуальной защиты сотрудникам", sortOrder: 38, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
 ];
 
+const documentOnlyJournalTemplates = [
+  {
+    code: "equipment_cleaning",
+    name: "Журнал мойки и дезинфекции оборудования",
+    description:
+      "Журнал мойки и дезинфекции оборудования с настройками документа и таблицей записей.",
+    sortOrder: 29,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [],
+  },
+  {
+    code: "intensive_cooling",
+    name: "Журнал контроля интенсивного охлаждения горячих блюд",
+    description:
+      "Журнал контроля интенсивного охлаждения горячих блюд с настройками и таблицей записей.",
+    sortOrder: 30,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
+    fields: [],
+  },
+] as const;
+
 const additionalJournalTemplates = [
   {
     code: "complaint_register",
@@ -570,16 +593,137 @@ const additionalJournalTemplates = [
   { code: "audit_report_scan", name: "Журнал аудита - Отчет", description: "Шаблон журнала сканирования для отчета по аудиту", sortOrder: 41, isMandatorySanpin: false, isMandatoryHaccp: false, fields: [] },
 ];
 
+const ACTIVE_JOURNAL_TEMPLATES = [
+  { code: "hygiene", name: "Гигиенический журнал", sortOrder: 1 },
+  { code: "health_check", name: "Журнал здоровья", sortOrder: 2 },
+  { code: "climate_control", name: "Бланк контроля температуры и влажности", sortOrder: 3 },
+  {
+    code: "cold_equipment_control",
+    name: "Журнал контроля температурного режима холодильного и морозильного оборудования",
+    sortOrder: 4,
+  },
+  { code: "cleaning", name: "Чек-лист уборки и проветривания помещений", sortOrder: 5 },
+  { code: "general_cleaning", name: "График и учет генеральных уборок", sortOrder: 6 },
+  {
+    code: "uv_lamp_runtime",
+    name: "Журнал учета работы УФ бактерицидной установки",
+    sortOrder: 7,
+  },
+  {
+    code: "finished_product",
+    name: "Журнал бракеража готовой пищевой продукции",
+    sortOrder: 8,
+  },
+  {
+    code: "perishable_rejection",
+    name: "Журнал бракеража скоропортящейся пищевой продукции",
+    sortOrder: 9,
+  },
+  {
+    code: "incoming_control",
+    name: "Журнал приемки и входного контроля продукции",
+    sortOrder: 10,
+  },
+  { code: "fryer_oil", name: "Журнал учета использования фритюрных жиров", sortOrder: 11 },
+  { code: "med_books", name: "Медицинские книжки", sortOrder: 12 },
+  { code: "training_plan", name: "План обучения персонала", sortOrder: 13 },
+  {
+    code: "staff_training",
+    name: "Журнал регистрации инструктажей (обучения) сотрудников",
+    sortOrder: 14,
+  },
+  { code: "disinfectant_usage", name: "Журнал учета дезинфицирующих средств", sortOrder: 15 },
+  {
+    code: "sanitary_day_control",
+    name: "Чек-лист (памятка) проведения санитарного дня",
+    sortOrder: 16,
+  },
+  {
+    code: "equipment_maintenance",
+    name: "График профилактического обслуживания оборудования",
+    sortOrder: 17,
+  },
+  { code: "breakdown_history", name: "Карточка истории поломок", sortOrder: 18 },
+  {
+    code: "equipment_calibration",
+    name: "График поверки средств измерений",
+    sortOrder: 19,
+  },
+  { code: "ppe_issuance", name: "Журнал учета выдачи СИЗ", sortOrder: 20 },
+  { code: "accident_journal", name: "Журнал учета аварий", sortOrder: 21 },
+  { code: "complaint_register", name: "Журнал регистрации жалоб", sortOrder: 22 },
+  { code: "product_writeoff", name: "Акт забраковки", sortOrder: 23 },
+  { code: "audit_plan", name: "План-программа внутренних аудитов", sortOrder: 24 },
+  { code: "audit_protocol", name: "Протокол внутреннего аудита", sortOrder: 25 },
+  { code: "audit_report", name: "Отчет о внутреннем аудите", sortOrder: 26 },
+  { code: "traceability_test", name: "Журнал прослеживаемости продукции", sortOrder: 27 },
+  { code: "metal_impurity", name: "Журнал учета металлопримесей в сырье", sortOrder: 28 },
+  {
+    code: "equipment_cleaning",
+    name: "Журнал мойки и дезинфекции оборудования",
+    sortOrder: 29,
+  },
+  {
+    code: "intensive_cooling",
+    name: "Журнал контроля интенсивного охлаждения горячих блюд",
+    sortOrder: 30,
+  },
+  {
+    code: "glass_items_list",
+    name: "Перечень изделий из стекла и хрупкого пластика",
+    sortOrder: 31,
+  },
+  {
+    code: "glass_control",
+    name: "Журнал контроля изделий из стекла и хрупкого пластика",
+    sortOrder: 32,
+  },
+  {
+    code: "pest_control",
+    name: "Журнал учета дезинфекции, дезинсекции и дератизации",
+    sortOrder: 33,
+  },
+] as const;
+
+const activeJournalTemplateMetaByCode = new Map(
+  ACTIVE_JOURNAL_TEMPLATES.map((item) => [item.code, item])
+);
+
 async function main() {
   console.log("Seeding journal templates...");
-  const allTemplates = [...journalTemplates, ...additionalJournalTemplates];
-  const allowedCodes = new Set(allTemplates.map((template) => template.code));
+  const allTemplates = [
+    ...journalTemplates,
+    ...additionalJournalTemplates,
+    ...documentOnlyJournalTemplates,
+  ];
+  const enabledTemplates = allTemplates
+    .filter((template) => activeJournalTemplateMetaByCode.has(template.code))
+    .map((template) => {
+      const meta = activeJournalTemplateMetaByCode.get(template.code)!;
+      return {
+        ...template,
+        name: meta.name,
+        sortOrder: meta.sortOrder,
+      };
+    });
+  const allowedCodes = new Set(enabledTemplates.map((template) => template.code));
 
-  for (const template of allTemplates) {
+  for (const template of enabledTemplates) {
     await prisma.journalTemplate.upsert({
       where: { code: template.code },
-      update: { name: template.name, description: template.description, fields: template.fields, sortOrder: template.sortOrder, isMandatorySanpin: template.isMandatorySanpin, isMandatoryHaccp: template.isMandatoryHaccp },
-      create: template,
+      update: {
+        name: template.name,
+        description: template.description,
+        fields: template.fields,
+        sortOrder: template.sortOrder,
+        isMandatorySanpin: template.isMandatorySanpin,
+        isMandatoryHaccp: template.isMandatoryHaccp,
+        isActive: true,
+      },
+      create: {
+        ...template,
+        isActive: true,
+      },
     });
     console.log(`  Done: ${template.code}: ${template.name}`);
   }
