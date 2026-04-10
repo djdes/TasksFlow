@@ -191,10 +191,7 @@ export function PestControlDocumentsClient(props: Props) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [deleting, setDeleting] = useState<DocumentItem | null>(null);
-<<<<<<< HEAD
   const [seeding, setSeeding] = useState(false);
-=======
->>>>>>> 9abe45c (fix: ship referenced journal modules for production)
 
   const createState: EditingState = {
     id: "",
@@ -202,7 +199,6 @@ export function PestControlDocumentsClient(props: Props) {
     dateFrom: new Date().toISOString().slice(0, 10),
   };
 
-<<<<<<< HEAD
   useEffect(() => {
     if (props.activeTab !== "active" || props.documents.length > 0 || seeding) {
       return;
@@ -311,8 +307,6 @@ export function PestControlDocumentsClient(props: Props) {
     };
   }, [props.activeTab, props.documents.length, props.templateCode, props.users, router, seeding]);
 
-=======
->>>>>>> 9abe45c (fix: ship referenced journal modules for production)
   async function createDocument(payload: { title: string; dateFrom: string }) {
     const response = await fetch("/api/journal-documents", {
       method: "POST",
