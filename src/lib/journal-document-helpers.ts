@@ -4,6 +4,10 @@ import {
   getHygienePeriodLabel,
 } from "@/lib/hygiene-document";
 import {
+  EQUIPMENT_CALIBRATION_DOCUMENT_TITLE,
+  EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
+} from "@/lib/equipment-calibration-document";
+import {
   COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
   getColdEquipmentDocumentTitle,
   getColdEquipmentPeriodLabel,
@@ -36,9 +40,21 @@ import {
   MED_BOOK_DOCUMENT_TITLE,
 } from "@/lib/med-book-document";
 import {
+  AUDIT_PLAN_DOCUMENT_TITLE,
+  AUDIT_PLAN_TEMPLATE_CODE,
+} from "@/lib/audit-plan-document";
+import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
   PERISHABLE_REJECTION_DOCUMENT_TITLE,
 } from "@/lib/perishable-rejection-document";
+import {
+  PRODUCT_WRITEOFF_DOCUMENT_TITLE,
+  PRODUCT_WRITEOFF_TEMPLATE_CODE,
+} from "@/lib/product-writeoff-document";
+import {
+  GLASS_LIST_DOCUMENT_TITLE,
+  GLASS_LIST_TEMPLATE_CODE,
+} from "@/lib/glass-list-document";
 import {
   STAFF_TRAINING_TEMPLATE_CODE,
   STAFF_TRAINING_FULL_TITLE,
@@ -51,6 +67,18 @@ import {
   BREAKDOWN_HISTORY_TEMPLATE_CODE,
   BREAKDOWN_HISTORY_DOCUMENT_TITLE,
 } from "@/lib/breakdown-history-document";
+import {
+  ACCIDENT_DOCUMENT_TEMPLATE_CODE,
+  ACCIDENT_DOCUMENT_TITLE,
+} from "@/lib/accident-document";
+import {
+  AUDIT_PROTOCOL_DOCUMENT_TITLE,
+  AUDIT_PROTOCOL_TEMPLATE_CODE,
+} from "@/lib/audit-protocol-document";
+import {
+  AUDIT_REPORT_DOCUMENT_TITLE,
+  AUDIT_REPORT_TEMPLATE_CODE,
+} from "@/lib/audit-report-document";
 import {
   EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
   EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
@@ -67,6 +95,15 @@ import {
   TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
   getTraceabilityDocumentTitle,
 } from "@/lib/traceability-document";
+import {
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  getEquipmentCleaningDocumentTitle,
+  getEquipmentCleaningPeriodLabel,
+} from "@/lib/equipment-cleaning-document";
+import {
+  METAL_IMPURITY_DOCUMENT_TITLE,
+  METAL_IMPURITY_TEMPLATE_CODE,
+} from "@/lib/metal-impurity-document";
 import {
   getScanJournalConfig,
   isScanOnlyDocumentTemplate as isScanOnlyDocumentTemplateFromConfig,
@@ -132,12 +169,20 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === EQUIPMENT_MAINTENANCE_TEMPLATE_CODE ||
     templateCode === STAFF_TRAINING_TEMPLATE_CODE ||
     templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE ||
+    templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE ||
+    templateCode === GLASS_LIST_TEMPLATE_CODE ||
     templateCode === MED_BOOK_TEMPLATE_CODE ||
+    templateCode === AUDIT_PLAN_TEMPLATE_CODE ||
     templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE ||
+    templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === AUDIT_PROTOCOL_TEMPLATE_CODE ||
+    templateCode === AUDIT_REPORT_TEMPLATE_CODE ||
+    templateCode === METAL_IMPURITY_TEMPLATE_CODE ||
     templateCode === PPE_ISSUANCE_TEMPLATE_CODE ||
     templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE ||
     templateCode === DISINFECTANT_TEMPLATE_CODE ||
+    templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE ||
     isScanOnlyJournalTemplate(templateCode) ||
     isTrackedDocumentTemplate(templateCode)
   );
@@ -154,6 +199,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
 
   if (templateCode === "health_check") return getHealthDocumentTitle();
+  if (templateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE) {
+    return EQUIPMENT_CALIBRATION_DOCUMENT_TITLE;
+  }
   if (templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
     return getColdEquipmentDocumentTitle();
   }
@@ -178,8 +226,17 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   if (templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE) {
     return PERISHABLE_REJECTION_DOCUMENT_TITLE;
   }
+  if (templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE) {
+    return PRODUCT_WRITEOFF_DOCUMENT_TITLE;
+  }
+  if (templateCode === GLASS_LIST_TEMPLATE_CODE) {
+    return GLASS_LIST_DOCUMENT_TITLE;
+  }
   if (templateCode === MED_BOOK_TEMPLATE_CODE) {
     return MED_BOOK_DOCUMENT_TITLE;
+  }
+  if (templateCode === AUDIT_PLAN_TEMPLATE_CODE) {
+    return AUDIT_PLAN_DOCUMENT_TITLE;
   }
   if (templateCode === TRAINING_PLAN_TEMPLATE_CODE) {
     return TRAINING_PLAN_DOCUMENT_TITLE;
@@ -187,17 +244,32 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   if (templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE) {
     return BREAKDOWN_HISTORY_DOCUMENT_TITLE;
   }
+  if (templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+    return ACCIDENT_DOCUMENT_TITLE;
+  }
+  if (templateCode === AUDIT_PROTOCOL_TEMPLATE_CODE) {
+    return AUDIT_PROTOCOL_DOCUMENT_TITLE;
+  }
+  if (templateCode === AUDIT_REPORT_TEMPLATE_CODE) {
+    return AUDIT_REPORT_DOCUMENT_TITLE;
+  }
   if (templateCode === DISINFECTANT_TEMPLATE_CODE) {
     return DISINFECTANT_DOCUMENT_TITLE;
   }
   if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
     return PPE_ISSUANCE_DOCUMENT_TITLE;
   }
+  if (templateCode === METAL_IMPURITY_TEMPLATE_CODE) {
+    return METAL_IMPURITY_DOCUMENT_TITLE;
+  }
   if (templateCode === "critical_limit_check") {
     return "Журнал учета критических показателей";
   }
   if (templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
     return getTraceabilityDocumentTitle();
+  }
+  if (templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    return getEquipmentCleaningDocumentTitle();
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);
@@ -229,6 +301,9 @@ export function getJournalDocumentPeriodLabel(
 
   if (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
     return getCleaningPeriodLabel(dateFrom, dateTo);
+  }
+  if (templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    return getEquipmentCleaningPeriodLabel(dateFrom);
   }
 
   return getHygienePeriodLabel(dateFrom, dateTo);

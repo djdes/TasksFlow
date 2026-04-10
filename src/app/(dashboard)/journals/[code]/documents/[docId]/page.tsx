@@ -58,10 +58,18 @@ import { isScanOnlyDocumentTemplate } from "@/lib/scan-journal-config";
 import { getScanJournalPageCount } from "@/lib/scan-journal-pages";
 import { TRAINING_PLAN_TEMPLATE_CODE } from "@/lib/training-plan-document";
 import { TrainingPlanDocumentClient } from "@/components/journals/training-plan-document-client";
+import {
+  AUDIT_PLAN_TEMPLATE_CODE,
+  normalizeAuditPlanConfig,
+} from "@/lib/audit-plan-document";
+import { AuditPlanDocumentClient } from "@/components/journals/audit-plan-document-client";
 import { DISINFECTANT_TEMPLATE_CODE } from "@/lib/disinfectant-document";
 import { DisinfectantDocumentClient } from "@/components/journals/disinfectant-document-client";
 import { BREAKDOWN_HISTORY_TEMPLATE_CODE } from "@/lib/breakdown-history-document";
 import { BreakdownHistoryDocumentClient } from "@/components/journals/breakdown-history-document-client";
+import { ACCIDENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/accident-document";
+import { AccidentDocumentClient } from "@/components/journals/accident-document-client";
+import { IntensiveCoolingDocumentClient } from "@/components/journals/intensive-cooling-document-client";
 import { UvLampRuntimeDocumentClient } from "@/components/journals/uv-lamp-runtime-document-client";
 import {
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
@@ -86,6 +94,11 @@ import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
   normalizePerishableRejectionConfig,
 } from "@/lib/perishable-rejection-document";
+import { ProductWriteoffDocumentClient } from "@/components/journals/product-writeoff-document-client";
+import {
+  PRODUCT_WRITEOFF_TEMPLATE_CODE,
+  normalizeProductWriteoffConfig,
+} from "@/lib/product-writeoff-document";
 import { StaffTrainingDocumentClient } from "@/components/journals/staff-training-document-client";
 import {
   STAFF_TRAINING_TEMPLATE_CODE,
@@ -112,6 +125,19 @@ import {
   TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
   normalizeTraceabilityDocumentConfig,
 } from "@/lib/traceability-document";
+import { EquipmentCleaningDocumentClient } from "@/components/journals/equipment-cleaning-document-client";
+import {
+  EQUIPMENT_CLEANING_DOCUMENT_TITLE,
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  normalizeEquipmentCleaningConfig,
+  normalizeEquipmentCleaningRowData,
+} from "@/lib/equipment-cleaning-document";
+import { ComplaintDocumentClient } from "@/components/journals/complaint-document-client";
+import { COMPLAINT_REGISTER_TEMPLATE_CODE } from "@/lib/complaint-document";
+import {
+  INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+} from "@/lib/intensive-cooling-document";
 
 export const dynamic = "force-dynamic";
 
@@ -268,6 +294,26 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    return (
+      <EquipmentCleaningDocumentClient
+        documentId={document.id}
+        title={document.title || EQUIPMENT_CLEANING_DOCUMENT_TITLE}
+        templateCode={resolvedCode}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        status={document.status as "active" | "closed"}
+        dateFrom={toDateKey(document.dateFrom)}
+        config={normalizeEquipmentCleaningConfig(document.config)}
+        users={enrichedEmployees}
+        equipmentOptions={equipment.map((item) => item.name)}
+        initialRows={document.entries.map((entry) => ({
+          id: entry.id,
+          data: normalizeEquipmentCleaningRowData(entry.data),
+        }))}
+      />
+    );
+  }
+
   if (document.template.code === MED_BOOK_TEMPLATE_CODE) {
     const medConfig = normalizeMedBookConfig(document.config);
 
@@ -318,6 +364,20 @@ export default async function JournalDocumentPage({
         dateFrom={toDateKey(document.dateFrom)}
         status={document.status}
         initialConfig={normalizePerishableRejectionConfig(document.config)}
+        users={enrichedEmployees}
+      />
+    );
+  }
+
+  if (document.template.code === PRODUCT_WRITEOFF_TEMPLATE_CODE) {
+    return (
+      <ProductWriteoffDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        initialConfig={normalizeProductWriteoffConfig(document.config)}
         users={enrichedEmployees}
       />
     );
@@ -443,6 +503,22 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === AUDIT_PLAN_TEMPLATE_CODE) {
+    return (
+      <AuditPlanDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        status={document.status}
+        users={enrichedEmployees}
+        config={normalizeAuditPlanConfig(document.config, {
+          organizationName: organization?.name || 'ООО "Тест"',
+          users: enrichedEmployees,
+        })}
+      />
+    );
+  }
+
   if (document.template.code === BREAKDOWN_HISTORY_TEMPLATE_CODE) {
     return (
       <BreakdownHistoryDocumentClient
@@ -452,6 +528,34 @@ export default async function JournalDocumentPage({
         dateFrom={toDateKey(document.dateFrom)}
         status={document.status}
         config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <AccidentDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === INTENSIVE_COOLING_TEMPLATE_CODE) {
+    return (
+      <IntensiveCoolingDocumentClient
+        routeCode={code}
+        documentId={document.id}
+        title={document.title || INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        config={document.config}
+        users={enrichedEmployees}
       />
     );
   }
@@ -672,6 +776,22 @@ export default async function JournalDocumentPage({
         status={document.status}
         initialConfig={normalizeFinishedProductDocumentConfig(document.config)}
         users={employees}
+      />
+    );
+  }
+
+  if (document.template.code === COMPLAINT_REGISTER_TEMPLATE_CODE) {
+    const fields = parseRegisterFields(document.template.fields);
+
+    return (
+      <ComplaintDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        initialConfig={normalizeRegisterDocumentConfig(document.config, fields)}
+        users={enrichedEmployees}
       />
     );
   }
