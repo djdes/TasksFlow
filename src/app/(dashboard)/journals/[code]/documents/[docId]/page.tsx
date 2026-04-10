@@ -41,6 +41,11 @@ import {
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import {
+  PPE_ISSUANCE_TEMPLATE_CODE,
+  normalizePpeIssuanceConfig,
+} from "@/lib/ppe-issuance-document";
+import { PpeIssuanceDocumentClient } from "@/components/journals/ppe-issuance-document-client";
+import {
   isRegisterDocumentTemplate,
   normalizeRegisterDocumentConfig,
   parseRegisterFields,
@@ -420,6 +425,20 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === PPE_ISSUANCE_TEMPLATE_CODE) {
+    return (
+      <PpeIssuanceDocumentClient
+        documentId={document.id}
+        title={document.title || "Журнал учета выдачи СИЗ"}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        users={enrichedEmployees}
+        config={normalizePpeIssuanceConfig(document.config, enrichedEmployees)}
+      />
+    );
+  }
+
   if (
     isTrackedDocumentTemplate(document.template.code) &&
     !isRegisterDocumentTemplate(document.template.code)
@@ -632,4 +651,3 @@ export default async function JournalDocumentPage({
 
   notFound();
 }
-

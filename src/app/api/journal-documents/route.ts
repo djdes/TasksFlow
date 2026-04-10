@@ -22,6 +22,10 @@ import {
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE, getAcceptanceDocumentDefaultConfig } from "@/lib/acceptance-document";
 import {
+  PPE_ISSUANCE_TEMPLATE_CODE,
+  getPpeIssuanceDefaultConfig,
+} from "@/lib/ppe-issuance-document";
+import {
   buildRegisterDocumentConfigFromUsers,
   isRegisterDocumentTemplate,
 } from "@/lib/register-document";
@@ -159,6 +163,8 @@ export async function POST(request: Request) {
       ? buildFinishedProductConfigFromUsers(allUsers)
       : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
       ? getAcceptanceDocumentDefaultConfig(allUsers)
+      : templateCode === PPE_ISSUANCE_TEMPLATE_CODE
+      ? getPpeIssuanceDefaultConfig(allUsers)
       : templateCode === SANITATION_DAY_TEMPLATE_CODE
       ? getSanitationDayDefaultConfig()
       : templateCode === TRAINING_PLAN_TEMPLATE_CODE

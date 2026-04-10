@@ -44,6 +44,12 @@ import {
 } from "@/lib/med-book-document";
 import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE } from "@/lib/acceptance-document";
 import {
+  PPE_ISSUANCE_DOCUMENT_TITLE,
+  PPE_ISSUANCE_TEMPLATE_CODE,
+  PPE_ISSUANCE_SOURCE_SLUG,
+  buildPpeIssuanceDemoConfig,
+} from "@/lib/ppe-issuance-document";
+import {
   SANITATION_DAY_SOURCE_SLUG,
   SANITATION_DAY_TEMPLATE_CODE,
   SANITATION_DAY_DOCUMENT_TITLE,
@@ -52,6 +58,7 @@ import {
   getSanitationApproveLabel,
 } from "@/lib/sanitation-day-document";
 import { SanitationDayDocumentsClient } from "@/components/journals/sanitation-day-documents-client";
+import { PpeIssuanceDocumentsClient } from "@/components/journals/ppe-issuance-documents-client";
 import {
   BREAKDOWN_HISTORY_TEMPLATE_CODE,
   BREAKDOWN_HISTORY_SOURCE_SLUG,
@@ -504,6 +511,61 @@ async function ensureSanitationDaySampleDocuments(params: {
         dateTo: doc.date,
         createdById,
         config: getSanitationDayDefaultConfig(doc.date),
+      },
+    });
+  }
+}
+
+async function ensurePpeIssuanceSampleDocuments(params: {
+  templateId: string;
+  organizationId: string;
+  createdById: string;
+  users: { id: string; name: string; role: string; email?: string | null }[];
+}) {
+  const { templateId, organizationId, createdById, users } = params;
+  const existingCount = await db.journalDocument.count({
+    where: {
+      templateId,
+      organizationId,
+    },
+  });
+
+  if (existingCount > 0) return;
+
+  const now = new Date();
+  const activeFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const closedFrom1 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const closedFrom2 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
+
+  const configs = [
+    {
+      status: "active" as const,
+      dateFrom: activeFrom,
+      config: buildPpeIssuanceDemoConfig(users, activeFrom),
+    },
+    {
+      status: "closed" as const,
+      dateFrom: closedFrom1,
+      config: buildPpeIssuanceDemoConfig(users, closedFrom1),
+    },
+    {
+      status: "closed" as const,
+      dateFrom: closedFrom2,
+      config: buildPpeIssuanceDemoConfig(users, closedFrom2),
+    },
+  ];
+
+  for (const item of configs) {
+    await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: PPE_ISSUANCE_DOCUMENT_TITLE,
+        status: item.status,
+        dateFrom: item.dateFrom,
+        dateTo: item.dateFrom,
+        createdById,
+        config: item.config,
       },
     });
   }
@@ -1220,6 +1282,40 @@ export default async function JournalDocumentsPage({
       );
     }
 
+    if (resolvedCode === PPE_ISSUANCE_TEMPLATE_CODE) {
+      await ensurePpeIssuanceSampleDocuments({
+        templateId: template.id,
+        organizationId: session.user.organizationId,
+        createdById: session.user.id,
+        users: orgUsers,
+      });
+
+      const ppeDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { dateFrom: "asc" },
+      });
+
+      return (
+        <PpeIssuanceDocumentsClient
+          routeCode={code === PPE_ISSUANCE_SOURCE_SLUG ? code : resolvedCode}
+          templateCode={resolvedCode}
+          activeTab={activeTab}
+          users={orgUsers}
+          documents={ppeDocuments.map((document) => ({
+            id: document.id,
+            title: document.title || PPE_ISSUANCE_DOCUMENT_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            config: document.config,
+          }))}
+        />
+      );
+    }
+
     if (resolvedCode === SANITARY_DAY_CHECKLIST_TEMPLATE_CODE) {
       const existingSdc = await db.journalDocument.findMany({
         where: { templateId: template.id, organizationId: session.user.organizationId },
@@ -1436,4 +1532,3 @@ export default async function JournalDocumentsPage({
     </div>
   );
 }
-

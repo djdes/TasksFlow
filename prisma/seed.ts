@@ -508,6 +508,7 @@ const journalTemplates = [
       { key: "nextTrainingDate", label: "Дата следующего инструктажа", type: "date", required: false },
     ],
   },
+  { code: "ppe_issuance", name: "Журнал учета выдачи СИЗ", description: "Журнал учета выдачи средств индивидуальной защиты сотрудникам", sortOrder: 38, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
 ];
 
 const additionalJournalTemplates = [

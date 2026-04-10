@@ -80,6 +80,14 @@ import {
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import {
+  PPE_ISSUANCE_DOCUMENT_TITLE,
+  PPE_ISSUANCE_TEMPLATE_CODE,
+  formatPpeIssuanceDate,
+  getPpeIssuanceIssuerLabel,
+  getPpeIssuanceRecipientLabel,
+  normalizePpeIssuanceConfig,
+} from "@/lib/ppe-issuance-document";
+import {
   TRAINING_PLAN_TEMPLATE_CODE,
   TRAINING_PLAN_HEADING,
   normalizeTrainingPlanConfig,
@@ -820,14 +828,14 @@ function drawColdEquipmentPdf(doc: jsPDF, params: {
   });
 
   const equipment = params.config.equipment;
-  const head: RowInput[] = [[
+  const head = [[
     { content: "Дата", styles: { halign: "center" as const, valign: "middle" as const } },
     ...equipment.map((item) => ({
       content: `${item.name}\n(${item.min ?? "—"}...${item.max ?? "—"}°C)`,
       styles: { halign: "center" as const, valign: "middle" as const },
     })),
     { content: "Ответственный", styles: { halign: "center" as const, valign: "middle" as const } },
-  ]];
+  ]] as RowInput[];
 
   const body: RowInput[] = params.entries.map((entry) => {
     const data = normalizeColdEquipmentEntryData(entry.data);
@@ -1360,6 +1368,95 @@ function drawAcceptancePdf(doc: jsPDF, params: {
     },
     headStyles: {
       fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      lineWidth: 0.2,
+      fontStyle: "bold",
+      fontSize: 6,
+    },
+    bodyStyles: {
+      lineWidth: 0.2,
+    },
+  });
+}
+
+function drawPpeIssuancePdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  config: ReturnType<typeof normalizePpeIssuanceConfig>;
+  users: { id: string; name: string; role: string }[];
+}) {
+  const cfg = params.config;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+  const dateFromStr =
+    params.dateFrom instanceof Date
+      ? formatPpeIssuanceDate(params.dateFrom.toISOString().slice(0, 10))
+      : formatPpeIssuanceDate(String(params.dateFrom).slice(0, 10));
+
+  drawTitle(doc, params.title || PPE_ISSUANCE_DOCUMENT_TITLE);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: "ЖУРНАЛ УЧЕТА ВЫДАЧИ СИЗ",
+    withPeriodicity: false,
+  });
+
+  const headerRight = pageWidth - 24;
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(9);
+  doc.text(`Начат  ${dateFromStr}`, headerRight, 32, { align: "right" });
+  doc.text("Окончен __________", headerRight, 38, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(11);
+  doc.text("ЖУРНАЛ УЧЕТА ВЫДАЧИ СИЗ", centerX, 60, { align: "center" });
+
+  const head: RowInput[] = [[
+    { content: "Дата выдачи СИЗ", styles: { halign: "center" as const, valign: "middle" as const } },
+    { content: "Количество масок, выданных на 1 рабочую неделю", styles: { halign: "center" as const, valign: "middle" as const } },
+    ...(cfg.showGloves ? [{ content: "Количество пар перчаток, выданных на 1 рабочую неделю", styles: { halign: "center" as const, valign: "middle" as const } }] : []),
+    ...(cfg.showShoes ? [{ content: "Количество пар обуви, выданных на 1 рабочую неделю", styles: { halign: "center" as const, valign: "middle" as const } }] : []),
+    ...(cfg.showClothing ? [{ content: "Количество комплектов одежды, выданных на 1 рабочую неделю", styles: { halign: "center" as const, valign: "middle" as const } }] : []),
+    ...(cfg.showCaps ? [{ content: "Количество шапочек, выданных на 1 рабочую неделю", styles: { halign: "center" as const, valign: "middle" as const } }] : []),
+    { content: "Должность и ФИО лица, получившего СИЗ", styles: { halign: "center" as const, valign: "middle" as const } },
+    { content: "ФИО лица, выдавшего СИЗ", styles: { halign: "center" as const, valign: "middle" as const } },
+  ]];
+
+  const body: RowInput[] = cfg.rows.map((row) => [
+    centerCell(formatPpeIssuanceDate(row.issueDate)),
+    centerCell(String(row.maskCount || "")),
+    ...(cfg.showGloves ? [centerCell(String(row.gloveCount || ""))] : []),
+    ...(cfg.showShoes ? [centerCell(String(row.shoePairsCount || ""))] : []),
+    ...(cfg.showClothing ? [centerCell(String(row.clothingSetsCount || ""))] : []),
+    ...(cfg.showCaps ? [centerCell(String(row.capCount || ""))] : []),
+    centerCell(getPpeIssuanceRecipientLabel(row, params.users)),
+    centerCell(getPpeIssuanceIssuerLabel(row, params.users)),
+  ]);
+
+  if (body.length === 0) {
+    for (let i = 0; i < 3; i++) {
+      body.push(Array(head[0].length).fill(centerCell("")));
+    }
+  }
+
+  autoTable(doc, {
+    startY: 66,
+    margin: { left: 14, right: 14 },
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 6.5,
+      cellPadding: 1,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
       textColor: [0, 0, 0],
       lineWidth: 0.2,
       fontStyle: "bold",
@@ -2371,6 +2468,14 @@ export async function generateJournalDocumentPdf(params: {
       config: normalizeAcceptanceDocumentConfig(document.config, users),
       users,
     });
+  } else if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
+    drawPpeIssuancePdf(doc, {
+      organizationName,
+      title: document.title || PPE_ISSUANCE_DOCUMENT_TITLE,
+      dateFrom: document.dateFrom,
+      config: normalizePpeIssuanceConfig(document.config, users),
+      users,
+    });
   } else if (isRegisterDocumentTemplate(templateCode)) {
     drawRegisterPdf(doc, {
       organizationName,
@@ -2458,6 +2563,8 @@ export async function generateJournalDocumentPdf(params: {
               ? "breakdown-history"
             : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
               ? "acceptance-journal"
+            : templateCode === PPE_ISSUANCE_TEMPLATE_CODE
+              ? "ppe-issuance-journal"
             : templateCode === FRYER_OIL_TEMPLATE_CODE
               ? getFryerOilFilePrefix()
             : isRegisterDocumentTemplate(templateCode)

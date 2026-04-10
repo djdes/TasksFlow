@@ -27,7 +27,7 @@ export const SOURCE_JOURNAL_MAP: SourceJournalMapItem[] = [
   { sourceSlug: "breakdownhistoryjournal", localCode: "breakdown_history", status: "mapped" },
   { sourceSlug: "instrumentcalibration", localCode: "equipment_calibration", status: "mapped" },
   { sourceSlug: "acceptance2journal", localCode: "receiving_temperature_control", status: "candidate" },
-  { sourceSlug: "issuancesizjournal", localCode: null, status: "new" },
+  { sourceSlug: "issuancesizjournal", localCode: "ppe_issuance", status: "mapped" },
   { sourceSlug: "accidentjournal", localCode: null, status: "new" },
   { sourceSlug: "complaintjournal", localCode: null, status: "new" },
   { sourceSlug: "defectjournal", localCode: "product_writeoff", status: "mapped" },
