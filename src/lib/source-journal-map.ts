@@ -41,7 +41,7 @@ const LEGACY_SOURCE_JOURNAL_MAP: SourceJournalMapItem[] = [
   { sourceSlug: "equipcleanjournal", localCode: "equipment_cleaning", status: "mapped" },
   { sourceSlug: "intensivecoolingjournal", localCode: "intensive_cooling", status: "mapped" },
   { sourceSlug: "glasslist", localCode: "glass_items_list", status: "mapped" },
-  { sourceSlug: "glassjournal", localCode: "allergen_control", status: "candidate" },
+  { sourceSlug: "glassjournal", localCode: "glass_control", status: "mapped" },
   { sourceSlug: "deratization1journal", localCode: "pest_control", status: "mapped" },
 ];
 

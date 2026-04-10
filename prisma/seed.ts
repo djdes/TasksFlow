@@ -520,8 +520,9 @@ const additionalJournalTemplates = [
   { code: "inventory_sanitation", name: "Санобработка инвентаря", description: "Учёт мойки и дезинфекции инвентаря", sortOrder: 30, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [{ key: "inventoryName", label: "Инвентарь", type: "text", required: true }, { key: "method", label: "Метод обработки", type: "text", required: true }, { key: "agent", label: "Средство", type: "text", required: false }] },
   { code: "receiving_temperature_control", name: "Температура при приёмке", description: "Контроль температуры сырья при приёмке", sortOrder: 31, isMandatorySanpin: true, isMandatoryHaccp: true, fields: [{ key: "productName", label: "Продукт", type: "text", required: true }, { key: "supplier", label: "Поставщик", type: "text", required: true }, { key: "temperature", label: "Температура (°C)", type: "number", required: true, step: 0.1 }] },
   { code: "allergen_control", name: "Контроль аллергенов", description: "Маркировка и предотвращение перекрёстного контакта", sortOrder: 32, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "productName", label: "Продукт", type: "text", required: true }, { key: "allergen", label: "Аллерген", type: "text", required: true }, { key: "isolated", label: "Изолирован", type: "boolean", required: true }] },
-  { code: "critical_limit_check", name: "Проверка критических пределов", description: "Проверки критических пределов ККТ", sortOrder: 33, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "ccpName", label: "ККТ", type: "text", required: true }, { key: "limitValue", label: "Критический предел", type: "text", required: true }, { key: "actualValue", label: "Факт", type: "text", required: true }] },
-  { code: "intensive_cooling", name: "Журнал контроля интенсивного охлаждения горячих блюд", description: "Контроль интенсивного охлаждения горячих блюд", sortOrder: 34, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [] },
+  { code: "glass_control", name: "Журнал контроля изделий из стекла и хрупкого пластика", description: "Документный журнал контроля стекла и хрупкого пластика с фиксацией повреждений и замен", sortOrder: 33, isMandatorySanpin: true, isMandatoryHaccp: true, fields: [] },
+  { code: "critical_limit_check", name: "Проверка критических пределов", description: "Проверки критических пределов ККТ", sortOrder: 34, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "ccpName", label: "ККТ", type: "text", required: true }, { key: "limitValue", label: "Критический предел", type: "text", required: true }, { key: "actualValue", label: "Факт", type: "text", required: true }] },
+  { code: "intensive_cooling", name: "Журнал контроля интенсивного охлаждения горячих блюд", description: "Контроль интенсивного охлаждения горячих блюд", sortOrder: 35, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [] },
   { code: "supplier_audit", name: "Оценка поставщиков", description: "Результаты оценки и переоценки поставщиков", sortOrder: 34, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "supplier", label: "Поставщик", type: "text", required: true }, { key: "criterion", label: "Критерий", type: "text", required: true }, { key: "score", label: "Оценка", type: "number", required: true, step: 1 }] },
   { code: "traceability_test", name: "Журнал прослеживаемости продукции", description: "Проверка прослеживаемости продукции по партиям", sortOrder: 35, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "batchNumber", label: "Партия", type: "text", required: true }, { key: "productName", label: "Продукт", type: "text", required: true }, { key: "status", label: "Статус", type: "select", required: true, options: [{ value: "ok", label: "Пройдено" }, { value: "fail", label: "Не пройдено" }] }] },
   { code: "audit_plan", name: "План-программа внутренних аудитов", description: "План-программа внутренних аудитов с таблицей требований и датами аудита по подразделениям", sortOrder: 36, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [] },
@@ -574,6 +575,17 @@ additionalJournalTemplates.push({
       required: false,
     },
   ],
+});
+
+additionalJournalTemplates.push({
+  code: "glass_items_list",
+  name: "РџРµСЂРµС‡РµРЅСЊ РёР·РґРµР»РёР№ РёР· СЃС‚РµРєР»Р° Рё С…СЂСѓРїРєРѕРіРѕ РїР»Р°СЃС‚РёРєР°",
+  description:
+    "Р”РѕРєСѓРјРµРЅС‚ РґР»СЏ РІРµРґРµРЅРёСЏ РїРµСЂРµС‡РЅСЏ РёР·РґРµР»РёР№ РёР· СЃС‚РµРєР»Р° Рё С…СЂСѓРїРєРѕРіРѕ РїР»Р°СЃС‚РёРєР° РїРѕ СѓС‡Р°СЃС‚РєР°Рј",
+  sortOrder: 42,
+  isMandatorySanpin: true,
+  isMandatoryHaccp: true,
+  fields: [],
 });
 
 const scanJournalTemplates = SCAN_JOURNALS.map((journal) => ({

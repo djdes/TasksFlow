@@ -35,6 +35,26 @@ import {
   normalizeFinishedProductDocumentConfig,
 } from "@/lib/finished-product-document";
 import {
+  PRODUCT_WRITEOFF_TEMPLATE_CODE,
+  formatProductWriteoffDateLong,
+  getProductWriteoffFilePrefix,
+  normalizeProductWriteoffConfig,
+} from "@/lib/product-writeoff-document";
+import {
+  GLASS_LIST_TEMPLATE_CODE,
+  formatGlassListDateLong,
+  getGlassListFilePrefix,
+  normalizeGlassListConfig,
+} from "@/lib/glass-list-document";
+import {
+  GLASS_CONTROL_TEMPLATE_CODE,
+  formatRuDateDash as formatGlassRuDateDash,
+  getGlassControlFilePrefix,
+  GLASS_CONTROL_PAGE_TITLE,
+  normalizeGlassControlConfig,
+  normalizeGlassControlEntryData,
+} from "@/lib/glass-control-document";
+import {
   getTrackedDocumentTitle,
   isTrackedDocumentTemplate,
   type TrackedDocumentTemplateCode,
@@ -103,6 +123,20 @@ import {
   normalizeBreakdownHistoryDocumentConfig,
 } from "@/lib/breakdown-history-document";
 import {
+  ACCIDENT_DOCUMENT_TEMPLATE_CODE,
+  ACCIDENT_DOCUMENT_HEADING,
+  normalizeAccidentDocumentConfig,
+} from "@/lib/accident-document";
+import {
+  formatIntensiveCoolingDate,
+  formatTemperatureLabel as formatIntensiveCoolingTemperatureLabel,
+  getIntensiveCoolingFilePrefix,
+  INTENSIVE_COOLING_DOCUMENT_TITLE,
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+  normalizeIntensiveCoolingConfig,
+  type IntensiveCoolingConfig,
+} from "@/lib/intensive-cooling-document";
+import {
   EQUIPMENT_CALIBRATION_DOCUMENT_TITLE,
   EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
   calculateNextCalibrationDate,
@@ -129,6 +163,12 @@ import {
   normalizeHygieneEntryData,
   toDateKey,
 } from "@/lib/hygiene-document";
+import {
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  getEquipmentCleaningResultLabel,
+  normalizeEquipmentCleaningConfig,
+  normalizeEquipmentCleaningRowData,
+} from "@/lib/equipment-cleaning-document";
 
 const FONT_CANDIDATES = [
   "C:\\Windows\\Fonts\\arial.ttf",
@@ -274,6 +314,25 @@ function centerCell(content: string): CellDef {
     content,
     styles: { halign: "center", valign: "middle" },
   };
+}
+
+function formatDateTime(
+  date: string | Date | null | undefined,
+  hour?: number | null,
+  minute?: number | null
+) {
+  if (!date) return "";
+
+  const dateValue =
+    date instanceof Date ? date.toISOString().slice(0, 10) : String(date).slice(0, 10);
+  const [year, month, day] = dateValue.split("-");
+  if (!year || !month || !day) return String(date);
+
+  const hh = typeof hour === "number" ? String(hour).padStart(2, "0") : "";
+  const mm = typeof minute === "number" ? String(minute).padStart(2, "0") : "";
+  const timePart = hh && mm ? ` ${hh}:${mm}` : "";
+
+  return `${day}.${month}.${year}${timePart}`;
 }
 
 function buildHygieneHead(dateKeys: string[], monthLabel: string): RowInput[] {
@@ -1488,11 +1547,131 @@ function drawPpeIssuancePdf(doc: jsPDF, params: {
   });
 }
 
+function drawProductWriteoffPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date;
+  config: ReturnType<typeof normalizeProductWriteoffConfig>;
+}) {
+  drawTitle(doc, params.title);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: params.config.documentName || params.title,
+    withPeriodicity: false,
+  });
+
+  const dateLabel = formatProductWriteoffDateLong(params.config.documentDate || params.dateFrom);
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(16);
+  doc.text("АКТ", 105, 72, { align: "center" });
+  doc.text(`№ ${params.config.actNumber || "1"} от ${dateLabel}`, 105, 80, { align: "center" });
+
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(11);
+  let cursorY = 92;
+  doc.text("Комиссия в составе:", 24, cursorY);
+  cursorY += 7;
+  if (params.config.commissionMembers.length === 0) {
+    doc.text("________________", 30, cursorY);
+    cursorY += 7;
+  } else {
+    params.config.commissionMembers.forEach((member) => {
+      doc.text(`${member.role} ${member.employeeName}`, 30, cursorY);
+      cursorY += 6;
+    });
+  }
+
+  const introLines = doc.splitTextToSize(
+    `Составила настоящий АКТ о том, что ${dateLabel} на предприятии выявлены ТМЦ с несоответствиями по качеству и (или) безопасности согласно списку ниже.`,
+    160
+  ) as string[];
+  cursorY += 4;
+  introLines.forEach((line) => {
+    doc.text(line, 24, cursorY);
+    cursorY += 5;
+  });
+
+  const supplierLines = doc.splitTextToSize(
+    `Указанные ТМЦ были выработаны ${params.config.supplierName || "________________"} и поставлены...`,
+    160
+  ) as string[];
+  supplierLines.forEach((line) => {
+    doc.text(line, 24, cursorY);
+    cursorY += 5;
+  });
+
+  cursorY += 3;
+  doc.text("Комиссия постановила выполнить в отношении выявленных ТМЦ следующие действия:", 24, cursorY);
+
+  autoTable(doc, {
+    startY: cursorY + 5,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 9,
+      cellPadding: 2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      valign: "middle",
+      textColor: [0, 0, 0],
+    },
+    headStyles: {
+      font: "JournalUnicode",
+      fontStyle: "bold",
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      halign: "center",
+    },
+    head: [[
+      "№ п/п",
+      "Наименование ТМЦ",
+      "№ партии, дата выработки",
+      "Количество (кг, шт)",
+      "Описание несоответствия",
+      "Действия с ТМЦ",
+    ]],
+    body: (params.config.rows.length > 0
+      ? params.config.rows
+      : [{ productName: "", batchNumber: "", productionDate: "", quantity: "", discrepancyDescription: "", action: "" }]
+    ).map((row, index) => [
+      String(index + 1),
+      row.productName,
+      [row.batchNumber, row.productionDate].filter(Boolean).join("\n"),
+      row.quantity,
+      row.discrepancyDescription,
+      row.action,
+    ]),
+    margin: { left: 24, right: 24 },
+    columnStyles: {
+      0: { cellWidth: 12, halign: "center" },
+      1: { cellWidth: 34 },
+      2: { cellWidth: 30, halign: "center" },
+      3: { cellWidth: 24, halign: "center" },
+      4: { cellWidth: 40, halign: "center" },
+      5: { cellWidth: 40, halign: "center" },
+    },
+  });
+
+  const finalY = ((doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || cursorY) + 14;
+  doc.text("Подписи членов комиссии:", 24, finalY);
+  let signY = finalY + 8;
+  (params.config.commissionMembers.length > 0 ? params.config.commissionMembers : [{ employeeName: "" }]).forEach((member) => {
+    doc.text(member.employeeName || "________________", 30, signY);
+    doc.line(62, signY + 1, 112, signY + 1);
+    signY += 8;
+  });
+}
+
 function formatBreakdownDateRu(dateKey: string) {
   if (!dateKey) return "";
   const [y, m, d] = dateKey.split("-");
   if (!y || !m || !d) return dateKey;
   return `${d}-${m}-${y}`;
+}
+
+function formatAccidentDateTime(date: string, hour: string, minute: string) {
+  return `${formatBreakdownDateRu(date)}\n${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
 }
 
 function drawBreakdownHistoryPdf(doc: jsPDF, params: {
@@ -1597,6 +1776,122 @@ function drawBreakdownHistoryPdf(doc: jsPDF, params: {
       fontStyle: "bold",
     },
     bodyStyles: { lineWidth: 0.2 },
+  });
+}
+
+function drawAccidentPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  config: ReturnType<typeof normalizeAccidentDocumentConfig>;
+}) {
+  const cfg = params.config;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+
+  drawTitle(doc, params.title || ACCIDENT_DOCUMENT_HEADING);
+
+  const x = 18;
+  const y = 28;
+  const width = pageWidth - 36;
+  const leftWidth = 48;
+  const rightWidth = 40;
+  const middleWidth = width - leftWidth - rightWidth;
+  const topHeight = 10;
+  const secondHeight = 10;
+  const totalHeight = topHeight + secondHeight;
+
+  doc.setLineWidth(0.25);
+  doc.rect(x, y, width, totalHeight);
+  doc.line(x + leftWidth, y, x + leftWidth, y + totalHeight);
+  doc.line(x + leftWidth + middleWidth, y, x + leftWidth + middleWidth, y + totalHeight);
+  doc.line(x + leftWidth, y + topHeight, x + leftWidth + middleWidth, y + topHeight);
+
+  doc.setFontSize(10);
+  doc.setFont("JournalUnicode", "bold");
+  drawCenteredText(doc, params.organizationName, x + 3, y, leftWidth - 6, totalHeight, leftWidth - 10);
+
+  doc.setFont("JournalUnicode", "normal");
+  drawCenteredText(doc, "СИСТЕМА ХАССП", x + leftWidth, y, middleWidth, topHeight, middleWidth - 10);
+
+  doc.setFont("JournalUnicode", "italic");
+  drawCenteredText(doc, "ЖУРНАЛ УЧЕТА АВАРИЙ", x + leftWidth, y + topHeight, middleWidth, secondHeight, middleWidth - 10);
+
+  const dateFromStr = params.dateFrom instanceof Date
+    ? formatBreakdownDateRu(params.dateFrom.toISOString().slice(0, 10))
+    : formatBreakdownDateRu(String(params.dateFrom).slice(0, 10));
+
+  doc.setFont("JournalUnicode", "normal");
+  drawCenteredText(doc, `Начат  ${dateFromStr}\nОкончен __________`, x + leftWidth + middleWidth, y, rightWidth, topHeight, rightWidth - 4);
+  drawCenteredText(doc, "СТР. 1 ИЗ 1", x + leftWidth + middleWidth, y + topHeight, rightWidth, secondHeight, rightWidth - 4);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  doc.text("ЖУРНАЛ УЧЕТА АВАРИЙ", centerX, y + totalHeight + 12, { align: "center" });
+
+  const head: RowInput[] = [[
+    { content: "", styles: { halign: "center", valign: "middle" } },
+    { content: "№ п/п", styles: { halign: "center", valign: "middle" } },
+    { content: "Дата и время аварии", styles: { halign: "center", valign: "middle" } },
+    { content: "Наименование помещения, в котором зафиксирована авария", styles: { halign: "center", valign: "middle" } },
+    { content: "Описание аварии (причины, возникновения, предпринятые действия для ликвидации аварии и т.д.)", styles: { halign: "center", valign: "middle" } },
+    { content: "Наличие «потенциально небезопасной» пищевой продукции, предпринятые действия с продукцией", styles: { halign: "center", valign: "middle" } },
+    { content: "Дата и время ликвидации аварии, допуск к работе", styles: { halign: "center", valign: "middle" } },
+    { content: "ФИО лиц, ответственных за ликвидацию аварии и ее последствий", styles: { halign: "center", valign: "middle" } },
+    { content: "Мероприятия (корректирующие действия), предпринятые комиссией для исключения возникновения аварии", styles: { halign: "center", valign: "middle" } },
+  ]];
+
+  const body: RowInput[] = cfg.rows.map((row, index) => [
+    centerCell(""),
+    centerCell(String(index + 1)),
+    centerCell(formatAccidentDateTime(row.accidentDate, row.accidentHour, row.accidentMinute)),
+    centerCell(row.locationName),
+    centerCell(row.accidentDescription),
+    centerCell(row.affectedProducts),
+    centerCell(formatAccidentDateTime(row.resolvedDate, row.resolvedHour, row.resolvedMinute)),
+    centerCell(row.responsiblePeople),
+    centerCell(row.correctiveActions),
+  ]);
+
+  if (body.length === 0) {
+    body.push(Array(9).fill(centerCell("")));
+  } else {
+    body.push([centerCell(""), ...Array(8).fill(centerCell(""))]);
+  }
+
+  autoTable(doc, {
+    startY: y + totalHeight + 18,
+    margin: { left: 10, right: 10 },
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      lineWidth: 0.2,
+      fontStyle: "bold",
+    },
+    bodyStyles: { lineWidth: 0.2 },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 14 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 44 },
+      5: { cellWidth: 38 },
+      6: { cellWidth: 28 },
+      7: { cellWidth: 30 },
+      8: { cellWidth: 42 },
+    },
   });
 }
 
@@ -2020,6 +2315,113 @@ function drawTrackedPdf(doc: jsPDF, params: {
   });
 }
 
+function drawEquipmentCleaningPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date;
+  entries: Array<{
+    id: string;
+    date: Date;
+    data: Record<string, unknown>;
+  }>;
+  fieldVariant: "rinse_temperature" | "rinse_completeness";
+}) {
+  const marginX = 14;
+  let currentY = 18;
+  const currentFont = doc.getFont().fontName || "helvetica";
+
+  doc.setFontSize(11);
+  doc.setFont(currentFont, "bold");
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: marginX, right: marginX },
+    theme: "grid",
+    tableLineColor: [0, 0, 0],
+    tableLineWidth: 0.2,
+    styles: {
+      font: currentFont,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      cellPadding: 2,
+      halign: "center",
+      valign: "middle",
+      fontSize: 11,
+    },
+    body: [
+      [
+        { content: params.organizationName, rowSpan: 2, styles: { fontStyle: "bold" } },
+        { content: "СИСТЕМА ХАССП" },
+        {
+          content: `Начат  ${toDateKey(params.dateFrom).split("-").reverse().join("-")}\nОкончен __________`,
+          styles: { halign: "left" },
+        },
+      ],
+      [
+        { content: "ЖУРНАЛ МОЙКИ И ДЕЗИНФЕКЦИИ ОБОРУДОВАНИЯ", styles: { fontStyle: "italic" } },
+        { content: "СТР. 1 ИЗ 1" },
+      ],
+    ],
+  });
+
+  currentY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 48;
+  doc.setFontSize(14);
+  doc.text("ЖУРНАЛ МОЙКИ И ДЕЗИНФЕКЦИИ ОБОРУДОВАНИЯ", 105, currentY + 10, {
+    align: "center",
+  });
+
+  const body = params.entries.map((entry) => {
+    const data = normalizeEquipmentCleaningRowData(entry.data);
+    return [
+      `${formatRuDateDash(data.washDate)}\n${data.washTime}`,
+      data.equipmentName,
+      data.detergentName,
+      data.detergentConcentration,
+      data.disinfectantName,
+      data.disinfectantConcentration,
+      params.fieldVariant === "rinse_temperature"
+        ? data.rinseTemperature || "—"
+        : getEquipmentCleaningResultLabel(data.rinseResult),
+      data.washerName,
+      `${data.controllerPosition}, ${data.controllerName}`,
+    ];
+  });
+
+  autoTable(doc, {
+    startY: currentY + 18,
+    margin: { left: marginX, right: marginX },
+    theme: "grid",
+    tableLineColor: [0, 0, 0],
+    tableLineWidth: 0.2,
+    styles: {
+      font: "JournalUnicode",
+      font: currentFont,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      cellPadding: 1.8,
+      halign: "center",
+      valign: "middle",
+      fontSize: 9,
+    },
+    head: [[
+      "Дата и время мойки",
+      "Наименование оборудования",
+      "Наименование моющего раствора",
+      "Концентрация моющего раствора, %",
+      "Наименование дезинфицирующего раствора",
+      "Концентрация дезинфицирующего раствора, %",
+      params.fieldVariant === "rinse_temperature"
+        ? "Ополаскивание, °C"
+        : "Полнота смываемости дез. ср-ва с оборудования и инвентаря",
+      "Мойщик (ФИО)",
+      "Контролирующее лицо (должность, ФИО)",
+    ]],
+    body: body.length > 0 ? body : [["", "", "", "", "", "", "", "", ""]],
+  });
+}
+
 function drawTraceabilityPdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -2342,6 +2744,136 @@ function renderWrappedTextBlock(
   return cursorY;
 }
 
+function drawIntensiveCoolingPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  config: IntensiveCoolingConfig;
+  users: { id: string; name: string; role: string }[];
+}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const x = 24;
+  const y = 28;
+  const width = pageWidth - 48;
+  const leftWidth = 56;
+  const rightWidth = 36;
+  const middleWidth = width - leftWidth - rightWidth;
+  const topHeight = 10;
+  const secondHeight = 10;
+  const totalHeight = topHeight + secondHeight;
+
+  drawTitle(doc, params.title);
+
+  doc.setLineWidth(0.25);
+  doc.rect(x, y, width, totalHeight);
+  doc.line(x + leftWidth, y, x + leftWidth, y + totalHeight);
+  doc.line(x + leftWidth + middleWidth, y, x + leftWidth + middleWidth, y + totalHeight);
+  doc.line(x + leftWidth, y + topHeight, x + leftWidth + middleWidth, y + topHeight);
+
+  doc.setFontSize(10);
+  doc.setFont("JournalUnicode", "bold");
+  drawCenteredText(doc, params.organizationName, x + 3, y, leftWidth - 6, totalHeight, leftWidth - 10);
+
+  doc.setFont("JournalUnicode", "normal");
+  drawCenteredText(doc, "СИСТЕМА ХАССП", x + leftWidth, y, middleWidth, topHeight, middleWidth - 10);
+
+  doc.setFont("JournalUnicode", "italic");
+  drawCenteredText(
+    doc,
+    INTENSIVE_COOLING_DOCUMENT_TITLE.toUpperCase(),
+    x + leftWidth,
+    y + topHeight,
+    middleWidth,
+    secondHeight,
+    middleWidth - 10
+  );
+
+  const startedAt =
+    params.dateFrom instanceof Date
+      ? params.dateFrom.toISOString().slice(0, 10)
+      : String(params.dateFrom).slice(0, 10);
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.text(`Начат  ${formatIntensiveCoolingDate(startedAt)}`, x + leftWidth + middleWidth + 2, y + 6);
+  doc.text(`Окончен __________`, x + leftWidth + middleWidth + 2, y + 13);
+  doc.setFont("JournalUnicode", "normal");
+  doc.text("СТР. 1 ИЗ 1", x + width - 20, y + 18, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(13);
+  doc.text(INTENSIVE_COOLING_DOCUMENT_TITLE.toUpperCase(), pageWidth / 2, y + totalHeight + 12, {
+    align: "center",
+  });
+
+  const head: RowInput[] = [[
+    centerCell(""),
+    centerCell("Дата и время изготовления блюда"),
+    centerCell("Наименование блюда"),
+    centerCell("Температура в начале процесса охлаждения"),
+    centerCell("Температура через 1 час"),
+    centerCell("Корректирующие действия"),
+    centerCell("Комментарий"),
+    centerCell("Лицо, проводившее контроль интенсивного охлаждения (должность, ФИО)"),
+  ]];
+
+  const body: RowInput[] =
+    params.config.rows.length > 0
+      ? params.config.rows.map((row) => {
+          const user = params.users.find((item) => item.id === row.responsibleUserId);
+          const responsibleLabel = [row.responsibleTitle, user?.name]
+            .filter(Boolean)
+            .join(", ");
+
+          return [
+            centerCell(""),
+            centerCell(
+              `${formatIntensiveCoolingDate(row.productionDate)}\n${row.productionHour || "00"}:${row.productionMinute || "00"}`
+            ),
+            centerCell(row.dishName || "—"),
+            centerCell(formatIntensiveCoolingTemperatureLabel(row.startTemperature)),
+            centerCell(formatIntensiveCoolingTemperatureLabel(row.endTemperature)),
+            centerCell(row.correctiveAction || "—"),
+            centerCell(row.comment || "—"),
+            centerCell(responsibleLabel || "—"),
+          ];
+        })
+      : [[centerCell(""), centerCell(""), centerCell(""), centerCell(""), centerCell(""), centerCell(""), centerCell(""), centerCell("")]];
+
+  autoTable(doc, {
+    startY: y + totalHeight + 18,
+    head,
+    body,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7.2,
+      cellPadding: 1.4,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+      halign: "center",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 34 },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 28 },
+      4: { cellWidth: 24 },
+      5: { cellWidth: 62 },
+      6: { cellWidth: 28 },
+      7: { cellWidth: 42 },
+    },
+  });
+}
+
 function drawFryerOilPdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -2578,6 +3110,107 @@ function drawFryerOilPdf(doc: jsPDF, params: {
   );
 }
 
+function drawGlassControlPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date;
+  dateTo: Date;
+  status: string;
+  responsibleName: string;
+  config: ReturnType<typeof normalizeGlassControlConfig>;
+  entries: Array<{ date: Date; employeeId: string; data: Record<string, unknown> }>;
+  users: Array<{ id: string; name: string; role: string }>;
+}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  drawTitle(doc, params.title);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: GLASS_CONTROL_PAGE_TITLE,
+    withPeriodicity: false,
+  });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(10);
+  doc.text(`Начат: ${formatGlassRuDateDash(params.dateFrom)}`, pageWidth - 72, 36);
+  doc.text(
+    `Окончен: ${
+      params.status === "closed" ? formatGlassRuDateDash(params.dateTo) : "__________"
+    }`,
+    pageWidth - 72,
+    43
+  );
+
+  autoTable(doc, {
+    startY: 50,
+    body: [[
+      { content: "Частота контроля", styles: { fontStyle: "bold" } },
+      { content: params.config.controlFrequency, colSpan: 3, styles: { halign: "center", fontStyle: "bold" } },
+    ]],
+    theme: "grid",
+    styles: { font: "JournalUnicode", fontSize: 10, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+    margin: { left: 14, right: 14 },
+    columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 40 }, 2: { cellWidth: 40 }, 3: { cellWidth: 40 } },
+  });
+
+  const bodyRows = params.entries.map((entry) => {
+    const data = normalizeGlassControlEntryData(entry.data);
+    const userName = params.users.find((user) => user.id === entry.employeeId)?.name || params.responsibleName;
+    return [
+      formatGlassRuDateDash(entry.date),
+      data.damagesDetected ? "V" : "",
+      data.damagesDetected ? "" : "V",
+      data.itemName,
+      data.quantity,
+      data.damageInfo,
+      userName,
+    ];
+  });
+
+  bodyRows.push(["", "", "", "", "", "", ""]);
+
+  autoTable(doc, {
+    startY: ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 60) + 8,
+    head: [[
+      "Дата",
+      "Да",
+      "Нет",
+      "Наименование",
+      "Кол-во",
+      "Информация о повреждениях / замены",
+      "Фамилия ответственного лица",
+    ]],
+    body: bodyRows,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 8.5,
+      cellPadding: 1.6,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 24, halign: "center" },
+      1: { cellWidth: 12, halign: "center" },
+      2: { cellWidth: 12, halign: "center" },
+      3: { cellWidth: 42 },
+      4: { cellWidth: 16, halign: "center" },
+      5: { cellWidth: 58 },
+      6: { cellWidth: 28, halign: "center" },
+    },
+  });
+}
+
 export async function generateJournalDocumentPdf(params: {
   documentId: string;
   organizationId: string;
@@ -2640,6 +3273,8 @@ export async function generateJournalDocumentPdf(params: {
   const registerFields = parseRegisterFields(document.template.fields);
   const registerConfig = normalizeRegisterDocumentConfig(document.config, registerFields);
   const traceabilityConfig = normalizeTraceabilityDocumentConfig(document.config);
+  const equipmentCleaningConfig = normalizeEquipmentCleaningConfig(document.config);
+  const intensiveCoolingConfig = normalizeIntensiveCoolingConfig(document.config, users);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -2711,6 +3346,13 @@ export async function generateJournalDocumentPdf(params: {
       dateTo: document.dateTo,
       config: finishedConfig,
     });
+  } else if (templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE) {
+    drawProductWriteoffPdf(doc, {
+      organizationName,
+      title: document.title || "Акт забраковки",
+      dateFrom: document.dateFrom,
+      config: normalizeProductWriteoffConfig(document.config),
+    });
   } else if (templateCode === SANITATION_DAY_TEMPLATE_CODE) {
     drawSanitationDayPdf(doc, {
       organizationName,
@@ -2729,6 +3371,13 @@ export async function generateJournalDocumentPdf(params: {
       title: document.title || BREAKDOWN_HISTORY_HEADING,
       dateFrom: document.dateFrom,
       config: normalizeBreakdownHistoryDocumentConfig(document.config),
+    });
+  } else if (templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+    drawAccidentPdf(doc, {
+      organizationName,
+      title: document.title || ACCIDENT_DOCUMENT_HEADING,
+      dateFrom: document.dateFrom,
+      config: normalizeAccidentDocumentConfig(document.config),
     });
   } else if (templateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE) {
     drawEquipmentCalibrationPdf(doc, {
@@ -2758,6 +3407,26 @@ export async function generateJournalDocumentPdf(params: {
       title: document.title || "Журнал прослеживаемости продукции",
       dateFrom: document.dateFrom,
       config: traceabilityConfig,
+    });
+  } else if (templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+    drawEquipmentCleaningPdf(doc, {
+      organizationName,
+      title: document.title || "Журнал мойки и дезинфекции оборудования",
+      dateFrom: document.dateFrom,
+      fieldVariant: equipmentCleaningConfig.fieldVariant,
+      entries: document.entries.map((entry) => ({
+        id: entry.id,
+        date: entry.date,
+        data: (entry.data as Record<string, unknown>) || {},
+      })),
+    });
+  } else if (templateCode === INTENSIVE_COOLING_TEMPLATE_CODE) {
+    drawIntensiveCoolingPdf(doc, {
+      organizationName,
+      title: document.title || INTENSIVE_COOLING_DOCUMENT_TITLE,
+      dateFrom: document.dateFrom,
+      config: intensiveCoolingConfig,
+      users,
     });
   } else if (isRegisterDocumentTemplate(templateCode)) {
     drawRegisterPdf(doc, {
@@ -2835,15 +3504,19 @@ export async function generateJournalDocumentPdf(params: {
         : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
           ? getColdEquipmentFilePrefix()
           : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-            ? getCleaningFilePrefix()
+        ? getCleaningFilePrefix()
           : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
             ? getFinishedProductFilePrefix()
+            : templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
+              ? getProductWriteoffFilePrefix()
             : templateCode === SANITATION_DAY_TEMPLATE_CODE
               ? "general-cleaning-schedule"
             : templateCode === TRAINING_PLAN_TEMPLATE_CODE
               ? "training-plan"
             : templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE
               ? "breakdown-history"
+            : templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE
+              ? "accident-journal"
             : templateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE
               ? "equipment-calibration"
             : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
@@ -2852,6 +3525,10 @@ export async function generateJournalDocumentPdf(params: {
               ? "ppe-issuance-journal"
             : templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE
               ? "traceability-journal"
+            : templateCode === EQUIPMENT_CLEANING_TEMPLATE_CODE
+              ? "equipment-cleaning-journal"
+            : templateCode === INTENSIVE_COOLING_TEMPLATE_CODE
+              ? getIntensiveCoolingFilePrefix()
             : templateCode === FRYER_OIL_TEMPLATE_CODE
               ? getFryerOilFilePrefix()
             : isRegisterDocumentTemplate(templateCode)

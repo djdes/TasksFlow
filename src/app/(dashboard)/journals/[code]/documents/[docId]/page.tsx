@@ -84,11 +84,16 @@ import {
   normalizeMedBookEntryData,
 } from "@/lib/med-book-document";
 import { FryerOilDocumentClient } from "@/components/journals/fryer-oil-document-client";
+import { PestControlDocumentClient } from "@/components/journals/pest-control-document-client";
 import {
   FRYER_OIL_TEMPLATE_CODE,
   normalizeFryerOilDocumentConfig,
   normalizeFryerOilEntryData,
 } from "@/lib/fryer-oil-document";
+import {
+  normalizePestControlEntryData,
+  PEST_CONTROL_TEMPLATE_CODE,
+} from "@/lib/pest-control-document";
 import { PerishableRejectionDocumentClient } from "@/components/journals/perishable-rejection-document-client";
 import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
@@ -99,6 +104,17 @@ import {
   PRODUCT_WRITEOFF_TEMPLATE_CODE,
   normalizeProductWriteoffConfig,
 } from "@/lib/product-writeoff-document";
+import { GlassListDocumentClient } from "@/components/journals/glass-list-document-client";
+import {
+  GLASS_LIST_TEMPLATE_CODE,
+  normalizeGlassListConfig,
+} from "@/lib/glass-list-document";
+import { GlassControlDocumentClient } from "@/components/journals/glass-control-document-client";
+import {
+  GLASS_CONTROL_TEMPLATE_CODE,
+  normalizeGlassControlConfig,
+  normalizeGlassControlEntryData,
+} from "@/lib/glass-control-document";
 import { StaffTrainingDocumentClient } from "@/components/journals/staff-training-document-client";
 import {
   STAFF_TRAINING_TEMPLATE_CODE,
@@ -383,6 +399,45 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (document.template.code === GLASS_LIST_TEMPLATE_CODE) {
+    return (
+      <GlassListDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        status={document.status}
+        initialConfig={normalizeGlassListConfig(document.config)}
+        users={enrichedEmployees}
+      />
+    );
+  }
+
+  if (document.template.code === GLASS_CONTROL_TEMPLATE_CODE) {
+    return (
+      <GlassControlDocumentClient
+        routeCode={code}
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        dateTo={toDateKey(document.dateTo)}
+        responsibleTitle={document.responsibleTitle}
+        responsibleUserId={document.responsibleUserId}
+        status={document.status}
+        autoFill={document.autoFill}
+        users={enrichedEmployees}
+        config={normalizeGlassControlConfig(document.config)}
+        initialEntries={document.entries.map((entry) => ({
+          id: entry.id,
+          employeeId: entry.employeeId,
+          date: toDateKey(entry.date),
+          data: normalizeGlassControlEntryData(entry.data),
+        }))}
+        itemSuggestions={equipment.map((item) => item.name)}
+      />
+    );
+  }
+
   if (document.template.code === STAFF_TRAINING_TEMPLATE_CODE) {
     return (
       <StaffTrainingDocumentClient
@@ -593,6 +648,39 @@ export default async function JournalDocumentPage({
     isTrackedDocumentTemplate(document.template.code) &&
     !isRegisterDocumentTemplate(document.template.code)
   ) {
+    if (document.template.code === PEST_CONTROL_TEMPLATE_CODE) {
+      return (
+        <PestControlDocumentClient
+          documentId={document.id}
+          title={document.title || "Журнал учета дезинфекции, дезинсекции и дератизации"}
+          organizationName={organization?.name || 'ООО "Тест"'}
+          status={document.status}
+          dateFrom={toDateKey(document.dateFrom)}
+          dateTo={toDateKey(document.dateTo)}
+          routeCode={code}
+          users={enrichedEmployees}
+          initialEntries={document.entries
+            .map((entry) => ({
+              id: entry.id,
+              data: normalizePestControlEntryData(
+                entry.data,
+                toDateKey(entry.date),
+                entry.employeeId
+              ),
+            }))
+            .sort((a, b) => {
+              const aDate = new Date(
+                `${a.data.performedDate}T${a.data.timeSpecified ? `${a.data.performedHour || "00"}:${a.data.performedMinute || "00"}:00` : "00:00:00"}Z`
+              );
+              const bDate = new Date(
+                `${b.data.performedDate}T${b.data.timeSpecified ? `${b.data.performedHour || "00"}:${b.data.performedMinute || "00"}:00` : "00:00:00"}Z`
+              );
+              return aDate.getTime() - bDate.getTime();
+            })}
+        />
+      );
+    }
+
     if (document.template.code === FRYER_OIL_TEMPLATE_CODE) {
       const fryerConfig = normalizeFryerOilDocumentConfig(document.config);
       return (

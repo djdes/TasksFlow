@@ -97,7 +97,9 @@ import {
   getDisinfectantDefaultConfig,
 } from "@/lib/disinfectant-document";
 import { DisinfectantDocumentsClient } from "@/components/journals/disinfectant-documents-client";
+import { PestControlDocumentsClient } from "@/components/journals/pest-control-documents-client";
 import {
+  buildDailyRange,
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
   buildUvRuntimeDocumentTitle,
   defaultUvSpecification,
@@ -106,6 +108,11 @@ import {
 } from "@/lib/uv-lamp-runtime-document";
 import { FryerOilDocumentsClient } from "@/components/journals/fryer-oil-documents-client";
 import { FRYER_OIL_TEMPLATE_CODE } from "@/lib/fryer-oil-document";
+import {
+  PEST_CONTROL_DOCUMENT_TITLE,
+  PEST_CONTROL_PAGE_TITLE,
+  PEST_CONTROL_TEMPLATE_CODE,
+} from "@/lib/pest-control-document";
 import { PerishableRejectionDocumentsClient } from "@/components/journals/perishable-rejection-documents-client";
 import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
@@ -118,6 +125,13 @@ import {
   buildProductWriteoffConfigFromData,
   normalizeProductWriteoffConfig,
 } from "@/lib/product-writeoff-document";
+import { GlassListDocumentsClient } from "@/components/journals/glass-list-documents-client";
+import {
+  GLASS_LIST_DOCUMENT_TITLE,
+  GLASS_LIST_TEMPLATE_CODE,
+  buildGlassListConfigFromData,
+  normalizeGlassListConfig,
+} from "@/lib/glass-list-document";
 import { GlassControlDocumentsClient } from "@/components/journals/glass-control-documents-client";
 import {
   GLASS_CONTROL_DEFAULT_FREQUENCY,
@@ -184,7 +198,6 @@ import {
   getDefaultIntensiveCoolingConfig,
   getResponsibleTitleByRole,
   INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
-  INTENSIVE_COOLING_DOCUMENT_TITLE,
   INTENSIVE_COOLING_SOURCE_SLUG,
   INTENSIVE_COOLING_TEMPLATE_CODE,
 } from "@/lib/intensive-cooling-document";
@@ -540,6 +553,111 @@ async function ensureSourceStyleTrackedSampleDocuments({
         skipDuplicates: true,
       });
     }
+  }
+}
+
+async function ensurePestControlSampleDocuments(params: {
+  templateId: string;
+  organizationId: string;
+  createdById: string;
+  users: { id: string; name: string; role: string }[];
+}) {
+  const { templateId, organizationId, createdById, users } = params;
+  const existing = await db.journalDocument.findMany({
+    where: {
+      templateId,
+      organizationId,
+    },
+    select: {
+      id: true,
+      status: true,
+      _count: { select: { entries: true } },
+    },
+  });
+
+  const statuses = new Set(existing.map((item) => item.status));
+  const responsibleUser =
+    users.find((user) => user.role === "owner") ||
+    users.find((user) => user.role === "technologist") ||
+    users[0];
+
+  if (!responsibleUser) return;
+
+  const secondaryUser =
+    users.find((user) => user.id !== responsibleUser.id) || responsibleUser;
+
+  const activeFrom = new Date("2025-03-05T00:00:00.000Z");
+  const closedFrom = new Date("2025-02-05T00:00:00.000Z");
+
+  if (!statuses.has("active")) {
+    const activeDocument = await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: PEST_CONTROL_DOCUMENT_TITLE,
+        status: "active",
+        dateFrom: activeFrom,
+        dateTo: activeFrom,
+        createdById,
+      },
+      select: { id: true },
+    });
+
+    await db.journalDocumentEntry.createMany({
+      data: [
+        {
+          documentId: activeDocument.id,
+          employeeId: responsibleUser.id,
+          date: new Date("2025-03-17T18:00:00.000Z"),
+          data: {
+            performedDate: "2025-03-17",
+            performedHour: "18",
+            performedMinute: "00",
+            timeSpecified: true,
+            event: "Дезинсекция",
+            areaOrVolume: "200",
+            treatmentProduct: "Раствор",
+            note: "Не мыть полы 24 -48 часов. Добавочно расставить ловушки.",
+            performedBy: "ИП",
+            acceptedRole: "Управляющий",
+            acceptedEmployeeId: responsibleUser.id,
+          },
+        },
+        {
+          documentId: activeDocument.id,
+          employeeId: secondaryUser.id,
+          date: new Date("2025-03-25T11:00:01.000Z"),
+          data: {
+            performedDate: "2025-03-25",
+            performedHour: "11",
+            performedMinute: "00",
+            timeSpecified: true,
+            event: "Дезинсекция",
+            areaOrVolume: "84,9",
+            treatmentProduct: "пропан",
+            note: "",
+            performedBy: "ИП Хижняк",
+            acceptedRole: "Управляющий",
+            acceptedEmployeeId: secondaryUser.id,
+          },
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+
+  if (!statuses.has("closed")) {
+    await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: PEST_CONTROL_DOCUMENT_TITLE,
+        status: "closed",
+        dateFrom: closedFrom,
+        dateTo: new Date("2025-02-28T00:00:00.000Z"),
+        createdById,
+      },
+    });
   }
 }
 
@@ -1562,6 +1680,132 @@ export default async function JournalDocumentsPage({
     );
   }
 
+  if (resolvedCode === GLASS_LIST_TEMPLATE_CODE) {
+    const existingCount = await db.journalDocument.count({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+      },
+    });
+
+    if (existingCount === 0) {
+      const [areas, equipment, products] = await Promise.all([
+        db.area.findMany({
+          where: { organizationId: session.user.organizationId },
+          select: { name: true },
+          orderBy: { name: "asc" },
+        }),
+        db.equipment.findMany({
+          where: {
+            area: {
+              organizationId: session.user.organizationId,
+            },
+          },
+          select: { name: true },
+          orderBy: { name: "asc" },
+          take: 10,
+        }),
+        db.product.findMany({
+          where: { organizationId: session.user.organizationId, isActive: true },
+          select: { name: true },
+          orderBy: { name: "asc" },
+          take: 10,
+        }),
+      ]);
+
+      const glassListConfig = buildGlassListConfigFromData({
+        users: orgUsers,
+        areas,
+        equipment,
+        products,
+        referenceDate: new Date(Date.UTC(2025, 1, 1)),
+      });
+
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: glassListConfig.documentName || GLASS_LIST_DOCUMENT_TITLE,
+          status: "active",
+          dateFrom: new Date(glassListConfig.documentDate),
+          dateTo: new Date(glassListConfig.documentDate),
+          responsibleTitle: glassListConfig.responsibleTitle || null,
+          responsibleUserId: glassListConfig.responsibleUserId || null,
+          createdById: session.user.id,
+          config: glassListConfig as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    const documents = await db.journalDocument.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+        status: activeTab,
+      },
+      orderBy: { dateFrom: "desc" },
+    });
+
+    return (
+      <GlassListDocumentsClient
+        activeTab={activeTab}
+        routeCode={code}
+        templateCode={resolvedCode}
+        templateName={template.name}
+        users={orgUsers}
+        documents={documents.map((doc) => {
+          const config = normalizeGlassListConfig(doc.config);
+          return {
+            id: doc.id,
+            title: doc.title || GLASS_LIST_DOCUMENT_TITLE,
+            status: doc.status as "active" | "closed",
+            dateFrom: doc.dateFrom.toISOString().slice(0, 10),
+            responsibleTitle: doc.responsibleTitle || config.responsibleTitle || null,
+            responsibleUserId: doc.responsibleUserId || config.responsibleUserId || null,
+            config,
+          };
+        })}
+      />
+    );
+  }
+
+  if (resolvedCode === GLASS_CONTROL_TEMPLATE_CODE) {
+    await ensureGlassControlSampleDocuments({
+      templateId: template.id,
+      organizationId: session.user.organizationId,
+      createdById: session.user.id,
+      users: orgUsers,
+    });
+
+    const glassDocuments = await db.journalDocument.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+        status: activeTab,
+      },
+      orderBy: { dateFrom: "asc" },
+    });
+
+    return (
+      <GlassControlDocumentsClient
+        activeTab={activeTab}
+        routeCode={code === GLASS_CONTROL_SOURCE_SLUG ? code : resolvedCode}
+        templateCode={resolvedCode}
+        templateName={template.name}
+        users={orgUsers}
+        documents={glassDocuments.map((document) => ({
+          id: document.id,
+          title: document.title || GLASS_CONTROL_DOCUMENT_TITLE,
+          status: document.status as "active" | "closed",
+          responsibleTitle: document.responsibleTitle,
+          responsibleUserId: document.responsibleUserId,
+          dateFrom: document.dateFrom.toISOString().slice(0, 10),
+          config: document.config,
+        }))}
+      />
+    );
+  }
+
   if (resolvedCode === STAFF_TRAINING_TEMPLATE_CODE) {
     const existingCount = await db.journalDocument.count({
       where: {
@@ -2019,6 +2263,39 @@ export default async function JournalDocumentsPage({
             title: document.title || DISINFECTANT_DOCUMENT_TITLE,
             status: document.status as "active" | "closed",
             config: document.config,
+          }))}
+        />
+      );
+    }
+
+    if (resolvedCode === PEST_CONTROL_TEMPLATE_CODE) {
+      await ensurePestControlSampleDocuments({
+        templateId: template.id,
+        organizationId: session.user.organizationId,
+        createdById: session.user.id,
+        users: orgUsers,
+      });
+
+      const pestDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { dateFrom: "asc" },
+      });
+
+      return (
+        <PestControlDocumentsClient
+          activeTab={activeTab}
+          routeCode={code}
+          templateCode={resolvedCode}
+          users={orgUsers}
+          documents={pestDocuments.map((document) => ({
+            id: document.id,
+            title: document.title || PEST_CONTROL_DOCUMENT_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
           }))}
         />
       );
