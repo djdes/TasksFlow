@@ -1,6 +1,4 @@
-export const REGISTER_DOCUMENT_TEMPLATE_CODES = [
-  "disinfectant_usage",
-] as const;
+export const REGISTER_DOCUMENT_TEMPLATE_CODES = [] as const;
 
 export type RegisterDocumentTemplateCode =
   (typeof REGISTER_DOCUMENT_TEMPLATE_CODES)[number];
@@ -35,9 +33,7 @@ export type RegisterDocumentConfig = {
   defaultResponsibleTitle: string | null;
 };
 
-const TITLES: Record<RegisterDocumentTemplateCode, string> = {
-  disinfectant_usage: "Журнал учета дезинфицирующих средств",
-};
+const TITLES: Record<RegisterDocumentTemplateCode, string> = {};
 
 function createId(prefix: string) {
   const randomPart =

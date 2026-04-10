@@ -55,6 +55,10 @@ import {
   EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
   EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
 } from "@/lib/equipment-maintenance-document";
+import {
+  DISINFECTANT_TEMPLATE_CODE,
+  DISINFECTANT_DOCUMENT_TITLE,
+} from "@/lib/disinfectant-document";
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -70,6 +74,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === MED_BOOK_TEMPLATE_CODE ||
     templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE ||
+    templateCode === DISINFECTANT_TEMPLATE_CODE ||
     isTrackedDocumentTemplate(templateCode)
   );
 }
@@ -112,6 +117,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE) {
     return BREAKDOWN_HISTORY_DOCUMENT_TITLE;
+  }
+  if (templateCode === DISINFECTANT_TEMPLATE_CODE) {
+    return DISINFECTANT_DOCUMENT_TITLE;
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);
