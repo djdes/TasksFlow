@@ -1702,6 +1702,15 @@ export default async function JournalDocumentsPage({
       });
     }
 
+    if (resolvedCode === INTENSIVE_COOLING_TEMPLATE_CODE) {
+      await ensureIntensiveCoolingSampleDocuments({
+        templateId: template.id,
+        organizationId: session.user.organizationId,
+        createdById: session.user.id,
+        users: orgUsers,
+      });
+    }
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -1710,6 +1719,34 @@ export default async function JournalDocumentsPage({
       },
       orderBy: { dateFrom: "asc" },
     });
+
+    if (resolvedCode === INTENSIVE_COOLING_TEMPLATE_CODE) {
+      const products = await db.product.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          isActive: true,
+        },
+        select: { name: true },
+        orderBy: { name: "asc" },
+        take: 20,
+      });
+
+      return (
+        <IntensiveCoolingDocumentsClient
+          activeTab={activeTab}
+          routeCode={code === INTENSIVE_COOLING_SOURCE_SLUG ? code : resolvedCode}
+          users={orgUsers}
+          dishSuggestions={products.map((item) => item.name)}
+          documents={documents.map((document) => ({
+            id: document.id,
+            title: document.title || INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            config: document.config,
+          }))}
+        />
+      );
+    }
 
     if (resolvedCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
       return (

@@ -77,6 +77,7 @@ import { DISINFECTANT_TEMPLATE_CODE } from "@/lib/disinfectant-document";
 import { DisinfectantDocumentClient } from "@/components/journals/disinfectant-document-client";
 import { BREAKDOWN_HISTORY_TEMPLATE_CODE } from "@/lib/breakdown-history-document";
 import { BreakdownHistoryDocumentClient } from "@/components/journals/breakdown-history-document-client";
+import { IntensiveCoolingDocumentClient } from "@/components/journals/intensive-cooling-document-client";
 import { ACCIDENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/accident-document";
 import { AccidentDocumentClient } from "@/components/journals/accident-document-client";
 import { UvLampRuntimeDocumentClient } from "@/components/journals/uv-lamp-runtime-document-client";
@@ -98,6 +99,10 @@ import {
   normalizeFryerOilDocumentConfig,
   normalizeFryerOilEntryData,
 } from "@/lib/fryer-oil-document";
+import {
+  INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME,
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+} from "@/lib/intensive-cooling-document";
 import { PerishableRejectionDocumentClient } from "@/components/journals/perishable-rejection-document-client";
 import {
   PERISHABLE_REJECTION_TEMPLATE_CODE,
@@ -589,6 +594,21 @@ export default async function JournalDocumentPage({
         dateFrom={toDateKey(document.dateFrom)}
         status={document.status}
         config={document.config}
+      />
+    );
+  }
+
+  if (document.template.code === INTENSIVE_COOLING_TEMPLATE_CODE) {
+    return (
+      <IntensiveCoolingDocumentClient
+        routeCode={code}
+        documentId={document.id}
+        title={document.title || INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        config={document.config}
+        users={enrichedEmployees}
       />
     );
   }
