@@ -6,6 +6,7 @@ on:
 
 env:
   APP_DIR: /var/www/wesetupru/data/www/wesetup.ru/app
+  NODE_VERSION: "20"
 
 jobs:
   deploy:
@@ -16,13 +17,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create deploy tarball
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app in CI
         run: |
           echo "${{ github.sha }}" > .build-sha
           echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .build-time
+          npm run build
+
+      - name: Create deploy tarball
+        run: |
           tar cf deploy.tar \
             --exclude=node_modules \
-            --exclude=.next \
             --exclude=.git \
             --exclude=.github \
             --exclude=.claude \
@@ -76,12 +89,9 @@ jobs:
             # Restore .env from backup if it exists
             [ -f .env.bak ] && cp .env.bak .env || true
 
-            echo "=== Clearing previous Next build cache ==="
-            rm -rf .next .next-lock
-
-            echo "=== Installing dependencies ==="
+            echo "=== Installing runtime dependencies ==="
             [ -s ~/.nvm/nvm.sh ] && . ~/.nvm/nvm.sh || true
-            npm install 2>&1 | tail -5
+            npm ci --omit=dev 2>&1 | tail -5
 
             echo "=== Generating Prisma client ==="
             npx prisma generate 2>&1 | tail -5
@@ -92,9 +102,6 @@ jobs:
             echo "=== Seeding journal templates ==="
             if [ -f .env ]; then set -a; . ./.env; set +a; fi
             npx tsx prisma/seed.ts 2>&1 | tail -20
-
-            echo "=== Building ==="
-            npm run build 2>&1 | tail -10
 
             echo "=== Restarting PM2 ==="
             npx pm2 delete haccp-online 2>/dev/null || true
