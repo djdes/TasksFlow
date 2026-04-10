@@ -529,6 +529,9 @@ const additionalJournalTemplates = [
   { code: "traceability_test", name: "Журнал прослеживаемости продукции", description: "Проверка прослеживаемости продукции по партиям", sortOrder: 35, isMandatorySanpin: false, isMandatoryHaccp: true, fields: [{ key: "batchNumber", label: "Партия", type: "text", required: true }, { key: "productName", label: "Продукт", type: "text", required: true }, { key: "status", label: "Статус", type: "select", required: true, options: [{ value: "ok", label: "Пройдено" }, { value: "fail", label: "Не пройдено" }] }] },
   { code: "med_books", name: "Медицинские книжки", description: "Журнал учёта медицинских книжек, осмотров и прививок сотрудников", sortOrder: 36, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
   { code: "perishable_rejection", name: "Бракераж скоропортящейся пищевой продукции", description: "Журнал бракеража скоропортящейся пищевой продукции", sortOrder: 37, isMandatorySanpin: true, isMandatoryHaccp: false, fields: [] },
+  { code: "audit_plan_scan", name: "Журнал аудита - План", description: "Шаблон журнала сканирования для плана аудита", sortOrder: 39, isMandatorySanpin: false, isMandatoryHaccp: false, fields: [] },
+  { code: "audit_protocol_scan", name: "Журнал аудита - Протокол", description: "Шаблон журнала сканирования для протокола аудита", sortOrder: 40, isMandatorySanpin: false, isMandatoryHaccp: false, fields: [] },
+  { code: "audit_report_scan", name: "Журнал аудита - Отчет", description: "Шаблон журнала сканирования для отчета по аудиту", sortOrder: 41, isMandatorySanpin: false, isMandatoryHaccp: false, fields: [] },
 ];
 
 async function main() {

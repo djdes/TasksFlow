@@ -32,6 +32,7 @@ import {
 import { SANITATION_DAY_TEMPLATE_CODE, getSanitationDayDefaultConfig } from "@/lib/sanitation-day-document";
 import { TRAINING_PLAN_TEMPLATE_CODE, getTrainingPlanDefaultConfig } from "@/lib/training-plan-document";
 import { BREAKDOWN_HISTORY_TEMPLATE_CODE, getBreakdownHistoryDefaultConfig } from "@/lib/breakdown-history-document";
+import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -45,7 +46,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "templateCode обязателен" }, { status: 400 });
   }
 
-  const template = await db.journalTemplate.findUnique({ where: { code: templateCode } });
+  const resolvedTemplateCode = resolveJournalCodeAlias(templateCode);
+  const template = await db.journalTemplate.findUnique({ where: { code: resolvedTemplateCode } });
   if (!template) return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
 
   const documents = await db.journalDocument.findMany({
@@ -81,11 +83,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const template = await db.journalTemplate.findUnique({ where: { code: templateCode } });
+  const resolvedTemplateCode = resolveJournalCodeAlias(templateCode);
+  const template = await db.journalTemplate.findUnique({ where: { code: resolvedTemplateCode } });
   if (!template) return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
 
   const coldEquipmentConfig =
-    templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
       ? buildColdEquipmentConfigFromEquipment(
           await db.equipment.findMany({
             where: {
@@ -106,7 +109,7 @@ export async function POST(request: Request) {
       : undefined;
 
   const cleaningUsers =
-    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? await db.user.findMany({
           where: {
             organizationId: session.user.organizationId,
@@ -134,7 +137,7 @@ export async function POST(request: Request) {
   });
 
   const cleaningAreas =
-    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? await db.area.findMany({
           where: {
             organizationId: session.user.organizationId,
@@ -148,35 +151,35 @@ export async function POST(request: Request) {
       : [];
 
   const cleaningDefaults =
-    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? getDefaultCleaningResponsibleIds(cleaningUsers)
       : null;
 
   const initialConfig =
-    templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
       ? coldEquipmentConfig
-      : templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE
+      : resolvedTemplateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE
       ? getDefaultClimateDocumentConfig()
-      : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      : resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? buildCleaningConfigFromAreas(cleaningAreas, cleaningDefaults || undefined)
-      : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
+      : resolvedTemplateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
       ? buildFinishedProductConfigFromUsers(allUsers)
-      : templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+      : resolvedTemplateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
       ? getAcceptanceDocumentDefaultConfig(allUsers)
-      : templateCode === PPE_ISSUANCE_TEMPLATE_CODE
+      : resolvedTemplateCode === PPE_ISSUANCE_TEMPLATE_CODE
       ? getPpeIssuanceDefaultConfig(allUsers)
-      : templateCode === SANITATION_DAY_TEMPLATE_CODE
+      : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
       ? getSanitationDayDefaultConfig()
-      : templateCode === TRAINING_PLAN_TEMPLATE_CODE
+      : resolvedTemplateCode === TRAINING_PLAN_TEMPLATE_CODE
       ? getTrainingPlanDefaultConfig()
-      : templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE
+      : resolvedTemplateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE
       ? getBreakdownHistoryDefaultConfig()
-      : isRegisterDocumentTemplate(templateCode)
+      : isRegisterDocumentTemplate(resolvedTemplateCode)
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;
 
   const cleaningControlRole =
-    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+    resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? cleaningUsers.find(
           (user) => user.id === (responsibleUserId || cleaningDefaults?.responsibleControlUserId)
         )?.role || null
@@ -192,12 +195,12 @@ export async function POST(request: Request) {
       dateTo: new Date(dateTo),
       responsibleUserId:
         responsibleUserId ||
-        (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+        (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
           ? cleaningDefaults?.responsibleControlUserId || null
           : null),
       responsibleTitle:
         responsibleTitle ||
-        (templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+        (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
           ? getHygienePositionLabel(cleaningControlRole || "owner")
           : null),
       createdById: session.user.id,

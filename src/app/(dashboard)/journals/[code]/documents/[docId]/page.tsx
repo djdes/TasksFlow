@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { TrackedDocumentClient } from "@/components/journals/tracked-document-client";
+import { ScanJournalDocumentClient } from "@/components/journals/scan-journal-document-client";
 import { ColdEquipmentDocumentClient } from "@/components/journals/cold-equipment-document-client";
 import {
   COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
@@ -53,6 +54,8 @@ import {
 import { isTrackedDocumentTemplate } from "@/lib/tracked-document";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
 import { SANITATION_DAY_TEMPLATE_CODE } from "@/lib/sanitation-day-document";
+import { isScanOnlyDocumentTemplate } from "@/lib/scan-journal-config";
+import { getScanJournalPageCount } from "@/lib/scan-journal-pages";
 import { TRAINING_PLAN_TEMPLATE_CODE } from "@/lib/training-plan-document";
 import { TrainingPlanDocumentClient } from "@/components/journals/training-plan-document-client";
 import { DISINFECTANT_TEMPLATE_CODE } from "@/lib/disinfectant-document";
@@ -126,11 +129,14 @@ type TrackedField = {
 
 export default async function JournalDocumentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string; docId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { code, docId } = await params;
   const resolvedCode = resolveJournalCodeAlias(code);
+  const query = await searchParams;
   const session = await requireAuth();
 
   const [document, organization, employees, areas, equipment] = await Promise.all([
@@ -241,10 +247,30 @@ export default async function JournalDocumentPage({
     );
   }
 
+  if (isScanOnlyDocumentTemplate(document.template.code)) {
+    const pageCount = await getScanJournalPageCount(resolvedCode);
+    if (pageCount === 0) {
+      notFound();
+    }
+
+    const requestedPage = Number(query.page || "1");
+    const currentPage = Number.isFinite(requestedPage) ? Math.max(1, requestedPage) : 1;
+    const safePage = Math.min(currentPage, pageCount);
+
+    return (
+      <ScanJournalDocumentClient
+        templateCode={resolvedCode}
+        templateName={document.title || document.template.name}
+        documentId={document.id}
+        pageCount={pageCount}
+        currentPage={safePage}
+      />
+    );
+  }
+
   if (document.template.code === MED_BOOK_TEMPLATE_CODE) {
     const medConfig = normalizeMedBookConfig(document.config);
 
-    // Group entries by employeeId (one entry per employee)
     const rowMap = new Map<
       string,
       { id: string; employeeId: string; data: ReturnType<typeof normalizeMedBookEntryData> }

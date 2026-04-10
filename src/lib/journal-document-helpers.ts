@@ -67,6 +67,59 @@ import {
   TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
   getTraceabilityDocumentTitle,
 } from "@/lib/traceability-document";
+import {
+  getScanJournalConfig,
+  isScanOnlyDocumentTemplate as isScanOnlyDocumentTemplateFromConfig,
+} from "@/lib/scan-journal-config";
+
+const SCAN_ONLY_JOURNALS = [
+  {
+    code: "audit_plan_scan",
+    folderName: "План внутреннего аудита",
+    title: "Журнал аудита - План",
+  },
+  {
+    code: "audit_protocol_scan",
+    folderName: "Протокол внутреннего аудита",
+    title: "Журнал аудита - Протокол",
+  },
+  {
+    code: "audit_report_scan",
+    folderName: "Отчет о внутреннем аудите",
+    title: "Журнал аудита - Отчет",
+  },
+  {
+    code: "critical_limit_check",
+    folderName: "Журнал учета критических показателей",
+    title: "Журнал учета критических показателей",
+  },
+] as const;
+
+export type ScanOnlyJournalCode = (typeof SCAN_ONLY_JOURNALS)[number]["code"];
+
+export function getScanOnlyJournalCodeMeta(code: string) {
+  const configCode = getScanJournalConfig(code);
+  if (configCode) {
+    return {
+      code: configCode.code,
+      folderName: configCode.folderName,
+      title: configCode.title,
+    };
+  }
+
+  return SCAN_ONLY_JOURNALS.find((item) => item.code === code);
+}
+
+export function getScanOnlyJournalFolderName(code: string) {
+  return getScanOnlyJournalCodeMeta(code)?.folderName ?? null;
+}
+
+export function isScanOnlyJournalTemplate(code: string) {
+  return (
+    isScanOnlyDocumentTemplateFromConfig(code) ||
+    getScanOnlyJournalCodeMeta(code) != null
+  );
+}
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -85,6 +138,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === PPE_ISSUANCE_TEMPLATE_CODE ||
     templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE ||
     templateCode === DISINFECTANT_TEMPLATE_CODE ||
+    isScanOnlyJournalTemplate(templateCode) ||
     isTrackedDocumentTemplate(templateCode)
   );
 }
@@ -94,6 +148,11 @@ export function isStaffDocumentTemplate(templateCode: string) {
 }
 
 export function getJournalDocumentDefaultTitle(templateCode: string) {
+  const scanJournalConfig = getScanJournalConfig(templateCode);
+  if (scanJournalConfig) {
+    return scanJournalConfig.title;
+  }
+
   if (templateCode === "health_check") return getHealthDocumentTitle();
   if (templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
     return getColdEquipmentDocumentTitle();
@@ -133,6 +192,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
     return PPE_ISSUANCE_DOCUMENT_TITLE;
+  }
+  if (templateCode === "critical_limit_check") {
+    return "Журнал учета критических показателей";
   }
   if (templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
     return getTraceabilityDocumentTitle();

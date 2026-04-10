@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { DynamicForm } from "@/components/journals/dynamic-form";
 import { isDocumentTemplate } from "@/lib/journal-document-helpers";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
+import { isScanOnlyDocumentTemplate } from "@/lib/scan-journal-config";
 
 export default async function NewJournalEntryPage({
   params,
@@ -22,7 +23,7 @@ export default async function NewJournalEntryPage({
     notFound();
   }
 
-  if (isDocumentTemplate(resolvedCode)) {
+  if (isDocumentTemplate(resolvedCode) || isScanOnlyDocumentTemplate(resolvedCode)) {
     notFound();
   }
 

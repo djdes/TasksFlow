@@ -128,6 +128,12 @@ import {
   getDefaultTraceabilityDocumentConfig,
   normalizeTraceabilityDocumentConfig,
 } from "@/lib/traceability-document";
+import {
+  getScanJournalConfig,
+  isScanOnlyDocumentTemplate,
+} from "@/lib/scan-journal-config";
+import { getScanJournalPageCount } from "@/lib/scan-journal-pages";
+import { ScanJournalDocumentsClient } from "@/components/journals/scan-journal-documents-client";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -772,6 +778,40 @@ export default async function JournalDocumentsPage({
           status: document.status as "active" | "closed",
           responsibleTitle: document.responsibleTitle,
           periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
+        }))}
+      />
+    );
+  }
+
+  if (isScanOnlyDocumentTemplate(resolvedCode)) {
+    const pageCount = await getScanJournalPageCount(resolvedCode);
+    if (pageCount === 0) {
+      notFound();
+    }
+
+    const scanConfig = getScanJournalConfig(resolvedCode);
+    const documents = await db.journalDocument.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        templateId: template.id,
+        status: activeTab,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return (
+      <ScanJournalDocumentsClient
+        activeTab={activeTab}
+        templateCode={resolvedCode}
+        templateName={scanConfig?.title || template.name}
+        pageCount={pageCount}
+        documents={documents.map((document) => ({
+          id: document.id,
+          title: document.title || (scanConfig?.title || template.name),
+          status: document.status as "active" | "closed",
+          dateFromLabel: document.dateFrom.toISOString().slice(0, 10),
+          dateToLabel: document.dateTo.toISOString().slice(0, 10),
+          pageCount,
         }))}
       />
     );
