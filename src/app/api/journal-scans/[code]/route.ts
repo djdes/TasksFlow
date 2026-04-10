@@ -25,9 +25,12 @@ export async function GET(
   }
 
   const folderPath = path.join(process.cwd(), "journals", config.folderName);
-  let entries: Awaited<ReturnType<typeof readdir>>;
+  let entries: { isFile: () => boolean; name: string }[];
   try {
-    entries = await readdir(folderPath, { withFileTypes: true });
+    entries = (await readdir(folderPath, { withFileTypes: true })) as {
+      isFile: () => boolean;
+      name: string;
+    }[];
   } catch {
     return NextResponse.json(
       { error: "РџР°РєРѕРґ РјРЅРёРІРµС‚Р°Р·РёС‚Рµ РЅРµ РЅР°Р№РґРµРЅР°" },
