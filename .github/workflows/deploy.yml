@@ -34,6 +34,9 @@ jobs:
             echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres" >> .env
           fi
 
+      - name: Generate Prisma client for CI build
+        run: npx prisma generate
+
       - name: Build app in CI
         run: |
           echo "${{ github.sha }}" > .build-sha
