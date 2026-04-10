@@ -63,6 +63,10 @@ import {
   PPE_ISSUANCE_DOCUMENT_TITLE,
   PPE_ISSUANCE_TEMPLATE_CODE,
 } from "@/lib/ppe-issuance-document";
+import {
+  TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+  getTraceabilityDocumentTitle,
+} from "@/lib/traceability-document";
 
 export function isDocumentTemplate(templateCode: string) {
   return (
@@ -79,6 +83,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE ||
     templateCode === PPE_ISSUANCE_TEMPLATE_CODE ||
+    templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE ||
     templateCode === DISINFECTANT_TEMPLATE_CODE ||
     isTrackedDocumentTemplate(templateCode)
   );
@@ -128,6 +133,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
     return PPE_ISSUANCE_DOCUMENT_TITLE;
+  }
+  if (templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
+    return getTraceabilityDocumentTitle();
   }
   if (isTrackedDocumentTemplate(templateCode)) {
     return getTrackedDocumentTitle(templateCode);

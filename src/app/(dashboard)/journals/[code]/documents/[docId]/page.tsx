@@ -104,6 +104,11 @@ import {
   EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
   normalizeEquipmentCalibrationConfig,
 } from "@/lib/equipment-calibration-document";
+import { TraceabilityDocumentClient } from "@/components/journals/traceability-document-client";
+import {
+  TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+  normalizeTraceabilityDocumentConfig,
+} from "@/lib/traceability-document";
 
 export const dynamic = "force-dynamic";
 
@@ -329,6 +334,21 @@ export default async function JournalDocumentPage({
         dateFrom={toDateKey(document.dateFrom)}
         status={document.status}
         initialConfig={normalizeEquipmentCalibrationConfig(document.config)}
+        users={enrichedEmployees}
+      />
+    );
+  }
+
+  if (document.template.code === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
+    return (
+      <TraceabilityDocumentClient
+        documentId={document.id}
+        title={document.title}
+        routeCode={code}
+        organizationName={organization?.name || 'ООО "Тест"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        initialConfig={normalizeTraceabilityDocumentConfig(document.config)}
         users={enrichedEmployees}
       />
     );

@@ -120,6 +120,14 @@ import {
   EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
   getDefaultEquipmentCalibrationConfig,
 } from "@/lib/equipment-calibration-document";
+import { TraceabilityDocumentsClient } from "@/components/journals/traceability-documents-client";
+import {
+  TRACEABILITY_DOCUMENT_SOURCE_SLUG,
+  TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+  createTraceabilityRow,
+  getDefaultTraceabilityDocumentConfig,
+  normalizeTraceabilityDocumentConfig,
+} from "@/lib/traceability-document";
 
 export const dynamic = "force-dynamic";
 const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
@@ -569,6 +577,138 @@ async function ensurePpeIssuanceSampleDocuments(params: {
       },
     });
   }
+}
+
+async function ensureTraceabilitySampleDocuments(params: {
+  templateId: string;
+  organizationId: string;
+  createdById: string;
+  users: { id: string; name: string; role: string; email?: string | null }[];
+}) {
+  const { templateId, organizationId, createdById, users } = params;
+
+  const activeCount = await db.journalDocument.count({
+    where: {
+      templateId,
+      organizationId,
+      status: "active",
+    },
+  });
+
+  if (activeCount > 0) return;
+
+  const products = await db.product.findMany({
+    where: {
+      organizationId,
+      isActive: true,
+    },
+    select: { name: true },
+    orderBy: { name: "asc" },
+    take: 12,
+  });
+
+  const orgItemNames = products
+    .map((item) => item.name.trim())
+    .filter((name) => name.length > 0);
+  const rawMaterialList = orgItemNames.length > 0 ? orgItemNames.slice(0, 8) : ["Мука"];
+  const productList = orgItemNames.length > 0 ? orgItemNames.slice(0, 8) : ["Пельмени"];
+
+  const responsibleUser =
+    users.find((user) => user.role === "owner") ||
+    users.find((user) => user.role === "technologist") ||
+    users[0] ||
+    null;
+  const defaultResponsibleRole =
+    responsibleUser?.role === "technologist"
+      ? "Технолог"
+      : responsibleUser
+        ? "Управляющий"
+        : "Управляющий";
+
+  const sampleRows = [
+    createTraceabilityRow({
+      date: "2022-04-04",
+      incoming: {
+        rawMaterialName: rawMaterialList[0] || "Мука",
+        batchNumber: "150",
+        packagingDate: "2022-04-01",
+        quantityPieces: null,
+        quantityKg: 20.5,
+      },
+      outgoing: {
+        productName: productList[0] || "Пельмени",
+        quantityPacksPieces: null,
+        quantityPacksKg: 0.5,
+        shockTemp: 3.5,
+      },
+      responsibleRole: defaultResponsibleRole,
+      responsibleEmployee: "",
+    }),
+    createTraceabilityRow({
+      date: "2024-02-12",
+      incoming: {
+        rawMaterialName: rawMaterialList[0] || "Мука",
+        batchNumber: "1112",
+        packagingDate: "2024-02-10",
+        quantityPieces: null,
+        quantityKg: 5,
+      },
+      outgoing: {
+        productName: productList[0] || "Пельмени",
+        quantityPacksPieces: 20,
+        quantityPacksKg: null,
+        shockTemp: null,
+      },
+      responsibleRole: defaultResponsibleRole,
+      responsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+    }),
+    createTraceabilityRow({
+      date: "2024-02-13",
+      incoming: {
+        rawMaterialName: rawMaterialList[0] || "Мука",
+        batchNumber: "1114",
+        packagingDate: "2024-02-10",
+        quantityPieces: null,
+        quantityKg: 20,
+      },
+      outgoing: {
+        productName: productList[0] || "Пельмени",
+        quantityPacksPieces: 30,
+        quantityPacksKg: null,
+        shockTemp: 2,
+      },
+      responsibleRole: defaultResponsibleRole,
+      responsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+    }),
+  ];
+
+  const config = normalizeTraceabilityDocumentConfig({
+    ...getDefaultTraceabilityDocumentConfig(),
+    documentTitle: "Журнал прослеживаемости",
+    dateFrom: "2025-01-01",
+    showShockTempField: true,
+    showShipmentBlock: false,
+    rawMaterialList,
+    productList,
+    rows: sampleRows,
+    defaultResponsibleRole,
+    defaultResponsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+  });
+
+  await db.journalDocument.create({
+    data: {
+      templateId,
+      organizationId,
+      title: config.documentTitle,
+      status: "active",
+      dateFrom: new Date(`${config.dateFrom}T00:00:00.000Z`),
+      dateTo: new Date(`${config.dateFrom}T00:00:00.000Z`),
+      createdById,
+      responsibleUserId: responsibleUser?.id || null,
+      responsibleTitle: defaultResponsibleRole,
+      config,
+    },
+  });
 }
 
 export default async function JournalDocumentsPage({
@@ -1068,6 +1208,15 @@ export default async function JournalDocumentsPage({
       }
     }
 
+    if (resolvedCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
+      await ensureTraceabilitySampleDocuments({
+        templateId: template.id,
+        organizationId: session.user.organizationId,
+        createdById: session.user.id,
+        users: orgUsers,
+      });
+    }
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -1356,6 +1505,27 @@ export default async function JournalDocumentsPage({
           documents={sdcDocuments.map((document) => ({
             id: document.id,
             title: document.title || SANITARY_DAY_CHECKLIST_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            config:
+              document.config && typeof document.config === "object" && !Array.isArray(document.config)
+                ? (document.config as Record<string, unknown>)
+                : null,
+          }))}
+        />
+      );
+    }
+
+    if (resolvedCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
+      return (
+        <TraceabilityDocumentsClient
+          activeTab={activeTab}
+          routeCode={code === TRACEABILITY_DOCUMENT_SOURCE_SLUG ? code : resolvedCode}
+          templateCode={resolvedCode}
+          templateName={template.name}
+          documents={documents.map((document) => ({
+            id: document.id,
+            title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
             status: document.status as "active" | "closed",
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             config:

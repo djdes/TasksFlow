@@ -22,7 +22,6 @@ export const TRACKED_DOCUMENT_TEMPLATE_CODES = [
   "inventory_sanitation",
   "critical_limit_check",
   "supplier_audit",
-  "traceability_test",
 ] as const;
 
 export type TrackedDocumentTemplateCode =

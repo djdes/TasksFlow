@@ -40,6 +40,11 @@ import {
   type TrackedDocumentTemplateCode,
 } from "@/lib/tracked-document";
 import {
+  TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+  formatTraceabilityQuantity,
+  normalizeTraceabilityDocumentConfig,
+} from "@/lib/traceability-document";
+import {
   UV_LAMP_RUNTIME_TEMPLATE_CODE,
   calculateDurationMinutes,
   formatRuDateDash,
@@ -1265,6 +1270,13 @@ function formatAcceptanceDateRu(dateKey: string) {
   return `${d}-${m}-${y}`;
 }
 
+function formatTraceabilityDateRu(dateKey: string) {
+  if (!dateKey) return "";
+  const [y, m, d] = dateKey.split("-");
+  if (!y || !m || !d) return dateKey;
+  return `${d}-${m}-${y}`;
+}
+
 function drawAcceptancePdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -1852,6 +1864,106 @@ function drawTrackedPdf(doc: jsPDF, params: {
   });
 }
 
+function drawTraceabilityPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  config: ReturnType<typeof normalizeTraceabilityDocumentConfig>;
+}) {
+  const cfg = params.config;
+  const showShock = cfg.showShockTempField;
+  const dateFromStr =
+    params.dateFrom instanceof Date
+      ? formatTraceabilityDateRu(params.dateFrom.toISOString().slice(0, 10))
+      : formatTraceabilityDateRu(String(params.dateFrom).slice(0, 10));
+
+  drawTitle(doc, cfg.documentTitle || params.title);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: "ЖУРНАЛ ПРОСЛЕЖИВАЕМОСТИ ПРОДУКЦИИ",
+    withPeriodicity: false,
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(9);
+  doc.text(`Начат  ${dateFromStr}`, pageWidth - 24, 32, { align: "right" });
+  doc.text("Окончен ________", pageWidth - 24, 38, { align: "right" });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  doc.text("ЖУРНАЛ ПРОСЛЕЖИВАЕМОСТИ ПРОДУКЦИИ", pageWidth / 2, 60, { align: "center" });
+
+  const head: RowInput[] = [
+    [
+      { content: "Дата", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+      { content: "Поступило в цех сырья", colSpan: 3, styles: { halign: "center", valign: "middle" } },
+      { content: "Выпущено цехом", colSpan: showShock ? 3 : 2, styles: { halign: "center", valign: "middle" } },
+      { content: "ФИО ответственного", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
+    ],
+    [
+      centerCell("Наименование сырья"),
+      centerCell("Номер партии ПФ\nДата фасовки"),
+      centerCell("Кол-во\nшт./кг."),
+      centerCell("Наименование ПФ"),
+      centerCell("Кол-во фасовок\nшт./кг."),
+      ...(showShock ? [centerCell("T °C продукта\nпосле шоковой\nзаморозки")] : []),
+    ],
+  ];
+
+  const body: RowInput[] = cfg.rows.map((row) => {
+    const incomingQty = [formatTraceabilityQuantity(row.incoming.quantityPieces), formatTraceabilityQuantity(row.incoming.quantityKg)]
+      .filter(Boolean)
+      .join(" / ");
+    const outgoingQty = [formatTraceabilityQuantity(row.outgoing.quantityPacksPieces), formatTraceabilityQuantity(row.outgoing.quantityPacksKg)]
+      .filter(Boolean)
+      .join(" / ");
+
+    const cells: RowInput = [
+      centerCell(formatTraceabilityDateRu(row.date)),
+      centerCell(row.incoming.rawMaterialName),
+      centerCell(
+        [row.incoming.batchNumber, formatTraceabilityDateRu(row.incoming.packagingDate)]
+          .filter(Boolean)
+          .join("\n")
+      ),
+      centerCell(incomingQty),
+      centerCell(row.outgoing.productName),
+      centerCell(outgoingQty),
+    ];
+
+    if (showShock) {
+      cells.push(centerCell(formatTraceabilityQuantity(row.outgoing.shockTemp)));
+    }
+
+    cells.push(centerCell(row.responsibleEmployee || ""));
+    return cells;
+  });
+
+  autoTable(doc, {
+    startY: 66,
+    head,
+    body: body.length > 0 ? body : [Array(showShock ? 8 : 7).fill(centerCell(""))],
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7.5,
+      cellPadding: 1.2,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+}
+
 function drawUvRuntimePdf(doc: jsPDF, params: {
   organizationName: string;
   title: string;
@@ -2370,6 +2482,7 @@ export async function generateJournalDocumentPdf(params: {
   const trackedFields = getTrackedFields(document.template.fields);
   const registerFields = parseRegisterFields(document.template.fields);
   const registerConfig = normalizeRegisterDocumentConfig(document.config, registerFields);
+  const traceabilityConfig = normalizeTraceabilityDocumentConfig(document.config);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -2476,6 +2589,13 @@ export async function generateJournalDocumentPdf(params: {
       config: normalizePpeIssuanceConfig(document.config, users),
       users,
     });
+  } else if (templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
+    drawTraceabilityPdf(doc, {
+      organizationName,
+      title: document.title || "Журнал прослеживаемости продукции",
+      dateFrom: document.dateFrom,
+      config: traceabilityConfig,
+    });
   } else if (isRegisterDocumentTemplate(templateCode)) {
     drawRegisterPdf(doc, {
       organizationName,
@@ -2565,6 +2685,8 @@ export async function generateJournalDocumentPdf(params: {
               ? "acceptance-journal"
             : templateCode === PPE_ISSUANCE_TEMPLATE_CODE
               ? "ppe-issuance-journal"
+            : templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE
+              ? "traceability-journal"
             : templateCode === FRYER_OIL_TEMPLATE_CODE
               ? getFryerOilFilePrefix()
             : isRegisterDocumentTemplate(templateCode)
