@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, UserPlus, Users } from "lucide-react";
+import { ChevronDown, Plus, Printer, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -26,7 +27,6 @@ import {
   getStaffJournalResponsibleTitleOptions,
   HYGIENE_PERIODICITY_TEXT,
 } from "@/lib/hygiene-document";
-import { getUserRoleGroupLabel } from "@/lib/user-roles";
 
 type UserItem = {
   id: string;
@@ -43,6 +43,13 @@ type Props = {
   responsibleTitle: string | null;
   users: UserItem[];
   includedEmployeeIds: string[];
+  routeCode?: string;
+  organizationName?: string;
+  showHeaderActions?: boolean;
+  hideHeading?: boolean;
+  hidePrint?: boolean;
+  hideAutoFill?: boolean;
+  onSettingsClick?: () => void;
 };
 
 async function requestJson(url: string, init: RequestInit) {
@@ -316,7 +323,7 @@ function JournalSettingsDialog({
       <DialogContent className="max-w-[765px] rounded-[32px] border-0 p-0">
         <DialogHeader className="border-b px-14 py-12">
           <DialogTitle className="text-[32px] font-medium text-black">
-            Настройки журнала
+            Настройки документа
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-8 px-14 py-12">
@@ -376,6 +383,13 @@ export function StaffJournalToolbar({
   responsibleTitle,
   users,
   includedEmployeeIds,
+  routeCode,
+  organizationName,
+  showHeaderActions = false,
+  hideHeading = false,
+  hidePrint = false,
+  hideAutoFill = false,
+  onSettingsClick,
 }: Props) {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -420,9 +434,60 @@ export function StaffJournalToolbar({
   return (
     <>
       <div className="space-y-8">
+        {showHeaderActions && routeCode && organizationName ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-[14px] text-[#7c7c93]">
+              <Link href={`/journals/${routeCode}`} className="hover:text-black hover:underline">
+                {organizationName}
+              </Link>
+              {" > "}
+              <Link href={`/journals/${routeCode}`} className="hover:text-black hover:underline">
+                {heading}
+              </Link>
+              {" > "}
+              <span className="text-black">{title}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {!hidePrint && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    window.open(`/api/journal-documents/${documentId}/pdf`, "_blank", "noopener,noreferrer")
+                  }
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
+                >
+                  <Printer className="size-4" />
+                  Печать
+                </Button>
+              )}
+              {status === "active" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (onSettingsClick) {
+                      onSettingsClick();
+                    } else {
+                      setSettingsOpen(true);
+                    }
+                  }}
+                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                >
+                  Настройки журнала
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-start justify-between gap-6">
-          <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
-          {status === "active" && (
+          {!hideHeading ? (
+            <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
+          ) : (
+            <div />
+          )}
+          {!showHeaderActions && status === "active" && (
             <Button
               type="button"
               variant="outline"
@@ -436,19 +501,21 @@ export function StaffJournalToolbar({
 
         {status === "active" && (
           <>
-            <div className="rounded-[22px] bg-[#f3f4fe] px-6 py-5">
-              <div className="flex items-center gap-4">
-                <Switch
-                  checked={checked}
-                  onCheckedChange={handleAutoFill}
-                  disabled={isSwitching}
-                  className="h-10 w-16 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
-                />
-                <span className="text-[20px] font-medium text-black">
-                  Автоматически заполнять журнал
-                </span>
+            {!hideAutoFill && (
+              <div className="rounded-[22px] bg-[#f3f4fe] px-6 py-5">
+                <div className="flex items-center gap-4">
+                  <Switch
+                    checked={checked}
+                    onCheckedChange={handleAutoFill}
+                    disabled={isSwitching}
+                    className="h-10 w-16 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                  />
+                  <span className="text-[20px] font-medium text-black">
+                    Автоматически заполнять журнал
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

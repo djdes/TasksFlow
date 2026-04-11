@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { HygieneDocumentsClient } from "@/components/journals/hygiene-documents-client";
+import { HealthDocumentsClient } from "@/components/journals/health-documents-client";
 import {
   buildDateKeys,
   buildExampleHygieneEntryMap,
@@ -20,10 +21,17 @@ import {
   getJournalDocumentPeriodLabel,
   isDocumentTemplate,
 } from "@/lib/journal-document-helpers";
-import { FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE } from "@/lib/finished-product-document";
+import {
+  buildFinishedProductArchiveSeed,
+  FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+} from "@/lib/finished-product-document";
 import { FinishedProductDocumentsClient } from "@/components/journals/finished-product-documents-client";
 import { CLIMATE_DOCUMENT_TEMPLATE_CODE } from "@/lib/climate-document";
-import { COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE } from "@/lib/cold-equipment-document";
+import {
+  buildColdEquipmentConfigFromEquipment,
+  COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
+} from "@/lib/cold-equipment-document";
+import { ColdEquipmentDocumentsClient } from "@/components/journals/cold-equipment-documents-client";
 import {
   CLEANING_DOCUMENT_TEMPLATE_CODE,
   applyCleaningAutoFillToConfig,
@@ -455,21 +463,21 @@ function buildTrackedDemoValue(field: TrackedTemplateField, rowIndex: number) {
 function getTrackedMeta(templateCode: string, dateFrom: Date, dateTo: Date) {
   if (isAcceptanceDocumentTemplate(templateCode)) {
     return {
-      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaLabel: "Дата начала",
       metaValue: toSourceDateLabel(dateFrom),
     };
   }
 
   if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
     return {
-      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaLabel: "Дата начала",
       metaValue: toSourceDateLabel(dateFrom),
     };
   }
 
   if (!isSourceStyleTrackedTemplate(templateCode)) {
     return {
-      metaLabel: "РџРµСЂРёРѕРґ",
+      metaLabel: "Период",
       metaValue: getJournalDocumentPeriodLabel(templateCode, dateFrom, dateTo),
     };
   }
@@ -477,20 +485,20 @@ function getTrackedMeta(templateCode: string, dateFrom: Date, dateTo: Date) {
   const mode = getTrackedDocumentCreateMode(templateCode);
   if (mode === "staff") {
     return {
-      metaLabel: "РџРµСЂРёРѕРґ",
+      metaLabel: "Период",
       metaValue: getJournalDocumentPeriodLabel(templateCode, dateFrom, dateTo),
     };
   }
 
   if (mode === "uv") {
     return {
-      metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
+      metaLabel: "Дата начала",
       metaValue: toSourceDateLabel(dateFrom),
     };
   }
 
   return {
-    metaLabel: "Р”Р°С‚Р° РґРѕРєСѓРјРµРЅС‚Р°",
+    metaLabel: "Дата документа",
     metaValue: toSourceDateLabel(dateFrom),
   };
 }
@@ -1286,19 +1294,39 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "asc" },
     });
 
+    const mappedDocuments = documents.map((document) => {
+      const config = (document.config && typeof document.config === "object" && !Array.isArray(document.config))
+        ? (document.config as Record<string, unknown>)
+        : {};
+      return {
+        id: document.id,
+        title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
+        status: document.status as "active" | "closed",
+        responsibleTitle: document.responsibleTitle,
+        periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
+        printEmptyRows: typeof config.printEmptyRows === "number" ? config.printEmptyRows : 0,
+      };
+    });
+
+    if (resolvedCode === "health_check") {
+      return (
+        <HealthDocumentsClient
+          activeTab={activeTab}
+          templateCode={resolvedCode}
+          templateName={template.name}
+          users={orgUsers}
+          documents={mappedDocuments}
+        />
+      );
+    }
+
     return (
       <HygieneDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
         templateName={template.name}
         users={orgUsers}
-        documents={documents.map((document) => ({
-          id: document.id,
-          title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
-          status: document.status as "active" | "closed",
-          responsibleTitle: document.responsibleTitle,
-          periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
-        }))}
+        documents={mappedDocuments}
       />
     );
   }
@@ -2094,6 +2122,30 @@ export default async function JournalDocumentsPage({
 
       if (existingBasicDocumentCount === 0) {
         const { activeFrom, activeTo, closedFrom, closedTo } = getCurrentAndPreviousMonthBounds();
+        const coldEquipmentConfig =
+          resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+            ? buildColdEquipmentConfigFromEquipment(
+                await db.equipment.findMany({
+                  where: {
+                    area: {
+                      organizationId: session.user.organizationId,
+                    },
+                  },
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    tempMin: true,
+                    tempMax: true,
+                  },
+                  orderBy: { name: "asc" },
+                })
+              )
+            : undefined;
+        const primaryUser = pickPrimaryManager(orgUsers) || orgUsers[0];
+        const defaultResponsibleTitle = primaryUser
+          ? getUserRoleLabel(primaryUser.role)
+          : null;
         await db.journalDocument.createMany({
           data: [
             {
@@ -2104,6 +2156,18 @@ export default async function JournalDocumentsPage({
               dateFrom: activeFrom,
               dateTo: activeTo,
               createdById: session.user.id,
+              responsibleUserId:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? primaryUser?.id || null
+                  : null,
+              responsibleTitle:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? defaultResponsibleTitle
+                  : null,
+              config:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? (coldEquipmentConfig as Prisma.InputJsonValue)
+                  : undefined,
             },
             {
               templateId: template.id,
@@ -2113,6 +2177,18 @@ export default async function JournalDocumentsPage({
               dateFrom: closedFrom,
               dateTo: closedTo,
               createdById: session.user.id,
+              responsibleUserId:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? primaryUser?.id || null
+                  : null,
+              responsibleTitle:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? defaultResponsibleTitle
+                  : null,
+              config:
+                resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+                  ? (coldEquipmentConfig as Prisma.InputJsonValue)
+                  : undefined,
             },
           ],
         });
@@ -2229,34 +2305,28 @@ export default async function JournalDocumentsPage({
       });
 
       if (!existingDocument) {
-        const currentDate = new Date();
-        const year = currentDate.getUTCFullYear();
-        const month = currentDate.getUTCMonth();
-        const dateFrom = new Date(Date.UTC(year, month, 1));
-        const dateTo = new Date(Date.UTC(year, month + 1, 0));
-        const closedFrom = new Date(Date.UTC(year, month - 1, 1));
-        const closedTo = new Date(Date.UTC(year, month, 0));
+        const seed = buildFinishedProductArchiveSeed(new Date());
 
         await db.journalDocument.createMany({
           data: [
             {
               templateId: template.id,
               organizationId: session.user.organizationId,
-              title: getJournalDocumentDefaultTitle(resolvedCode),
+              title: seed.active.title,
               status: "active",
-              dateFrom,
-              dateTo,
+              dateFrom: seed.active.dateFrom,
+              dateTo: seed.active.dateTo,
               createdById: session.user.id,
             },
-            {
+            ...seed.closed.map((item) => ({
               templateId: template.id,
               organizationId: session.user.organizationId,
-              title: getJournalDocumentDefaultTitle(resolvedCode),
-              status: "closed",
-              dateFrom: closedFrom,
-              dateTo: closedTo,
+              title: item.title,
+              status: "closed" as const,
+              dateFrom: item.dateFrom,
+              dateTo: item.dateTo,
               createdById: session.user.id,
-            },
+            })),
           ],
         });
       }
@@ -2553,13 +2623,12 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === TRAINING_PLAN_TEMPLATE_CODE) {
-      // Auto-seed sample documents
       const existingTP = await db.journalDocument.findMany({
         where: { templateId: template.id, organizationId: session.user.organizationId },
         select: { status: true },
       });
-      const tpStatuses = new Set(existingTP.map((d) => d.status));
-      if (!tpStatuses.has("active")) {
+
+      if (existingTP.length === 0) {
         const now = new Date();
         await db.journalDocument.create({
           data: {
@@ -2573,8 +2642,7 @@ export default async function JournalDocumentsPage({
             config: getTrainingPlanDefaultConfig(now),
           },
         });
-      }
-      if (!tpStatuses.has("closed")) {
+
         const previousYear = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 11));
         await db.journalDocument.create({
           data: {
@@ -3333,6 +3401,31 @@ export default async function JournalDocumentsPage({
         );
       }
 
+      if (resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
+        return (
+          <ColdEquipmentDocumentsClient
+            activeTab={activeTab}
+            routeCode={code}
+            templateCode={resolvedCode}
+            templateName={template.name}
+            users={orgUsers}
+            documents={documents.map((document) => ({
+              id: document.id,
+              title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
+              status: document.status as "active" | "closed",
+              responsibleTitle: document.responsibleTitle,
+              periodLabel: getJournalDocumentPeriodLabel(
+                resolvedCode,
+                document.dateFrom,
+                document.dateTo
+              ),
+              dateFrom: document.dateFrom.toISOString().slice(0, 10),
+              dateTo: document.dateTo.toISOString().slice(0, 10),
+            }))}
+          />
+        );
+      }
+
       if (resolvedCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
         return (
           <UvLampRuntimeDocumentsClient
@@ -3378,6 +3471,9 @@ export default async function JournalDocumentsPage({
             title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
             status: document.status as "active" | "closed",
             responsibleTitle: document.responsibleTitle,
+            responsibleUserName: document.responsibleUserId
+              ? orgUsers.find((user) => user.id === document.responsibleUserId)?.name || null
+              : null,
             periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
             ...getTrackedMeta(resolvedCode, document.dateFrom, document.dateTo),
             dateFrom: document.dateFrom.toISOString().slice(0, 10),

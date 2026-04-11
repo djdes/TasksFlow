@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -45,7 +45,7 @@ function HealthCheckbox(props: {
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
 }) {
-  return <Checkbox checked={props.checked} onCheckedChange={(value) => props.onCheckedChange?.(value === true)} className="mx-auto h-5 w-5 rounded-[5px] border-[#c8ccda]" />;
+  return <Checkbox checked={props.checked} onCheckedChange={(value) => props.onCheckedChange?.(value === true)} className="mx-auto h-5 w-5 rounded-[5px] border-[#c8ccda] data-[state=checked]:border-[#2563ff] data-[state=checked]:bg-[#2563ff]" />;
 }
 
 function HealthHeader({
@@ -280,54 +280,47 @@ export function HealthDocumentClient(props: Props) {
         <div className="screen-only mb-10 space-y-10">
           <StaffJournalToolbar
             documentId={documentId}
-            heading="Журнал здоровья"
+            heading="Журнал Здоровья"
             title={documentTitle}
             status={status}
             autoFill={autoFill}
             responsibleTitle={props.responsibleTitle}
             users={employees}
             includedEmployeeIds={includedEmployeeIds}
+            routeCode="health_check"
+            organizationName={organizationLabel}
+            showHeaderActions
+            hidePrint
+            hideAutoFill
+            onSettingsClick={() => {
+              setSettingsDocTitle(documentTitle);
+              setEmptyRows(String(printEmptyRows));
+              setSettingsOpen(true);
+            }}
           />
 
-          <div className="flex flex-wrap items-center gap-3">
-            {status === "active" && selectedCount > 0 && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSelectedEmployeeIds([])}
-                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-                >
-                  Выбрано: {selectedCount}
-                  <X className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDeleteSelected}
-                  disabled={isDeleting}
-                  className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
-                >
-                  {isDeleting ? "Удаление..." : "Удалить"}
-                </Button>
-              </>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (status !== "active") return;
-                setSettingsDocTitle(documentTitle);
-                setEmptyRows(String(printEmptyRows));
-                setSettingsOpen(true);
-              }}
-              disabled={status !== "active"}
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-            >
-              <Settings2 className="size-4" />
-              Настройки печати
-            </Button>
-          </div>
+          {status === "active" && selectedCount > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedEmployeeIds([])}
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
+              >
+                Выбрано: {selectedCount}
+                <X className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDeleteSelected}
+                disabled={isDeleting}
+                className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
+              >
+                {isDeleting ? "Удаление..." : "Удалить"}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mx-auto max-w-[1860px]">
