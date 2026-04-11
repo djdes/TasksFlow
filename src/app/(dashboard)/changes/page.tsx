@@ -67,7 +67,7 @@ export default async function ChangesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {changes.map((c) => {
+            {changes.map((c: (typeof changes)[number]) => {
               const sInfo = STATUS_LABELS[c.status] || { label: c.status, variant: "outline" as const };
               return (
                 <TableRow key={c.id}>

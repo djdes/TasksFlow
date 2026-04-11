@@ -45,7 +45,7 @@ function isSlaBreached(ticket: { createdAt: Date; slaHours: number; status: stri
 export default async function CapaPage() {
   const session = await requireAuth();
 
-  const tickets = await db.capaTicket.findMany({
+  const tickets: Awaited<ReturnType<typeof db.capaTicket.findMany>> = await db.capaTicket.findMany({
     where: { organizationId: session.user.organizationId },
     orderBy: [{ createdAt: "desc" }],
     take: 200,
@@ -55,7 +55,8 @@ export default async function CapaPage() {
 
   // Top-3 causes this week
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const weekTickets = tickets.filter((t) => t.createdAt >= weekAgo && t.status !== "closed");
+  type Ticket = (typeof tickets)[number];
+  const weekTickets = tickets.filter((t: Ticket) => t.createdAt >= weekAgo && t.status !== "closed");
 
   return (
     <div className="space-y-6">
@@ -76,12 +77,12 @@ export default async function CapaPage() {
 
       {/* Stats row */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card className={weekTickets.filter((t) => t.priority === "critical").length > 0 ? "border-red-300 bg-red-50" : ""}>
+        <Card className={weekTickets.filter((t: Ticket) => t.priority === "critical").length > 0 ? "border-red-300 bg-red-50" : ""}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">Открыто</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tickets.filter((t) => t.status !== "closed").length}</div>
+            <div className="text-2xl font-bold">{tickets.filter((t: Ticket) => t.status !== "closed").length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -89,7 +90,7 @@ export default async function CapaPage() {
             <CardTitle className="text-sm text-muted-foreground">Критических</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{tickets.filter((t) => t.priority === "critical" && t.status !== "closed").length}</div>
+            <div className="text-2xl font-bold text-red-600">{tickets.filter((t: Ticket) => t.priority === "critical" && t.status !== "closed").length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -97,7 +98,7 @@ export default async function CapaPage() {
             <CardTitle className="text-sm text-muted-foreground">SLA нарушено</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{tickets.filter((t) => isSlaBreached(t)).length}</div>
+            <div className="text-2xl font-bold text-orange-600">{tickets.filter((t: Ticket) => isSlaBreached(t)).length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -105,7 +106,7 @@ export default async function CapaPage() {
             <CardTitle className="text-sm text-muted-foreground">Закрыто за неделю</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "closed" && t.closedAt && t.closedAt >= weekAgo).length}</div>
+            <div className="text-2xl font-bold text-green-600">{tickets.filter((t: Ticket) => t.status === "closed" && t.closedAt && t.closedAt >= weekAgo).length}</div>
           </CardContent>
         </Card>
       </div>
@@ -113,7 +114,7 @@ export default async function CapaPage() {
       {/* Kanban columns */}
       <div className="grid gap-4 lg:grid-cols-5">
         {statuses.map((status) => {
-          const statusTickets = tickets.filter((t) => t.status === status);
+          const statusTickets = tickets.filter((t: Ticket) => t.status === status);
           const info = STATUS_INFO[status] || { label: status, color: "" };
 
           return (
@@ -125,7 +126,7 @@ export default async function CapaPage() {
                 <span className="text-xs text-muted-foreground">{statusTickets.length}</span>
               </div>
               <div className="space-y-2">
-                {statusTickets.slice(0, 10).map((ticket) => {
+                {statusTickets.slice(0, 10).map((ticket: Ticket) => {
                   const pInfo = PRIORITY_INFO[ticket.priority] || { label: ticket.priority, color: "" };
                   const breached = isSlaBreached(ticket);
 
