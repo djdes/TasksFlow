@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+﻿import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
@@ -50,6 +50,15 @@ const journalTemplates = [
       ]},
       { key: "notes", label: "Примечание", type: "text", required: false },
     ],
+  },
+  {
+    code: "incoming_raw_materials_control",
+    name: "Р–СѓСЂРЅР°Р» РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ СЃС‹СЂСЊСЏ, РёРЅРіСЂРµРґРёРµРЅС‚РѕРІ, СѓРїР°РєРѕРІРѕС‡РЅС‹С… РјР°С‚РµСЂРёР°Р»РѕРІ",
+    description: "Р–СѓСЂРЅР°Р» РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ СЃС‹СЂСЊСЏ, РёРЅРіСЂРµРґРёРµРЅС‚РѕРІ, СѓРїР°РєРѕРІРѕС‡РЅС‹С… РјР°С‚РµСЂРёР°Р»РѕРІ",
+    sortOrder: 3,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
+    fields: [],
   },
   {
     code: "finished_product",
@@ -343,7 +352,7 @@ const journalTemplates = [
 
   // === Контроль фритюрных жиров (СанПиН 2.3/2.4.3590-20, п. 8.6.6) ===
   // Органолептика + кислотное число; при превышении норм масло подлежит замене.
-  // Кислотное число > 1.0 мг KOH/г или изменение цвета/запаха → обязательная замена.
+  // Кислотное число > 1.0 мг KOH/г или изменение цвета/запаха > обязательная замена.
   {
     code: "fryer_oil",
     name: "Журнал учета использования фритюрных жиров",
@@ -513,6 +522,15 @@ const journalTemplates = [
 
 const documentOnlyJournalTemplates = [
   {
+    code: "cleaning_ventilation_checklist",
+    name: "Р§РµРє-Р»РёСЃС‚ СѓР±РѕСЂРєРё Рё РїСЂРѕРІРµС‚СЂРёРІР°РЅРёСЏ РїРѕРјРµС‰РµРЅРёР№",
+    description: "Р§РµРє-Р»РёСЃС‚ СѓР±РѕСЂРєРё Рё РїСЂРѕРІРµС‚СЂРёРІР°РЅРёСЏ РїРѕРјРµС‰РµРЅРёР№",
+    sortOrder: 29,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
+    fields: [],
+  },
+  {
     code: "equipment_cleaning",
     name: "Журнал мойки и дезинфекции оборудования",
     description:
@@ -530,6 +548,15 @@ const documentOnlyJournalTemplates = [
     sortOrder: 30,
     isMandatorySanpin: true,
     isMandatoryHaccp: true,
+    fields: [],
+  },
+  {
+    code: "cleaning_ventilation_checklist",
+    name: "Чек-лист уборки и проветривания помещений",
+    description: "Чек-лист уборки и проветривания помещений",
+    sortOrder: 35,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: false,
     fields: [],
   },
 ] as const;
@@ -683,6 +710,16 @@ const ACTIVE_JOURNAL_TEMPLATES = [
     name: "Журнал учета дезинфекции, дезинсекции и дератизации",
     sortOrder: 33,
   },
+  {
+    code: "incoming_raw_materials_control",
+    name: "Журнал входного контроля сырья, ингредиентов, упаковочных материалов",
+    sortOrder: 34,
+  },
+  {
+    code: "cleaning_ventilation_checklist",
+    name: "Чек-лист уборки и проветривания помещений",
+    sortOrder: 35,
+  },
 ] as const;
 
 const activeJournalTemplateMetaByCode = new Map(
@@ -811,3 +848,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

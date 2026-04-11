@@ -77,6 +77,14 @@ import {
   DISINFECTANT_DOCUMENT_TITLE,
 } from "@/lib/disinfectant-document";
 import {
+  getAcceptanceDocumentTitle,
+  isAcceptanceDocumentTemplate,
+} from "@/lib/acceptance-document";
+import {
+  getSanitaryDayChecklistTitle,
+  isSanitaryDayChecklistTemplate,
+} from "@/lib/sanitary-day-checklist-document";
+import {
   PPE_ISSUANCE_DOCUMENT_TITLE,
   PPE_ISSUANCE_TEMPLATE_CODE,
 } from "@/lib/ppe-issuance-document";
@@ -241,6 +249,12 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === INTENSIVE_COOLING_TEMPLATE_CODE) {
     return INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME;
+  }
+  if (isAcceptanceDocumentTemplate(templateCode)) {
+    return getAcceptanceDocumentTitle(templateCode);
+  }
+  if (isSanitaryDayChecklistTemplate(templateCode)) {
+    return getSanitaryDayChecklistTitle(templateCode);
   }
   if (templateCode === "critical_limit_check") {
     return "Журнал учета критических показателей";

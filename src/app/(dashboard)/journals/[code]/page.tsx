@@ -57,6 +57,8 @@ import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
   ACCEPTANCE_DOCUMENT_TITLE,
   buildAcceptanceDocumentConfigFromData,
+  getAcceptanceDocumentTitle,
+  isAcceptanceDocumentTemplate,
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import {
@@ -163,6 +165,8 @@ import { SanitaryDayChecklistDocumentsClient } from "@/components/journals/sanit
 import {
   SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
   SANITARY_DAY_CHECKLIST_TITLE,
+  getSanitaryDayChecklistTitle,
+  isSanitaryDayChecklistTemplate,
   defaultSdcConfig,
 } from "@/lib/sanitary-day-checklist-document";
 import { EquipmentCalibrationDocumentsClient } from "@/components/journals/equipment-calibration-documents-client";
@@ -356,7 +360,7 @@ function buildTrackedDemoValue(field: TrackedTemplateField, rowIndex: number) {
 }
 
 function getTrackedMeta(templateCode: string, dateFrom: Date, dateTo: Date) {
-  if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+  if (isAcceptanceDocumentTemplate(templateCode)) {
     return {
       metaLabel: "Р”Р°С‚Р° РЅР°С‡Р°Р»Р°",
       metaValue: toSourceDateLabel(dateFrom),
@@ -2333,7 +2337,7 @@ export default async function JournalDocumentsPage({
       );
     }
 
-    if (resolvedCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    if (isAcceptanceDocumentTemplate(resolvedCode)) {
       const [allAcceptanceDocuments, acceptanceUsers, acceptanceProducts, acceptanceSuppliers] =
         await Promise.all([
           db.journalDocument.findMany({
@@ -2396,7 +2400,7 @@ export default async function JournalDocumentsPage({
           data: {
             templateId: template.id,
             organizationId: session.user.organizationId,
-            title: ACCEPTANCE_DOCUMENT_TITLE,
+            title: getAcceptanceDocumentTitle(resolvedCode),
             status: "active",
             dateFrom: new Date("2025-03-01"),
             dateTo: new Date("2025-03-01"),
@@ -2424,7 +2428,7 @@ export default async function JournalDocumentsPage({
           data: {
             templateId: template.id,
             organizationId: session.user.organizationId,
-            title: ACCEPTANCE_DOCUMENT_TITLE,
+            title: getAcceptanceDocumentTitle(resolvedCode),
             status: "closed",
             dateFrom: new Date("2025-02-01"),
             dateTo: new Date("2025-02-28"),
@@ -2450,6 +2454,7 @@ export default async function JournalDocumentsPage({
 
       return (
         <IncomingControlDocumentsClient
+          templateCode={resolvedCode}
           routeCode={code === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE ? code : resolvedCode}
           activeTab={activeTab}
           users={acceptanceUsers}
@@ -2458,7 +2463,7 @@ export default async function JournalDocumentsPage({
           availableSuppliers={supplierNames}
           documents={acceptanceDocuments.map((document) => ({
             id: document.id,
-            title: document.title || ACCEPTANCE_DOCUMENT_TITLE,
+            title: document.title || getAcceptanceDocumentTitle(resolvedCode),
             status: document.status as "active" | "closed",
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             config: normalizeAcceptanceDocumentConfig(document.config ?? {}, acceptanceUsers),
@@ -2604,7 +2609,7 @@ export default async function JournalDocumentsPage({
       );
     }
 
-    if (resolvedCode === SANITARY_DAY_CHECKLIST_TEMPLATE_CODE) {
+    if (isSanitaryDayChecklistTemplate(resolvedCode)) {
       const existingSdc = await db.journalDocument.findMany({
         where: { templateId: template.id, organizationId: session.user.organizationId },
         select: { status: true },
@@ -2616,7 +2621,7 @@ export default async function JournalDocumentsPage({
           data: {
             templateId: template.id,
             organizationId: session.user.organizationId,
-            title: SANITARY_DAY_CHECKLIST_TITLE,
+            title: getSanitaryDayChecklistTitle(resolvedCode),
             status: "active",
             dateFrom: today,
             dateTo: today,
@@ -2643,7 +2648,7 @@ export default async function JournalDocumentsPage({
           users={orgUsers}
           documents={sdcDocuments.map((document) => ({
             id: document.id,
-            title: document.title || SANITARY_DAY_CHECKLIST_TITLE,
+            title: document.title || getSanitaryDayChecklistTitle(resolvedCode),
             status: document.status as "active" | "closed",
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             config:
@@ -2749,7 +2754,7 @@ export default async function JournalDocumentsPage({
       }
 
       const trackedHeading =
-        resolvedCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+        isAcceptanceDocumentTemplate(resolvedCode)
           ? "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё Рё РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ РїСЂРѕРґСѓРєС†РёРё"
           : template.name;
 

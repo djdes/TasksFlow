@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getSanitaryDayChecklistTitle } from "@/lib/sanitary-day-checklist-document";
 
 const CHECKLIST_HEADING = "Чек-лист (памятка) проведения санитарного дня";
 const CHECKLIST_DOCUMENT_TITLE = "Чек-лист (памятка) проведения санитарного дня";
@@ -193,6 +194,7 @@ export function SanitaryDayChecklistDocumentsClient({
   const [settingsTarget, setSettingsTarget] = useState<DocumentItem | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<DocumentItem | null>(null);
+  const checklistTitle = getSanitaryDayChecklistTitle(templateCode);
 
   async function createDocument(payload: SettingsState) {
     const config = {
@@ -204,7 +206,7 @@ export function SanitaryDayChecklistDocumentsClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         templateCode,
-        title: payload.title.trim() || CHECKLIST_DOCUMENT_TITLE,
+        title: payload.title.trim() || checklistTitle,
         dateFrom: payload.documentDate,
         dateTo: payload.documentDate,
         config,
@@ -233,7 +235,7 @@ export function SanitaryDayChecklistDocumentsClient({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: payload.title.trim() || CHECKLIST_DOCUMENT_TITLE,
+        title: payload.title.trim() || checklistTitle,
         dateFrom: payload.documentDate,
         dateTo: payload.documentDate,
         config,
@@ -314,17 +316,17 @@ export function SanitaryDayChecklistDocumentsClient({
 
   const defaultCreateState = useMemo<SettingsState>(
     () => ({
-      title: CHECKLIST_DOCUMENT_TITLE,
+      title: checklistTitle,
       documentDate: getDefaultDate(),
     }),
-    [],
+    [checklistTitle],
   );
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
-          {CHECKLIST_HEADING}
+          {checklistTitle}
           {activeTab === "closed" && " (Закрытые)"}
         </h1>
         <div className="flex items-center gap-3">
@@ -395,7 +397,7 @@ export function SanitaryDayChecklistDocumentsClient({
               className="grid grid-cols-[1fr_280px_64px] items-center rounded-[18px] border border-[#eaedf7] bg-white px-8 py-5"
             >
               <Link href={href} className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-                {document.title || CHECKLIST_DOCUMENT_TITLE}
+                {document.title || checklistTitle}
               </Link>
 
               <Link href={href} className="border-l border-[#e8ebf5] px-8">
@@ -496,7 +498,7 @@ export function SanitaryDayChecklistDocumentsClient({
           {archiveTarget && (
             <div className="px-10 py-8 space-y-6">
               <p className="text-[22px] text-[#3a3d52]">
-                Перенести в архив документ &quot;{archiveTarget.title || CHECKLIST_DOCUMENT_TITLE}&quot;?
+                Перенести в архив документ &quot;{archiveTarget.title || checklistTitle}&quot;?
               </p>
               <div className="flex justify-end gap-3">
                 <Button

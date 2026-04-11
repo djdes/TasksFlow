@@ -1,0 +1,57 @@
+{
+  "task_id": "journals-full-parity-2026-04-11",
+  "date": "2026-04-11",
+  "journal_folder_count": 35,
+  "active_template_count": 35,
+  "fixed_journals": [
+    {
+      "code": "incoming_raw_materials_control",
+      "name": "Журнал входного контроля сырья, ингредиентов, упаковочных материалов"
+    },
+    {
+      "code": "cleaning_ventilation_checklist",
+      "name": "Чек-лист уборки и проветривания помещений"
+    }
+  ],
+  "separate_existing_journal_preserved": {
+    "code": "incoming_control",
+    "name": "Журнал приемки и входного контроля продукции"
+  },
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "status": "PASS"
+    },
+    {
+      "command": "targeted eslint on touched files",
+      "status": "PASS",
+      "details": {
+        "errors": 0,
+        "warnings": 17
+      }
+    }
+  ],
+  "acceptance_criteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS",
+    "AC6": "PASS"
+  },
+  "changed_files": [
+    "prisma/seed.ts",
+    "src/lib/acceptance-document.ts",
+    "src/lib/sanitary-day-checklist-document.ts",
+    "src/lib/source-journal-map.ts",
+    "src/lib/tracked-document.ts",
+    "src/lib/journal-document-helpers.ts",
+    "src/app/api/journal-documents/route.ts",
+    "src/app/(dashboard)/journals/[code]/page.tsx",
+    "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
+    "src/components/journals/incoming-control-documents-client.tsx",
+    "src/components/journals/acceptance-document-client.tsx",
+    "src/components/journals/sanitary-day-checklist-documents-client.tsx",
+    "src/components/journals/sanitary-day-checklist-document-client.tsx"
+  ]
+}

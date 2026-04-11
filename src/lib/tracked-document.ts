@@ -1,5 +1,6 @@
 export const TRACKED_DOCUMENT_TEMPLATE_CODES = [
   "incoming_control",
+  "incoming_raw_materials_control",
   "pest_control",
   "equipment_calibration",
   "product_writeoff",
@@ -17,6 +18,7 @@ export const TRACKED_DOCUMENT_TEMPLATE_CODES = [
   "raw_storage_control",
   "defrosting_control",
   "sanitary_day_control",
+  "cleaning_ventilation_checklist",
   "water_temperature_control",
   "dishwashing_control",
   "inventory_sanitation",
@@ -29,6 +31,7 @@ export type TrackedDocumentTemplateCode =
 
 export const SOURCE_STYLE_TRACKED_TEMPLATE_CODES = [
   "incoming_control",
+  "incoming_raw_materials_control",
   "hand_hygiene_control",
   "waste_disposal_control",
   "uv_lamp_runtime",
@@ -82,7 +85,12 @@ export function getTrackedDocumentTitle(templateCode: string) {
 }
 
 export function getTrackedDocumentCreateMode(templateCode: string) {
-  if (templateCode === "incoming_control") return "acceptance";
+  if (
+    templateCode === "incoming_control" ||
+    templateCode === "incoming_raw_materials_control"
+  ) {
+    return "acceptance";
+  }
   if (templateCode === "hand_hygiene_control") return "staff";
   if (templateCode === "uv_lamp_runtime") return "uv";
   if (

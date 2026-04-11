@@ -29,7 +29,11 @@ import {
   buildGlassListConfigFromData,
 } from "@/lib/glass-list-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
-import { ACCEPTANCE_DOCUMENT_TEMPLATE_CODE, getAcceptanceDocumentDefaultConfig } from "@/lib/acceptance-document";
+import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  getAcceptanceDocumentDefaultConfig,
+  isAcceptanceDocumentTemplate,
+} from "@/lib/acceptance-document";
 import {
   PPE_ISSUANCE_TEMPLATE_CODE,
   getPpeIssuanceDefaultConfig,
@@ -63,6 +67,10 @@ import {
   EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
   normalizeEquipmentCalibrationConfig,
 } from "@/lib/equipment-calibration-document";
+import {
+  defaultSdcConfig,
+  isSanitaryDayChecklistTemplate,
+} from "@/lib/sanitary-day-checklist-document";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -353,7 +361,7 @@ export async function POST(request: Request) {
           products: allProducts,
           referenceDate: new Date(dateFrom),
         })
-      : resolvedTemplateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE
+      : isAcceptanceDocumentTemplate(resolvedTemplateCode)
       ? getAcceptanceDocumentDefaultConfig(allUsers)
       : resolvedTemplateCode === PPE_ISSUANCE_TEMPLATE_CODE
       ? getPpeIssuanceDefaultConfig(allUsers)
@@ -386,6 +394,8 @@ export async function POST(request: Request) {
               ? rawConfig.responsiblePosition
               : undefined,
         })
+      : isSanitaryDayChecklistTemplate(resolvedTemplateCode)
+      ? rawConfig ?? defaultSdcConfig()
       : isRegisterDocumentTemplate(resolvedTemplateCode)
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;

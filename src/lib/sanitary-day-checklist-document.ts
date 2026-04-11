@@ -1,6 +1,30 @@
 export const SANITARY_DAY_CHECKLIST_TEMPLATE_CODE = "sanitary_day_control";
+export const CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE =
+  "cleaning_ventilation_checklist";
 export const SANITARY_DAY_CHECKLIST_TITLE =
   "Чек-лист (памятка) проведения санитарного дня";
+
+export const CLEANING_VENTILATION_CHECKLIST_TITLE =
+  "Р§РµРє-Р»РёСЃС‚ СѓР±РѕСЂРєРё Рё РїСЂРѕРІРµС‚СЂРёРІР°РЅРёСЏ РїРѕРјРµС‰РµРЅРёР№";
+
+export const SANITARY_DAY_CHECKLIST_TEMPLATE_CODES = [
+  SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
+  CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE,
+] as const;
+
+export function isSanitaryDayChecklistTemplate(templateCode: string) {
+  return SANITARY_DAY_CHECKLIST_TEMPLATE_CODES.includes(
+    templateCode as (typeof SANITARY_DAY_CHECKLIST_TEMPLATE_CODES)[number]
+  );
+}
+
+export function getSanitaryDayChecklistTitle(templateCode: string) {
+  if (templateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE) {
+    return CLEANING_VENTILATION_CHECKLIST_TITLE;
+  }
+
+  return SANITARY_DAY_CHECKLIST_TITLE;
+}
 
 export type SdcZone = { id: string; name: string };
 export type SdcItem = { id: string; zoneId: string; text: string };

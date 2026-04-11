@@ -1,0 +1,21 @@
+Task: journals-full-parity-2026-04-11
+Date: 2026-04-11
+
+Checks run after implementation:
+
+1. npx tsc --noEmit
+Result: PASS
+
+2. targeted eslint on touched files
+Result: PASS with warnings only, no errors
+
+Inventory confirmation:
+- local folders in journals/: 35
+- active journal templates parsed from prisma/seed.ts: 35
+
+New active journal codes confirmed:
+- incoming_raw_materials_control
+- cleaning_ventilation_checklist
+
+Existing separate journal confirmed:
+- incoming_control

@@ -39,6 +39,7 @@ import {
 } from "@/lib/hygiene-document";
 import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  isAcceptanceDocumentTemplate,
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import {
@@ -137,6 +138,7 @@ import {
 import { SanitaryDayChecklistDocumentClient } from "@/components/journals/sanitary-day-checklist-document-client";
 import {
   SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
+  isSanitaryDayChecklistTemplate,
   normalizeSdcConfig,
   normalizeSdcEntryData,
 } from "@/lib/sanitary-day-checklist-document";
@@ -652,10 +654,11 @@ export default async function JournalDocumentPage({
     );
   }
 
-  if (document.template.code === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+  if (isAcceptanceDocumentTemplate(document.template.code)) {
     return (
       <AcceptanceDocumentClient
         documentId={document.id}
+        routeCode={code}
         title={document.title}
         organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
         dateFrom={toDateKey(document.dateFrom)}
@@ -730,7 +733,7 @@ export default async function JournalDocumentPage({
       );
     }
 
-    if (document.template.code === SANITARY_DAY_CHECKLIST_TEMPLATE_CODE) {
+    if (isSanitaryDayChecklistTemplate(document.template.code)) {
       return (
         <SanitaryDayChecklistDocumentClient
           documentId={document.id}

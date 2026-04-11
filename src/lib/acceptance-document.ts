@@ -1,9 +1,43 @@
 import { getUserRoleLabel } from "@/lib/user-roles";
 
 export const ACCEPTANCE_DOCUMENT_TEMPLATE_CODE = "incoming_control";
+export const RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE =
+  "incoming_raw_materials_control";
 export const ACCEPTANCE_PAGE_TITLE =
   "Журнал входного контроля сырья, ингредиентов, упаковочных материалов";
 export const ACCEPTANCE_DOCUMENT_TITLE = "Журнал входного контроля сырья";
+
+export const PRODUCT_ACCEPTANCE_PAGE_TITLE =
+  "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё Рё РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ РїСЂРѕРґСѓРєС†РёРё";
+export const PRODUCT_ACCEPTANCE_DOCUMENT_TITLE =
+  "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё Рё РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ РїСЂРѕРґСѓРєС†РёРё";
+
+export const ACCEPTANCE_DOCUMENT_TEMPLATE_CODES = [
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE,
+] as const;
+
+export function isAcceptanceDocumentTemplate(templateCode: string) {
+  return ACCEPTANCE_DOCUMENT_TEMPLATE_CODES.includes(
+    templateCode as (typeof ACCEPTANCE_DOCUMENT_TEMPLATE_CODES)[number]
+  );
+}
+
+export function getAcceptancePageTitle(templateCode: string) {
+  if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    return PRODUCT_ACCEPTANCE_PAGE_TITLE;
+  }
+
+  return ACCEPTANCE_PAGE_TITLE;
+}
+
+export function getAcceptanceDocumentTitle(templateCode: string) {
+  if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
+    return PRODUCT_ACCEPTANCE_DOCUMENT_TITLE;
+  }
+
+  return ACCEPTANCE_DOCUMENT_TITLE;
+}
 
 export type AcceptanceRow = {
   id: string;

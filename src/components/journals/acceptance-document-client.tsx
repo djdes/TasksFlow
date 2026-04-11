@@ -53,6 +53,7 @@ type User = { id: string; name: string; role: string };
 
 type Props = {
   documentId: string;
+  routeCode: string;
   title: string;
   organizationName: string;
   dateFrom: string;
@@ -664,13 +665,6 @@ function IncomingControlEditListsDialog(props: {
   const [products, setProducts] = useState<string[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!props.open) return;
-    setProducts([...props.config.products]);
-    setManufacturers([...props.config.manufacturers]);
-    setSuppliers([...props.config.suppliers]);
-  }, [props.config, props.open]);
 
   function handleClose() {
     props.setConfig({ ...props.config, products, manufacturers, suppliers });

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  SANITARY_DAY_CHECKLIST_TITLE,
+  getSanitaryDayChecklistTitle,
   normalizeSdcConfig,
   normalizeSdcEntryData,
   getItemNumber,
@@ -114,7 +114,7 @@ function SettingsDialog(props: {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: docTitle.trim() || SANITARY_DAY_CHECKLIST_TITLE,
+          title: docTitle.trim() || props.title,
           dateFrom,
         }),
       });
@@ -657,7 +657,7 @@ export function SanitaryDayChecklistDocumentClient({
 
   const isActive = status === "active";
   const organizationLabel = organizationName || 'ООО "Тест"';
-  const documentTitle = title || SANITARY_DAY_CHECKLIST_TITLE;
+  const documentTitle = title || getSanitaryDayChecklistTitle(routeCode);
   const entryDate = dateFrom;
 
   // Group items by zone

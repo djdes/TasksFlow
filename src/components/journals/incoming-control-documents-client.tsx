@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -22,9 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
-  ACCEPTANCE_DOCUMENT_TITLE,
-  ACCEPTANCE_PAGE_TITLE,
+  getAcceptanceDocumentTitle,
+  getAcceptancePageTitle,
   buildAcceptanceDocumentConfigFromData,
   normalizeAcceptanceDocumentConfig,
   type AcceptanceDocumentConfig,
@@ -44,6 +43,7 @@ type DocumentItem = {
 type Props = {
   activeTab: "active" | "closed";
   routeCode: string;
+  templateCode: string;
   documents: DocumentItem[];
   users: User[];
   availableProducts: string[];
@@ -60,7 +60,7 @@ type DialogState = {
 };
 
 function formatRuDate(value: string) {
-  if (!value) return "—";
+  if (!value) return "вЂ”";
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}-${month}-${year}` : value;
 }
@@ -70,6 +70,7 @@ function getUsersForRole(users: User[], roleLabel: string) {
 }
 
 function getDefaultDialogState(
+  templateCode: string,
   users: User[],
   availableProducts: string[],
   availableManufacturers: string[],
@@ -84,7 +85,7 @@ function getDefaultDialogState(
   });
 
   return {
-    title: ACCEPTANCE_DOCUMENT_TITLE,
+    title: getAcceptanceDocumentTitle(templateCode),
     startDate: new Date().toISOString().slice(0, 10),
     expiryFieldLabel: config.expiryFieldLabel,
     responsibleTitle: config.defaultResponsibleTitle || USER_ROLE_LABEL_VALUES[0],
@@ -143,16 +144,16 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[18px] text-[#73738a]">РќР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°</Label>
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
               className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
-              placeholder="Введите название документа"
+              placeholder="Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°"
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата начала</Label>
+            <Label className="text-[18px] text-[#73738a]">Р”Р°С‚Р° РЅР°С‡Р°Р»Р°</Label>
             <Input
               type="date"
               value={state.startDate}
@@ -161,7 +162,7 @@ function SettingsDialog({
             />
           </div>
           <div className="space-y-4">
-            <div className="text-[18px] font-semibold text-black">Название поля</div>
+            <div className="text-[18px] font-semibold text-black">РќР°Р·РІР°РЅРёРµ РїРѕР»СЏ</div>
             <label className="flex items-center gap-3 text-[18px] text-black">
               <input
                 type="radio"
@@ -170,7 +171,7 @@ function SettingsDialog({
                 onChange={() => setState({ ...state, expiryFieldLabel: "expiry_deadline" })}
                 className="size-5 accent-[#5b66ff]"
               />
-              "Предельный срок реализации"
+              &quot;РџСЂРµРґРµР»СЊРЅС‹Р№ СЃСЂРѕРє СЂРµР°Р»РёР·Р°С†РёРё&quot;
             </label>
             <label className="flex items-center gap-3 text-[18px] text-black">
               <input
@@ -180,11 +181,11 @@ function SettingsDialog({
                 onChange={() => setState({ ...state, expiryFieldLabel: "shelf_life" })}
                 className="size-5 accent-[#5b66ff]"
               />
-              "Срок годности"
+              &quot;РЎСЂРѕРє РіРѕРґРЅРѕСЃС‚Рё&quot;
             </label>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[18px] text-[#73738a]">Р”РѕР»Р¶РЅРѕСЃС‚СЊ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕРіРѕ</Label>
             <Select
               value={state.responsibleTitle}
               onValueChange={(value) =>
@@ -196,7 +197,7 @@ function SettingsDialog({
               }
             >
               <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
-                <SelectValue placeholder="- Выберите значение -" />
+                <SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" />
               </SelectTrigger>
               <SelectContent>
                 {USER_ROLE_LABEL_VALUES.map((role) => (
@@ -209,13 +210,13 @@ function SettingsDialog({
           </div>
           {showEmployeeField && (
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[18px] text-[#73738a]">РЎРѕС‚СЂСѓРґРЅРёРє</Label>
               <Select
                 value={state.responsibleUserId}
                 onValueChange={(value) => setState({ ...state, responsibleUserId: value })}
               >
                 <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
-                  <SelectValue placeholder="- Выберите значение -" />
+                  <SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" />
                 </SelectTrigger>
                 <SelectContent>
                   {employeeOptions.map((user) => (
@@ -242,7 +243,7 @@ function SettingsDialog({
               }}
               className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
             >
-              {submitting ? "Сохранение..." : submitLabel}
+              {submitting ? "РЎРѕС…СЂР°РЅРµРЅРёРµ..." : submitLabel}
             </Button>
           </div>
         </div>
@@ -269,7 +270,7 @@ function DeleteDialog({
       <DialogContent className="max-w-[680px] rounded-[32px] border-0 p-0">
         <DialogHeader className="border-b px-12 py-10">
           <DialogTitle className="pr-10 text-[32px] font-medium text-black">
-            {`Удаление документа "${title}"`}
+            {`РЈРґР°Р»РµРЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° "${title}"`}
           </DialogTitle>
         </DialogHeader>
         <div className="flex justify-end px-12 py-10">
@@ -287,7 +288,7 @@ function DeleteDialog({
             }}
             className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
           >
-            {submitting ? "Удаление..." : "Удалить"}
+            {submitting ? "РЈРґР°Р»РµРЅРёРµ..." : "РЈРґР°Р»РёС‚СЊ"}
           </Button>
         </div>
       </DialogContent>
@@ -298,6 +299,7 @@ function DeleteDialog({
 export function IncomingControlDocumentsClient({
   activeTab,
   routeCode,
+  templateCode,
   documents,
   users,
   availableProducts,
@@ -308,10 +310,18 @@ export function IncomingControlDocumentsClient({
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsDocument, setSettingsDocument] = useState<DocumentItem | null>(null);
   const [deleteDocument, setDeleteDocument] = useState<DocumentItem | null>(null);
+  const defaultDocumentTitle = getAcceptanceDocumentTitle(templateCode);
+  const pageTitle = getAcceptancePageTitle(templateCode);
   const createState = useMemo(
     () =>
-      getDefaultDialogState(users, availableProducts, availableManufacturers, availableSuppliers),
-    [availableManufacturers, availableProducts, availableSuppliers, users]
+      getDefaultDialogState(
+        templateCode,
+        users,
+        availableProducts,
+        availableManufacturers,
+        availableSuppliers
+      ),
+    [availableManufacturers, availableProducts, availableSuppliers, templateCode, users]
   );
 
   function buildConfigFromPayload(payload: DialogState, includeSampleRows = false) {
@@ -341,8 +351,8 @@ export function IncomingControlDocumentsClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        templateCode: ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
-        title: payload.title.trim() || ACCEPTANCE_DOCUMENT_TITLE,
+        templateCode,
+        title: payload.title.trim() || defaultDocumentTitle,
         dateFrom: payload.startDate,
         dateTo: payload.startDate,
         responsibleTitle: payload.responsibleTitle,
@@ -352,7 +362,7 @@ export function IncomingControlDocumentsClient({
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.document?.id) {
-      throw new Error(result?.error || "Не удалось создать документ");
+      throw new Error(result?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РґРѕРєСѓРјРµРЅС‚");
     }
     router.push(`/journals/${routeCode}/documents/${result.document.id}`);
     router.refresh();
@@ -364,7 +374,7 @@ export function IncomingControlDocumentsClient({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: payload.title.trim() || ACCEPTANCE_DOCUMENT_TITLE,
+        title: payload.title.trim() || defaultDocumentTitle,
         dateFrom: payload.startDate,
         responsibleTitle: payload.responsibleTitle,
         responsibleUserId: payload.responsibleUserId || null,
@@ -377,7 +387,7 @@ export function IncomingControlDocumentsClient({
       }),
     });
     if (!response.ok) {
-      throw new Error("Не удалось сохранить документ");
+      throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РґРѕРєСѓРјРµРЅС‚");
     }
     router.refresh();
   }
@@ -385,7 +395,7 @@ export function IncomingControlDocumentsClient({
   async function deleteById(documentId: string) {
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      throw new Error("Не удалось удалить документ");
+      throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РґРѕРєСѓРјРµРЅС‚");
     }
     router.refresh();
   }
@@ -395,7 +405,7 @@ export function IncomingControlDocumentsClient({
       <div className="space-y-10">
         <div className="flex items-start justify-between gap-4">
           <h1 className="max-w-[1100px] text-[48px] font-semibold tracking-[-0.04em] text-black">
-            {ACCEPTANCE_PAGE_TITLE}
+            {pageTitle}
           </h1>
           <div className="flex items-center gap-3">
             <Button
@@ -405,7 +415,7 @@ export function IncomingControlDocumentsClient({
             >
               <Link href="/sanpin">
                 <BookOpenText className="size-4" />
-                Инструкция
+                РРЅСЃС‚СЂСѓРєС†РёСЏ
               </Link>
             </Button>
             {activeTab === "active" && (
@@ -415,7 +425,7 @@ export function IncomingControlDocumentsClient({
                 className="h-12 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
               >
                 <Plus className="size-4" />
-                Создать документ
+                РЎРѕР·РґР°С‚СЊ РґРѕРєСѓРјРµРЅС‚
               </Button>
             )}
           </div>
@@ -431,7 +441,7 @@ export function IncomingControlDocumentsClient({
                   : "text-[#7c7c93]"
               }`}
             >
-              Активные
+              РђРєС‚РёРІРЅС‹Рµ
             </Link>
             <Link
               href={`/journals/${routeCode}?tab=closed`}
@@ -441,7 +451,7 @@ export function IncomingControlDocumentsClient({
                   : "text-[#7c7c93]"
               }`}
             >
-              Закрытые
+              Р—Р°РєСЂС‹С‚С‹Рµ
             </Link>
           </div>
         </div>
@@ -449,7 +459,7 @@ export function IncomingControlDocumentsClient({
         <div className="space-y-3">
           {documents.length === 0 && (
             <div className="rounded-[16px] border border-[#eef0f6] bg-white px-8 py-10 text-[18px] text-[#7c7c93]">
-              Документов пока нет
+              Р”РѕРєСѓРјРµРЅС‚РѕРІ РїРѕРєР° РЅРµС‚
             </div>
           )}
           {documents.map((document) => {
@@ -466,15 +476,15 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="text-[16px] font-semibold text-black"
                 >
-                  {document.title || ACCEPTANCE_DOCUMENT_TITLE}
+                  {document.title || defaultDocumentTitle}
                 </Link>
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[11px] text-[#979aab]">Ответственный</div>
+                  <div className="text-[11px] text-[#979aab]">РћС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№</div>
                   <div className="mt-1 text-[12px] font-semibold text-black">
-                    {(config.defaultResponsibleTitle || "Управляющий") +
+                    {(config.defaultResponsibleTitle || "РЈРїСЂР°РІР»СЏСЋС‰РёР№") +
                       (responsibleUser?.name ? `: ${responsibleUser.name}` : "")}
                   </div>
                 </Link>
@@ -482,7 +492,7 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[11px] text-[#979aab]">Дата начала</div>
+                  <div className="text-[11px] text-[#979aab]">Р”Р°С‚Р° РЅР°С‡Р°Р»Р°</div>
                   <div className="mt-1 text-[12px] font-semibold text-black">
                     {formatRuDate(document.dateFrom)}
                   </div>
@@ -506,7 +516,7 @@ export function IncomingControlDocumentsClient({
                           className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                           onSelect={() => setSettingsDocument(document)}
                         >
-                          Настройки
+                          РќР°СЃС‚СЂРѕР№РєРё
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
@@ -520,7 +530,7 @@ export function IncomingControlDocumentsClient({
                         }
                       >
                         <Printer className="mr-3 size-5 text-[#6f7282]" />
-                        Печать
+                        РџРµС‡Р°С‚СЊ
                       </DropdownMenuItem>
                       {document.status === "active" && (
                         <DropdownMenuItem
@@ -528,7 +538,7 @@ export function IncomingControlDocumentsClient({
                           onSelect={() => setDeleteDocument(document)}
                         >
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />
-                          Удалить
+                          РЈРґР°Р»РёС‚СЊ
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -543,8 +553,8 @@ export function IncomingControlDocumentsClient({
       <SettingsDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Создание документа"
-        submitLabel="Создать"
+        title="РЎРѕР·РґР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°"
+        submitLabel="РЎРѕР·РґР°С‚СЊ"
         initial={createState}
         users={users}
         showEmployeeField={false}
@@ -556,12 +566,12 @@ export function IncomingControlDocumentsClient({
         onOpenChange={(open) => {
           if (!open) setSettingsDocument(null);
         }}
-        title="Настройки документа"
-        submitLabel="Сохранить"
+        title="РќР°СЃС‚СЂРѕР№РєРё РґРѕРєСѓРјРµРЅС‚Р°"
+        submitLabel="РЎРѕС…СЂР°РЅРёС‚СЊ"
         initial={
           settingsDocument
             ? {
-                title: settingsDocument.title || ACCEPTANCE_DOCUMENT_TITLE,
+                title: settingsDocument.title || defaultDocumentTitle,
                 startDate: settingsDocument.dateFrom,
                 ...(() => {
                   const config = normalizeAcceptanceDocumentConfig(settingsDocument.config, users);
@@ -589,7 +599,7 @@ export function IncomingControlDocumentsClient({
         onOpenChange={(open) => {
           if (!open) setDeleteDocument(null);
         }}
-        title={deleteDocument?.title || ACCEPTANCE_DOCUMENT_TITLE}
+        title={deleteDocument?.title || defaultDocumentTitle}
         onDelete={async () => {
           if (!deleteDocument) return;
           await deleteById(deleteDocument.id);
@@ -598,3 +608,4 @@ export function IncomingControlDocumentsClient({
     </>
   );
 }
+
