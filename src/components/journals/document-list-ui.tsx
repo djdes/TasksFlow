@@ -34,9 +34,7 @@ export function JournalTopBar(props: {
           >
             {props.heading}
           </h1>
-          <div
-            className={compact ? "mt-4 flex flex-wrap gap-3" : "mt-0 flex items-center gap-4"}
-          >
+          <div className={compact ? "mt-4 flex flex-wrap gap-3" : "mt-0 flex items-center gap-4"}>
             <Button
               variant="outline"
               className={
@@ -115,12 +113,14 @@ export function EmptyDocumentsState() {
 }
 
 export function DocumentActionsMenu(props: {
-  onEdit: () => void;
+  onEdit?: () => void;
   onPrint: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   size?: "sm" | "md";
 }) {
   const md = (props.size ?? "md") === "md";
+  const hasDelete = Boolean(props.onDelete);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -139,39 +139,43 @@ export function DocumentActionsMenu(props: {
             : "w-[280px] rounded-[24px] border-0 p-4 shadow-xl"
         }
       >
+        {props.onEdit && (
+          <DropdownMenuItem
+            className={
+              md
+                ? "mb-3 h-16 rounded-2xl px-4 text-[20px]"
+                : "mb-2 h-14 rounded-2xl px-4 text-[18px]"
+            }
+            onSelect={props.onEdit}
+          >
+            <Pencil className={md ? "mr-4 size-7 text-[#6f7282]" : "mr-3 size-5 text-[#6f7282]"} />
+            Настройки
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className={
             md
-              ? "mb-3 h-16 rounded-2xl px-4 text-[20px]"
-              : "mb-2 h-14 rounded-2xl px-4 text-[18px]"
-          }
-          onSelect={props.onEdit}
-        >
-          <Pencil className={md ? "mr-4 size-7 text-[#6f7282]" : "mr-3 size-5 text-[#6f7282]"} />
-          Настройки
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className={
-            md
-              ? "mb-3 h-16 rounded-2xl px-4 text-[20px]"
-              : "mb-2 h-14 rounded-2xl px-4 text-[18px]"
+              ? `${hasDelete ? "mb-3 " : ""}h-16 rounded-2xl px-4 text-[20px]`
+              : `${hasDelete ? "mb-2 " : ""}h-14 rounded-2xl px-4 text-[18px]`
           }
           onSelect={props.onPrint}
         >
           <Printer className={md ? "mr-4 size-7 text-[#6f7282]" : "mr-3 size-5 text-[#6f7282]"} />
           Печать
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className={
-            md
-              ? "h-16 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
-              : "h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
-          }
-          onSelect={props.onDelete}
-        >
-          <Trash2 className={md ? "mr-4 size-7 text-[#ff3b30]" : "mr-3 size-5 text-[#ff3b30]"} />
-          Удалить
-        </DropdownMenuItem>
+        {props.onDelete && (
+          <DropdownMenuItem
+            className={
+              md
+                ? "h-16 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                : "h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+            }
+            onSelect={props.onDelete}
+          >
+            <Trash2 className={md ? "mr-4 size-7 text-[#ff3b30]" : "mr-3 size-5 text-[#ff3b30]"} />
+            Удалить
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,0 +1,7 @@
+src/components/journals/med-book-document-client.tsx(135,28): error TS2657: JSX expressions must have one parent element.
+src/components/journals/med-book-document-client.tsx(135,3294): error TS1005: ':' expected.
+src/components/journals/med-book-document-client.tsx(135,3301): error TS1005: ';' expected.
+src/components/journals/med-book-document-client.tsx(136,5): error TS2657: JSX expressions must have one parent element.
+src/components/journals/med-book-document-client.tsx(139,3): error TS1128: Declaration or statement expected.
+src/components/journals/med-book-document-client.tsx(139,9): error TS1109: Expression expected.
+src/components/journals/med-book-document-client.tsx(140,1): error TS1128: Declaration or statement expected.

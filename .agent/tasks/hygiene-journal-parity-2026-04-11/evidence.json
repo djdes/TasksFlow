@@ -1,0 +1,97 @@
+{
+  "taskId": "hygiene-journal-parity-2026-04-11",
+  "status": "blocked",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "title": "Visual parity",
+      "status": "partial",
+      "notes": [
+        "Hygiene document screen was reworked toward source structure.",
+        "Direct browser verification against the running app could not be completed in this environment."
+      ]
+    },
+    {
+      "id": "AC2",
+      "title": "Functional behavior",
+      "status": "partial",
+      "notes": [
+        "Interactive hygiene cell persistence and employee-row deletion were implemented in code.",
+        "Local runtime DB validation is blocked by unreachable DATABASE_URL host."
+      ]
+    },
+    {
+      "id": "AC3",
+      "title": "Print/PDF behavior",
+      "status": "partial",
+      "notes": [
+        "PDF generation code was aligned with screen roster and demo positions.",
+        "Targeted route validation was not completed because runtime DB access is blocked."
+      ]
+    },
+    {
+      "id": "AC4",
+      "title": "Verification artifacts",
+      "status": "pass",
+      "notes": [
+        "spec.md, evidence.md, evidence.json, and problems.md are present in the task folder."
+      ]
+    },
+    {
+      "id": "AC5",
+      "title": "Deploy",
+      "status": "blocked",
+      "notes": [
+        "Push/deploy not attempted because repo-wide verification is still blocked outside the hygiene scope."
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "targeted-eslint",
+      "status": "pass_with_warnings",
+      "details": [
+        "0 errors",
+        "Pre-existing warnings remain in src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
+        "Pre-existing warnings remain in src/lib/document-pdf.ts"
+      ]
+    },
+    {
+      "name": "next-build",
+      "status": "blocked",
+      "details": [
+        "Unable to acquire .next/lock because another Next build/dev process is running"
+      ]
+    },
+    {
+      "name": "typescript-compile",
+      "status": "fail",
+      "details": [
+        "Remaining errors are isolated to src/components/journals/med-book-document-client.tsx",
+        "Hygiene-related files compile after the targeted fixes"
+      ]
+    },
+    {
+      "name": "db-runtime-probe",
+      "status": "blocked",
+      "details": [
+        "Prisma could not reach DATABASE_URL host 'base'"
+      ]
+    }
+  ],
+  "filesChanged": [
+    "src/components/journals/hygiene-document-client.tsx",
+    "src/components/journals/staff-journal-toolbar.tsx",
+    "src/components/journals/hygiene-documents-client.tsx",
+    "src/app/api/journal-documents/[id]/entries/route.ts",
+    "src/app/api/journal-documents/[id]/pdf/route.ts",
+    "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
+    "src/lib/document-pdf.ts"
+  ],
+  "blockers": [
+    "Repo-wide verification is blocked by an active .next/lock from another Next process.",
+    "TypeScript still fails in src/components/journals/med-book-document-client.tsx outside the hygiene scope.",
+    "Local database host is unreachable from this environment.",
+    "Locked .next Turbopack cache prevented cache cleanup."
+  ]
+}

@@ -367,7 +367,7 @@ const journalTemplates = [
   // Не реже 1 раза в месяц; фиксирует плановую и фактическую даты.
   {
     code: "general_cleaning",
-    name: "График генеральных уборок",
+    name: "График и учет генеральных уборок",
     description: "Планирование и учёт генеральных уборок производственных помещений",
     sortOrder: 15,
     isMandatorySanpin: true,
@@ -848,4 +848,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

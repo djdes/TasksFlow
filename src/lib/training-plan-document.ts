@@ -6,13 +6,13 @@ export const TRAINING_PLAN_DOCUMENT_TITLE = "План обучения";
 
 export type TrainingCell = {
   required: boolean;
-  date: string; // MM.YY format e.g. "01.25"
+  date: string; // MM.YY format, for example "01.25"
 };
 
 export type TrainingPositionRow = {
   id: string;
   positionName: string;
-  cells: Record<string, TrainingCell>; // keyed by topic id
+  cells: Record<string, TrainingCell>;
 };
 
 export type TrainingPlanConfig = {
@@ -26,6 +26,50 @@ export type TrainingPlanConfig = {
 
 function createId() {
   return `tp-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function formatYearSuffix(year: number) {
+  return String(year).slice(-2);
+}
+
+function buildDefaultRows(year: number): TrainingPositionRow[] {
+  const yy = formatYearSuffix(year);
+
+  return [
+    {
+      id: "row-1",
+      positionName: "Шеф-повар",
+      cells: {
+        kkt: { required: true, date: `01.${yy}` },
+        sanitation: { required: true, date: `10.${yy}` },
+        duties: { required: false, date: "" },
+        safety: { required: false, date: "" },
+        fire: { required: false, date: "" },
+      },
+    },
+    {
+      id: "row-2",
+      positionName: "Повар",
+      cells: {
+        kkt: { required: true, date: `02.${yy}` },
+        sanitation: { required: false, date: "" },
+        duties: { required: false, date: "" },
+        safety: { required: true, date: `01.${yy}` },
+        fire: { required: false, date: "" },
+      },
+    },
+    {
+      id: "row-3",
+      positionName: "Официант",
+      cells: {
+        kkt: { required: true, date: `01.${yy}` },
+        sanitation: { required: false, date: "" },
+        duties: { required: false, date: "" },
+        safety: { required: true, date: `01.${yy}` },
+        fire: { required: false, date: "" },
+      },
+    },
+  ];
 }
 
 export function createTrainingTopic(name: string) {
@@ -60,14 +104,11 @@ function normalizeCell(value: unknown): TrainingCell {
   };
 }
 
-function normalizeTopics(
-  value: unknown
-): { id: string; name: string }[] {
+function normalizeTopics(value: unknown): { id: string; name: string }[] {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item))
-        return null;
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
       const source = item as Record<string, unknown>;
       const id = safeText(source.id);
       const name = safeText(source.name);
@@ -77,10 +118,7 @@ function normalizeTopics(
     .filter((item): item is { id: string; name: string } => item !== null);
 }
 
-function normalizeRows(
-  value: unknown,
-  topicIds: string[]
-): TrainingPositionRow[] {
+function normalizeRows(value: unknown, topicIds: string[]): TrainingPositionRow[] {
   if (!Array.isArray(value)) return [];
   return value
     .map((row, index) => {
@@ -112,75 +150,41 @@ const DEFAULT_TOPICS = [
   { id: "fire", name: "Пожарная безопасность" },
 ];
 
-export function getTrainingPlanDefaultConfig(
-  date = new Date()
-): TrainingPlanConfig {
+export function getTrainingPlanDefaultConfig(date = new Date()): TrainingPlanConfig {
   const year = date.getUTCFullYear();
-  const d = new Date(Date.UTC(year, 0, 1));
+  const documentDate = new Date(Date.UTC(year, 0, 11));
 
   return {
     year,
-    documentDate: toDateKey(d),
+    documentDate: toDateKey(documentDate),
     approveRole: "Управляющий",
     approveEmployee: "Иванов И.И.",
     topics: DEFAULT_TOPICS,
-    rows: [
-      {
-        id: "row-1",
-        positionName: "Шеф-повар",
-        cells: {
-          kkt: { required: true, date: "01.25" },
-          sanitation: { required: true, date: "10.25" },
-          duties: { required: false, date: "" },
-          safety: { required: false, date: "" },
-          fire: { required: false, date: "" },
-        },
-      },
-      {
-        id: "row-2",
-        positionName: "Повар",
-        cells: {
-          kkt: { required: true, date: "02.25" },
-          sanitation: { required: false, date: "" },
-          duties: { required: false, date: "" },
-          safety: { required: true, date: "01.25" },
-          fire: { required: false, date: "" },
-        },
-      },
-      {
-        id: "row-3",
-        positionName: "Официант",
-        cells: {
-          kkt: { required: true, date: "01.25" },
-          sanitation: { required: false, date: "" },
-          duties: { required: false, date: "" },
-          safety: { required: true, date: "01.25" },
-          fire: { required: false, date: "" },
-        },
-      },
-    ],
+    rows: buildDefaultRows(year),
   };
 }
 
-export function normalizeTrainingPlanConfig(
-  config: unknown
-): TrainingPlanConfig {
+export function normalizeTrainingPlanConfig(config: unknown): TrainingPlanConfig {
   const fallback = getTrainingPlanDefaultConfig();
-  if (!config || typeof config !== "object" || Array.isArray(config))
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
     return fallback;
-  const source = config as Record<string, unknown>;
+  }
 
+  const source = config as Record<string, unknown>;
+  const year = safeYear(source.year, fallback.year);
+  const dateKey = safeText(source.documentDate) || fallback.documentDate;
   const topics = normalizeTopics(source.topics);
-  const topicIds = topics.length > 0 ? topics.map((t) => t.id) : fallback.topics.map((t) => t.id);
+  const normalizedTopics = topics.length > 0 ? topics : fallback.topics;
+  const topicIds = normalizedTopics.map((topic) => topic.id);
+  const rows = normalizeRows(source.rows, topicIds);
 
   return {
-    year: safeYear(source.year, fallback.year),
-    documentDate: safeText(source.documentDate) || fallback.documentDate,
+    year,
+    documentDate: dateKey,
     approveRole: safeText(source.approveRole) || fallback.approveRole,
-    approveEmployee:
-      safeText(source.approveEmployee) || fallback.approveEmployee,
-    topics: topics.length > 0 ? topics : fallback.topics,
-    rows: normalizeRows(source.rows, topicIds),
+    approveEmployee: safeText(source.approveEmployee) || fallback.approveEmployee,
+    topics: normalizedTopics,
+    rows: rows.length > 0 ? rows : buildDefaultRows(year),
   };
 }
 
@@ -195,18 +199,12 @@ export function getTrainingPlanDocumentDateLabel(dateKey: string) {
   return `${day}-${month}-${year}`;
 }
 
-export function getTrainingPlanApproveLabel(
-  role: string,
-  employee: string
-) {
+export function getTrainingPlanApproveLabel(role: string, employee: string) {
   const rolePart = role ? `${role}: ` : "";
   return `${rolePart}${employee || ""}`.trim();
 }
 
-export function createEmptyTrainingRow(
-  name: string,
-  topicIds: string[]
-): TrainingPositionRow {
+export function createEmptyTrainingRow(name: string, topicIds: string[]): TrainingPositionRow {
   const cells: Record<string, TrainingCell> = {};
   for (const id of topicIds) {
     cells[id] = { required: false, date: "" };

@@ -1,25 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CalendarDays, Plus, Settings2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { CalendarDays, Pencil, Plus, Printer, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   SANITATION_MONTHS,
   createEmptySanitationRow,
@@ -27,7 +18,6 @@ import {
   normalizeSanitationDayConfig,
   type SanitationDayConfig,
   type SanitationMonthKey,
-  type SanitationMonthValues,
 } from "@/lib/sanitation-day-document";
 
 type UserItem = {
@@ -53,6 +43,12 @@ type SettingsState = {
   approveEmployee: string;
   responsibleRole: string;
   responsibleEmployee: string;
+};
+
+type RoomDialogState = {
+  id: string | null;
+  name: string;
+  plan: Record<SanitationMonthKey, string>;
 };
 
 const MONTH_FIELD_LABELS: Record<SanitationMonthKey, string> = {
@@ -93,68 +89,31 @@ function toViewDateLabel(dateKey: string) {
   })} ${year} г.`;
 }
 
-function AddRoomDialog(props: {
+function RoomDialog(props: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
-  onCreate: (name: string, plan: SanitationMonthValues) => Promise<void>;
+  title: string;
+  submitText: string;
+  initial: RoomDialogState;
+  includePlanFields: boolean;
+  onSubmit: (value: RoomDialogState) => Promise<void>;
 }) {
-  const [roomName, setRoomName] = useState("");
-  const [months, setMonths] = useState<SanitationMonthValues>({
-    jan: "",
-    feb: "",
-    mar: "",
-    apr: "",
-    may: "",
-    jun: "",
-    jul: "",
-    aug: "",
-    sep: "",
-    oct: "",
-    nov: "",
-    dec: "",
-  });
+  const [state, setState] = useState<RoomDialogState>(props.initial);
   const [submitting, setSubmitting] = useState(false);
 
-  function patchMonth(month: SanitationMonthKey, value: string) {
-    setMonths((prev) => ({ ...prev, [month]: value }));
-  }
-
-  async function submit() {
-    if (!roomName.trim()) {
-      window.alert("Введите название помещения");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await props.onCreate(roomName.trim(), months);
-      setRoomName("");
-      setMonths({
-        jan: "",
-        feb: "",
-        mar: "",
-        apr: "",
-        may: "",
-        jun: "",
-        jul: "",
-        aug: "",
-        sep: "",
-        oct: "",
-        nov: "",
-        dec: "",
-      });
-      props.onOpenChange(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+    <Dialog
+      open={props.open}
+      onOpenChange={(value) => {
+        if (value) setState(props.initial);
+        props.onOpenChange(value);
+      }}
+    >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-8 py-6">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[32px] font-semibold tracking-[-0.03em] text-black">
-              Добавление новой строки
+              {props.title}
             </DialogTitle>
             <button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}>
               <X className="size-8" />
@@ -162,49 +121,75 @@ function AddRoomDialog(props: {
           </div>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-4 overflow-auto px-8 py-6">
-          <Input
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-            placeholder="Введите название помещения"
-            className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
-          />
+        <div className="space-y-4 px-8 py-6">
+          <div className="space-y-2">
+            <Label className="text-[18px] text-[#73738a]">Название помещения</Label>
+            <Input
+              value={state.name}
+              onChange={(event) => setState((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Введите название помещения"
+              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+            />
+          </div>
 
-          {SANITATION_MONTHS.map((month) => (
-            <div key={month.key} className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">{MONTH_FIELD_LABELS[month.key]}</Label>
-              <Select
-                value={months[month.key] || "__empty__"}
-                onValueChange={(value) =>
-                  patchMonth(month.key, value === "__empty__" ? "" : value)
-                }
-              >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
-                  <SelectValue placeholder="--" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">--</SelectItem>
-                  {Array.from({ length: 31 }).map((_, index) => {
-                    const value = String(index + 1).padStart(2, "0");
-                    return (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+          {props.includePlanFields ? (
+            <>
+              {SANITATION_MONTHS.map((month) => (
+                <div key={month.key} className="space-y-2">
+                  <Label className="text-[18px] text-[#73738a]">{MONTH_FIELD_LABELS[month.key]}</Label>
+                  <Select
+                    value={state.plan[month.key] || "__empty__"}
+                    onValueChange={(value) =>
+                      setState((current) => ({
+                        ...current,
+                        plan: {
+                          ...current.plan,
+                          [month.key]: value === "__empty__" ? "" : value,
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+                      <SelectValue placeholder="--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__empty__">--</SelectItem>
+                      {Array.from({ length: 31 }).map((_, index) => {
+                        const value = String(index + 1).padStart(2, "0");
+                        return (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        );
+                      })}
+                      <SelectItem value="-">-</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </>
+          ) : null}
 
           <div className="flex justify-end pt-2">
             <Button
               type="button"
-              onClick={submit}
               disabled={submitting}
+              onClick={async () => {
+                if (!state.name.trim()) {
+                  window.alert("Введите название помещения");
+                  return;
+                }
+                setSubmitting(true);
+                try {
+                  await props.onSubmit({ ...state, name: state.name.trim() });
+                  props.onOpenChange(false);
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
               className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]"
             >
-              {submitting ? "Создание..." : "Создать"}
+              {submitting ? "Сохранение..." : props.submitText}
             </Button>
           </div>
         </div>
@@ -247,7 +232,7 @@ function DocumentSettingsDialog(props: {
         <div className="space-y-4 px-8 py-6">
           <Input
             value={state.title}
-            onChange={(e) => setState({ ...state, title: e.target.value })}
+            onChange={(event) => setState((current) => ({ ...current, title: event.target.value }))}
             placeholder="Название документа"
             className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
           />
@@ -256,13 +241,15 @@ function DocumentSettingsDialog(props: {
             <Input
               type="date"
               value={state.documentDate}
-              onChange={(e) => setState({ ...state, documentDate: toIsoDate(e.target.value) })}
+              onChange={(event) =>
+                setState((current) => ({ ...current, documentDate: toIsoDate(event.target.value) }))
+              }
               className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
             />
             <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
           </div>
 
-          <Select value={state.year} onValueChange={(value) => setState({ ...state, year: value })}>
+          <Select value={state.year} onValueChange={(value) => setState((current) => ({ ...current, year: value }))}>
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
               <SelectValue />
             </SelectTrigger>
@@ -282,11 +269,11 @@ function DocumentSettingsDialog(props: {
             value={state.approveRole}
             onValueChange={(value) => {
               const user = usersForRole(props.users, value)[0];
-              setState({
-                ...state,
+              setState((current) => ({
+                ...current,
                 approveRole: value,
-                approveEmployee: user?.name || state.approveEmployee,
-              });
+                approveEmployee: user?.name || current.approveEmployee,
+              }));
             }}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
@@ -303,7 +290,7 @@ function DocumentSettingsDialog(props: {
 
           <Select
             value={state.approveEmployee}
-            onValueChange={(value) => setState({ ...state, approveEmployee: value })}
+            onValueChange={(value) => setState((current) => ({ ...current, approveEmployee: value }))}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
               <SelectValue placeholder="Сотрудник" />
@@ -321,11 +308,11 @@ function DocumentSettingsDialog(props: {
             value={state.responsibleRole}
             onValueChange={(value) => {
               const user = usersForRole(props.users, value)[0];
-              setState({
-                ...state,
+              setState((current) => ({
+                ...current,
                 responsibleRole: value,
-                responsibleEmployee: user?.name || state.responsibleEmployee,
-              });
+                responsibleEmployee: user?.name || current.responsibleEmployee,
+              }));
             }}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
@@ -342,7 +329,7 @@ function DocumentSettingsDialog(props: {
 
           <Select
             value={state.responsibleEmployee}
-            onValueChange={(value) => setState({ ...state, responsibleEmployee: value })}
+            onValueChange={(value) => setState((current) => ({ ...current, responsibleEmployee: value }))}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
               <SelectValue placeholder="Сотрудник" />
@@ -380,6 +367,51 @@ function DocumentSettingsDialog(props: {
   );
 }
 
+function DeleteRowsDialog(props: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+  count: number;
+  onConfirm: () => Promise<void>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
+        <DialogHeader className="border-b px-8 py-6">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-[32px] font-semibold tracking-[-0.03em] text-black">
+              {props.count > 1 ? `Удаление ${props.count} строк` : "Удаление строки"}
+            </DialogTitle>
+            <button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}>
+              <X className="size-8" />
+            </button>
+          </div>
+        </DialogHeader>
+
+        <div className="flex justify-end px-8 py-6">
+          <Button
+            type="button"
+            disabled={submitting}
+            onClick={async () => {
+              setSubmitting(true);
+              try {
+                await props.onConfirm();
+                props.onOpenChange(false);
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]"
+          >
+            {submitting ? "Удаление..." : "Удалить"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function SanitationDayDocumentClient({
   documentId,
   title,
@@ -389,10 +421,35 @@ export function SanitationDayDocumentClient({
   config,
 }: Props) {
   const router = useRouter();
-  const [addOpen, setAddOpen] = useState(false);
+  const pathname = usePathname();
+  const [roomDialogOpen, setRoomDialogOpen] = useState(false);
+  const [roomDialogState, setRoomDialogState] = useState<RoomDialogState>({
+    id: null,
+    name: "",
+    plan: {
+      jan: "",
+      feb: "",
+      mar: "",
+      apr: "",
+      may: "",
+      jun: "",
+      jul: "",
+      aug: "",
+      sep: "",
+      oct: "",
+      nov: "",
+      dec: "",
+    },
+  });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const normalized = normalizeSanitationDayConfig(config);
   const readOnly = status === "closed";
+
+  const allSelected = normalized.rows.length > 0 && selectedRowIds.length === normalized.rows.length;
+  const selectedRows = normalized.rows.filter((row) => selectedRowIds.includes(row.id));
+  const journalHref = pathname ? pathname.split("/documents/")[0] : "/journals/general_cleaning";
 
   const settingsState: SettingsState = {
     title,
@@ -416,21 +473,14 @@ export function SanitationDayDocumentClient({
         config: nextConfig,
       }),
     });
+
     if (!response.ok) {
       window.alert("Не удалось сохранить документ");
       return;
     }
-    router.refresh();
-  }
 
-  async function addRoom(roomName: string, plan: SanitationMonthValues) {
-    const row = createEmptySanitationRow(roomName);
-    row.plan = plan;
-    const next = {
-      ...normalized,
-      rows: [...normalized.rows, row],
-    };
-    await patchConfig(next);
+    setSelectedRowIds([]);
+    router.refresh();
   }
 
   async function saveMonthValue(
@@ -452,83 +502,190 @@ export function SanitationDayDocumentClient({
     await patchConfig({ ...normalized, rows: nextRows });
   }
 
+  async function saveRoomDialog(value: RoomDialogState) {
+    if (!value.id) {
+      const nextRow = createEmptySanitationRow(value.name);
+      nextRow.plan = value.plan;
+      await patchConfig({
+        ...normalized,
+        rows: [...normalized.rows, nextRow],
+      });
+      return;
+    }
+
+    await patchConfig({
+      ...normalized,
+      rows: normalized.rows.map((row) => (row.id === value.id ? { ...row, roomName: value.name } : row)),
+    });
+  }
+
+  async function deleteSelectedRows() {
+    const rowIdSet = new Set(selectedRowIds);
+    await patchConfig({
+      ...normalized,
+      rows: normalized.rows.filter((row) => !rowIdSet.has(row.id)),
+    });
+  }
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="text-[16px] text-[#6f7282]">
-          {organizationName} <span className="mx-2">›</span> График и учет генеральных уборок{" "}
-          <span className="mx-2">›</span> {title}
+      <div className="flex items-center justify-between gap-4 text-[18px] text-[#555a6e]">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/journals" className="hover:text-black">
+            {organizationName}
+          </Link>
+          <span>›</span>
+          <Link href={journalHref} className="hover:text-black">
+            График и учет генеральных уборок
+          </Link>
+          <span>›</span>
+          <span className="text-black">{title}</span>
         </div>
-        {!readOnly && (
-          <Button
-            variant="outline"
-            className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
-            onClick={() => setSettingsOpen(true)}
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="rounded-2xl border border-[#e9ecf6] px-4 py-3 text-[#5b66ff]"
+            onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
           >
-            <Settings2 className="size-4" />
-            Настройки журнала
-          </Button>
-        )}
+            <Printer className="size-5" />
+          </button>
+          {!readOnly && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSettingsOpen(true)}
+              className="rounded-2xl border-[#eef0fb] px-7 py-6 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            >
+              <Settings2 className="size-5" />
+              Настройки журнала
+            </Button>
+          )}
+        </div>
       </div>
 
-      <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+      </div>
 
-      <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8">
-        <div className="grid grid-cols-[220px_1fr_220px] border border-black/70">
-          <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">
-            {organizationName}
-          </div>
-          <div className="grid grid-rows-2">
-            <div className="flex items-center justify-center border-b border-black/70 py-4 text-[14px]">
-              СИСТЕМА ХАССП
-            </div>
-            <div className="flex items-center justify-center py-4 text-[14px] italic">
-              ГРАФИК И УЧЕТ ГЕНЕРАЛЬНЫХ УБОРОК
-            </div>
-          </div>
-          <div className="flex items-center justify-center border-l border-black/70 text-[14px]">
-            СТР. 1 ИЗ 1
-          </div>
-        </div>
+      <section className="space-y-6 rounded-[20px] border bg-white p-6">
+        <table className="w-full border-collapse">
+          <tbody>
+            <tr>
+              <td rowSpan={2} className="w-[18%] border border-black p-3 text-center text-[26px] font-semibold">
+                {organizationName}
+              </td>
+              <td className="border border-black p-2 text-center text-[22px]">СИСТЕМА ХАССП</td>
+              <td className="w-[22%] border border-black p-2 text-center text-[20px]">СТР. 1 ИЗ 1</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="border border-black p-2 text-center text-[18px] italic uppercase">
+                ГРАФИК И УЧЕТ ГЕНЕРАЛЬНЫХ УБОРОК
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div className="ml-auto w-[420px] text-right text-[14px] leading-tight">
           <div className="font-semibold">УТВЕРЖДАЮ</div>
           <div>{normalized.approveRole}</div>
-          <div>{normalized.approveEmployee}</div>
-          <div>{toViewDateLabel(normalized.documentDate)}</div>
+          <div className="border-b border-black pb-1">{normalized.approveEmployee}</div>
+          <div className="pt-1">{toViewDateLabel(normalized.documentDate)}</div>
         </div>
 
-        <div className="py-4 text-center text-[24px] font-semibold">
+        <h2 className="text-center text-[28px] font-semibold">
           График и учет генеральных уборок на предприятии в {normalized.year} г.
-        </div>
+        </h2>
 
-        {!readOnly && (
-          <div>
+        {!readOnly ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <Button
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
-              onClick={() => setAddOpen(true)}
+              type="button"
+              onClick={() => {
+                setRoomDialogState({
+                  id: null,
+                  name: "",
+                  plan: {
+                    jan: "",
+                    feb: "",
+                    mar: "",
+                    apr: "",
+                    may: "",
+                    jun: "",
+                    jul: "",
+                    aug: "",
+                    sep: "",
+                    oct: "",
+                    nov: "",
+                    dec: "",
+                  },
+                });
+                setRoomDialogOpen(true);
+              }}
+              className="rounded-2xl bg-[#5b66ff] px-8 py-6 text-[18px] text-white hover:bg-[#4d58f5]"
             >
-              <Plus className="size-5" />
+              <Plus className="size-6" />
               Добавить помещение
             </Button>
+
+            {selectedRowIds.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={selectedRowIds.length !== 1}
+                  onClick={() => {
+                    const target = selectedRows[0];
+                    if (!target) return;
+                    setRoomDialogState({ id: target.id, name: target.roomName, plan: { ...target.plan } });
+                    setRoomDialogOpen(true);
+                  }}
+                  className="rounded-2xl border-[#e9ecf6] px-5 py-3 text-[18px] text-[#5b66ff]"
+                >
+                  <Pencil className="size-5" />
+                  Редактировать
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteOpen(true)}
+                  className="rounded-2xl border-[#ffd8d4] px-5 py-3 text-[18px] text-[#ff6b5f] hover:bg-[#fff5f4]"
+                >
+                  <Trash2 className="size-5" />
+                  Удалить
+                </Button>
+              </div>
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse border border-black/70 bg-white text-[14px]">
+          <table className="min-w-full border-collapse border border-black bg-white text-[14px]">
             <thead>
               <tr>
-                <th rowSpan={2} className="w-[460px] border border-black/70 px-3 py-2">
+                <th rowSpan={2} className="w-[54px] border border-black px-2 py-2">
+                  {!readOnly ? (
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) =>
+                          setSelectedRowIds(checked ? normalized.rows.map((row) => row.id) : [])
+                        }
+                      />
+                    </div>
+                  ) : null}
+                </th>
+                <th rowSpan={2} className="w-[360px] border border-black px-3 py-2">
                   Помещение
                 </th>
-                <th rowSpan={2} className="w-[240px] border border-black/70 px-3 py-2" />
-                <th colSpan={12} className="border border-black/70 px-3 py-2">
+                <th rowSpan={2} className="w-[160px] border border-black px-3 py-2" />
+                <th colSpan={12} className="border border-black px-3 py-2">
                   График
                 </th>
               </tr>
               <tr>
                 {SANITATION_MONTHS.map((month) => (
-                  <th key={month.key} className="w-[95px] border border-black/70 px-2 py-2">
+                  <th key={month.key} className="w-[90px] border border-black px-2 py-2">
                     {month.short}
                   </th>
                 ))}
@@ -537,20 +694,35 @@ export function SanitationDayDocumentClient({
             <tbody>
               {normalized.rows.map((row) => (
                 <Fragment key={row.id}>
-                  <tr key={`${row.id}-plan`}>
-                    <td rowSpan={2} className="border border-black/70 px-3 py-2 align-top">
+                  <tr>
+                    <td rowSpan={2} className="border border-black px-2 py-2 align-middle">
+                      {!readOnly ? (
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedRowIds.includes(row.id)}
+                            onCheckedChange={(checked) =>
+                              setSelectedRowIds((current) =>
+                                checked ? [...new Set([...current, row.id])] : current.filter((id) => id !== row.id)
+                              )
+                            }
+                          />
+                        </div>
+                      ) : null}
+                    </td>
+                    <td rowSpan={2} className="border border-black px-3 py-2 text-center align-middle">
                       {row.roomName}
                     </td>
-                    <td className="border border-black/70 px-3 py-2 text-center">План</td>
+                    <td className="border border-black px-3 py-2 text-center">План</td>
                     {SANITATION_MONTHS.map((month) => (
-                      <td key={`${row.id}-plan-${month.key}`} className="border border-black/70 px-2 py-1 text-center">
+                      <td key={`${row.id}-plan-${month.key}`} className="border border-black px-2 py-1 text-center">
                         {readOnly ? (
                           row.plan[month.key] || ""
                         ) : (
                           <Input
                             defaultValue={row.plan[month.key] || ""}
-                            onBlur={(e) => {
-                              const next = e.target.value;
+                            aria-label={`${MONTH_FIELD_LABELS[month.key]} план`}
+                            onBlur={(event) => {
+                              const next = event.target.value;
                               if (next === (row.plan[month.key] || "")) return;
                               void saveMonthValue(row.id, month.key, next, "plan");
                             }}
@@ -560,17 +732,18 @@ export function SanitationDayDocumentClient({
                       </td>
                     ))}
                   </tr>
-                  <tr key={`${row.id}-fact`}>
-                    <td className="border border-black/70 px-3 py-2 text-center">Факт</td>
+                  <tr>
+                    <td className="border border-black px-3 py-2 text-center">Факт</td>
                     {SANITATION_MONTHS.map((month) => (
-                      <td key={`${row.id}-fact-${month.key}`} className="border border-black/70 px-2 py-1 text-center">
+                      <td key={`${row.id}-fact-${month.key}`} className="border border-black px-2 py-1 text-center">
                         {readOnly ? (
                           row.fact[month.key] || ""
                         ) : (
                           <Input
                             defaultValue={row.fact[month.key] || ""}
-                            onBlur={(e) => {
-                              const next = e.target.value;
+                            aria-label={`${MONTH_FIELD_LABELS[month.key]} факт`}
+                            onBlur={(event) => {
+                              const next = event.target.value;
                               if (next === (row.fact[month.key] || "")) return;
                               void saveMonthValue(row.id, month.key, next, "fact");
                             }}
@@ -583,11 +756,11 @@ export function SanitationDayDocumentClient({
                 </Fragment>
               ))}
               <tr>
-                <td colSpan={2} className="border border-black/70 px-3 py-2">
+                <td colSpan={3} className="border border-black px-3 py-2 text-center">
                   Ответственный: {getSanitationApproveLabel(normalized.responsibleRole, normalized.responsibleEmployee)}
                 </td>
                 {SANITATION_MONTHS.map((month) => (
-                  <td key={`footer-${month.key}`} className="border border-black/70 px-2 py-2" />
+                  <td key={`footer-${month.key}`} className="border border-black px-2 py-2" />
                 ))}
               </tr>
             </tbody>
@@ -595,7 +768,22 @@ export function SanitationDayDocumentClient({
         </div>
       </section>
 
-      <AddRoomDialog open={addOpen} onOpenChange={setAddOpen} onCreate={addRoom} />
+      <RoomDialog
+        open={roomDialogOpen}
+        onOpenChange={setRoomDialogOpen}
+        initial={roomDialogState}
+        title={roomDialogState.id ? "Редактирование строки" : "Добавление новой строки"}
+        submitText={roomDialogState.id ? "Сохранить" : "Создать"}
+        includePlanFields={!roomDialogState.id}
+        onSubmit={saveRoomDialog}
+      />
+
+      <DeleteRowsDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        count={selectedRowIds.length}
+        onConfirm={deleteSelectedRows}
+      />
 
       <DocumentSettingsDialog
         open={settingsOpen}

@@ -1,0 +1,76 @@
+Custom login error: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique()` invocation in
+C:\www\Wesetup.ru\.next\dev\server\chunks\[root-of-the-server]__56e1f98b._.js:221:154
+
+  218         status: 400
+  219     });
+  220 }
+→ 221 const user = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique(
+
+    at <unknown> (src\app\api\auth\login\route.ts:72:32)
+    at async POST (src\app\api\auth\login\route.ts:72:18)
+  70 |     }
+  71 |
+> 72 |     const user = await db.user.findUnique({
+     |                                ^
+  73 |       where: { email },
+  74 |       include: { organization: true },
+  75 |     }); {
+  code: 'ECONNREFUSED',
+  meta: [Object],
+  clientVersion: '7.4.2'
+}
+Custom login error: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique()` invocation in
+C:\www\Wesetup.ru\.next\dev\server\chunks\[root-of-the-server]__56e1f98b._.js:221:154
+
+  218         status: 400
+  219     });
+  220 }
+→ 221 const user = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique(
+
+    at <unknown> (src\app\api\auth\login\route.ts:72:32)
+    at async POST (src\app\api\auth\login\route.ts:72:18)
+  70 |     }
+  71 |
+> 72 |     const user = await db.user.findUnique({
+     |                                ^
+  73 |       where: { email },
+  74 |       include: { organization: true },
+  75 |     }); {
+  code: 'ECONNREFUSED',
+  meta: [Object],
+  clientVersion: '7.4.2'
+}
+Custom login error: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique()` invocation in
+C:\www\Wesetup.ru\.next\dev\server\chunks\[root-of-the-server]__56e1f98b._.js:221:154
+
+  218         status: 400
+  219     });
+  220 }
+→ 221 const user = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].user.findUnique(
+
+    at <unknown> (src\app\api\auth\login\route.ts:72:32)
+    at async POST (src\app\api\auth\login\route.ts:72:18)
+  70 |     }
+  71 |
+> 72 |     const user = await db.user.findUnique({
+     |                                ^
+  73 |       where: { email },
+  74 |       include: { organization: true },
+  75 |     }); {
+  code: 'ETIMEDOUT',
+  meta: [Object],
+  clientVersion: '7.4.2'
+}
+
+thread 'tokio-runtime-worker' (152188) panicked at C:\actions-runner\_work\next.js\next.js\turbopack\crates\turbo-tasks-backend\src\backend\operation\mod.rs:156:17:
+Failed to restore task data (corrupted database or bug): Data for <DiskFileSystem as FileSystem>::read (TaskId 118554))
+
+Caused by:
+    0: Looking up data for TaskId 118554 from database failed
+    1: Unable to open static sorted file referenced from 00000212.meta
+    2: Unable to open static sorted file 00000211.sst
+    3: The system cannot find the file specified. (os error 2)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

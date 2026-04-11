@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Printer, Save, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +59,30 @@ function mergeDateTime(date: string, time: string) {
   return `${date} ${time}`;
 }
 
+const QUALITY_GUIDELINES = [
+  "Контроль за доброкачественностью пищи заключается в проведении бракеража готовой продукции, который проводится органолептическим методом.",
+  "Органолептическую оценку начинают с внешнего осмотра образцов пищи. Осмотр лучше проводить при дневном свете.",
+  "Затем определяют запах пищи. Лучше всего запах определяется при затаенном дыхании.",
+  "Вкус пищи, как и запах, следует устанавливать при характерной для нее температуре.",
+];
+
+const QUALITY_CRITERIA = [
+  "«Отлично» - блюдо приготовлено в соответствии с технологией.",
+  "«Хорошо» - незначительные изменения в технологии, которые можно исправить.",
+  "«Удовлетворительно» - изменения в технологии привели к изменению вкуса и качества, но дефекты еще можно исправить.",
+  "«Неудовлетворительно» - блюдо к раздаче не допускается, требуется замена блюда.",
+];
+
+const TEMPERATURE_GUIDELINES = [
+  { group: "A", name: "Натуральные рубленые изделия из мяса", temperature: "+85" },
+  { group: "B", name: "Изделия из фарша: котлеты, биточки, тефтели, зразы", temperature: "+90" },
+  { group: "C", name: "Мясо, рыба, ракообразные", temperature: "+68" },
+  { group: "D", name: "Домашняя птица, яйца, рыба, мясо измельченное", temperature: "+74" },
+  { group: "E", name: "Цельная говядина, баранина, рыба для употребления в холодном виде", temperature: "+65" },
+  { group: "G", name: "Холодные блюда: салаты, десерты", temperature: "+2..+5" },
+  { group: "H", name: "Горячие блюда: супы, соусы", temperature: ">+75" },
+];
+
 export function FinishedProductDocumentClient({
   documentId,
   title,
@@ -77,6 +101,7 @@ export function FinishedProductDocumentClient({
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [listModalOpen, setListModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newItemName, setNewItemName] = useState("");
   const [activeListId, setActiveListId] = useState<string>("");

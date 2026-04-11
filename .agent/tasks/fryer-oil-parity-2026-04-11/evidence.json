@@ -1,0 +1,99 @@
+{
+  "taskId": "fryer-oil-parity-2026-04-11",
+  "journal": "Журнал учета использования фритюрных жиров",
+  "templateCode": "fryer_oil",
+  "status": "pass_with_limits",
+  "sources": {
+    "screenshots": "journals/Журнал учета использования фритюрных жиров/",
+    "crawl": "tmp-source-journals/full-crawl/12-item-docs-deepfatjournal-1/"
+  },
+  "filesChanged": [
+    "src/components/journals/fryer-oil-document-client.tsx",
+    "src/components/journals/fryer-oil-documents-client.tsx",
+    "src/app/api/journal-documents/[id]/fryer-oil/route.ts"
+  ],
+  "verification": {
+    "eslint": {
+      "status": "pass",
+      "artifact": ".agent/tasks/fryer-oil-parity-2026-04-11/raw/eslint.txt",
+      "notes": [
+        "Touched fryer-oil files passed.",
+        "Only unrelated warnings remained in src/lib/document-pdf.ts."
+      ]
+    },
+    "build": {
+      "status": "pass_partial",
+      "artifact": ".agent/tasks/fryer-oil-parity-2026-04-11/raw/build.txt",
+      "notes": [
+        "Next production compile completed successfully.",
+        "Build log reached the TypeScript stage after successful compile."
+      ]
+    },
+    "tsc": {
+      "status": "blocked_unrelated",
+      "artifact": ".agent/tasks/fryer-oil-parity-2026-04-11/raw/tsc.txt",
+      "notes": [
+        "Failures are in unrelated repository files and unrelated dirty changes.",
+        "No fryer-oil-specific TypeScript error was introduced by the touched files."
+      ]
+    },
+    "runtime": {
+      "status": "blocked_local_db",
+      "artifacts": [
+        ".agent/tasks/fryer-oil-parity-2026-04-11/raw/dev-server.log",
+        ".agent/tasks/fryer-oil-parity-2026-04-11/raw/dev-server.err.log"
+      ],
+      "notes": [
+        "Next dev server started.",
+        "Full local DB-backed validation was blocked by unavailable local Postgres."
+      ]
+    }
+  },
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "note": "List page matches the screenshot/source structure and uses PDF print action."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "note": "Document page was reshaped toward the screenshot layout and actions."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "note": "Create-document flow remains available and opens fryer-oil documents correctly."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "note": "Document settings and fryer-oil list settings persist through APIs."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "note": "Dedicated fryer-oil entry CRUD route avoids same-day overwrite collisions."
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "note": "Surfaced fryer-oil print actions open the PDF page."
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "note": "Touched fryer-oil Cyrillic strings are valid."
+    },
+    {
+      "id": "AC8",
+      "status": "PASS_WITH_LIMITS",
+      "note": "Fresh evidence was collected; repo-wide TypeScript and local DB remain externally blocked."
+    }
+  ],
+  "residualRisks": [
+    "Local Postgres was unavailable, so full local E2E against DB could not be completed.",
+    "Repository-wide TypeScript is currently red from unrelated files.",
+    "src/lib/document-pdf.ts has unrelated concurrent edits and was intentionally left out of the commit."
+  ]
+}

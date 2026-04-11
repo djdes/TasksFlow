@@ -717,7 +717,13 @@ export function CleaningDocumentsClient(props: Props) {
                       ) : null}
                       <DropdownMenuItem
                         className="mb-2 h-16 rounded-2xl px-4 text-[20px]"
-                        onSelect={() => window.open(`${href}?print=1`, "_blank")}
+                        onSelect={() =>
+                          window.open(
+                            `/api/journal-documents/${document.id}/pdf`,
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
                       >
                         <Printer className="mr-4 size-6 text-[#6f7282]" />
                         Печать

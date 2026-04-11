@@ -1,4 +1,4 @@
-import { getUserRoleLabel } from "@/lib/user-roles";
+﻿import { getUserRoleLabel } from "@/lib/user-roles";
 
 export const ACCEPTANCE_DOCUMENT_TEMPLATE_CODE = "incoming_control";
 export const RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE =

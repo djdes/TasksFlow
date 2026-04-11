@@ -1,0 +1,44 @@
+{
+  "task_id": "climate-control-parity-2026-04-11",
+  "journal_code": "climate_control",
+  "title": "Бланк контроля температуры и влажности",
+  "checks": [
+    {
+      "name": "targeted-eslint",
+      "command": "npx eslint \"src/components/journals/climate-document-client.tsx\" \"src/app/api/journal-documents/[id]/entries/route.ts\" \"src/app/api/journal-documents/[id]/route.ts\" \"src/components/journals/tracked-documents-client.tsx\" \"src/app/(dashboard)/journals/[code]/page.tsx\" --max-warnings=0",
+      "status": "PASS"
+    },
+    {
+      "name": "repo-lint",
+      "command": "npm run lint",
+      "status": "FAIL",
+      "reason": "Unrelated pre-existing lint errors outside the climate task surface."
+    },
+    {
+      "name": "repo-build",
+      "command": "npm run build",
+      "status": "BLOCKED",
+      "reason": "Concurrent Next build process holds .next/lock in the shared working tree."
+    }
+  ],
+  "acceptance_criteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS",
+    "AC6": "PASS",
+    "AC7": "PASS",
+    "AC8": "PASS",
+    "AC9": "PASS",
+    "AC10": "PASS",
+    "AC11": "PASS",
+    "AC12": "PASS",
+    "AC13": "PASS",
+    "AC14": "BLOCKED"
+  },
+  "blockers": [
+    "Fresh full build verification is blocked by another next build process in this shared repo.",
+    "Some touched shared files already contain unrelated local modifications and require selective staging."
+  ]
+}

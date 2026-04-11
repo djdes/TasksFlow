@@ -39,10 +39,14 @@ import {
   getPpeIssuanceDefaultConfig,
 } from "@/lib/ppe-issuance-document";
 import {
+  SANITATION_DAY_TEMPLATE_CODE,
+  getSanitationDayDefaultConfig,
+  normalizeSanitationDayConfig,
+} from "@/lib/sanitation-day-document";
+import {
   buildRegisterDocumentConfigFromUsers,
   isRegisterDocumentTemplate,
 } from "@/lib/register-document";
-import { SANITATION_DAY_TEMPLATE_CODE, getSanitationDayDefaultConfig } from "@/lib/sanitation-day-document";
 import { TRAINING_PLAN_TEMPLATE_CODE, getTrainingPlanDefaultConfig } from "@/lib/training-plan-document";
 import { BREAKDOWN_HISTORY_TEMPLATE_CODE, getBreakdownHistoryDefaultConfig } from "@/lib/breakdown-history-document";
 import {
@@ -176,6 +180,7 @@ export async function POST(request: Request) {
   });
 
   const allProducts =
+    resolvedTemplateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE ||
     resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE ||
     resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE ||
     resolvedTemplateCode === METAL_IMPURITY_TEMPLATE_CODE
@@ -345,7 +350,10 @@ export async function POST(request: Request) {
           areas: cleaningAreas,
         })
       : resolvedTemplateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
-      ? buildFinishedProductConfigFromUsers(allUsers)
+      ? buildFinishedProductConfigFromUsers(
+          allUsers,
+          allProducts.map((product) => product.name)
+        )
       : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
       ? buildProductWriteoffConfigFromData({
           users: allUsers,
@@ -366,7 +374,7 @@ export async function POST(request: Request) {
       : resolvedTemplateCode === PPE_ISSUANCE_TEMPLATE_CODE
       ? getPpeIssuanceDefaultConfig(allUsers)
       : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
-      ? getSanitationDayDefaultConfig()
+      ? getSanitationDayDefaultConfig(new Date(dateFrom))
       : resolvedTemplateCode === TRAINING_PLAN_TEMPLATE_CODE
       ? getTrainingPlanDefaultConfig()
       : resolvedTemplateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE
@@ -425,6 +433,8 @@ export async function POST(request: Request) {
               users: cleaningUsers,
               areas: cleaningAreas,
             })
+          : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
+          ? normalizeSanitationDayConfig(rawConfig ?? initialConfig)
           : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
           ? {
               ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),

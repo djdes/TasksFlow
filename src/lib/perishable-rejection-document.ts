@@ -140,6 +140,10 @@ export function getPerishableRejectionDocumentTitle() {
   return PERISHABLE_REJECTION_DOCUMENT_TITLE;
 }
 
+export function getPerishableRejectionFilePrefix() {
+  return "perishable-rejection-journal";
+}
+
 export function getPerishableRejectionCreatePeriodBounds(referenceDate = new Date()) {
   const year = referenceDate.getUTCFullYear();
   const month = referenceDate.getUTCMonth();

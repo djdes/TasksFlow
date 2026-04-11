@@ -88,6 +88,16 @@ function getSortedRows(rows: RowItem[]) {
   });
 }
 
+function parseMetricInput(rawValue: string) {
+  if (rawValue.trim() === "") return null;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isDateWithinDocumentPeriod(dateKey: string, dateFrom: string, dateTo: string) {
+  return dateKey >= dateFrom && dateKey <= dateTo;
+}
+
 function RoomDialog({
   open,
   onOpenChange,
@@ -114,7 +124,12 @@ function RoomDialog({
 
   useEffect(() => {
     if (!open) return;
-    const room = initialRoom || createClimateRoomConfig();
+    const room =
+      initialRoom ||
+      createClimateRoomConfig({
+        temperature: { enabled: false, min: 18, max: 25 },
+        humidity: { enabled: false, min: 15, max: 75 },
+      });
     setName(room.name);
     setTemperatureEnabled(room.temperature.enabled);
     setTemperatureMin(room.temperature.min?.toString() || "");
@@ -269,6 +284,117 @@ function RoomDialog({
               className="h-11 rounded-2xl bg-[#5b66ff] px-5 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : initialRoom ? "Сохранить" : "Добавить"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResponsibleDialog({
+  open,
+  onOpenChange,
+  row,
+  employees,
+  defaultResponsibleTitle,
+  defaultResponsibleUserId,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+  row: RowItem | null;
+  employees: EmployeeItem[];
+  defaultResponsibleTitle: string | null;
+  defaultResponsibleUserId: string | null;
+  onSave: (params: {
+    rowId: string;
+    employeeId: string;
+    responsibleTitle: string | null;
+  }) => Promise<void>;
+}) {
+  const [responsibleTitle, setResponsibleTitle] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const titleOptions = useMemo(
+    () => [...new Set(employees.map((employee) => getHygienePositionLabel(employee.role)))],
+    [employees]
+  );
+
+  useEffect(() => {
+    if (!open || !row) return;
+    setResponsibleTitle(row.data.responsibleTitle || defaultResponsibleTitle || titleOptions[0] || "");
+    setEmployeeId(row.employeeId || defaultResponsibleUserId || employees[0]?.id || "");
+  }, [defaultResponsibleTitle, defaultResponsibleUserId, employees, open, row, titleOptions]);
+
+  async function handleSubmit() {
+    if (!row) return;
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        rowId: row.id,
+        employeeId,
+        responsibleTitle: responsibleTitle || null,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Не удалось сохранить ответственного");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+        <DialogHeader className="border-b px-12 py-10">
+          <DialogTitle className="text-[32px] font-medium text-black">
+            Редактирование ответственного лица
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-7 px-12 py-10">
+          <div className="space-y-3">
+            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
+              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                <SelectValue placeholder="Выберите должность" />
+              </SelectTrigger>
+              <SelectContent>
+                {titleOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                <SelectValue placeholder="Выберите сотрудника" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !employeeId}
+              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+            >
+              {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
         </div>
@@ -482,7 +608,7 @@ function JournalSettingsDialog({
       <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
         <DialogHeader className="border-b px-14 py-12">
           <DialogTitle className="text-[32px] font-medium text-black">
-            Настройки журнала
+            Настройки документа
           </DialogTitle>
         </DialogHeader>
 
@@ -615,7 +741,9 @@ export function ClimateDocumentClient({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [rowDialogOpen, setRowDialogOpen] = useState(false);
+  const [responsibleDialogOpen, setResponsibleDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<ClimateRoomConfig | null>(null);
+  const [editingResponsibleRow, setEditingResponsibleRow] = useState<RowItem | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [checkedAutoFill, setCheckedAutoFill] = useState(autoFill);
@@ -758,6 +886,11 @@ export function ClimateDocumentClient({
     date: string;
     responsibleTitle: string | null;
   }) {
+    if (!isDateWithinDocumentPeriod(params.date, dateFrom, dateTo)) {
+      window.alert("Дата строки должна попадать в период документа.");
+      return;
+    }
+
     const duplicate = rows.some(
       (row) => row.employeeId === params.employeeId && row.date === params.date
     );
@@ -795,6 +928,47 @@ export function ClimateDocumentClient({
     );
   }
 
+  async function handleSaveResponsible(params: {
+    rowId: string;
+    employeeId: string;
+    responsibleTitle: string | null;
+  }) {
+    const row = rows.find((item) => item.id === params.rowId);
+    if (!row) return;
+
+    const duplicate = rows.some(
+      (item) =>
+        item.id !== row.id &&
+        item.employeeId === params.employeeId &&
+        item.date === row.date
+    );
+    if (duplicate) {
+      throw new Error("Для выбранной даты и сотрудника строка уже существует.");
+    }
+
+    const nextRow: RowItem = {
+      ...row,
+      employeeId: params.employeeId,
+      data: {
+        ...row.data,
+        responsibleTitle: params.responsibleTitle,
+      },
+    };
+
+    setRows((currentRows) =>
+      currentRows.map((item) => (item.id === row.id ? nextRow : item))
+    );
+
+    try {
+      await saveRow(nextRow);
+    } catch (error) {
+      setRows((currentRows) =>
+        currentRows.map((item) => (item.id === row.id ? row : item))
+      );
+      throw error;
+    }
+  }
+
   async function saveRow(nextRow: RowItem) {
     const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
       method: "PUT",
@@ -827,7 +1001,7 @@ export function ClimateDocumentClient({
     field: "temperature" | "humidity",
     rawValue: string
   ) {
-    const nextValue = rawValue === "" ? null : Number(rawValue);
+    const nextValue = parseMetricInput(rawValue);
     const row = rows.find((item) => item.id === rowId);
     if (!row) return;
     const previousRow = row;
@@ -876,7 +1050,7 @@ export function ClimateDocumentClient({
     field: "temperature" | "humidity",
     rawValue: string
   ) {
-    const nextValue = rawValue === "" ? null : Number(rawValue);
+    const nextValue = parseMetricInput(rawValue);
 
     setRows((currentRows) =>
       currentRows.map((row) => {
@@ -906,6 +1080,21 @@ export function ClimateDocumentClient({
         };
       })
     );
+  }
+
+  async function handleSkipWeekendsChange(checked: boolean) {
+    const nextConfig = normalizeClimateDocumentConfig({
+      ...config,
+      skipWeekends: checked,
+    });
+
+    try {
+      await persistDocument({ config: nextConfig });
+      setConfig(nextConfig);
+      router.refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Не удалось обновить настройки");
+    }
   }
 
   async function handleDeleteSelected() {
@@ -967,13 +1156,13 @@ export function ClimateDocumentClient({
       <div className="mx-auto max-w-[1840px] px-6 py-8">
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
-            <div className="text-[16px] text-[#7b7d8d]">{organizationName}</div>
+            <div className="text-[15px] text-[#6f7282]">
+              {organizationName} <span className="mx-2">›</span> Бланк контроля температуры и влажности{" "}
+              <span className="mx-2">›</span> {documentTitle}
+            </div>
             <h1 className="mt-2 text-[56px] font-semibold tracking-[-0.04em] text-black">
               {documentTitle}
             </h1>
-            <div className="mt-3 text-[18px] text-[#63667a]">
-              Период: {getClimateDateLabel(dateFrom)} — {getClimateDateLabel(dateTo)}
-            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -994,7 +1183,7 @@ export function ClimateDocumentClient({
                 className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               >
                 <Settings2 className="size-6" />
-                Настройки журнала
+                Настройки документа
               </Button>
             )}
           </div>
@@ -1025,54 +1214,110 @@ export function ClimateDocumentClient({
 
           {summaryOpen && (
             <div className="mt-6 space-y-6">
-              <div className="flex flex-wrap gap-8 text-[20px]">
-                {visibleRooms.map((room) => (
-                  <div key={room.id} className="rounded-2xl bg-white/70 px-5 py-4 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="font-medium text-black">{room.name}</div>
-                      {status === "active" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingRoom(room);
-                            setRoomDialogOpen(true);
-                          }}
-                          className="text-[#5b66ff] hover:text-[#3f49d8]"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="mt-3 space-y-1 text-[17px] text-[#4a4d63]">
-                      {room.temperature.enabled && (
-                        <div>Темп. (T): {formatRange(room.temperature.min, room.temperature.max, "°C")}</div>
-                      )}
-                      {room.humidity.enabled && (
-                        <div>Вл. воздуха (ВВ): {formatRange(room.humidity.min, room.humidity.max, "%")}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-4 rounded-3xl border border-white/60 bg-white/70 px-6 py-4">
+                <Checkbox
+                  id="climate-skip-weekends"
+                  checked={config.skipWeekends}
+                  onCheckedChange={(checked) => handleSkipWeekendsChange(checked === true)}
+                  disabled={status !== "active"}
+                  className="size-5"
+                />
+                <Label htmlFor="climate-skip-weekends" className="text-[18px] text-black">
+                  Не заполнять в выходные дни
+                </Label>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="text-[18px] text-[#44485d]">
-                  {getClimatePeriodicityText(config)}
-                  {config.skipWeekends ? " · без выходных дней" : ""}
-                </div>
-                {status === "active" && (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setEditingRoom(null);
-                      setRoomDialogOpen(true);
-                    }}
-                    className="h-14 rounded-2xl bg-[#5b66ff] px-7 text-[18px] text-white hover:bg-[#4b57ff]"
-                  >
-                    <Plus className="size-6" />
-                    Добавить помещение
-                  </Button>
-                )}
+              <div className="overflow-x-auto rounded-[18px] bg-white p-6">
+                <table className="min-w-[1080px] w-full border-collapse text-[16px]">
+                  <tbody>
+                    <tr>
+                      <td rowSpan={2} className="w-[220px] border border-black px-4 py-4 text-center font-semibold">
+                        {organizationName}
+                      </td>
+                      <td className="border border-black px-4 py-4 text-center text-[18px]">
+                        СИСТЕМА ХАССП
+                      </td>
+                      <td rowSpan={2} className="w-[220px] border border-black px-4 py-3 align-top">
+                        <div className="space-y-2 text-[17px] font-semibold">
+                          <div>Начат {getClimateDateLabel(dateFrom)}</div>
+                          <div>Окончен {status === "closed" ? getClimateDateLabel(dateTo) : "__________"}</div>
+                        </div>
+                        <div className="mt-4 text-center text-[16px]">СТР. 1 ИЗ 1</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black px-4 py-4 text-center italic">
+                        БЛАНК КОНТРОЛЯ ТЕМПЕРАТУРЫ И ВЛАЖНОСТИ
+                      </td>
+                    </tr>
+                    <tr>
+                      <td rowSpan={status === "active" ? 2 : 1} className="border border-black px-4 py-6 text-center font-semibold">
+                        Нормы условий
+                      </td>
+                      <td colSpan={2} className="border border-black p-0">
+                        <table className="w-full border-collapse">
+                          <tbody>
+                            {visibleRooms.map((room) => (
+                              <tr key={room.id}>
+                                <td className="w-[220px] border border-black px-4 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <Checkbox checked />
+                                    <span className="font-medium lowercase">{room.name}</span>
+                                    {status === "active" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingRoom(room);
+                                          setRoomDialogOpen(true);
+                                        }}
+                                        className="text-[#5b66ff] hover:text-[#3f49d8]"
+                                      >
+                                        <Pencil className="size-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="w-1/2 border border-black px-4 py-4 text-center">
+                                  {room.temperature.enabled
+                                    ? formatRange(room.temperature.min, room.temperature.max, "°C")
+                                    : "—"}
+                                </td>
+                                <td className="w-1/2 border border-black px-4 py-4 text-center">
+                                  {room.humidity.enabled
+                                    ? formatRange(room.humidity.min, room.humidity.max, "%")
+                                    : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                            {status === "active" && (
+                              <tr>
+                                <td colSpan={3} className="border border-black p-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingRoom(null);
+                                      setRoomDialogOpen(true);
+                                    }}
+                                    className="flex h-16 w-full items-center justify-center gap-3 bg-[#5661f6] px-6 text-[18px] font-medium text-white hover:bg-[#4854ee]"
+                                  >
+                                    <Plus className="size-6" />
+                                    Добавить помещение
+                                  </button>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black px-4 py-4 font-semibold">Частота контроля</td>
+                      <td colSpan={2} className="border border-black px-4 py-4 text-right">
+                        {getClimatePeriodicityText(config)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -1125,7 +1370,7 @@ export function ClimateDocumentClient({
                   Точки контроля
                 </th>
                 <th className="w-[260px] border border-black p-2 text-center font-semibold" rowSpan={4}>
-                  Ответственный
+                  Фамилия ответственного лица
                 </th>
               </tr>
               <tr className="bg-[#f2f2f2]">
@@ -1269,10 +1514,20 @@ export function ClimateDocumentClient({
                       ])
                     )}
                     <td className="border border-black p-2 text-center">
-                      <div className="font-medium">{employee?.name || "—"}</div>
-                      <div className="text-[13px] text-[#666a80]">
-                        {row.data.responsibleTitle || defaultResponsibleTitle || ""}
-                      </div>
+                      <button
+                        type="button"
+                        disabled={status !== "active"}
+                        onClick={() => {
+                          setEditingResponsibleRow(row);
+                          setResponsibleDialogOpen(true);
+                        }}
+                        className={`w-full text-center ${status === "active" ? "cursor-pointer hover:text-[#5661f6]" : ""}`}
+                      >
+                        <div className="font-medium">{employee?.name || "—"}</div>
+                        <div className="text-[13px] text-[#666a80]">
+                          {row.data.responsibleTitle || defaultResponsibleTitle || ""}
+                        </div>
+                      </button>
                     </td>
                   </tr>
                 );
@@ -1323,6 +1578,19 @@ export function ClimateDocumentClient({
         defaultResponsibleTitle={defaultResponsibleTitle}
         defaultResponsibleUserId={defaultResponsibleUserId}
         onCreate={handleCreateRow}
+      />
+
+      <ResponsibleDialog
+        open={responsibleDialogOpen}
+        onOpenChange={(value) => {
+          setResponsibleDialogOpen(value);
+          if (!value) setEditingResponsibleRow(null);
+        }}
+        row={editingResponsibleRow}
+        employees={employees}
+        defaultResponsibleTitle={defaultResponsibleTitle}
+        defaultResponsibleUserId={defaultResponsibleUserId}
+        onSave={handleSaveResponsible}
       />
     </div>
   );

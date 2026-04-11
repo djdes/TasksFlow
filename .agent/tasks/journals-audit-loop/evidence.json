@@ -1,0 +1,85 @@
+{
+  "task_id": "journals-audit-loop",
+  "overall_status": "UNKNOWN",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "text": "Every screenshot folder under `C:\\www\\Wesetup.ru\\journals` is matched to a local journal template or route, using exact name matching first and the closest semantic match only when needed.",
+      "status": "PASS",
+      "proof": [
+        "Current repo mapping remains anchored in `src/lib/source-journal-map.ts`, `src/lib/scan-journal-config.ts`, and `src/app/(dashboard)/journals/[code]/page.tsx`.",
+        "No conflicting route/template remap was introduced by the current integrated worker wave."
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC2",
+      "text": "For every folder with screenshots, the corresponding journal UI is compared against the screenshots and all user-visible mismatches in layout, labels, controls, navigation, and state handling are fixed.",
+      "status": "UNKNOWN",
+      "proof": [
+        "Integrated fixes are present in `src/components/journals/sanitary-day-checklist-documents-client.tsx`, `src/components/journals/acceptance-document-client.tsx`, and `src/components/journals/metal-impurity-documents-client.tsx`.",
+        "The current diff is captured in `.agent/tasks/journals-audit-loop/raw/2026-04-11-worker-wave-diff.txt`."
+      ],
+      "gaps": [
+        "Full screenshot-by-screenshot parity is still incomplete across all folders.",
+        "The metal-impurity closed heading still retains a `Закрытые` suffix, so full parity is not yet proven."
+      ]
+    },
+    {
+      "id": "AC3",
+      "text": "For every journal template that does not have a screenshot folder, the journal list and document flow are smoke-tested for button behavior, layout alignment, database persistence, and linkage to the existing site logic, and any breakage is fixed.",
+      "status": "UNKNOWN",
+      "proof": [
+        "Integrated fixes are present in `src/components/journals/uv-lamp-runtime-document-client.tsx` and `src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx` for the UV runtime document route flow.",
+        "Current wave checks passed: `npx tsc --noEmit` and targeted `eslint`; output is captured in `.agent/tasks/journals-audit-loop/raw/2026-04-11-worker-wave-checks.txt`.",
+        "Earlier smoke-oriented fixes remain part of current repo state for climate, sanitation day, finished product, and cold equipment."
+      ],
+      "gaps": [
+        "The complete no-screenshot smoke checklist is still pending.",
+        "Fresh end-to-end CRUD/persistence proof is still missing for the whole no-screenshot set."
+      ]
+    },
+    {
+      "id": "AC4",
+      "text": "Changes are saved incrementally per journal scope so an interrupted run leaves the repository in a coherent state with completed fixes preserved.",
+      "status": "PASS",
+      "proof": [
+        "Repo-local proof-loop artifacts persist under `.agent/tasks/journals-audit-loop/`.",
+        "This wave added new raw artifacts instead of replacing prior task history."
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC5",
+      "text": "The final state remains buildable and does not introduce unrelated regressions in other journal routes or dashboard pages.",
+      "status": "PASS",
+      "proof": [
+        "`npx tsc --noEmit` exited with code 0 in the current builder session.",
+        "Targeted `eslint` exited with code 0 and warnings only for the touched files.",
+        "The current integrated diff stays within journal-specific files."
+      ],
+      "gaps": [
+        "A fresh verifier should still rerun broader build/proof checks."
+      ]
+    }
+  ],
+  "changed_files": [
+    "src/components/journals/sanitary-day-checklist-documents-client.tsx",
+    "src/components/journals/acceptance-document-client.tsx",
+    "src/components/journals/metal-impurity-documents-client.tsx",
+    "src/components/journals/uv-lamp-runtime-document-client.tsx",
+    "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx"
+  ],
+  "commands_for_fresh_verifier": [
+    "npm run build",
+    "npx tsc --noEmit",
+    "npx eslint 'src/components/journals/acceptance-document-client.tsx' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'",
+    "git diff -- 'src/components/journals/sanitary-day-checklist-documents-client.tsx' 'src/components/journals/acceptance-document-client.tsx' 'src/components/journals/metal-impurity-documents-client.tsx' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'",
+    "rg --line-number \"Закрытые!!!|/journals/uv|incoming_control\" src/components/journals src/app/(dashboard)/journals"
+  ],
+  "known_gaps": [
+    "Full screenshot parity is not yet complete across all folders in `journals/`.",
+    "No-screenshot journal smoke checks are still incomplete.",
+    "A fresh verifier has not yet produced a current verdict for the fully integrated repo state."
+  ]
+}

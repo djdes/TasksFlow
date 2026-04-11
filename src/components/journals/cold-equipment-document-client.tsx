@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -10,6 +11,7 @@ import {
   Printer,
   Settings2,
   Trash2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,10 +43,11 @@ import {
 import {
   buildDateKeys,
   getDayNumber,
-  getWeekdayShort,
   getHygienePositionLabel,
+  getWeekdayShort,
   isWeekend,
 } from "@/lib/hygiene-document";
+import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 type EmployeeItem = {
   id: string;
@@ -93,9 +96,7 @@ function buildResponsibleCodes(
     if (row.employeeId) usedIds.add(row.employeeId);
   });
 
-  if (defaultResponsibleUserId) {
-    usedIds.add(defaultResponsibleUserId);
-  }
+  if (defaultResponsibleUserId) usedIds.add(defaultResponsibleUserId);
 
   Array.from(usedIds).forEach((employeeId, index) => {
     codeMap[employeeId] = `С${index + 1}`;
@@ -184,11 +185,18 @@ function EquipmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
-        <DialogHeader className="border-b px-12 py-10">
+      <DialogContent className="max-w-[760px] rounded-[36px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
+        <DialogHeader className="flex flex-row items-center justify-between border-b border-[#d8dcea] px-12 py-10">
           <DialogTitle className="text-[32px] font-medium text-black">
             {initialItem ? "Редактирование оборудования" : "Добавление оборудования"}
           </DialogTitle>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="rounded-full p-2 text-black transition hover:bg-[#f3f4fb]"
+          >
+            <X className="size-9" />
+          </button>
         </DialogHeader>
 
         <div className="space-y-7 px-12 py-10">
@@ -234,7 +242,7 @@ function EquipmentDialog({
 
           <div className="flex items-center justify-between pt-2">
             <div>
-              {initialItem && canDelete && (
+              {initialItem && canDelete ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -244,13 +252,14 @@ function EquipmentDialog({
                 >
                   Удалить строку
                 </Button>
-              )}
+              ) : null}
             </div>
+
             <Button
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || name.trim() === ""}
-              className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-14 rounded-2xl bg-[#5566f6] px-8 text-[18px] text-white hover:bg-[#4858eb]"
             >
               {isSubmitting ? "Сохранение..." : initialItem ? "Сохранить" : "Добавить"}
             </Button>
@@ -324,65 +333,68 @@ function JournalSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
-        <DialogHeader className="border-b px-14 py-12">
-          <DialogTitle className="text-[32px] font-medium text-black">
+      <DialogContent className="max-w-[980px] rounded-[38px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
+        <DialogHeader className="flex flex-row items-center justify-between border-b border-[#d8dcea] px-16 py-12">
+          <DialogTitle className="text-[34px] font-medium text-black">
             Настройки журнала
           </DialogTitle>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="rounded-full p-2 text-black transition hover:bg-[#f3f4fb]"
+          >
+            <X className="size-10" />
+          </button>
         </DialogHeader>
 
-        <div className="space-y-8 px-14 py-12">
+        <div className="space-y-8 px-16 py-12">
           <div className="space-y-3">
-            <Label htmlFor="journal-title" className="sr-only">
+            <Label htmlFor="journal-title" className="text-[20px] text-[#8b8fa3]">
               Название журнала
             </Label>
             <Input
               id="journal-title"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="h-22 rounded-3xl border-[#dfe1ec] px-8 text-[24px]"
+              className="h-22 rounded-[24px] border-[#dfe1ec] px-8 text-[24px]"
             />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">
-                Должность ответственного
-              </Label>
-              <Select value={position} onValueChange={setPosition}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
-                  <SelectValue placeholder="Выберите должность" />
-                </SelectTrigger>
-                <SelectContent>
-                  {titleOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">
-                Сотрудник по умолчанию
-              </Label>
-              <Select value={userId} onValueChange={setUserId}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
-                  <SelectValue placeholder="Выберите сотрудника" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-3">
+            <Label className="text-[20px] text-[#8b8fa3]">
+              Должность ответственного за снятие показателей
+            </Label>
+            <Select value={position} onValueChange={setPosition}>
+              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[22px]">
+                <SelectValue placeholder="Выберите должность" />
+              </SelectTrigger>
+              <SelectContent>
+                {titleOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex items-center gap-4 rounded-3xl border border-[#dfe1ec] px-8 py-6">
+          <div className="space-y-3">
+            <Label className="text-[20px] text-[#8b8fa3]">Сотрудник</Label>
+            <Select value={userId} onValueChange={setUserId}>
+              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[22px]">
+                <SelectValue placeholder="Выберите сотрудника" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-[26px] border border-[#dfe1ec] px-8 py-6">
             <Checkbox
               id="skip-weekends"
               checked={skipWeekends}
@@ -390,9 +402,9 @@ function JournalSettingsDialog({
             />
             <Label
               htmlFor="skip-weekends"
-              className="cursor-pointer text-[18px] font-normal text-black"
+              className="cursor-pointer text-[20px] font-normal text-black"
             >
-              Не заполнять автоматически в выходные дни
+              Не заполнять в выходные дни
             </Label>
           </div>
 
@@ -401,7 +413,7 @@ function JournalSettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-20 rounded-[24px] bg-[#5566f6] px-12 text-[22px] text-white hover:bg-[#4858eb]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -530,17 +542,16 @@ export function ColdEquipmentDocumentClient({
 
   async function handleDeleteSelectedEquipment() {
     if (selectedEquipmentIds.length === 0) return;
+
     const nextEquipment = config.equipment.filter(
       (item) => !selectedEquipmentIds.includes(item.id)
     );
-
     if (nextEquipment.length === 0) {
       window.alert("В журнале должна остаться хотя бы одна строка оборудования.");
       return;
     }
 
-    const confirmed = window.confirm("Удалить выбранные строки оборудования?");
-    if (!confirmed) return;
+    if (!window.confirm("Удалить выбранные строки оборудования?")) return;
 
     await persistDocument({
       config: {
@@ -561,17 +572,14 @@ export function ColdEquipmentDocumentClient({
       await persistDocument({ autoFill: value });
 
       if (value) {
-        const response = await fetch(
-          `/api/journal-documents/${documentId}/cold-equipment`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "apply_auto_fill" }),
-          }
-        );
+        const response = await fetch(`/api/journal-documents/${documentId}/cold-equipment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "apply_auto_fill" }),
+        });
 
+        const result = await response.json().catch(() => null);
         if (!response.ok) {
-          const result = await response.json().catch(() => null);
           throw new Error(result?.error || "Не удалось применить автозаполнение");
         }
       }
@@ -580,9 +588,7 @@ export function ColdEquipmentDocumentClient({
     } catch (error) {
       setCheckedAutoFill(!value);
       window.alert(
-        error instanceof Error
-          ? error.message
-          : "Ошибка обновления автозаполнения"
+        error instanceof Error ? error.message : "Ошибка обновления автозаполнения"
       );
     } finally {
       setIsSwitching(false);
@@ -595,7 +601,6 @@ export function ColdEquipmentDocumentClient({
     rawValue: string
   ) {
     const employeeId = rowByDate[dateKey]?.employeeId || responsibleUserId || employees[0]?.id;
-
     if (!employeeId) {
       window.alert("Нет сотрудника, которого можно назначить ответственным.");
       return;
@@ -652,56 +657,73 @@ export function ColdEquipmentDocumentClient({
     });
   }
 
+  async function handlePrint() {
+    try {
+      await openDocumentPdf(documentId);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Не удалось открыть PDF");
+    }
+  }
+
   return (
     <div className="bg-white text-black">
       <div className="mx-auto max-w-[1880px] px-6 py-8">
-        <div className="mb-8 flex items-start justify-between gap-6">
-          <div>
-            <div className="text-[16px] text-[#7b7d8d]">{organizationName}</div>
-            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <div className="mb-6 flex flex-wrap items-center gap-3 text-[14px] text-[#7c7f92]">
+          <Link href="/journals/cold_equipment_control" className="hover:text-black">
+            {organizationName}
+          </Link>
+          <span>›</span>
+          <Link href="/journals/cold_equipment_control" className="hover:text-black">
+            Журнал контроля температурного режима холодильного и морозильного оборудования
+          </Link>
+          <span>›</span>
+          <span className="text-black">{documentTitle}</span>
+        </div>
+
+        <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-[1260px]">
+            <h1 className="text-[64px] font-semibold leading-[1.08] tracking-[-0.05em] text-black">
               {documentTitle}
             </h1>
-            <div className="mt-3 text-[18px] text-[#63667a]">
-              Период: {getColdEquipmentDateLabel(dateFrom)} - {getColdEquipmentDateLabel(dateTo)}
-            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
-                window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")
-              }
-              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              onClick={() => {
+                handlePrint().catch(() => undefined);
+              }}
+              className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
             >
               <Printer className="size-6" />
               Печать
             </Button>
-            {status === "active" && (
+
+            {status === "active" ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки журнала
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="mb-10 rounded-[24px] bg-[#f3f4fe] px-6 py-5">
+        <div className="mb-10 rounded-[32px] bg-[#f5f6ff] px-8 py-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Switch
                 checked={checkedAutoFill}
                 onCheckedChange={handleAutoFillChange}
                 disabled={status !== "active" || isSwitching}
-                className="h-10 w-16 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                className="h-11 w-18 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
               />
-              <span className="text-[20px] font-medium text-black">
+              <span className="text-[22px] font-medium text-black">
                 Автоматически заполнять журнал
               </span>
             </div>
@@ -709,56 +731,63 @@ export function ColdEquipmentDocumentClient({
             <button
               type="button"
               onClick={() => setSummaryOpen((value) => !value)}
-              className="flex size-11 items-center justify-center rounded-full text-[#5b66ff] hover:bg-white/70"
+              className="flex size-12 items-center justify-center rounded-full text-[#5566f6] hover:bg-white/70"
             >
-              {summaryOpen ? (
-                <ChevronUp className="size-7" />
-              ) : (
-                <ChevronDown className="size-7" />
-              )}
+              {summaryOpen ? <ChevronUp className="size-7" /> : <ChevronDown className="size-7" />}
             </button>
           </div>
 
-          {summaryOpen && (
-            <div className="mt-6 space-y-6">
-              <div className="flex flex-wrap gap-8 text-[20px]">
-                {config.equipment.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl bg-white/70 px-5 py-4 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="font-medium text-black">{item.name}</div>
-                      {status === "active" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingEquipment(item);
-                            setEquipmentDialogOpen(true);
-                          }}
-                          className="text-[#5b66ff] hover:text-[#3f49d8]"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="mt-3 text-[17px] text-[#4a4d63]">
-                      {formatRange(item.min, item.max)}
-                    </div>
+          {summaryOpen ? (
+            <div className="mt-8 space-y-6">
+              {config.equipment.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid gap-4 rounded-[24px] bg-white/70 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_170px_170px_44px]"
+                >
+                  <div className="text-[20px] leading-[1.35] text-black">
+                    {item.name}, Темп. (T)
                   </div>
-                ))}
-              </div>
-
-              {config.skipWeekends && (
-                <div className="text-[18px] text-[#44485d]">
-                  Автозаполнение не создаёт записи по выходным дням.
+                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[20px]">
+                    От {item.min ?? "—"}
+                  </div>
+                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[20px]">
+                    До {item.max ?? "—"}
+                  </div>
+                  <div className="flex items-center justify-end">
+                    {status === "active" ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingEquipment(item);
+                          setEquipmentDialogOpen(true);
+                        }}
+                        className="rounded-full p-2 text-[#5566f6] hover:bg-[#eef1ff]"
+                      >
+                        <Pencil className="size-5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              )}
+              ))}
+
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-[20px]">
+                <div className="rounded-[20px] bg-white px-6 py-4">
+                  Ответственный: {responsibleTitle || "Не назначен"}
+                </div>
+                <div className="rounded-[20px] bg-white px-6 py-4">
+                  Период: {getColdEquipmentDateLabel(dateFrom)} - {getColdEquipmentDateLabel(dateTo)}
+                </div>
+                {config.skipWeekends ? (
+                  <div className="rounded-[20px] bg-white px-6 py-4">
+                    Выходные пропускаются при автозаполнении
+                  </div>
+                ) : null}
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {status === "active" && (
+        {status === "active" ? (
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Button
               type="button"
@@ -766,34 +795,31 @@ export function ColdEquipmentDocumentClient({
                 setEditingEquipment(null);
                 setEquipmentDialogOpen(true);
               }}
-              className="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-18 rounded-[22px] bg-[#5566f6] px-8 text-[20px] text-white hover:bg-[#4858eb]"
             >
-              <Plus className="size-7" />
-              Добавить оборудование
+              <Plus className="size-6" />
+              Добавить ХО
             </Button>
 
-            {selectedEquipmentIds.length > 0 && (
+            {selectedEquipmentIds.length > 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleDeleteSelectedEquipment}
-                className="h-16 rounded-2xl border-[#ffd7d3] px-8 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                className="h-18 rounded-[22px] border-[#ffd7d3] px-8 text-[20px] text-[#ff3b30] hover:bg-[#fff3f2]"
               >
                 <Trash2 className="size-6" />
                 Удалить выбранные
               </Button>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
-        <div className="overflow-x-auto rounded-[28px] border border-[#ececf4]">
-          <table className="min-w-[1800px] border-collapse text-[14px]">
+        <div className="overflow-x-auto rounded-[28px] border border-[#d9dce6] bg-white">
+          <table className="min-w-[1900px] border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
-                <th
-                  className="w-[44px] border border-black p-2 text-center"
-                  rowSpan={2}
-                >
+                <th className="w-[52px] border border-black p-3 text-center" rowSpan={2}>
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={(checked) =>
@@ -805,16 +831,17 @@ export function ColdEquipmentDocumentClient({
                   />
                 </th>
                 <th
-                  className="min-w-[320px] border border-black p-2 text-center font-semibold"
+                  className="min-w-[420px] border border-black p-3 text-center text-[22px] font-semibold"
                   rowSpan={2}
                 >
-                  Наименование или номер ХО
+                  Номер ХК
                 </th>
                 <th
-                  className="border border-black p-2 text-right font-semibold"
+                  className="border border-black p-3 text-center text-[22px] font-semibold"
                   colSpan={dateKeys.length}
                 >
-                  Месяц {new Date(`${dateKeys[0]}T00:00:00Z`).toLocaleDateString("ru-RU", {
+                  Месяц{" "}
+                  {new Date(`${dateKeys[0]}T00:00:00Z`).toLocaleDateString("ru-RU", {
                     month: "long",
                     year: "numeric",
                   })}
@@ -824,26 +851,27 @@ export function ColdEquipmentDocumentClient({
                 {dateKeys.map((dateKey) => (
                   <th
                     key={dateKey}
-                    className={`w-[56px] border border-black p-2 text-center font-semibold ${
+                    className={`w-[66px] border border-black p-2 text-center font-semibold ${
                       isWeekend(dateKey) ? "bg-[#eceffd]" : ""
                     }`}
                   >
-                    <div>{getDayNumber(dateKey)}</div>
-                    <div className="text-[10px] font-normal uppercase text-[#666]">
+                    <div className="text-[18px]">{getDayNumber(dateKey)}</div>
+                    <div className="text-[11px] font-normal uppercase text-[#666]">
                       {getWeekdayShort(dateKey)}
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
               <tr>
                 <td className="border border-black p-2" />
                 <td
-                  className="border border-black p-2 text-center text-[13px] font-semibold"
+                  className="border border-black p-3 text-center text-[20px] font-semibold"
                   colSpan={dateKeys.length + 1}
                 >
-                  Температура, °C
+                  Температура °C
                 </td>
               </tr>
 
@@ -862,12 +890,12 @@ export function ColdEquipmentDocumentClient({
                       disabled={status !== "active"}
                     />
                   </td>
-                  <td className="border border-black px-4 py-3">
-                    <div className="font-medium">{item.name}</div>
-                    <div className="mt-1 text-[12px] text-[#666a80]">
-                      {formatRange(item.min, item.max)}
-                    </div>
+
+                  <td className="border border-black px-4 py-4 align-top">
+                    <div className="text-[18px] font-medium">{item.name}</div>
+                    <div className="mt-1 text-[13px] text-[#666a80]">{formatRange(item.min, item.max)}</div>
                   </td>
+
                   {dateKeys.map((dateKey) => {
                     const row = rowByDate[dateKey];
                     const value = row?.data.temperatures[item.id];
@@ -887,10 +915,10 @@ export function ColdEquipmentDocumentClient({
                             onBlur={(event) =>
                               handleTemperatureBlur(dateKey, item.id, event.target.value)
                             }
-                            className="h-10 min-w-[52px] border-0 px-1 text-center shadow-none focus-visible:ring-1"
+                            className="h-11 min-w-[58px] border-0 px-1 text-center text-[16px] shadow-none focus-visible:ring-1"
                           />
                         ) : (
-                          value ?? ""
+                          <span className="text-[16px]">{value ?? ""}</span>
                         )}
                       </td>
                     );
@@ -900,14 +928,15 @@ export function ColdEquipmentDocumentClient({
 
               <tr>
                 <td className="border border-black p-2 text-center" />
-                <td className="border border-black px-4 py-3 align-top">
-                  <div className="font-medium">Ответственный за снятие показателей</div>
-                  <div className="mt-2 space-y-1 text-[12px] text-[#4f5368]">
+                <td className="border border-black px-4 py-4 align-top">
+                  <div className="text-[18px] font-medium">Ответственный за снятие показателей</div>
+                  <div className="mt-2 space-y-1 text-[13px] text-[#4f5368]">
                     {responsibleCodes.items.map((item) => (
                       <div key={item.employeeId}>{item.label}</div>
                     ))}
                   </div>
                 </td>
+
                 {dateKeys.map((dateKey) => {
                   const row = rowByDate[dateKey];
                   const employeeId = row?.employeeId || responsibleUserId || "";
@@ -915,7 +944,7 @@ export function ColdEquipmentDocumentClient({
                   return (
                     <td
                       key={`responsible:${dateKey}`}
-                      className={`border border-black p-2 text-center text-[12px] font-medium ${
+                      className={`border border-black p-2 text-center text-[15px] font-medium ${
                         isWeekend(dateKey) ? "bg-[#fafbff]" : ""
                       }`}
                     >

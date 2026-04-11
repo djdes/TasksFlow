@@ -1,0 +1,7 @@
+﻿src/lib/document-pdf.ts:979:function drawCleaningPdf(doc: jsPDF, params: {
+src/lib/document-pdf.ts:1064:        content: "Наименование помещения",
+src/lib/document-pdf.ts:1069:        content: "Моющие и дезинфицирующие средства",
+src/lib/document-pdf.ts:1153:      centerCell("Наименование помещения"),
+src/lib/document-pdf.ts:2083:    { content: "Наименование помещения, в котором зафиксирована авария", styles: { halign: "center", valign: "middle" } },
+src/components/journals/cleaning-documents-client.tsx:721:                          window.open(
+src/components/journals/cleaning-documents-client.tsx:722:                            `/api/journal-documents/${document.id}/pdf`,

@@ -1,0 +1,67 @@
+{
+  "taskId": "cleaning-journal-audit-2026-04-11",
+  "sources": [
+    "journals/Журнал уборки/",
+    "tmp-source-journals/full-crawl-smoke-2/06-item-docs-cleaning1journal-1/"
+  ],
+  "artifacts": {
+    "tsc": ".agent/tasks/cleaning-journal-audit-2026-04-11/raw/tsc.txt",
+    "build": ".agent/tasks/cleaning-journal-audit-2026-04-11/raw/build.txt",
+    "proof": ".agent/tasks/cleaning-journal-audit-2026-04-11/raw/cleaning-proof.txt",
+    "screenshots": ".agent/tasks/cleaning-journal-audit-2026-04-11/raw/screenshot-inventory.txt",
+    "sourceCrawl": ".agent/tasks/cleaning-journal-audit-2026-04-11/raw/source-crawl-inventory.txt"
+  },
+  "checks": [
+    {
+      "name": "tsc",
+      "command": "npx tsc --noEmit --pretty false",
+      "status": "PASS"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "status": "PASS"
+    }
+  ],
+  "acceptanceCriteria": {
+    "AC1": {
+      "status": "PASS",
+      "method": "source parity review + targeted code diff"
+    },
+    "AC2": {
+      "status": "PASS",
+      "method": "source parity review + targeted code diff"
+    },
+    "AC3": {
+      "status": "PASS",
+      "method": "touched-flow string review"
+    },
+    "AC4": {
+      "status": "PASS",
+      "method": "code-path verification",
+      "inference": true
+    },
+    "AC5": {
+      "status": "PASS",
+      "method": "shared JournalDocument/JournalDocumentEntry usage review",
+      "inference": true
+    },
+    "AC6": {
+      "status": "PASS",
+      "method": "explicit print route verification"
+    },
+    "AC7": {
+      "status": "PASS",
+      "method": "PDF route/build verification",
+      "inference": true
+    },
+    "AC8": {
+      "status": "PASS",
+      "method": "fresh tsc + next build"
+    },
+    "AC9": {
+      "status": "PENDING",
+      "method": "git push + deploy observation pending"
+    }
+  }
+}

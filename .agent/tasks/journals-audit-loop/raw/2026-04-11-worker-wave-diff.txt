@@ -1,0 +1,22 @@
+git diff -- 'src/components/journals/sanitary-day-checklist-documents-client.tsx' 'src/components/journals/acceptance-document-client.tsx' 'src/components/journals/metal-impurity-documents-client.tsx' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'
+
+Observed integrated changes:
+- src/components/journals/sanitary-day-checklist-documents-client.tsx
+  - removed hardcoded sanitary-day checklist constants
+  - settings dialog fallback title now uses getSanitaryDayChecklistTitle(templateCode)
+- src/components/journals/acceptance-document-client.tsx
+  - breadcrumb link now resolves through props.routeCode
+  - breadcrumb label now resolves through getAcceptancePageTitle(routeCode)
+- src/components/journals/metal-impurity-documents-client.tsx
+  - closed-tab heading suffix reduced from "Закрытые!!!" to "Закрытые"
+- src/components/journals/uv-lamp-runtime-document-client.tsx
+  - new routeCode prop added
+  - breadcrumb back-link now uses /journals/${routeCode}
+  - removed unused responsibleName state derivation
+  - removed setState-in-effect sync for autoFill
+- src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx
+  - passes routeCode into UvLampRuntimeDocumentClient
+
+Status interpretation:
+- These are concrete, present-in-repo fixes for the current wave.
+- They do not prove full screenshot parity or full no-screenshot smoke coverage by themselves.

@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Plus, Settings2, X } from "lucide-react";
+import { CalendarDays, Plus, Printer, Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,8 @@ import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@
 import {
   createEmptyTrainingRow,
   createTrainingTopic,
-  getTrainingPlanApproveLabel,
   normalizeTrainingPlanConfig,
-  type TrainingCell,
   type TrainingPlanConfig,
-  type TrainingPositionRow,
 } from "@/lib/training-plan-document";
 
 type UserItem = { id: string; name: string; role: string };
@@ -51,8 +48,18 @@ type SettingsState = {
 };
 
 const MONTH_OPTIONS = [
-  "январь", "февраль", "март", "апрель", "май", "июнь",
-  "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+  "январь",
+  "февраль",
+  "март",
+  "апрель",
+  "май",
+  "июнь",
+  "июль",
+  "август",
+  "сентябрь",
+  "октябрь",
+  "ноябрь",
+  "декабрь",
 ];
 
 function roleOptionsFromUsers(users: UserItem[]) {
@@ -73,16 +80,9 @@ function toIsoDate(value: string) {
 function toViewDateLabel(dateKey: string) {
   const [year, month, day] = dateKey.split("-");
   if (!year || !month || !day) return dateKey;
-  return `« ${day} » ${new Date(`${year}-${month}-01`).toLocaleDateString("ru-RU", { month: "long" })} ${year} г.`;
-}
-
-function monthDateToLabel(mmyy: string) {
-  if (!mmyy) return "";
-  const [mm, yy] = mmyy.split(".");
-  if (!mm || !yy) return mmyy;
-  const monthIndex = parseInt(mm, 10) - 1;
-  if (monthIndex < 0 || monthIndex > 11) return mmyy;
-  return `${mm}.${yy}`;
+  return `« ${day} » ${new Date(`${year}-${month}-01`).toLocaleDateString("ru-RU", {
+    month: "long",
+  })} ${year} г.`;
 }
 
 function AddPositionDialog(props: {
@@ -95,7 +95,7 @@ function AddPositionDialog(props: {
   const [submitting, setSubmitting] = useState(false);
 
   const uniqueRoles = useMemo(() => {
-    const labels = props.users.map((u) => getUserRoleLabel(u.role));
+    const labels = props.users.map((user) => getUserRoleLabel(user.role));
     return [...new Set(labels)];
   }, [props.users]);
 
@@ -104,6 +104,7 @@ function AddPositionDialog(props: {
       window.alert("Выберите должность");
       return;
     }
+
     setSubmitting(true);
     try {
       await props.onCreate(position.trim());
@@ -130,20 +131,27 @@ function AddPositionDialog(props: {
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Должность</Label>
-            <Select value={position || "__empty__"} onValueChange={(v) => setPosition(v === "__empty__" ? "" : v)}>
+            <Select value={position || "__empty__"} onValueChange={(value) => setPosition(value === "__empty__" ? "" : value)}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                 {uniqueRoles.map((role) => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={submit} disabled={submitting} className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]">
+            <Button
+              type="button"
+              onClick={submit}
+              disabled={submitting}
+              className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]"
+            >
               {submitting ? "Создание..." : "Создать"}
             </Button>
           </div>
@@ -166,6 +174,7 @@ function AddTopicDialog(props: {
       window.alert("Введите тему обучения");
       return;
     }
+
     setSubmitting(true);
     try {
       await props.onCreate(topicName.trim());
@@ -192,12 +201,17 @@ function AddTopicDialog(props: {
         <div className="space-y-4 px-8 py-6">
           <Input
             value={topicName}
-            onChange={(e) => setTopicName(e.target.value)}
+            onChange={(event) => setTopicName(event.target.value)}
             placeholder="Тема обучения"
             className="h-14 rounded-2xl border-[#5b66ff] px-4 text-[20px]"
           />
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={submit} disabled={submitting} className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]">
+            <Button
+              type="button"
+              onClick={submit}
+              disabled={submitting}
+              className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]"
+            >
               {submitting ? "Создание..." : "Создать"}
             </Button>
           </div>
@@ -219,7 +233,13 @@ function DocumentSettingsDialog(props: {
   const roles = useMemo(() => roleOptionsFromUsers(props.users), [props.users]);
 
   return (
-    <Dialog open={props.open} onOpenChange={(v) => { if (v) setState(props.initial); props.onOpenChange(v); }}>
+    <Dialog
+      open={props.open}
+      onOpenChange={(value) => {
+        if (value) setState(props.initial);
+        props.onOpenChange(value);
+      }}
+    >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-8 py-6">
           <div className="flex items-center justify-between">
@@ -234,59 +254,100 @@ function DocumentSettingsDialog(props: {
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Название документа</Label>
-            <Input value={state.title} onChange={(e) => setState({ ...state, title: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+            <Input
+              value={state.title}
+              onChange={(event) => setState({ ...state, title: event.target.value })}
+              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
             <div className="relative">
-              <Input type="date" value={state.documentDate} onChange={(e) => setState({ ...state, documentDate: toIsoDate(e.target.value) })} className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]" />
+              <Input
+                type="date"
+                value={state.documentDate}
+                onChange={(event) => setState({ ...state, documentDate: toIsoDate(event.target.value) })}
+                className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
+              />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Год</Label>
-            <Select value={state.year} onValueChange={(v) => setState({ ...state, year: v })}>
+            <Select value={state.year} onValueChange={(value) => setState({ ...state, year: value })}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 8 }).map((_, idx) => {
-                  const year = String(new Date().getFullYear() - 2 + idx);
-                  return <SelectItem key={year} value={year}>{year}</SelectItem>;
+                {Array.from({ length: 8 }).map((_, index) => {
+                  const year = String(new Date().getFullYear() - 2 + index);
+                  return (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  );
                 })}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Должность &quot;Утверждаю&quot;</Label>
-            <Select value={state.approveRole} onValueChange={(v) => {
-              const user = usersForRole(props.users, v)[0];
-              setState({ ...state, approveRole: v, approveEmployee: user?.name || state.approveEmployee });
-            }}>
+            <Select
+              value={state.approveRole}
+              onValueChange={(value) => {
+                const user = usersForRole(props.users, value)[0];
+                setState({
+                  ...state,
+                  approveRole: value,
+                  approveEmployee: user?.name || state.approveEmployee,
+                });
+              }}
+            >
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                {roles.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
-            <Select value={state.approveEmployee} onValueChange={(v) => setState({ ...state, approveEmployee: v })}>
+            <Select
+              value={state.approveEmployee}
+              onValueChange={(value) => setState({ ...state, approveEmployee: value })}
+            >
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {usersForRole(props.users, state.approveRole).map((u) => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                {usersForRole(props.users, state.approveRole).map((user) => (
+                  <SelectItem key={user.id} value={user.name}>
+                    {user.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex justify-end pt-2">
-            <Button type="button" disabled={submitting} onClick={async () => {
-              setSubmitting(true);
-              try { await props.onSubmit(state); props.onOpenChange(false); } finally { setSubmitting(false); }
-            }} className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]">
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={async () => {
+                setSubmitting(true);
+                try {
+                  await props.onSubmit(state);
+                  props.onOpenChange(false);
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+              className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]"
+            >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
@@ -296,7 +357,14 @@ function DocumentSettingsDialog(props: {
   );
 }
 
-export function TrainingPlanDocumentClient({ documentId, title, organizationName, status, users, config }: Props) {
+export function TrainingPlanDocumentClient({
+  documentId,
+  title,
+  organizationName,
+  status,
+  users,
+  config,
+}: Props) {
   const router = useRouter();
   const [addPositionOpen, setAddPositionOpen] = useState(false);
   const [addTopicOpen, setAddTopicOpen] = useState(false);
@@ -324,15 +392,17 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
         config: nextConfig,
       }),
     });
+
     if (!response.ok) {
       window.alert("Не удалось сохранить документ");
       return;
     }
+
     router.refresh();
   }
 
   async function addPosition(name: string) {
-    const topicIds = normalized.topics.map((t) => t.id);
+    const topicIds = normalized.topics.map((topic) => topic.id);
     const row = createEmptyTrainingRow(name, topicIds);
     await patchConfig({ ...normalized, rows: [...normalized.rows, row] });
   }
@@ -354,7 +424,11 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
         ...row,
         cells: {
           ...row.cells,
-          [topicId]: { ...row.cells[topicId], required: checked },
+          [topicId]: {
+            ...row.cells[topicId],
+            required: checked,
+            date: checked ? row.cells[topicId]?.date || `01.${String(normalized.year).slice(-2)}` : "",
+          },
         },
       };
     });
@@ -378,7 +452,7 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
   async function deleteSelectedRows() {
     if (selectedRowIds.length === 0) return;
     if (!window.confirm(`Удалить выбранные строки (${selectedRowIds.length})?`)) return;
-    const nextRows = normalized.rows.filter((r) => !selectedRowIds.includes(r.id));
+    const nextRows = normalized.rows.filter((row) => !selectedRowIds.includes(row.id));
     setSelectedRowIds([]);
     await patchConfig({ ...normalized, rows: nextRows });
   }
@@ -387,24 +461,43 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="text-[16px] text-[#6f7282]">
-          {organizationName} <span className="mx-2">›</span> План обучения персонала <span className="mx-2">›</span> {title}
+          {organizationName} <span className="mx-2">›</span> План обучения персонала{" "}
+          <span className="mx-2">›</span> {title}
         </div>
-        {!readOnly && (
-          <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]" onClick={() => setSettingsOpen(true)}>
-            <Settings2 className="size-4" />
-            Настройки журнала
+        <div className="flex items-center gap-3 self-start lg:self-auto">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-xl border-[#e8ebf7] px-4 text-[#5b66ff] hover:bg-[#f6f7ff]"
+            onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank", "noopener,noreferrer")}
+          >
+            <Printer className="size-5" />
           </Button>
-        )}
+          {!readOnly && (
+            <Button
+              variant="outline"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings2 className="size-4" />
+              Настройки журнала
+            </Button>
+          )}
+        </div>
       </div>
 
       <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
 
       {selectedRowIds.length > 0 && !readOnly && (
         <div className="flex items-center gap-4 rounded-2xl bg-[#f3f4fe] px-6 py-3">
-          <button type="button" className="flex items-center gap-1 text-[16px] text-[#5b66ff]" onClick={() => setSelectedRowIds([])}>
-            <X className="size-4" /> Выбранно: {selectedRowIds.length}
+          <button
+            type="button"
+            className="flex items-center gap-1 text-[16px] text-[#5b66ff]"
+            onClick={() => setSelectedRowIds([])}
+          >
+            <X className="size-4" /> Выбрано: {selectedRowIds.length}
           </button>
           <button type="button" className="flex items-center gap-1 text-[16px] text-[#ff3b30]" onClick={deleteSelectedRows}>
             Удалить
@@ -418,16 +511,21 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
             {organizationName}
           </div>
           <div className="grid grid-rows-2">
-            <div className="flex items-center justify-center border-b border-black/70 py-4 text-[14px]">СИСТЕМА ХАССП</div>
-            <div className="flex items-center justify-center py-4 text-[14px] italic">ПЛАН ОБУЧЕНИЯ ПЕРСОНАЛА</div>
+            <div className="flex items-center justify-center border-b border-black/70 py-4 text-[14px]">
+              СИСТЕМА ХАССП
+            </div>
+            <div className="flex items-center justify-center py-4 text-[14px] italic">
+              ПЛАН ОБУЧЕНИЯ ПЕРСОНАЛА
+            </div>
           </div>
           <div className="flex items-center justify-center border-l border-black/70 text-[14px]">СТР. 1 ИЗ 1</div>
         </div>
 
-        <div className="ml-auto w-[420px] text-right text-[14px] leading-tight">
+        <div className="ml-auto flex w-[420px] flex-col items-end gap-1 text-right text-[14px] leading-tight">
           <div className="font-semibold">УТВЕРЖДАЮ</div>
           <div>{normalized.approveRole}</div>
           <div>{normalized.approveEmployee}</div>
+          <div className="mt-1 h-px w-[230px] bg-black" />
           <div>{toViewDateLabel(normalized.documentDate)}</div>
         </div>
 
@@ -436,11 +534,17 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
         </div>
 
         {!readOnly && (
-          <div className="flex gap-4">
-            <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => setAddPositionOpen(true)}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Button
+              className="h-14 w-full rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
+              onClick={() => setAddPositionOpen(true)}
+            >
               <Plus className="size-5" /> Добавить должность
             </Button>
-            <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => setAddTopicOpen(true)}>
+            <Button
+              className="h-14 w-full rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
+              onClick={() => setAddTopicOpen(true)}
+            >
               <Plus className="size-5" /> Добавить тему обучения
             </Button>
           </div>
@@ -454,11 +558,15 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
                   {!readOnly && (
                     <Checkbox
                       checked={allSelected}
-                      onCheckedChange={(c) => setSelectedRowIds(c === true ? normalized.rows.map((r) => r.id) : [])}
+                      onCheckedChange={(checked) =>
+                        setSelectedRowIds(checked === true ? normalized.rows.map((row) => row.id) : [])
+                      }
                     />
                   )}
                 </th>
-                <th rowSpan={2} className="w-[60px] border border-black/70 px-2 py-2">№ п/п</th>
+                <th rowSpan={2} className="w-[60px] border border-black/70 px-2 py-2">
+                  № п/п
+                </th>
                 <th rowSpan={2} className="w-[200px] border border-black/70 px-3 py-2">
                   Должностная единица, подлежащая обучению
                 </th>
@@ -481,9 +589,11 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
                     {!readOnly && (
                       <Checkbox
                         checked={selectedRowIds.includes(row.id)}
-                        onCheckedChange={(c) =>
-                          setSelectedRowIds((cur) =>
-                            c === true ? [...new Set([...cur, row.id])] : cur.filter((id) => id !== row.id)
+                        onCheckedChange={(checked) =>
+                          setSelectedRowIds((current) =>
+                            checked === true
+                              ? [...new Set([...current, row.id])]
+                              : current.filter((id) => id !== row.id)
                           )
                         }
                       />
@@ -509,22 +619,26 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
                             <>
                               <Checkbox
                                 checked={cell.required}
-                                onCheckedChange={(c) => void toggleCell(row.id, topic.id, c === true)}
+                                onCheckedChange={(checked) => void toggleCell(row.id, topic.id, checked === true)}
                               />
                               {cell.required && (
                                 <select
-                                  className="w-[80px] border-b border-dashed border-[#5b66ff] bg-transparent text-center text-[12px] text-[#5b66ff] outline-none"
+                                  className="w-[128px] border-b border-dashed border-[#5b66ff] bg-transparent text-center text-[12px] text-[#5b66ff] outline-none"
                                   value={cell.date ? cell.date.split(".")[0] : ""}
-                                  onChange={(e) => {
-                                    const mm = e.target.value;
+                                  onChange={(event) => {
+                                    const month = event.target.value;
                                     const yy = String(normalized.year).slice(2);
-                                    void setCellDate(row.id, topic.id, mm ? `${mm}.${yy}` : "");
+                                    void setCellDate(row.id, topic.id, month ? `${month}.${yy}` : "");
                                   }}
                                 >
                                   <option value=""></option>
-                                  {MONTH_OPTIONS.map((label, i) => {
-                                    const mm = String(i + 1).padStart(2, "0");
-                                    return <option key={mm} value={mm}>{label}</option>;
+                                  {MONTH_OPTIONS.map((label, monthIndex) => {
+                                    const month = String(monthIndex + 1).padStart(2, "0");
+                                    return (
+                                      <option key={month} value={month}>
+                                        {label}
+                                      </option>
+                                    );
                                   })}
                                 </select>
                               )}
@@ -537,9 +651,7 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
                 </tr>
               ))}
               <tr>
-                <td className="border border-black/70 px-2 py-2">
-                  {!readOnly && <Checkbox disabled />}
-                </td>
+                <td className="border border-black/70 px-2 py-2">{!readOnly && <Checkbox disabled />}</td>
                 <td colSpan={2 + normalized.topics.length} className="border border-black/70 px-3 py-2" />
               </tr>
             </tbody>
@@ -547,7 +659,12 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
         </div>
       </section>
 
-      <AddPositionDialog open={addPositionOpen} onOpenChange={setAddPositionOpen} users={users} onCreate={addPosition} />
+      <AddPositionDialog
+        open={addPositionOpen}
+        onOpenChange={setAddPositionOpen}
+        users={users}
+        onCreate={addPosition}
+      />
       <AddTopicDialog open={addTopicOpen} onOpenChange={setAddTopicOpen} onCreate={addTopic} />
       <DocumentSettingsDialog
         open={settingsOpen}
@@ -555,14 +672,14 @@ export function TrainingPlanDocumentClient({ documentId, title, organizationName
         users={users}
         initial={settingsState}
         onSubmit={async (value) => {
-          const next = normalizeTrainingPlanConfig({
+          const nextConfig = normalizeTrainingPlanConfig({
             ...normalized,
             year: Number(value.year),
             documentDate: value.documentDate,
             approveRole: value.approveRole,
             approveEmployee: value.approveEmployee,
           });
-          await patchConfig(next, value.title.trim() || title);
+          await patchConfig(nextConfig, value.title.trim() || title);
         }}
       />
     </div>

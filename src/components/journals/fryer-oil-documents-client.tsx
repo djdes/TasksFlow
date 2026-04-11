@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FRYER_OIL_PAGE_TITLE } from "@/lib/fryer-oil-document";
+import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 type DocumentItem = {
   id: string;
@@ -160,6 +161,10 @@ export function FryerOilDocumentsClient(props: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<EditingState | null>(null);
   const routeCode = props.routeCode || props.templateCode;
+  const pageTitle =
+    props.activeTab === "closed"
+      ? `${FRYER_OIL_PAGE_TITLE} (Закрытые!!!)`
+      : FRYER_OIL_PAGE_TITLE;
 
   async function handleDelete(documentId: string, title: string) {
     if (!window.confirm(`Удалить документ "${title}"?`)) return;
@@ -180,7 +185,7 @@ export function FryerOilDocumentsClient(props: Props) {
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-[54px] font-semibold tracking-[-0.04em] text-black">
-          {FRYER_OIL_PAGE_TITLE}
+          {pageTitle}
         </h1>
         <div className="flex items-center gap-3">
           <Button
@@ -285,7 +290,13 @@ export function FryerOilDocumentsClient(props: Props) {
                     )}
                     <DropdownMenuItem
                       className="h-11 rounded-lg px-3 text-[14px]"
-                      onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
+                      onSelect={() => {
+                        void openDocumentPdf(document.id).catch((error) =>
+                          window.alert(
+                            error instanceof Error ? error.message : "Не удалось открыть PDF"
+                          )
+                        );
+                      }}
                     >
                       <Printer className="mr-2 size-4 text-[#6f7282]" />
                       Печать

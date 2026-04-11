@@ -45,6 +45,7 @@ type EquipmentCleaningRow = {
 
 type Props = {
   documentId: string;
+  routeCode?: string;
   title: string;
   templateCode: string;
   organizationName: string;
@@ -92,6 +93,7 @@ function buildPayload(data: EquipmentCleaningRowData) {
 
 export function EquipmentCleaningDocumentClient({
   documentId,
+  routeCode,
   title,
   templateCode,
   organizationName,
@@ -103,6 +105,7 @@ export function EquipmentCleaningDocumentClient({
   initialRows,
 }: Props) {
   const router = useRouter();
+  const journalRouteCode = routeCode || templateCode;
   const [rows, setRows] = useState(initialRows);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -266,7 +269,7 @@ export function EquipmentCleaningDocumentClient({
         throw new Error();
       }
       setCloseOpen(false);
-      router.push(`/journals/${templateCode}?tab=closed`);
+      router.push(`/journals/${journalRouteCode}?tab=closed`);
       router.refresh();
     } catch {
       window.alert("Не удалось закрыть журнал");
@@ -310,7 +313,7 @@ export function EquipmentCleaningDocumentClient({
             {organizationName}
           </Link>
           <span>›</span>
-          <Link href={`/journals/${templateCode}`} className="hover:text-black">
+          <Link href={`/journals/${journalRouteCode}`} className="hover:text-black">
             Журнал мойки и дезинфекции оборудования
           </Link>
           <span>›</span>

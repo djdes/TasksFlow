@@ -1,0 +1,84 @@
+{
+  "task_id": "journals-audit-loop",
+  "verifier_mode": "fresh",
+  "verified_at": "2026-04-11T17:05:00+03:00",
+  "overall_verdict": "UNKNOWN",
+  "summary": "Current wave fixes are present and focused rerun checks pass, but AC2 and AC3 are still not fully proven for the whole task scope.",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "reason": "The current repository still preserves the screenshot-folder to route/template matching baseline described in the task artifacts, and this wave introduced no conflicting remap."
+    },
+    {
+      "id": "AC2",
+      "status": "UNKNOWN",
+      "reason": "This wave confirms several screenshot-parity fixes, but there is still no fresh screenshot-by-screenshot proof for every screenshot-backed journal, and full parity for the metal-impurity closed state is not yet proven."
+    },
+    {
+      "id": "AC3",
+      "status": "UNKNOWN",
+      "reason": "The UV runtime route/detail fix is confirmed and the touched files compile, but the broader no-screenshot smoke set still lacks fresh end-to-end proof for create/open/save/close/delete and persistence flows."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "reason": "The repo-local task artifact set remains intact and the current wave is preserved incrementally under `.agent/tasks/journals-audit-loop/`."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "reason": "Fresh rerun checks passed for the current wave: `npx tsc --noEmit` succeeded and targeted `eslint` returned 0 errors with warnings only."
+    }
+  ],
+  "checks_rerun": [
+    {
+      "command": "npx tsc --noEmit",
+      "exit_code": 0
+    },
+    {
+      "command": "npx eslint 'src/components/journals/sanitary-day-checklist-documents-client.tsx' 'src/components/journals/acceptance-document-client.tsx' 'src/components/journals/metal-impurity-documents-client.tsx' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'",
+      "exit_code": 0,
+      "notes": "7 warnings, 0 errors"
+    },
+    {
+      "command": "rg -n --fixed-strings '/journals/incoming_control' 'src/components/journals/acceptance-document-client.tsx'",
+      "exit_code": 1,
+      "notes": "No hardcoded fallback route remained in the acceptance breadcrumb."
+    },
+    {
+      "command": "rg -n --fixed-strings 'Закрытые!!!' 'src/components/journals/metal-impurity-documents-client.tsx'",
+      "exit_code": 1,
+      "notes": "The debug suffix is absent."
+    },
+    {
+      "command": "rg -n 'toUiState\\(|getSanitaryDayChecklistTitle\\(|checklistTitle' 'src/components/journals/sanitary-day-checklist-documents-client.tsx'",
+      "exit_code": 0,
+      "notes": "Checklist fallback titles are template-aware in the current file."
+    },
+    {
+      "command": "rg -n 'getAcceptancePageTitle\\(|routeCode\\}|routeCode\\)' 'src/components/journals/acceptance-document-client.tsx'",
+      "exit_code": 0,
+      "notes": "Acceptance breadcrumb now uses route-aware title/route resolution."
+    },
+    {
+      "command": "rg -n 'routeCode' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'",
+      "exit_code": 0,
+      "notes": "UV detail page passes and uses `routeCode`."
+    }
+  ],
+  "files_considered": [
+    ".agent/tasks/journals-audit-loop/spec.md",
+    ".agent/tasks/journals-audit-loop/evidence.md",
+    ".agent/tasks/journals-audit-loop/evidence.json",
+    "src/components/journals/sanitary-day-checklist-documents-client.tsx",
+    "src/components/journals/acceptance-document-client.tsx",
+    "src/components/journals/metal-impurity-documents-client.tsx",
+    "src/components/journals/uv-lamp-runtime-document-client.tsx",
+    "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx"
+  ],
+  "files_written": [
+    ".agent/tasks/journals-audit-loop/verdict.json",
+    ".agent/tasks/journals-audit-loop/problems.md"
+  ]
+}

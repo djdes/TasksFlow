@@ -1,0 +1,19 @@
+npx tsc --noEmit
+exit_code: 0
+
+npx eslint 'src/components/journals/acceptance-document-client.tsx' 'src/components/journals/uv-lamp-runtime-document-client.tsx' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx'
+exit_code: 0
+warnings:
+- src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx
+  - ACCEPTANCE_DOCUMENT_TEMPLATE_CODE is defined but never used
+  - SANITARY_DAY_CHECKLIST_TEMPLATE_CODE is defined but never used
+- src/components/journals/acceptance-document-client.tsx
+  - useMemo is defined but never used
+  - CalendarDays is defined but never used
+  - getUserRoleLabel is defined but never used
+  - EditListsDialog is defined but never used
+  - isPending is assigned a value but never used
+
+notes:
+- No eslint errors remained in the targeted files for this wave.
+- The uv-lamp runtime client no longer triggers the prior setState-in-effect eslint error.

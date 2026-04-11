@@ -1,0 +1,32 @@
+{
+  "task_id": "general-cleaning-parity-2026-04-11",
+  "status": "blocked",
+  "acceptance_criteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS",
+    "AC6": "PASS",
+    "AC7": "BLOCKED"
+  },
+  "checks": [
+    {
+      "command": "npx eslint \"src/components/journals/sanitation-day-document-client.tsx\" \"src/components/journals/sanitation-day-documents-client.tsx\" \"src/app/api/journal-documents/[id]/route.ts\" \"src/app/api/journal-documents/route.ts\" \"src/lib/tracked-document.ts\" \"prisma/seed.ts\"",
+      "result": "pass_with_warning"
+    },
+    {
+      "command": "npx tsx -  # import touched clients/routes/helpers",
+      "result": "pass"
+    },
+    {
+      "command": "npm run build  # in C:\\www\\Wesetup.ru-buildcheck",
+      "result": "fail_unrelated",
+      "details": "Module not found: Can't resolve '@/components/journals/finished-product-documents-client' from src/app/(dashboard)/journals/[code]/page.tsx"
+    }
+  ],
+  "push": {
+    "executed": false,
+    "reason": "Unsafe to push due unrelated concurrent worktree changes in overlapping files and unrelated full-build failure."
+  }
+}

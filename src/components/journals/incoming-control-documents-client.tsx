@@ -400,12 +400,17 @@ export function IncomingControlDocumentsClient({
     router.refresh();
   }
 
+  const heading =
+    activeTab === "closed" && routeCode === "incoming_control"
+      ? `${pageTitle} (Закрытые!!!)`
+      : pageTitle;
+
   return (
     <>
       <div className="space-y-10">
         <div className="flex items-start justify-between gap-4">
           <h1 className="max-w-[1100px] text-[48px] font-semibold tracking-[-0.04em] text-black">
-            {pageTitle}
+            {heading}
           </h1>
           <div className="flex items-center gap-3">
             <Button
@@ -415,7 +420,7 @@ export function IncomingControlDocumentsClient({
             >
               <Link href="/sanpin">
                 <BookOpenText className="size-4" />
-                РРЅСЃС‚СЂСѓРєС†РёСЏ
+                Инструкция
               </Link>
             </Button>
             {activeTab === "active" && (
@@ -523,7 +528,7 @@ export function IncomingControlDocumentsClient({
                         className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                         onSelect={() =>
                           window.open(
-                            `/journals/${routeCode}/documents/${document.id}?print=1`,
+                            `/api/journal-documents/${document.id}/pdf`,
                             "_blank",
                             "noopener,noreferrer"
                           )
@@ -608,4 +613,3 @@ export function IncomingControlDocumentsClient({
     </>
   );
 }
-

@@ -68,7 +68,7 @@ const TRACKED_DOCUMENT_TITLES: Partial<Record<TrackedDocumentTemplateCode, strin
   uv_lamp_runtime: "Журнал учета наработки УФ-ламп",
   uv_lamp_control: "Журнал контроля УФ-ламп",
   fryer_oil: "Журнал учета использования фритюрных жиров",
-  general_cleaning: "Журнал генеральной уборки",
+  general_cleaning: "График и учет генеральных уборок",
   equipment_maintenance: "График профилактического обслуживания оборудования",
   staff_training: "Журнал инструктажей",
   daily_rejection: "Журнал ежедневного бракеража блюд",

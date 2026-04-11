@@ -17,29 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
-import {
-  SANITATION_DAY_HEADING,
   SANITATION_DAY_DOCUMENT_TITLE,
+  SANITATION_DAY_HEADING,
   createEmptySanitationRow,
   getSanitationApproveLabel,
   getSanitationDayDefaultConfig,
@@ -123,7 +107,6 @@ function SettingsDialog(props: {
   const [submitting, setSubmitting] = useState(false);
 
   const roles = useMemo(() => roleOptionsFromUsers(props.users), [props.users]);
-
   const activeState = state || props.initial;
 
   async function handleSubmit() {
@@ -141,16 +124,14 @@ function SettingsDialog(props: {
     <Dialog
       open={props.open}
       onOpenChange={(value) => {
-        if (value) {
-          setState(props.initial);
-        }
+        if (value) setState(props.initial);
         props.onOpenChange(value);
       }}
     >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
-          <DialogTitle className="text-[42px] font-semibold tracking-[-0.03em] text-black">
+            <DialogTitle className="text-[42px] font-semibold tracking-[-0.03em] text-black">
               {props.title}
             </DialogTitle>
             <button
@@ -162,13 +143,14 @@ function SettingsDialog(props: {
             </button>
           </div>
         </DialogHeader>
-        {activeState && (
+
+        {activeState ? (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
               <Label className="text-[22px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
-                onChange={(e) => setState({ ...activeState, title: e.target.value })}
+                onChange={(event) => setState({ ...activeState, title: event.target.value })}
                 className="h-20 rounded-3xl border-[#d8dae6] px-7 text-[28px] tracking-[-0.02em]"
               />
             </div>
@@ -179,8 +161,8 @@ function SettingsDialog(props: {
                 <Input
                   type="date"
                   value={activeState.documentDate}
-                  onChange={(e) =>
-                    setState({ ...activeState, documentDate: toIsoDate(e.target.value) })
+                  onChange={(event) =>
+                    setState({ ...activeState, documentDate: toIsoDate(event.target.value) })
                   }
                   className="h-20 rounded-3xl border-[#d8dae6] px-7 pr-14 text-[28px] tracking-[-0.02em]"
                 />
@@ -190,10 +172,7 @@ function SettingsDialog(props: {
 
             <div className="space-y-2">
               <Label className="text-[22px] text-[#7a7c8e]">Год</Label>
-              <Select
-                value={activeState.year}
-                onValueChange={(value) => setState({ ...activeState, year: value })}
-              >
+              <Select value={activeState.year} onValueChange={(value) => setState({ ...activeState, year: value })}>
                 <SelectTrigger className="h-20 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[28px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -256,7 +235,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Должность ответственного</Label>
+              <Label className="text-[22px] text-[#7a7c8e]">Ответственный</Label>
               <Select
                 value={activeState.responsibleRole}
                 onValueChange={(value) => {
@@ -285,9 +264,7 @@ function SettingsDialog(props: {
               <Label className="text-[22px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
                 value={activeState.responsibleEmployee}
-                onValueChange={(value) =>
-                  setState({ ...activeState, responsibleEmployee: value })
-                }
+                onValueChange={(value) => setState({ ...activeState, responsibleEmployee: value })}
               >
                 <SelectTrigger className="h-20 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
@@ -313,7 +290,56 @@ function SettingsDialog(props: {
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteDialog(props: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+  title: string;
+  onConfirm: () => Promise<void>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
+        <DialogHeader className="border-b px-10 py-8">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="max-w-[80%] text-[32px] font-semibold tracking-[-0.03em] text-black">
+              Удаление документа &quot;{props.title}&quot;
+            </DialogTitle>
+            <button
+              type="button"
+              className="rounded-xl p-2 text-[#0b1024]"
+              onClick={() => props.onOpenChange(false)}
+            >
+              <X className="size-8" />
+            </button>
+          </div>
+        </DialogHeader>
+
+        <div className="flex justify-end px-10 py-8">
+          <Button
+            type="button"
+            disabled={submitting}
+            onClick={async () => {
+              setSubmitting(true);
+              try {
+                await props.onConfirm();
+                props.onOpenChange(false);
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[24px] text-white hover:bg-[#4554ff]"
+          >
+            {submitting ? "Удаление..." : "Удалить"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -328,6 +354,7 @@ export function SanitationDayDocumentsClient({
 }: Props) {
   const router = useRouter();
   const [settingsTarget, setSettingsTarget] = useState<SanitationDocumentItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SanitationDocumentItem | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   async function createDocument(payload: SettingsState) {
@@ -368,6 +395,7 @@ export function SanitationDayDocumentsClient({
   async function saveSettings(documentId: string, payload: SettingsState) {
     const current = documents.find((item) => item.id === documentId);
     if (!current) return;
+
     const currentConfig = normalizeSanitationDayConfig(current.config);
     const config: SanitationDayConfig = {
       ...currentConfig,
@@ -399,8 +427,7 @@ export function SanitationDayDocumentsClient({
     router.refresh();
   }
 
-  async function handleDelete(documentId: string, title: string) {
-    if (!window.confirm(`Удалить документ "${title}"?`)) return;
+  async function handleDelete(documentId: string) {
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
       window.alert("Не удалось удалить документ");
@@ -438,6 +465,7 @@ export function SanitationDayDocumentsClient({
   async function cloneDocument(documentId: string) {
     const current = documents.find((item) => item.id === documentId);
     if (!current) return;
+
     const cfg = normalizeSanitationDayConfig(current.config);
     const response = await fetch("/api/journal-documents", {
       method: "POST",
@@ -451,10 +479,12 @@ export function SanitationDayDocumentsClient({
         config: cfg,
       }),
     });
+
     if (!response.ok) {
       window.alert("Не удалось сделать копию");
       return;
     }
+
     router.refresh();
   }
 
@@ -476,8 +506,9 @@ export function SanitationDayDocumentsClient({
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
           {SANITATION_DAY_HEADING}
-          {activeTab === "closed" && " (Закрытые)"}
+          {activeTab === "closed" ? " (Закрытые!!!)" : ""}
         </h1>
+
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -489,7 +520,8 @@ export function SanitationDayDocumentsClient({
               Инструкция
             </Link>
           </Button>
-          {activeTab === "active" && (
+
+          {activeTab === "active" ? (
             <Button
               className="h-12 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
               onClick={() => setCreateOpen(true)}
@@ -497,7 +529,7 @@ export function SanitationDayDocumentsClient({
               <Plus className="size-5" />
               Создать документ
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -527,15 +559,16 @@ export function SanitationDayDocumentsClient({
       </div>
 
       <div className="space-y-4">
-        {documents.length === 0 && (
+        {documents.length === 0 ? (
           <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[28px] text-[#8a8ea4]">
             Документов пока нет
           </div>
-        )}
+        ) : null}
 
         {documents.map((document) => {
           const cfg = normalizeSanitationDayConfig(document.config);
           const href = `/journals/${routeCode}/documents/${document.id}`;
+
           return (
             <div
               key={document.id}
@@ -547,9 +580,7 @@ export function SanitationDayDocumentsClient({
 
               <Link href={href} className="border-l border-[#e8ebf5] px-8">
                 <div className="text-[14px] text-[#7c8094]">Год</div>
-                <div className="mt-2 text-[18px] font-semibold text-black">
-                  {getSanitationYearLabel(cfg.year)}
-                </div>
+                <div className="mt-2 text-[18px] font-semibold text-black">{getSanitationYearLabel(cfg.year)}</div>
               </Link>
 
               <Link href={href} className="border-l border-[#e8ebf5] px-8">
@@ -583,8 +614,9 @@ export function SanitationDayDocumentsClient({
                       <Ellipsis className="size-8" />
                     </button>
                   </DropdownMenuTrigger>
+
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
-                    {document.status === "active" && (
+                    {document.status === "active" ? (
                       <>
                         <DropdownMenuItem
                           className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
@@ -601,7 +633,8 @@ export function SanitationDayDocumentsClient({
                           Сделать копию
                         </DropdownMenuItem>
                       </>
-                    )}
+                    ) : null}
+
                     <DropdownMenuItem
                       className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                       onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
@@ -609,7 +642,8 @@ export function SanitationDayDocumentsClient({
                       <Printer className="mr-3 size-6 text-[#6f7282]" />
                       Печать
                     </DropdownMenuItem>
-                    {document.status === "closed" && (
+
+                    {document.status === "closed" ? (
                       <DropdownMenuItem
                         className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                         onSelect={() => moveToActive(document.id)}
@@ -617,8 +651,7 @@ export function SanitationDayDocumentsClient({
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
                         Отправить в активные
                       </DropdownMenuItem>
-                    )}
-                    {document.status === "active" && (
+                    ) : (
                       <>
                         <DropdownMenuItem
                           className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
@@ -629,7 +662,7 @@ export function SanitationDayDocumentsClient({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
-                          onSelect={() => handleDelete(document.id, document.title)}
+                          onSelect={() => setDeleteTarget(document)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" />
                           Удалить
@@ -667,6 +700,18 @@ export function SanitationDayDocumentsClient({
         }}
         submitText="Сохранить"
         title="Настройки документа"
+      />
+
+      <DeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(value) => {
+          if (!value) setDeleteTarget(null);
+        }}
+        title={deleteTarget?.title || SANITATION_DAY_DOCUMENT_TITLE}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await handleDelete(deleteTarget.id);
+        }}
       />
     </div>
   );

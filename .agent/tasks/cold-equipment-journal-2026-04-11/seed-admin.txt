@@ -1,0 +1,19 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.findUnique()` invocation in
+C:\www\Wesetup.ru\prisma\seed-admin.ts:76:40
+
+  73 );
+  74 
+  75 try {
+→ 76   const existing = await prisma.user.findUnique(
+
+    at zr.handleRequestError (C:\www\Wesetup.ru\node_modules\@prisma\client\src\runtime\RequestHandler.ts:237:13)
+    at zr.handleAndLogRequestError (C:\www\Wesetup.ru\node_modules\@prisma\client\src\runtime\RequestHandler.ts:183:12)
+    at zr.request (C:\www\Wesetup.ru\node_modules\@prisma\client\src\runtime\RequestHandler.ts:152:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async a (C:\www\Wesetup.ru\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:808:24)
+    at async main (C:\www\Wesetup.ru\prisma\seed-admin.ts:76:22) {
+  code: 'ECONNREFUSED',
+  meta: { modelName: 'User' },
+  clientVersion: '7.4.2'
+}

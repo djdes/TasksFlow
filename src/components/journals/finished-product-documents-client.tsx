@@ -10,10 +10,10 @@ import {
   JournalTopBar,
 } from "@/components/journals/document-list-ui";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { normalizeFinishedProductDocumentConfig } from "@/lib/finished-product-document";
 
 type JournalListDocument = {
@@ -35,6 +35,12 @@ type Props = {
   users: { id: string; name: string; role: string }[];
   documents: JournalListDocument[];
 };
+
+function endOfMonth(dateValue: string) {
+  const [year, month] = dateValue.split("-").map(Number);
+  if (!year || !month) return dateValue;
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+}
 
 export function FinishedProductDocumentsClient({
   activeTab,
@@ -92,6 +98,7 @@ export function FinishedProductDocumentsClient({
         body: JSON.stringify({
           title,
           dateFrom,
+          dateTo: endOfMonth(dateFrom),
           config: {
             ...(normalizeFinishedProductDocumentConfig(editingDocument.config) || {}),
             fieldNameMode,
@@ -117,7 +124,11 @@ export function FinishedProductDocumentsClient({
   return (
     <div className="space-y-8">
       <JournalTopBar
-        heading="Журнал бракеража готовой пищевой продукции"
+        heading={
+          activeTab === "closed"
+            ? "Журнал бракеража готовой пищевой продукции (Закрытые!!!)"
+            : "Журнал бракеража готовой пищевой продукции"
+        }
         activeTab={activeTab}
         templateCode={templateCode}
         templateName={templateName}
@@ -129,20 +140,29 @@ export function FinishedProductDocumentsClient({
         {documents.map((document) => (
           <div
             key={document.id}
-            className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
+            className="grid grid-cols-[minmax(0,1fr)_180px_48px] items-center rounded-[16px] border border-[#e7eaf3] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(33,43,54,0.04)]"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-              <div className="text-[36px] leading-none tracking-tight text-black">{document.title}</div>
+              <div className="truncate text-[22px] font-medium tracking-[-0.02em] text-black">
+                {document.title}
+              </div>
             </Link>
-            <Link href={`/journals/${templateCode}/documents/${document.id}`} className="justify-self-end pr-2">
+            <Link
+              href={`/journals/${templateCode}/documents/${document.id}`}
+              className="justify-self-end pr-2 text-right"
+            >
               <div className="text-[14px] text-[#85889b]">Дата начала</div>
-              <div className="text-[30px] leading-none text-black">{document.startedAtLabel}</div>
+              <div className="text-[16px] font-semibold text-black">{document.startedAtLabel}</div>
             </Link>
             <DocumentActionsMenu
               size="sm"
-              onEdit={() => setEditingDocument(document)}
+              onEdit={activeTab === "active" ? () => setEditingDocument(document) : undefined}
               onPrint={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
-              onDelete={() => handleDelete(document.id, document.title)}
+              onDelete={
+                activeTab === "active"
+                  ? () => handleDelete(document.id, document.title)
+                  : undefined
+              }
             />
           </div>
         ))}
@@ -151,7 +171,9 @@ export function FinishedProductDocumentsClient({
       <Dialog open={!!editingDocument} onOpenChange={(open) => !open && setEditingDocument(null)}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
           <DialogHeader className="border-b px-6 py-5">
-            <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
+            <DialogTitle className="text-[24px] font-medium text-black">
+              Настройки документа
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-6 py-5">
             <div className="space-y-2">
@@ -185,7 +207,7 @@ export function FinishedProductDocumentsClient({
               <Label>Добавить поля</Label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={showProductTemp} onCheckedChange={(v) => setShowProductTemp(v === true)} />
-                Т°С внутри продукта
+                T°C внутри продукта
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -225,7 +247,7 @@ export function FinishedProductDocumentsClient({
             <Input
               value={footerNote}
               onChange={(e) => setFooterNote(e.target.value)}
-              placeholder="Примечание: (внизу, после таблицы)"
+              placeholder="Примечание после таблицы"
             />
             <div className="flex justify-end">
               <Button onClick={saveSettings} disabled={isSaving}>

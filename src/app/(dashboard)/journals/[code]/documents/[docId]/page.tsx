@@ -244,6 +244,7 @@ export default async function JournalDocumentPage({
     return (
       <HygieneDocumentClient
         documentId={document.id}
+        routeCode={code}
         title={document.title}
         organizationName={organization?.name || 'ООО "Тест"'}
         dateFrom={toDateKey(document.dateFrom)}
@@ -316,6 +317,7 @@ export default async function JournalDocumentPage({
     return (
       <EquipmentCleaningDocumentClient
         documentId={document.id}
+        routeCode={code}
         title={document.title}
         templateCode={resolvedCode}
         organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}

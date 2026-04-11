@@ -1,0 +1,113 @@
+﻿
+> haccp-online@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 60s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/34) ...
+  Generating static pages using 11 workers (8/34) 
+  Generating static pages using 11 workers (16/34) 
+  Generating static pages using 11 workers (25/34) 
+✓ Generating static pages using 11 workers (34/34) in 2.4s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/areas
+├ ƒ /api/areas/[id]
+├ ƒ /api/audit
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/register
+├ ƒ /api/batches
+├ ƒ /api/batches/[id]
+├ ƒ /api/build-info
+├ ƒ /api/capa
+├ ƒ /api/capa/[id]
+├ ƒ /api/changes
+├ ƒ /api/changes/[id]
+├ ƒ /api/charts/temperature
+├ ƒ /api/competencies
+├ ƒ /api/cron/compliance
+├ ƒ /api/cron/expiry
+├ ƒ /api/equipment
+├ ƒ /api/equipment/[id]
+├ ƒ /api/journal-documents
+├ ƒ /api/journal-documents/[id]
+├ ƒ /api/journal-documents/[id]/cleaning
+├ ƒ /api/journal-documents/[id]/climate
+├ ƒ /api/journal-documents/[id]/cold-equipment
+├ ƒ /api/journal-documents/[id]/entries
+├ ƒ /api/journal-documents/[id]/equipment-cleaning
+├ ƒ /api/journal-documents/[id]/fryer-oil
+├ ƒ /api/journal-documents/[id]/pdf
+├ ƒ /api/journal-documents/[id]/pest-control-entries
+├ ƒ /api/journal-documents/[id]/staff
+├ ƒ /api/journal-documents/[id]/traceability/import
+├ ƒ /api/journal-scans/[code]
+├ ƒ /api/journals
+├ ƒ /api/journals/[id]/status
+├ ƒ /api/losses
+├ ƒ /api/mercury
+├ ƒ /api/notifications/preferences
+├ ƒ /api/notifications/telegram
+├ ƒ /api/notifications/telegram/unlink
+├ ƒ /api/ocr/label
+├ ƒ /api/payments/create
+├ ƒ /api/payments/webhook
+├ ƒ /api/plans
+├ ƒ /api/plans/[id]
+├ ƒ /api/products
+├ ƒ /api/products/import
+├ ƒ /api/products/lookup
+├ ƒ /api/reports/excel
+├ ƒ /api/reports/pdf
+├ ƒ /api/runtime-probe
+├ ƒ /api/tuya/collect
+├ ƒ /api/tuya/device
+├ ƒ /api/users/[id]
+├ ƒ /api/users/invite
+├ ƒ /batches
+├ ƒ /batches/[id]
+├ ƒ /batches/new
+├ ƒ /capa
+├ ƒ /capa/[id]
+├ ƒ /capa/new
+├ ƒ /changes
+├ ƒ /changes/new
+├ ƒ /competencies
+├ ƒ /dashboard
+├ ƒ /journals
+├ ƒ /journals/[code]
+├ ƒ /journals/[code]/[entryId]
+├ ƒ /journals/[code]/documents/[docId]
+├ ƒ /journals/[code]/new
+├ ƒ /login
+├ ƒ /losses
+├ ƒ /losses/new
+├ ƒ /plans
+├ ƒ /plans/new
+├ ƒ /register
+├ ƒ /reports
+├ ƒ /sanpin
+├ ƒ /settings
+├ ƒ /settings/areas
+├ ƒ /settings/audit
+├ ƒ /settings/equipment
+├ ƒ /settings/notifications
+├ ƒ /settings/products
+├ ƒ /settings/subscription
+└ ƒ /settings/users
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

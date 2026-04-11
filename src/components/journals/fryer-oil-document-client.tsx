@@ -1,57 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Pencil, Plus, Trash2, X, Check } from "lucide-react";
+import { Pencil, Plus, Printer, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { openDocumentPdf } from "@/lib/open-document-pdf";
 import {
   formatDateRu,
   formatTime,
   normalizeFryerOilEntryData,
-  QUALITY_LABELS,
   QUALITY_ASSESSMENT_TABLE,
+  QUALITY_LABELS,
   type FryerOilDocumentConfig,
   type FryerOilEntryData,
   type FryerOilSelectLists,
 } from "@/lib/fryer-oil-document";
 
-/* ─── Local types ─── */
-
-type UserItem = {
-  id: string;
-  name: string;
-  role: string;
-};
-
-type EntryItem = {
-  id: string;
-  date: string;
-  data: FryerOilEntryData;
-};
-
+type UserItem = { id: string; name: string; role: string };
+type EntryItem = { id: string; date: string; data: FryerOilEntryData };
 type Props = {
   documentId: string;
   title: string;
@@ -64,509 +37,118 @@ type Props = {
   routeCode: string;
 };
 
-/* ─── Hours / Minutes arrays ─── */
-
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 const QUALITY_OPTIONS = [5, 4, 3, 2, 1] as const;
 
-/* ─── EditListsDialog ─── */
-
-function EditListsDialog(props: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  lists: FryerOilSelectLists;
-  onSave: (lists: FryerOilSelectLists) => Promise<void>;
-}) {
-  const [lists, setLists] = useState<FryerOilSelectLists>(props.lists);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Inline edit state per tab: key = "fatTypes" | "equipmentTypes" | "productTypes"
-  const [editIndex, setEditIndex] = useState<{ key: keyof FryerOilSelectLists; index: number } | null>(null);
-  const [editValue, setEditValue] = useState("");
-
-  // New item inputs per list
-  const [newFat, setNewFat] = useState("");
-  const [newEquipment, setNewEquipment] = useState("");
-  const [newProduct, setNewProduct] = useState("");
-
-  useEffect(() => {
-    if (!props.open) return;
-    setLists(props.lists);
-    setEditIndex(null);
-    setEditValue("");
-    setNewFat("");
-    setNewEquipment("");
-    setNewProduct("");
-  }, [props.open, props.lists]);
-
-  function startEdit(key: keyof FryerOilSelectLists, index: number) {
-    setEditIndex({ key, index });
-    setEditValue(lists[key][index]);
-  }
-
-  function confirmEdit() {
-    if (!editIndex) return;
-    const trimmed = editValue.trim();
-    if (!trimmed) return;
-    setLists((prev) => {
-      const arr = [...prev[editIndex.key]];
-      arr[editIndex.index] = trimmed;
-      return { ...prev, [editIndex.key]: arr };
-    });
-    setEditIndex(null);
-    setEditValue("");
-  }
-
-  function cancelEdit() {
-    setEditIndex(null);
-    setEditValue("");
-  }
-
-  function deleteItem(key: keyof FryerOilSelectLists, index: number) {
-    setLists((prev) => {
-      const arr = [...prev[key]];
-      arr.splice(index, 1);
-      return { ...prev, [key]: arr };
-    });
-    if (editIndex?.key === key && editIndex.index === index) {
-      setEditIndex(null);
-      setEditValue("");
-    }
-  }
-
-  function addItem(key: keyof FryerOilSelectLists, value: string, clear: () => void) {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    setLists((prev) => ({ ...prev, [key]: [...prev[key], trimmed] }));
-    clear();
-  }
-
-  function renderList(key: keyof FryerOilSelectLists, newVal: string, setNew: (v: string) => void) {
-    const items = lists[key];
-    return (
-      <div className="space-y-2">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            {editIndex?.key === key && editIndex.index === index ? (
-              <>
-                <Input
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") confirmEdit();
-                    if (e.key === "Escape") cancelEdit();
-                  }}
-                  className="h-10 flex-1 rounded-xl border-[#dfe1ec] px-3 text-[15px]"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={confirmEdit}
-                  className="rounded-lg p-1.5 text-[#5b66ff] hover:bg-[#eceef5]"
-                >
-                  <Check className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="rounded-lg p-1.5 text-[#6f7282] hover:bg-[#eceef5]"
-                >
-                  <X className="size-4" />
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="flex-1 rounded-xl border border-[#eceef5] bg-[#f8f9fc] px-3 py-2 text-[15px]">
-                  {item}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => startEdit(key, index)}
-                  className="rounded-lg p-1.5 text-[#6f7282] hover:bg-[#eceef5] hover:text-[#5b66ff]"
-                >
-                  <Pencil className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteItem(key, index)}
-                  className="rounded-lg p-1.5 text-[#6f7282] hover:bg-[#fff2f1] hover:text-[#ff3b30]"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </>
-            )}
-          </div>
-        ))}
-        {/* Add new */}
-        <div className="flex items-center gap-2 pt-1">
-          <Input
-            value={newVal}
-            onChange={(e) => setNew(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                addItem(key, newVal, () => setNew(""));
-              }
-            }}
-            placeholder="Добавить новый..."
-            className="h-10 flex-1 rounded-xl border-[#dfe1ec] px-3 text-[15px]"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addItem(key, newVal, () => setNew(""))}
-            className="h-10 rounded-xl border-[#dfe1ec] px-3 text-[14px]"
-          >
-            <Plus className="size-4" />
-          </Button>
-        </div>
-      </div>
+function sortEntries(items: EntryItem[]) {
+  return [...items]
+    .map((item) => ({ ...item, data: normalizeFryerOilEntryData(item.data) }))
+    .sort((a, b) =>
+      `${a.data.startDate}-${a.data.startHour}-${a.data.startMinute}`.localeCompare(
+        `${b.data.startDate}-${b.data.startHour}-${b.data.startMinute}`
+      )
     );
-  }
-
-  return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto rounded-[24px] border-0 p-0">
-        <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[24px] font-semibold tracking-[-0.03em] text-black">
-            Редактирование списков
-          </DialogTitle>
-          <button
-            type="button"
-            className="rounded-md p-1 text-black/80 hover:bg-black/5"
-            onClick={() => props.onOpenChange(false)}
-          >
-            <X className="size-6" />
-          </button>
-        </DialogHeader>
-
-        <div className="px-7 py-6">
-          <Tabs defaultValue="fatTypes">
-            <TabsList className="mb-5 w-full">
-              <TabsTrigger value="fatTypes" className="flex-1 text-[13px]">
-                Вид жира
-              </TabsTrigger>
-              <TabsTrigger value="equipmentTypes" className="flex-1 text-[13px]">
-                Оборудование
-              </TabsTrigger>
-              <TabsTrigger value="productTypes" className="flex-1 text-[13px]">
-                Вид продукции
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="fatTypes">
-              {renderList("fatTypes", newFat, setNewFat)}
-            </TabsContent>
-            <TabsContent value="equipmentTypes">
-              {renderList("equipmentTypes", newEquipment, setNewEquipment)}
-            </TabsContent>
-            <TabsContent value="productTypes">
-              {renderList("productTypes", newProduct, setNewProduct)}
-            </TabsContent>
-          </Tabs>
-
-          <div className="mt-6 flex justify-end">
-            <Button
-              type="button"
-              disabled={submitting}
-              onClick={async () => {
-                setSubmitting(true);
-                try {
-                  await props.onSave(lists);
-                  props.onOpenChange(false);
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
-            >
-              {submitting ? "Сохранение..." : "Сохранить"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
-/* ─── AddEntryDialog ─── */
-
-function AddEntryDialog(props: {
+function EntryDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lists: FryerOilSelectLists;
   users: UserItem[];
-  onAdd: (data: FryerOilEntryData) => Promise<void>;
+  initialEntry: EntryItem | null;
+  onSubmit: (payload: { id?: string; data: FryerOilEntryData }) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const initial = props.initialEntry?.data
+    ? normalizeFryerOilEntryData(props.initialEntry.data)
+    : {
+        ...normalizeFryerOilEntryData({}),
+        startDate: new Date().toISOString().slice(0, 10),
+        fatType: props.lists.fatTypes[0] ?? "",
+        equipmentType: props.lists.equipmentTypes[0] ?? "",
+        productType: props.lists.productTypes[0] ?? "",
+        controllerName: props.users[0]?.name ?? "",
+      };
+  const [data, setData] = useState<FryerOilEntryData>(initial);
+  const [busy, setBusy] = useState(false);
 
-  const [startDate, setStartDate] = useState(today);
-  const [startHour, setStartHour] = useState("08");
-  const [startMinute, setStartMinute] = useState("00");
-  const [fatType, setFatType] = useState(props.lists.fatTypes[0] ?? "");
-  const [qualityStart, setQualityStart] = useState<number>(5);
-  const [equipmentType, setEquipmentType] = useState(props.lists.equipmentTypes[0] ?? "");
-  const [productType, setProductType] = useState(props.lists.productTypes[0] ?? "");
-  const [endHour, setEndHour] = useState("17");
-  const [endMinute, setEndMinute] = useState("00");
-  const [qualityEnd, setQualityEnd] = useState<number>(5);
-  const [carryoverKg, setCarryoverKg] = useState("0");
-  const [disposedKg, setDisposedKg] = useState("0");
-  const [controllerName, setControllerName] = useState(props.users[0]?.name ?? "");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!props.open) return;
-    setStartDate(today);
-    setStartHour("08");
-    setStartMinute("00");
-    setFatType(props.lists.fatTypes[0] ?? "");
-    setQualityStart(5);
-    setEquipmentType(props.lists.equipmentTypes[0] ?? "");
-    setProductType(props.lists.productTypes[0] ?? "");
-    setEndHour("17");
-    setEndMinute("00");
-    setQualityEnd(5);
-    setCarryoverKg("0");
-    setDisposedKg("0");
-    setControllerName(props.users[0]?.name ?? "");
-  }, [props.open, props.lists, props.users]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function save() {
+    setBusy(true);
+    try {
+      await props.onSubmit({ id: props.initialEntry?.id, data });
+      props.onOpenChange(false);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto rounded-[24px] border-0 p-0">
+      <DialogContent className="max-h-[90vh] max-w-[620px] overflow-y-auto rounded-[24px] border-0 p-0">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[24px] font-semibold tracking-[-0.03em] text-black">
-            Добавление новой строки
+          <DialogTitle className="text-[28px] font-semibold">
+            {props.initialEntry ? "Редактирование записи" : "Добавление новой строки"}
           </DialogTitle>
-          <button
-            type="button"
-            className="rounded-md p-1 text-black/80 hover:bg-black/5"
-            onClick={() => props.onOpenChange(false)}
-          >
+          <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}>
             <X className="size-6" />
           </button>
         </DialogHeader>
-
-        <div className="space-y-5 px-7 py-6">
-          {/* Date + start time */}
-          <div>
-            <div className="mb-2 text-[16px] font-medium text-black">Дата и время начала использования</div>
-            <div className="space-y-2">
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
-              />
-              <div className="flex gap-3">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-[14px] text-[#6f7282]">Часы</Label>
-                  <Select value={startHour} onValueChange={setStartHour}>
-                    <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1 space-y-1">
-                  <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
-                  <Select value={startMinute} onValueChange={setStartMinute}>
-                    <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Fat type */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Вид фритюрного жира</Label>
-            <Select value={fatType} onValueChange={setFatType}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                <SelectValue placeholder="— Выберите —" />
-              </SelectTrigger>
-              <SelectContent>
-                {props.lists.fatTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-              </SelectContent>
+        <div className="space-y-4 px-7 py-6">
+          <Input type="date" value={data.startDate} onChange={(e) => setData((v) => ({ ...v, startDate: e.target.value }))} className="h-14 rounded-2xl" />
+          <div className="grid gap-3 md:grid-cols-2">
+            <Select value={String(data.startHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startHour: Number(v) }))}>
+              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Часы" /></SelectTrigger>
+              <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={String(data.startMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startMinute: Number(v) }))}>
+              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Минуты" /></SelectTrigger>
+              <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-
-          {/* Quality start */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Органолептическая оценка на начало жарки</Label>
-            <Select value={String(qualityStart)} onValueChange={(v) => setQualityStart(Number(v))}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {QUALITY_OPTIONS.map((score) => (
-                  <SelectItem key={score} value={String(score)}>
-                    {score} — {QUALITY_LABELS[score]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+          <Select value={data.fatType} onValueChange={(v) => setData((d) => ({ ...d, fatType: v }))}>
+            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Вид фритюрного жира" /></SelectTrigger>
+            <SelectContent>{props.lists.fatTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={String(data.qualityStart)} onValueChange={(v) => setData((d) => ({ ...d, qualityStart: Number(v) }))}>
+            <SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger>
+            <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={data.equipmentType} onValueChange={(v) => setData((d) => ({ ...d, equipmentType: v }))}>
+            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Тип жарочного оборудования" /></SelectTrigger>
+            <SelectContent>{props.lists.equipmentTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={data.productType} onValueChange={(v) => setData((d) => ({ ...d, productType: v }))}>
+            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Вид продукции" /></SelectTrigger>
+            <SelectContent>{props.lists.productTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+          </Select>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Select value={String(data.endHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endHour: Number(v) }))}>
+              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Часы окончания" /></SelectTrigger>
+              <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={String(data.endMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endMinute: Number(v) }))}>
+              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Минуты окончания" /></SelectTrigger>
+              <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-
-          {/* Equipment type */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Тип жарочного оборудования</Label>
-            <Select value={equipmentType} onValueChange={setEquipmentType}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                <SelectValue placeholder="— Выберите —" />
-              </SelectTrigger>
-              <SelectContent>
-                {props.lists.equipmentTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <Select value={String(data.qualityEnd)} onValueChange={(v) => setData((d) => ({ ...d, qualityEnd: Number(v) }))}>
+            <SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger>
+            <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
+          </Select>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input type="number" min="0" step="0.01" value={String(data.carryoverKg)} onChange={(e) => setData((d) => ({ ...d, carryoverKg: Number(e.target.value) || 0 }))} className="h-14 rounded-2xl" placeholder="Переходящий остаток, кг" />
+            <Input type="number" min="0" step="0.01" value={String(data.disposedKg)} onChange={(e) => setData((d) => ({ ...d, disposedKg: Number(e.target.value) || 0 }))} className="h-14 rounded-2xl" placeholder="Утилизированный, кг" />
           </div>
-
-          {/* Product type */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Вид продукции</Label>
-            <Select value={productType} onValueChange={setProductType}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                <SelectValue placeholder="— Выберите —" />
-              </SelectTrigger>
-              <SelectContent>
-                {props.lists.productTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* End time */}
-          <div>
-            <div className="mb-2 text-[16px] font-medium text-black">Время окончания фритюрной жарки</div>
-            <div className="flex gap-3">
-              <div className="flex-1 space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Часы</Label>
-                <Select value={endHour} onValueChange={setEndHour}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
-                <Select value={endMinute} onValueChange={setEndMinute}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Quality end */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Органолептическая оценка по окончании жарки</Label>
-            <Select value={String(qualityEnd)} onValueChange={(v) => setQualityEnd(Number(v))}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {QUALITY_OPTIONS.map((score) => (
-                  <SelectItem key={score} value={String(score)}>
-                    {score} — {QUALITY_LABELS[score]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Carryover kg */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Переходящий остаток, кг</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={carryoverKg}
-              onChange={(e) => setCarryoverKg(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
-            />
-          </div>
-
-          {/* Disposed kg */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Утилизировано, кг</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={disposedKg}
-              onChange={(e) => setDisposedKg(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
-            />
-          </div>
-
-          {/* Controller */}
-          <div className="space-y-1">
-            <Label className="text-[16px] text-[#6f7282]">Должность, ФИО контролера</Label>
-            {props.users.length > 0 ? (
-              <Select value={controllerName} onValueChange={setControllerName}>
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
-                  <SelectValue placeholder="— Выберите —" />
-                </SelectTrigger>
-                <SelectContent>
-                  {props.users.map((u) => (
-                    <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={controllerName}
-                onChange={(e) => setControllerName(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
-              />
-            )}
-          </div>
-
-          <div className="flex justify-end pt-1">
-            <Button
-              type="button"
-              disabled={submitting}
-              onClick={async () => {
-                setSubmitting(true);
-                try {
-                  await props.onAdd({
-                    startDate,
-                    startHour: parseInt(startHour, 10),
-                    startMinute: parseInt(startMinute, 10),
-                    fatType,
-                    qualityStart,
-                    equipmentType,
-                    productType,
-                    endHour: parseInt(endHour, 10),
-                    endMinute: parseInt(endMinute, 10),
-                    qualityEnd,
-                    carryoverKg: parseFloat(carryoverKg) || 0,
-                    disposedKg: parseFloat(disposedKg) || 0,
-                    controllerName,
-                  });
-                  props.onOpenChange(false);
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
-            >
-              {submitting ? "Сохранение..." : "Добавить"}
+          <Input value={data.controllerName} onChange={(e) => setData((d) => ({ ...d, controllerName: e.target.value }))} className="h-14 rounded-2xl" placeholder="Должность, ФИО контролера" />
+          <div className={`flex ${props.initialEntry && props.onDelete ? "justify-between" : "justify-end"} gap-3 pt-2`}>
+            {props.initialEntry && props.onDelete ? (
+              <Button type="button" variant="outline" className="h-14 rounded-xl border-[#ffd7d3] text-[#ff3b30]" onClick={() => { void props.onDelete?.(props.initialEntry!.id); props.onOpenChange(false); }}>
+                Удалить
+              </Button>
+            ) : null}
+            <Button type="button" disabled={busy} className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void save(); }}>
+              {busy ? "Сохранение..." : props.initialEntry ? "Сохранить" : "Добавить"}
             </Button>
           </div>
         </div>
@@ -575,377 +157,137 @@ function AddEntryDialog(props: {
   );
 }
 
-/* ─── Quality Assessment Appendix ─── */
-
-function QualityAssessmentAppendix() {
-  const { indicators, gradingTable, formulaExample } = QUALITY_ASSESSMENT_TABLE;
-
+function ListsDialog(props: { open: boolean; onOpenChange: (open: boolean) => void; lists: FryerOilSelectLists; onSave: (lists: FryerOilSelectLists) => Promise<void> }) {
+  const [lists, setLists] = useState(props.lists);
+  const tabs: Array<[keyof FryerOilSelectLists, string]> = [["fatTypes", "Вид жира"], ["equipmentTypes", "Оборудование"], ["productTypes", "Вид продукции"]];
   return (
-    <div className="fryer-appendix mt-8 space-y-6 rounded-2xl border border-[#eceef5] bg-white p-6">
-      <div className="text-center text-[15px] font-bold uppercase tracking-wide text-black">
-        Приложение. Органолептическая оценка качества жира
-      </div>
-
-      {/* Indicators table */}
-      <div>
-        <div className="mb-2 text-[13px] font-semibold text-[#6f7282]">
-          Показатели качества и соответствующие баллы
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[12px]">
-            <thead>
-              <tr className="bg-[#f0f0f0]">
-                <th className="border border-[#ccc] px-3 py-2 text-left font-semibold">Показатель</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">Коэфф.</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">5 — Отличное</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">4 — Хорошее</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">3 — Удовл.</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">2 — Неудовл.</th>
-                <th className="border border-[#ccc] px-3 py-2 text-center font-semibold">1 — Неудовл.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {indicators.map((ind) => (
-                <tr key={ind.name}>
-                  <td className="border border-[#ccc] bg-[#f9f9f9] px-3 py-2 font-medium">{ind.name}</td>
-                  <td className="border border-[#ccc] px-3 py-2 text-center">{ind.coefficient}</td>
-                  {[5, 4, 3, 2, 1].map((score) => (
-                    <td key={score} className="border border-[#ccc] px-3 py-2">
-                      {ind.scores[score as keyof typeof ind.scores]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Grading table */}
-      <div>
-        <div className="mb-2 text-[13px] font-semibold text-[#6f7282]">
-          Шкала оценки качества
-        </div>
-        <table className="border-collapse text-[12px]">
-          <thead>
-            <tr className="bg-[#f0f0f0]">
-              <th className="border border-[#ccc] px-4 py-2 text-left font-semibold">Оценка качества</th>
-              <th className="border border-[#ccc] px-4 py-2 text-center font-semibold">Балл</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gradingTable.map((row, i) => (
-              <tr key={i}>
-                <td className="border border-[#ccc] px-4 py-1.5">{row.label}</td>
-                <td className="border border-[#ccc] px-4 py-1.5 text-center">{row.score}</td>
-              </tr>
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="max-w-[620px] rounded-[24px] border-0 p-0">
+        <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
+          <DialogTitle className="text-[28px] font-semibold">Редактировать списки</DialogTitle>
+          <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
+        </DialogHeader>
+        <div className="px-7 py-6">
+          <Tabs defaultValue="fatTypes">
+            <TabsList className="mb-5 w-full">{tabs.map(([key, label]) => <TabsTrigger key={key} value={key} className="flex-1">{label}</TabsTrigger>)}</TabsList>
+            {tabs.map(([key]) => (
+              <TabsContent key={key} value={key} className="space-y-2">
+                {lists[key].map((item, index) => (
+                  <div key={`${key}:${index}`} className="flex items-center gap-2">
+                    <Input value={item} onChange={(e) => setLists((v) => ({ ...v, [key]: v[key].map((x, i) => i === index ? e.target.value : x) }))} className="h-10 rounded-xl" />
+                    <Button type="button" variant="outline" className="h-10 rounded-xl border-[#ffd7d3] text-[#ff3b30]" onClick={() => setLists((v) => ({ ...v, [key]: v[key].filter((_, i) => i !== index) }))}><Trash2 className="size-4" /></Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={() => setLists((v) => ({ ...v, [key]: [...v[key], ""] }))}><Plus className="size-4" />Добавить</Button>
+              </TabsContent>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </Tabs>
+          <div className="mt-6 flex justify-end"><Button type="button" className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave(lists); props.onOpenChange(false); }}>Сохранить</Button></div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-      {/* Formula */}
-      <div className="rounded-xl bg-[#f8f9fc] px-5 py-4 text-[13px] text-[#6f7282]">
-        <span className="font-semibold text-black">Формула расчёта:</span>{" "}
-        (Σ балл × коэффициент) / Σ коэффициентов
-        <br />
-        <span className="font-semibold text-black">Пример:</span>{" "}
-        {formulaExample}
-      </div>
+function SettingsDialog(props: { open: boolean; onOpenChange: (open: boolean) => void; title: string; dateFrom: string; status: "active" | "closed"; onSave: (v: { title: string; dateFrom: string; status: "active" | "closed" }) => Promise<void> }) {
+  const [title, setTitle] = useState(props.title);
+  const [dateFrom, setDateFrom] = useState(props.dateFrom);
+  const [status, setStatus] = useState<"active" | "closed">(props.status);
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="max-w-[560px] rounded-[24px] border-0 p-0">
+        <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
+          <DialogTitle className="text-[28px] font-semibold">Настройки журнала</DialogTitle>
+          <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
+        </DialogHeader>
+        <div className="space-y-4 px-7 py-6">
+          <div className="space-y-1"><Label>Название документа</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-14 rounded-2xl" /></div>
+          <div className="space-y-1"><Label>Дата начала</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-14 rounded-2xl" /></div>
+          <div className="space-y-1"><Label>Статус документа</Label><Select value={status} onValueChange={(v: "active" | "closed") => setStatus(v)}><SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Активный</SelectItem><SelectItem value="closed">Закрытый</SelectItem></SelectContent></Select></div>
+          <div className="flex justify-end"><Button type="button" className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave({ title, dateFrom, status }); props.onOpenChange(false); }}>Сохранить</Button></div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Appendix() {
+  return (
+    <div className="space-y-5 pt-8">
+      <div className="text-[18px]">Приложение. Методика определения качества фритюрного жира.</div>
+      <table className="w-full border-collapse text-[14px]"><thead><tr className="bg-[#f2f2f2]"><th className="border border-black px-3 py-2">Показатели качества</th><th className="border border-black px-3 py-2">Отлично</th><th className="border border-black px-3 py-2">Хорошо</th><th className="border border-black px-3 py-2">Удовлетворительно</th><th className="border border-black px-3 py-2">Неудовлетворительно</th></tr></thead><tbody>{QUALITY_ASSESSMENT_TABLE.indicators.map((x) => <tr key={x.name}><td className="border border-black px-3 py-2">{x.name}</td><td className="border border-black px-3 py-2">{x.scores[5]}</td><td className="border border-black px-3 py-2">{x.scores[4]}</td><td className="border border-black px-3 py-2">{x.scores[3]}</td><td className="border border-black px-3 py-2">{x.scores[2]}</td></tr>)}</tbody></table>
+      <table className="w-full border-collapse text-[14px]"><thead><tr className="bg-[#f2f2f2]"><th className="border border-black px-3 py-2">Качество фритюра</th><th className="border border-black px-3 py-2">Бальная оценка</th></tr></thead><tbody>{QUALITY_ASSESSMENT_TABLE.gradingTable.map((x) => <tr key={`${x.label}-${x.score}`}><td className="border border-black px-3 py-2 text-center">{x.label}</td><td className="border border-black px-3 py-2 text-center">{x.score}</td></tr>)}</tbody></table>
+      <div className="text-[15px] leading-7">Пример расчета среднего балла: {QUALITY_ASSESSMENT_TABLE.formulaExample}</div>
     </div>
   );
 }
 
-/* ─── Main Component ─── */
-
 export function FryerOilDocumentClient(props: Props) {
   const router = useRouter();
-  const [entries, setEntries] = useState<EntryItem[]>(() =>
-    props.initialEntries.map((e) => ({
-      ...e,
-      data: normalizeFryerOilEntryData(e.data),
-    }))
-  );
-  const [config, setConfig] = useState<FryerOilDocumentConfig>(props.config);
-  const [addOpen, setAddOpen] = useState(false);
-  const [editListsOpen, setEditListsOpen] = useState(false);
+  const [entries, setEntries] = useState<EntryItem[]>(() => sortEntries(props.initialEntries));
+  const [config, setConfig] = useState(props.config);
+  const [title, setTitle] = useState(props.title);
+  const [dateFrom, setDateFrom] = useState(props.dateFrom);
+  const [status, setStatus] = useState<"active" | "closed">(props.status === "closed" ? "closed" : "active");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [entryItem, setEntryItem] = useState<EntryItem | null>(null);
+  const [listsOpen, setListsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const isActive = status === "active";
 
-  const isActive = props.status === "active";
-
-  /* ── Toggle row selection ── */
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  async function saveEntry(payload: { id?: string; data: FryerOilEntryData }) {
+    const response = await fetch(`/api/journal-documents/${props.documentId}/fryer-oil`, { method: payload.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.entry) throw new Error(result?.error || "Не удалось сохранить запись");
+    const next = { id: result.entry.id, date: result.entry.date, data: normalizeFryerOilEntryData(result.entry.data) };
+    setEntries((v) => sortEntries([...v.filter((x) => x.id !== next.id), next]));
   }
 
-  function clearSelection() {
-    setSelectedIds([]);
-  }
-
-  /* ── Add entry ── */
-  const handleAddEntry = useCallback(
-    async (data: FryerOilEntryData) => {
-      const firstUserId = props.users[0]?.id ?? "";
-      const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId: firstUserId,
-          date: data.startDate,
-          data,
-        }),
-      });
-
-      const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.entry) {
-        window.alert("Не удалось сохранить запись");
-        throw new Error("save_entry_failed");
-      }
-
-      const saved: EntryItem = {
-        id: result.entry.id,
-        date: data.startDate,
-        data: normalizeFryerOilEntryData(result.entry.data ?? data),
-      };
-
-      setEntries((prev) => {
-        const updated = [...prev.filter((e) => e.id !== saved.id), saved];
-        updated.sort((a, b) => {
-          const dateCmp = a.data.startDate.localeCompare(b.data.startDate);
-          if (dateCmp !== 0) return dateCmp;
-          return a.data.startHour !== b.data.startHour
-            ? a.data.startHour - b.data.startHour
-            : a.data.startMinute - b.data.startMinute;
-        });
-        return updated;
-      });
-    },
-    [props.documentId, props.users]
-  );
-
-  /* ── Delete selected ── */
-  async function handleDeleteSelected() {
-    if (selectedIds.length === 0) return;
-    if (!window.confirm(`Удалить выбранные строки (${selectedIds.length})?`)) return;
-
-    const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedIds }),
-    });
-
-    if (!response.ok) {
-      window.alert("Не удалось удалить выбранные строки");
-      return;
-    }
-
-    setEntries((prev) => prev.filter((e) => !selectedIds.includes(e.id)));
-    setSelectedIds([]);
-  }
-
-  /* ── Save lists ── */
-  async function handleSaveLists(lists: FryerOilSelectLists) {
-    const nextConfig: FryerOilDocumentConfig = { ...config, lists };
-    const response = await fetch(`/api/journal-documents/${props.documentId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: nextConfig }),
-    });
-
-    if (!response.ok) {
-      window.alert("Не удалось сохранить списки");
-      throw new Error("save_lists_failed");
-    }
-
-    setConfig(nextConfig);
-    router.refresh();
+  async function deleteEntries(ids: string[]) {
+    if (ids.length === 0) return;
+    const response = await fetch(`/api/journal-documents/${props.documentId}/fryer-oil`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error || "Не удалось удалить записи");
+    setEntries((v) => v.filter((x) => !ids.includes(x.id)));
+    setSelectedIds((v) => v.filter((x) => !ids.includes(x)));
   }
 
   return (
-    <div className="space-y-4">
-      {/* Breadcrumb */}
-      <div className="text-[13px] text-[#7c7c93] print:hidden">
-        <Link href={`/journals/${props.routeCode}`} className="hover:underline">
-          {props.title}
-        </Link>
-        {" › "}
-        <span>{props.organizationName}</span>
-      </div>
-
-      {/* Title row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <h1 className="text-[28px] font-semibold tracking-[-0.03em] text-black">
-          {props.title}
-        </h1>
-      </div>
-
-      {/* Action row */}
-      {isActive && (
-        <div className="flex flex-wrap items-center gap-3 print:hidden">
-          <Button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="h-10 rounded-xl bg-[#5b66ff] px-5 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
-          >
-            <Plus className="mr-1 size-4" />
-            Добавить
-          </Button>
-
-          <button
-            type="button"
-            onClick={() => setEditListsOpen(true)}
-            className="text-[14px] text-[#5b66ff] hover:underline"
-          >
-            Редактировать списки
-          </button>
-
-          {selectedIds.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 text-[14px]">
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className="text-[#7c7c93] hover:text-black"
-                >
-                  <X className="size-4" />
-                </button>
-                <span>Выбрано: {selectedIds.length}</span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 border-[#ff3b30] px-3 text-[13px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]"
-                onClick={() => {
-                  handleDeleteSelected().catch(() => window.alert("Ошибка удаления"));
-                }}
-              >
-                <Trash2 className="mr-1 size-4" />
-                Удалить выбранные
-              </Button>
-            </>
-          )}
+    <div className="bg-white text-black">
+      <div className="mx-auto max-w-[1880px] space-y-8 px-6 py-8">
+        <div className="flex flex-wrap items-start justify-between gap-6 print:hidden">
+          <div className="space-y-3">
+            <div className="text-[15px] text-[#7c7c93]"><Link href={`/journals/${props.routeCode}`} className="hover:underline">{props.organizationName}</Link>{" > "}<Link href={`/journals/${props.routeCode}`} className="hover:underline">Журнал учета использования фритюрных жиров</Link>{" > "}<span>{title}</span></div>
+            <h1 className="text-[54px] font-semibold tracking-[-0.04em]">{title}</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => { void openDocumentPdf(props.documentId).catch((e) => window.alert(e instanceof Error ? e.message : "Не удалось открыть PDF")); }}><Printer className="size-5" />Печать</Button>
+            <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => setSettingsOpen(true)}><Settings2 className="size-5" />Настройки журнала</Button>
+          </div>
         </div>
-      )}
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-[#eceef5] bg-white">
-        <table className="w-full border-collapse text-[13px]">
-          <thead>
-            <tr className="border-b border-[#eceef5] bg-[#f8f9fc]">
-              {isActive && (
-                <th className="w-10 px-3 py-3 text-center">
-                  <span className="sr-only">Выбрать</span>
-                </th>
-              )}
-              <th className="px-3 py-3 text-left font-semibold text-[#6f7282]">Дата, время начала</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#6f7282]">Вид фритюрного жира</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#6f7282]">Оценка на начало</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#6f7282]">Тип оборудования</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#6f7282]">Вид продукции</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#6f7282]">Время окончания</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#6f7282]">Оценка по окончании</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#6f7282]">Остаток, кг</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#6f7282]">Утилиз., кг</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#6f7282]">Контролер</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={isActive ? 11 : 10}
-                  className="px-6 py-10 text-center text-[14px] text-[#6f7282]"
-                >
-                  Нет записей. Нажмите «Добавить», чтобы создать первую запись.
-                </td>
-              </tr>
-            ) : (
-              entries.map((entry) => {
-                const d = entry.data;
-                const isSelected = selectedIds.includes(entry.id);
-                return (
-                  <tr
-                    key={entry.id}
-                    className={`border-b border-[#eceef5] transition-colors last:border-0 ${
-                      isSelected ? "bg-[#f0f2ff]" : "hover:bg-[#fafbff]"
-                    }`}
-                  >
-                    {isActive && (
-                      <td className="px-3 py-2 text-center">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelect(entry.id)}
-                          className="size-4"
-                        />
-                      </td>
-                    )}
-                    <td className="whitespace-nowrap px-3 py-2">
-                      {formatDateRu(d.startDate)}{" "}
-                      <span className="text-[#6f7282]">{formatTime(d.startHour, d.startMinute)}</span>
-                    </td>
-                    <td className="px-3 py-2">{d.fatType || "—"}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span
-                        className={`inline-block rounded-md px-2 py-0.5 text-[12px] font-medium ${
-                          d.qualityStart >= 4
-                            ? "bg-[#e8f5e9] text-[#2e7d32]"
-                            : d.qualityStart === 3
-                            ? "bg-[#fff8e1] text-[#f57f17]"
-                            : "bg-[#ffebee] text-[#c62828]"
-                        }`}
-                      >
-                        {d.qualityStart} — {QUALITY_LABELS[d.qualityStart]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">{d.equipmentType || "—"}</td>
-                    <td className="px-3 py-2">{d.productType || "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-center">
-                      {formatTime(d.endHour, d.endMinute)}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <span
-                        className={`inline-block rounded-md px-2 py-0.5 text-[12px] font-medium ${
-                          d.qualityEnd >= 4
-                            ? "bg-[#e8f5e9] text-[#2e7d32]"
-                            : d.qualityEnd === 3
-                            ? "bg-[#fff8e1] text-[#f57f17]"
-                            : "bg-[#ffebee] text-[#c62828]"
-                        }`}
-                      >
-                        {d.qualityEnd} — {QUALITY_LABELS[d.qualityEnd]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-center">{d.carryoverKg}</td>
-                    <td className="px-3 py-2 text-center">{d.disposedKg}</td>
-                    <td className="px-3 py-2 text-[#6f7282]">{d.controllerName || "—"}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <div className="min-w-[1400px]">
+            <div className="grid grid-cols-[240px_1fr_280px] border border-black">
+              <div className="flex min-h-[110px] items-center justify-center border-r border-black px-6 text-center text-[22px]">{props.organizationName}</div>
+              <div className="grid grid-rows-[55px_55px]"><div className="flex items-center justify-center border-b border-black text-[20px] uppercase">Система ХАССП</div><div className="flex items-center justify-center text-[18px] italic uppercase">Журнал учета использования фритюрных жиров</div></div>
+              <div className="grid grid-rows-[55px_55px] border-l border-black"><div className="space-y-1 border-b border-black px-6 py-3 text-[18px]"><div className="flex items-center justify-between"><span>Начат</span><span>{formatDateRu(dateFrom)}</span></div><div className="flex items-center justify-between"><span>Окончен</span><span>__________</span></div></div><div className="flex items-center justify-center text-[18px] uppercase">Стр. 1 из 1</div></div>
+            </div>
+            <div className="py-10 text-center text-[26px] font-semibold uppercase">Журнал учета использования фритюрных жиров</div>
+            {isActive ? <div className="mb-5 flex flex-wrap items-center gap-3 print:hidden"><Button type="button" className="h-16 rounded-2xl bg-[#5863f8] px-8 text-[18px] text-white" onClick={() => { setEntryItem(null); setEntryOpen(true); }} disabled={props.users.length === 0}><Plus className="size-6" />Добавить</Button><Button type="button" variant="outline" className="h-16 rounded-2xl border-[#eef0fb] px-8 text-[18px] text-[#5464ff]" onClick={() => setListsOpen(true)}>Редактировать списки</Button>{selectedIds.length > 0 ? <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#ffd7d3] px-6 text-[#ff3b30]" onClick={() => { if (window.confirm(`Удалить выбранные строки (${selectedIds.length})?`)) { void deleteEntries(selectedIds).catch((e) => window.alert(e instanceof Error ? e.message : "Не удалось удалить записи")); } }}><Trash2 className="size-5" />Удалить</Button> : null}</div> : null}
+            <table className="w-full border-collapse text-[14px]">
+              <thead><tr className="bg-[#f2f2f2]">{isActive ? <th rowSpan={2} className="w-[52px] border border-black px-2 py-3 print:hidden"><Checkbox checked={entries.length > 0 && selectedIds.length === entries.length} onCheckedChange={(checked) => setSelectedIds(checked === true ? entries.map((x) => x.id) : [])} disabled={entries.length === 0} /></th> : null}<th rowSpan={2} className="border border-black px-3 py-3">Дата, время начала использования фритюрного жира</th><th rowSpan={2} className="border border-black px-3 py-3">Вид фритюрного жира</th><th rowSpan={2} className="border border-black px-3 py-3">Органолептическая оценка качества жира на начало жарки</th><th rowSpan={2} className="border border-black px-3 py-3">Тип жарочного оборудования</th><th rowSpan={2} className="border border-black px-3 py-3">Вид продукции</th><th rowSpan={2} className="border border-black px-3 py-3">Время окончания фритюрной жарки</th><th rowSpan={2} className="border border-black px-3 py-3">Органолептическая оценка качества жира по окончании жарки</th><th colSpan={2} className="border border-black px-3 py-3">Использование оставшегося жира</th><th rowSpan={2} className="border border-black px-3 py-3">Должность, ФИО контролера</th></tr><tr className="bg-[#f2f2f2]"><th className="border border-black px-3 py-3">Переходящий остаток, кг</th><th className="border border-black px-3 py-3">Утилизированный, кг</th></tr></thead>
+              <tbody>{entries.length === 0 ? <tr><td colSpan={isActive ? 11 : 10} className="border border-black px-6 py-10 text-center text-[#6f7282]">Нет записей. Нажмите «Добавить», чтобы создать первую запись.</td></tr> : entries.map((entry) => <tr key={entry.id} className={selectedIds.includes(entry.id) ? "bg-[#f3f5ff]" : ""}>{isActive ? <td className="border border-black px-2 py-3 text-center print:hidden"><Checkbox checked={selectedIds.includes(entry.id)} onCheckedChange={() => setSelectedIds((v) => v.includes(entry.id) ? v.filter((x) => x !== entry.id) : [...v, entry.id])} /></td> : null}<td className="border border-black px-3 py-3"><button type="button" className={`flex w-full items-start justify-between gap-3 text-left ${isActive ? "hover:text-[#5464ff]" : ""}`} onClick={() => { if (isActive) { setEntryItem(entry); setEntryOpen(true); } }} disabled={!isActive}>{formatDateRu(entry.data.startDate)} {formatTime(entry.data.startHour, entry.data.startMinute)}{isActive ? <Pencil className="mt-0.5 size-4 shrink-0 print:hidden" /> : null}</button></td><td className="border border-black px-3 py-3">{entry.data.fatType || "-"}</td><td className="border border-black px-3 py-3 text-center">{QUALITY_LABELS[entry.data.qualityStart] || entry.data.qualityStart}</td><td className="border border-black px-3 py-3">{entry.data.equipmentType || "-"}</td><td className="border border-black px-3 py-3">{entry.data.productType || "-"}</td><td className="border border-black px-3 py-3 text-center">{formatTime(entry.data.endHour, entry.data.endMinute)}</td><td className="border border-black px-3 py-3 text-center">{QUALITY_LABELS[entry.data.qualityEnd] || entry.data.qualityEnd}</td><td className="border border-black px-3 py-3 text-center">{entry.data.carryoverKg > 0 ? entry.data.carryoverKg : ""}</td><td className="border border-black px-3 py-3 text-center">{entry.data.disposedKg > 0 ? entry.data.disposedKg : ""}</td><td className="border border-black px-3 py-3">{entry.data.controllerName || "-"}</td></tr>)}</tbody>
+            </table>
+            <Appendix />
+          </div>
+        </div>
       </div>
 
-      {/* Quality assessment appendix */}
-      <QualityAssessmentAppendix />
-
-      {/* Dialogs */}
-      <AddEntryDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        lists={config.lists}
-        users={props.users}
-        onAdd={handleAddEntry}
-      />
-
-      <EditListsDialog
-        open={editListsOpen}
-        onOpenChange={setEditListsOpen}
-        lists={config.lists}
-        onSave={handleSaveLists}
-      />
+      <EntryDialog key={entryItem?.id ?? "new"} open={entryOpen} onOpenChange={(open) => { setEntryOpen(open); if (!open) setEntryItem(null); }} lists={config.lists} users={props.users} initialEntry={entryItem} onSubmit={async (payload) => { await saveEntry(payload); }} onDelete={isActive ? async (id) => { await deleteEntries([id]); } : undefined} />
+      <ListsDialog key={JSON.stringify(config.lists)} open={listsOpen} onOpenChange={setListsOpen} lists={config.lists} onSave={async (lists) => { const nextConfig = { ...config, lists }; const response = await fetch(`/api/journal-documents/${props.documentId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config: nextConfig }) }); const result = await response.json().catch(() => null); if (!response.ok) throw new Error(result?.error || "Не удалось сохранить списки"); setConfig(nextConfig); router.refresh(); }} />
+      <SettingsDialog key={`${title}-${dateFrom}-${status}`} open={settingsOpen} onOpenChange={setSettingsOpen} title={title} dateFrom={dateFrom} status={status} onSave={async (v) => { const response = await fetch(`/api/journal-documents/${props.documentId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: v.title, dateFrom: v.dateFrom, status: v.status }) }); const result = await response.json().catch(() => null); if (!response.ok) throw new Error(result?.error || "Не удалось сохранить настройки"); setTitle(v.title); setDateFrom(v.dateFrom); setStatus(v.status); router.refresh(); }} />
     </div>
   );
 }

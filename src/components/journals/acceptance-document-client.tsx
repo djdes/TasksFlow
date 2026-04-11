@@ -7,6 +7,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  Printer,
   Upload,
   X,
 } from "lucide-react";
@@ -38,9 +39,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
   createAcceptanceRow,
   normalizeAcceptanceDocumentConfig,
   formatAcceptanceDateDash,
+  getAcceptanceDocumentTitle,
   getAcceptancePageTitle,
   getExpiryFieldDisplayLabel,
   TRANSPORT_LABELS,
@@ -230,14 +233,7 @@ function RowDialog(props: {
             </div>
           </fieldset>
 
-          {isEdit ? (
-            /* Edit mode: simple text input for product */
-            <div className="space-y-1">
-              <Label className="text-[14px] text-[#6f7282]">Наименование продукции</Label>
-              <Input value={row.productName} onChange={(e) => setValue("productName", e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
-            </div>
-          ) : (
-            <>
+          <>
               {/* Наименование продукции */}
               <div className="space-y-2">
                 <Label className="font-semibold">Наименование продукции</Label>
@@ -389,8 +385,7 @@ function RowDialog(props: {
                   </SelectContent>
                 </Select>
               </div>
-            </>
-          )}
+          </>
 
           <div className="flex justify-end pt-2">
             <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">
@@ -664,6 +659,18 @@ function IncomingControlEditListsDialog(props: {
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (!props.open) return;
+    setProducts([...props.config.products]);
+    setManufacturers([...props.config.manufacturers]);
+    setSuppliers([...props.config.suppliers]);
+  }, [
+    props.open,
+    props.config.products,
+    props.config.manufacturers,
+    props.config.suppliers,
+  ]);
+
   function handleClose() {
     props.setConfig({ ...props.config, products, manufacturers, suppliers });
     props.onOpenChange(false);
@@ -671,9 +678,9 @@ function IncomingControlEditListsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(open) => { if (!open) handleClose(); else props.onOpenChange(true); }}>
-      <DialogContent className="max-h-[92vh] max-w-[560px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[900px] overflow-y-auto rounded-[28px] border-0 p-0">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
-          <DialogTitle className="text-[24px] font-semibold text-black">Редактировать список</DialogTitle>
+          <DialogTitle className="text-[24px] font-semibold text-black">Редактировать список изделий</DialogTitle>
           <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={handleClose}><X className="size-6" /></button>
         </DialogHeader>
         <div className="space-y-6 px-8 py-6">
@@ -1109,6 +1116,7 @@ export function AcceptanceDocumentClient(props: Props) {
   const [config, setConfig] = useState(() => normalizeAcceptanceDocumentConfig(props.config, props.users));
   const [title, setTitle] = useState(props.title);
   const [dateFrom, setDateFrom] = useState(props.dateFrom);
+  const [sortByExpiry, setSortByExpiry] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editListsOpen, setEditListsOpen] = useState(false);
@@ -1125,10 +1133,16 @@ export function AcceptanceDocumentClient(props: Props) {
   useEffect(() => { setTitle(props.title); setDateFrom(props.dateFrom); }, [props.dateFrom, props.title]);
 
   const rows = config.rows;
+  const routeCode = props.routeCode;
+  const isProductAcceptance = routeCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE;
   const allSelected = rows.length > 0 && selectedRowIds.length === rows.length;
   const isClosed = props.status === "closed";
   const responsibleTitle = config.defaultResponsibleTitle || "";
   const responsibleUserId = config.defaultResponsibleUserId || "";
+  const displayedRows = useMemo(() => {
+    if (!sortByExpiry) return rows;
+    return [...rows].sort((a, b) => (a.expiryDate || "").localeCompare(b.expiryDate || ""));
+  }, [rows, sortByExpiry]);
 
   async function persist(nextTitle: string, nextDateFrom: string, nextConfig: AcceptanceDocumentConfig) {
     const response = await fetch(`/api/journal-documents/${props.documentId}`, {
@@ -1262,8 +1276,11 @@ export function AcceptanceDocumentClient(props: Props) {
   }
 
   const organizationLabel = props.organizationName || 'ООО "Тест"';
-  const routeCode = props.routeCode;
   const pageTitle = getAcceptancePageTitle(routeCode);
+  const documentTitle = title || getAcceptanceDocumentTitle(routeCode);
+  const journalHeaderTitle = isProductAcceptance
+    ? "ЖУРНАЛ ПРИЕМКИ И ВХОДНОГО КОНТРОЛЯ ПРОДУКЦИИ"
+    : "ЖУРНАЛ ВХОДНОГО КОНТРОЛЯ СЫРЬЯ, ИНГРЕДИЕНТОВ, УПАКОВОЧНЫХ МАТЕРИАЛОВ";
 
   return (
     <div className="bg-white text-black">
@@ -1272,7 +1289,7 @@ export function AcceptanceDocumentClient(props: Props) {
         {selectedRowIds.length > 0 && !isClosed && (
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setSelectedRowIds([])} className="text-[#7c7c93] hover:text-black"><X className="size-4" /></button>
-            <span className="text-[14px]">Выбранно: {selectedRowIds.length}</span>
+            <span className="text-[14px]">Выбрано: {selectedRowIds.length}</span>
             <Button type="button" variant="ghost" className="h-9 px-3 text-[13px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => setDeleteSelectedOpen(true)}>
               <span className="mr-1">🗑</span> Удалить
             </Button>
@@ -1291,36 +1308,72 @@ export function AcceptanceDocumentClient(props: Props) {
           {" > "}
           <Link href={`/journals/${routeCode}`} className="hover:underline">{pageTitle}</Link>
           {" > "}
-          <span>{title}</span>
+          <span>{documentTitle}</span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{title || "Журнал входного контроля сырья, ингредиентов, упаковочных материалов"}</h1>
-          <button type="button" onClick={() => setSettingsOpen(true)} className="text-[14px] text-[#5b66ff] hover:underline">Настройки журнала</button>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-5">
+            <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{documentTitle}</h1>
+            <label className="flex items-center gap-4 rounded-[18px] bg-[#f3f4fe] px-5 py-4 text-[16px]">
+              <Checkbox checked={sortByExpiry} onCheckedChange={(checked) => setSortByExpiry(checked === true)} />
+              <span>Сортировать по сроку годности</span>
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-14 rounded-2xl border-[#e8ebf8] px-5 text-[16px] text-[#5b66ff] shadow-none"
+              onClick={() =>
+                window.open(
+                  `/api/journal-documents/${props.documentId}/pdf`,
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }
+            >
+              <Printer className="size-5" />
+              Печать
+            </Button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className="text-[14px] text-[#5b66ff] hover:underline"
+            >
+              Настройки журнала
+            </button>
+          </div>
         </div>
 
         {/* HACCP header */}
         <table className="w-full border-collapse text-[15px]">
           <tbody>
             <tr>
-              <td rowSpan={2} className="w-[220px] border border-black px-4 py-3 text-center font-semibold">{organizationLabel}</td>
-              <td className="border border-black px-4 py-2 text-center">СИСТЕМА ХАССП</td>
+              <td
+                rowSpan={2}
+                className="w-[220px] border border-black px-4 py-3 text-center font-semibold"
+              >
+                {organizationLabel}
+              </td>
+              <td className="border border-black px-4 py-2 text-center">
+                СИСТЕМА ХАССП
+              </td>
               <td rowSpan={2} className="w-[200px] border border-black px-3 py-2">
-                <div className="text-sm font-semibold">Начат {formatAcceptanceDateDash(dateFrom)}</div>
+                <div className="text-sm font-semibold">
+                  Начат {formatAcceptanceDateDash(dateFrom)}
+                </div>
                 <div className="mt-1 text-sm">Окончен ________</div>
               </td>
             </tr>
             <tr>
               <td className="border border-black px-4 py-2 text-center italic">
-                ЖУРНАЛ ВХОДНОГО КОНТРОЛЯ СЫРЬЯ, ИНГРЕДИЕНТОВ, УПАКОВОЧНЫХ МАТЕРИАЛОВ
+                {journalHeaderTitle}
               </td>
             </tr>
           </tbody>
         </table>
 
-        <div className="text-center text-[20px] font-semibold">
-          ЖУРНАЛ ВХОДНОГО КОНТРОЛЯ СЫРЬЯ, ИНГРЕДИЕНТОВ, УПАКОВОЧНЫХ МАТЕРИАЛОВ
-        </div>
+        <div className="text-center text-[20px] font-semibold">{journalHeaderTitle}</div>
 
         {/* Toolbar */}
         {!isClosed && (
@@ -1369,7 +1422,7 @@ export function AcceptanceDocumentClient(props: Props) {
             <thead>
               <tr className="bg-[#f2f2f2]">
                 <th className="w-[44px] border border-black p-2">
-                  <Checkbox checked={allSelected} onCheckedChange={(c) => setSelectedRowIds(c === true ? rows.map((r) => r.id) : [])} disabled={rows.length === 0 || isClosed} />
+                  <Checkbox checked={allSelected} onCheckedChange={(c) => setSelectedRowIds(c === true ? displayedRows.map((r) => r.id) : [])} disabled={rows.length === 0 || isClosed} />
                 </th>
                 <th className="border border-black p-2 text-center">Дата, время поступления продукции, товара</th>
                 <th className="border border-black p-2 text-center">Наименование продукции</th>
@@ -1384,7 +1437,7 @@ export function AcceptanceDocumentClient(props: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {displayedRows.map((row) => (
                 <tr key={row.id}>
                   <td className="border border-black p-2 text-center">
                     <Checkbox checked={selectedRowIds.includes(row.id)} onCheckedChange={(c) => setSelectedRowIds((cur) => c === true ? [...new Set([...cur, row.id])] : cur.filter((id) => id !== row.id))} disabled={isClosed} />

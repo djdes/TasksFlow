@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES } from "@/lib/user-roles";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,7 @@ export function PerishableRejectionDocumentClient({
   const [config, setConfig] = useState(() =>
     normalizePerishableRejectionConfig(initialConfig)
   );
+  const readOnly = status === "closed";
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [listModalOpen, setListModalOpen] = useState(false);
@@ -137,12 +138,14 @@ export function PerishableRejectionDocumentClient({
   }
 
   function toggleRow(id: string, checked: boolean) {
+    if (readOnly) return;
     setSelectedRows((prev) =>
       checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)
     );
   }
 
   function removeSelectedRows() {
+    if (readOnly) return;
     if (selectedRows.length === 0) return;
     setConfig((prev) => ({
       ...prev,
@@ -152,6 +155,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addSingleRow(productName = "") {
+    if (readOnly) return;
     setConfig((prev) => ({
       ...prev,
       rows: [
@@ -169,12 +173,14 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addRowsFromList() {
+    if (readOnly) return;
     const list = config.productLists.find((l) => l.id === activeListId);
     if (!list) return;
     list.items.forEach((item) => addSingleRow(item));
   }
 
   function addFromFile() {
+    if (readOnly) return;
     const text = window.prompt(
       "Вставьте названия изделий, каждое с новой строки:"
     );
@@ -201,6 +207,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function saveDraftRow() {
+    if (readOnly) return;
     const user = users.find((u) => u.id === draftUserId);
     const responsible = user
       ? `${user.name}, ${draftPosition}`
@@ -216,6 +223,7 @@ export function PerishableRejectionDocumentClient({
   /* ---------- List modal helpers ---------- */
 
   function addProductList() {
+    if (readOnly) return;
     if (!newListName.trim()) return;
     const id = `list-${Date.now()}`;
     setConfig((prev) => ({
@@ -229,6 +237,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addItemToProductList(item: string) {
+    if (readOnly) return;
     if (!activeListId) return;
     setConfig((prev) => ({
       ...prev,
@@ -241,6 +250,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addProductItem() {
+    if (readOnly) return;
     if (!newItemName.trim()) return;
     const list = config.productLists[0];
     if (!list) return;
@@ -256,6 +266,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addManufacturerItem() {
+    if (readOnly) return;
     if (!newItemName.trim()) return;
     setConfig((prev) => ({
       ...prev,
@@ -265,6 +276,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function addSupplierItem() {
+    if (readOnly) return;
     if (!newItemName.trim()) return;
     setConfig((prev) => ({
       ...prev,
@@ -274,6 +286,7 @@ export function PerishableRejectionDocumentClient({
   }
 
   function importItemsFromText(section: "products" | "manufacturers" | "suppliers") {
+    if (readOnly) return;
     const text = window.prompt("Вставьте элементы, каждый с новой строки:");
     if (!text) return;
     const items = text
@@ -319,7 +332,7 @@ export function PerishableRejectionDocumentClient({
         <Button
           type="button"
           variant="outline"
-          onClick={() => window.print()}
+          onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
         >
           Печать журнала
         </Button>
@@ -339,18 +352,17 @@ export function PerishableRejectionDocumentClient({
               <td className="border border-black p-2 text-center">
                 СИСТЕМА ХАССП
               </td>
-              <td className="w-[20%] border border-black p-2">
-                Начат &nbsp;{" "}
-                {new Date(dateFrom).toLocaleDateString("ru-RU")}
+              <td className="w-[20%] border border-black p-2 text-[18px] font-medium">
+                Начат&nbsp;&nbsp;{new Date(dateFrom).toLocaleDateString("ru-RU")}
+                <div className="mt-2 font-normal">Окончен&nbsp;__________</div>
               </td>
             </tr>
             <tr>
-              <td className="border border-black p-2 text-center text-sm uppercase">
+              <td className="border border-black p-2 text-center text-sm uppercase italic">
                 ЖУРНАЛ БРАКЕРАЖА СКОРОПОРТЯЩЕЙСЯ ПИЩЕВОЙ ПРОДУКЦИИ
               </td>
-              <td className="border border-black p-2">
-                Окончен &nbsp;{" "}
-                {status === "closed" ? "________" : "________"}
+              <td className="border border-black p-2 text-center text-[18px]">
+                СТР. 1 ИЗ 1
               </td>
             </tr>
           </tbody>
@@ -362,44 +374,47 @@ export function PerishableRejectionDocumentClient({
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                className="bg-[#5b66ff] hover:bg-[#4d58f5]"
-              >
-                <Plus className="size-4" />
-                Добавить
-                <ChevronDown className="ml-1 size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[280px] rounded-2xl border-0 p-2">
-              <DropdownMenuItem onSelect={() => setAddModalOpen(true)}>
-                Добавить изделие
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => {
-                  const count = Number(
-                    window.prompt("Сколько изделий добавить?", "3") || "0"
-                  );
-                  if (count > 0)
-                    for (let i = 0; i < count; i += 1) addSingleRow();
-                }}
-              >
-                Добавить несколько изделий
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={addRowsFromList}>
-                Добавить из списка
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={addFromFile}>
-                Добавить из файла
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!readOnly && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  className="bg-[#5b66ff] hover:bg-[#4d58f5]"
+                >
+                  <Plus className="size-4" />
+                  Добавить
+                  <ChevronDown className="ml-1 size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[280px] rounded-2xl border-0 p-2">
+                <DropdownMenuItem onSelect={() => setAddModalOpen(true)}>
+                  Добавить изделие
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    const count = Number(
+                      window.prompt("Сколько изделий добавить?", "3") || "0"
+                    );
+                    if (count > 0)
+                      for (let i = 0; i < count; i += 1) addSingleRow();
+                  }}
+                >
+                  Добавить несколько изделий
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={addRowsFromList}>
+                  Добавить из списка
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={addFromFile}>
+                  Добавить из файла
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button
             type="button"
             className="bg-[#5b66ff] hover:bg-[#4d58f5]"
             onClick={() => setAddModalOpen(true)}
+            disabled={readOnly}
           >
             <Plus className="size-4" />
             Добавить изделие
@@ -408,14 +423,15 @@ export function PerishableRejectionDocumentClient({
             type="button"
             variant="outline"
             onClick={() => setListModalOpen(true)}
+            disabled={readOnly}
           >
-            Редактировать списки
+            Редактировать список изделий
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={removeSelectedRows}
-            disabled={selectedRows.length === 0}
+            disabled={readOnly || selectedRows.length === 0}
           >
             <Trash2 className="size-4" />
             Удалить выбранные
@@ -423,7 +439,7 @@ export function PerishableRejectionDocumentClient({
           <Button
             type="button"
             onClick={() => saveConfig()}
-            disabled={isSaving || isPending}
+            disabled={readOnly || isSaving || isPending}
           >
             <Save className="size-4" />
             {isSaving ? "Сохранение..." : "Сохранить"}
@@ -472,6 +488,7 @@ export function PerishableRejectionDocumentClient({
                       onCheckedChange={(checked) =>
                         toggleRow(row.id, checked === true)
                       }
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -486,6 +503,7 @@ export function PerishableRejectionDocumentClient({
                         });
                       }}
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -495,6 +513,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { productName: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -504,6 +523,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { productionDate: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -517,6 +537,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { manufacturer: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -530,6 +551,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { packaging: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -541,6 +563,7 @@ export function PerishableRejectionDocumentClient({
                         })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -559,6 +582,7 @@ export function PerishableRejectionDocumentClient({
                         })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -568,6 +592,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { expiryDate: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -582,6 +607,7 @@ export function PerishableRejectionDocumentClient({
                         });
                       }}
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -593,6 +619,7 @@ export function PerishableRejectionDocumentClient({
                         })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                   <td className="border p-1 align-top">
@@ -602,6 +629,7 @@ export function PerishableRejectionDocumentClient({
                         updateRow(row.id, { note: e.target.value })
                       }
                       className="border-0 shadow-none"
+                      disabled={readOnly}
                     />
                   </td>
                 </tr>
@@ -612,7 +640,7 @@ export function PerishableRejectionDocumentClient({
       </div>
 
       {/* Add Row Dialog */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+      <Dialog open={readOnly ? false : addModalOpen} onOpenChange={setAddModalOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[760px]">
           <DialogHeader>
             <DialogTitle>Добавление новой строки</DialogTitle>
@@ -969,11 +997,11 @@ export function PerishableRejectionDocumentClient({
       </Dialog>
 
       {/* Edit Lists Dialog */}
-      <Dialog open={listModalOpen} onOpenChange={setListModalOpen}>
+      <Dialog open={readOnly ? false : listModalOpen} onOpenChange={setListModalOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[760px]">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              Редактировать списки
+              Редактировать список изделий
               <button type="button" onClick={() => setListModalOpen(false)}>
                 <X className="size-5" />
               </button>

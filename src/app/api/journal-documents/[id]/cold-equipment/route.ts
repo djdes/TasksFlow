@@ -54,6 +54,13 @@ export async function POST(
     return NextResponse.json({ error: "Неверный тип документа" }, { status: 400 });
   }
 
+  if (document.status === "closed") {
+    return NextResponse.json(
+      { error: "Закрытый документ нельзя изменять" },
+      { status: 400 }
+    );
+  }
+
   const config = normalizeColdEquipmentDocumentConfig(document.config);
   const entriesByDate = new Map<string, (typeof document.entries)>();
 

@@ -1,0 +1,10 @@
+npx eslint "src/components/journals/sanitation-day-document-client.tsx" "src/components/journals/sanitation-day-documents-client.tsx" "src/app/api/journal-documents/[id]/route.ts" "src/app/api/journal-documents/route.ts" "src/lib/tracked-document.ts" "prisma/seed.ts"
+Result: pass with one unrelated warning in src/app/api/journal-documents/route.ts
+
+npx tsx -  # imported touched clients/routes/helpers
+Result: ok
+
+npm run build  # executed in isolated copy C:\www\Wesetup.ru-buildcheck
+Result: fail
+Error: Module not found: Can't resolve '@/components/journals/finished-product-documents-client'
+Origin: ./src/app/(dashboard)/journals/[code]/page.tsx:28:1

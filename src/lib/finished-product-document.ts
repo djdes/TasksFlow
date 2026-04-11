@@ -1,4 +1,10 @@
 export const FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE = "finished_product";
+export const FINISHED_PRODUCT_DEFAULT_DOCUMENT_TITLE = "Бракеражный журнал";
+export const FINISHED_PRODUCT_ARCHIVE_DOCUMENT_TITLES = [
+  "Бракеражный журнал с температурой",
+  "Бракераж",
+  "Бракеражный журнал",
+] as const;
 export const FINISHED_PRODUCT_DOCUMENT_TITLE =
   "Журнал бракеража готовой пищевой продукции";
 
@@ -75,21 +81,22 @@ export function getDefaultFinishedProductDocumentConfig(): FinishedProductDocume
     rows: [createFinishedProductRow()],
     fieldNameMode: "dish",
     inspectorMode: "inspector_name",
-    showProductTemp: false,
-    showCorrectiveAction: false,
+    showProductTemp: true,
+    showCorrectiveAction: true,
     showOxygenLevel: false,
-    showCourierTime: false,
+    showCourierTime: true,
     footerNote: "Рекомендации по организации контроля за доброкачественностью готовой пищи",
     productLists: [
-      { id: createId("finished-product-list"), name: "Понедельник", items: [] },
-      { id: createId("finished-product-list"), name: "Вторник", items: [] },
+      { id: createId("finished-product-list"), name: "Основной список", items: [] },
+      { id: createId("finished-product-list"), name: "Сезонные позиции", items: [] },
     ],
     itemsCatalog: [],
   };
 }
 
 export function buildFinishedProductConfigFromUsers(
-  users: Array<{ name: string; role?: string | null }>
+  users: Array<{ name: string; role?: string | null }>,
+  productNames: string[] = []
 ): FinishedProductDocumentConfig {
   const cfg = getDefaultFinishedProductDocumentConfig();
   const primaryUser = users[0]?.name || "";
@@ -100,6 +107,13 @@ export function buildFinishedProductConfigFromUsers(
       inspectorName: inspectorUser,
     }),
   ];
+  cfg.itemsCatalog = productNames;
+  if (cfg.productLists.length > 0) {
+    cfg.productLists[0] = {
+      ...cfg.productLists[0],
+      items: productNames.slice(0, Math.min(productNames.length, 24)),
+    };
+  }
   return cfg;
 }
 
@@ -167,6 +181,46 @@ export function normalizeFinishedProductDocumentConfig(
 
 export function getFinishedProductDocumentTitle() {
   return FINISHED_PRODUCT_DOCUMENT_TITLE;
+}
+
+export function getFinishedProductDefaultDocumentTitle() {
+  return FINISHED_PRODUCT_DEFAULT_DOCUMENT_TITLE;
+}
+
+export function buildFinishedProductArchiveSeed(referenceDate = new Date()) {
+  const currentYear = referenceDate.getUTCFullYear();
+  const currentMonth = referenceDate.getUTCMonth();
+  const archiveStart = new Date(Date.UTC(2023, 3, 1));
+  const activeFrom = new Date(Date.UTC(currentYear, currentMonth, 1));
+  const activeTo = new Date(Date.UTC(currentYear, currentMonth + 1, 0));
+  const closed: Array<{ title: string; dateFrom: Date; dateTo: Date }> = [];
+
+  let cursor = new Date(Date.UTC(currentYear, currentMonth - 1, 1));
+  let titleIndex = 0;
+
+  while (cursor >= archiveStart) {
+    const year = cursor.getUTCFullYear();
+    const month = cursor.getUTCMonth();
+    closed.push({
+      title:
+        FINISHED_PRODUCT_ARCHIVE_DOCUMENT_TITLES[
+          titleIndex % FINISHED_PRODUCT_ARCHIVE_DOCUMENT_TITLES.length
+        ],
+      dateFrom: new Date(Date.UTC(year, month, 1)),
+      dateTo: new Date(Date.UTC(year, month + 1, 0)),
+    });
+    cursor = new Date(Date.UTC(year, month - 1, 1));
+    titleIndex += 1;
+  }
+
+  return {
+    active: {
+      title: FINISHED_PRODUCT_DEFAULT_DOCUMENT_TITLE,
+      dateFrom: activeFrom,
+      dateTo: activeTo,
+    },
+    closed,
+  };
 }
 
 export function getFinishedProductCreatePeriodBounds(referenceDate = new Date()) {

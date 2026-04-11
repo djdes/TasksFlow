@@ -25,6 +25,7 @@ import {
 } from "@/lib/equipment-cleaning-document";
 import {
   FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+  getFinishedProductDefaultDocumentTitle,
   getFinishedProductDocumentTitle,
   getFinishedProductPeriodLabel,
 } from "@/lib/finished-product-document";
@@ -197,7 +198,7 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
     return getColdEquipmentDocumentTitle();
   }
   if (templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
-    return getFinishedProductDocumentTitle();
+    return getFinishedProductDefaultDocumentTitle();
   }
   if (templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
     return getClimateDocumentTitle();

@@ -1,0 +1,42 @@
+{
+  "taskId": "cold-equipment-journal-2026-04-11",
+  "commands": [
+    {
+      "command": "npx eslint \"src/components/journals/cold-equipment-document-client.tsx\" \"src/components/journals/cold-equipment-documents-client.tsx\" \"src/lib/cold-equipment-document.ts\" \"src/lib/open-document-pdf.ts\" \"src/app/(dashboard)/journals/[code]/page.tsx\" \"src/app/api/journal-documents/[id]/route.ts\" \"src/app/api/journal-documents/[id]/cold-equipment/route.ts\"",
+      "status": "PASS"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "status": "FAIL",
+      "reason": "Unrelated existing TypeScript failures elsewhere in repository; local task files were linted successfully."
+    },
+    {
+      "command": "npx tsx prisma/seed-admin.ts",
+      "status": "FAIL",
+      "reason": "ECONNREFUSED to local PostgreSQL on localhost:5432."
+    }
+  ],
+  "acceptanceCriteria": {
+    "AC1": {
+      "status": "PARTIAL",
+      "reason": "Touched journal list and document surfaces were aligned toward the source screenshots, but runtime screenshot verification is blocked locally."
+    },
+    "AC2": {
+      "status": "PARTIAL",
+      "reason": "Code changes cover starter-doc config seeding, closed-document guards, config normalization, and UI button flows, but runtime DB validation is blocked locally."
+    },
+    "AC3": {
+      "status": "PARTIAL",
+      "reason": "Print buttons now use guarded PDF opening, but end-to-end runtime verification is blocked locally."
+    },
+    "AC4": {
+      "status": "PARTIAL",
+      "reason": "Fresh targeted lint evidence exists; push/deploy verification is not yet recorded and full repo typecheck still fails."
+    }
+  },
+  "blockers": [
+    "Local PostgreSQL is unavailable.",
+    "Repository has unrelated existing TypeScript failures outside this task.",
+    "Remote deploy verification has not yet been captured."
+  ]
+}

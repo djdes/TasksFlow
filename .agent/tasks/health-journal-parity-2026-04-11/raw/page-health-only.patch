@@ -1,0 +1,36 @@
+diff --git a/src/app/(dashboard)/journals/[code]/page.tsx b/src/app/(dashboard)/journals/[code]/page.tsx
+index 3c6bfba..0000000 100644
+--- a/src/app/(dashboard)/journals/[code]/page.tsx
++++ b/src/app/(dashboard)/journals/[code]/page.tsx
+@@ -7,0 +8 @@ import { db } from "@/lib/db";
++import { HealthDocumentsClient } from "@/components/journals/health-documents-client";
+@@ -1288,0 +1297,20 @@ export default async function JournalDocumentsPage({
++    const mappedDocuments = documents.map((document) => ({
++      id: document.id,
++      title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
++      status: document.status as "active" | "closed",
++      responsibleTitle: document.responsibleTitle,
++      periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
++    }));
++
++    if (resolvedCode === "health_check") {
++      return (
++        <HealthDocumentsClient
++          activeTab={activeTab}
++          templateCode={resolvedCode}
++          templateName={template.name}
++          users={orgUsers}
++          documents={mappedDocuments}
++        />
++      );
++    }
++
+@@ -1295,7 +1323 @@ export default async function JournalDocumentsPage({
+-        documents={documents.map((document) => ({
+-          id: document.id,
+-          title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
+-          status: document.status as "active" | "closed",
+-          responsibleTitle: document.responsibleTitle,
+-          periodLabel: getJournalDocumentPeriodLabel(resolvedCode, document.dateFrom, document.dateTo),
+-        }))}
++        documents={mappedDocuments}

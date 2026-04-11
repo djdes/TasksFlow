@@ -99,12 +99,12 @@ function EditDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
-        <DialogHeader className="border-b px-6 py-5">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[32px] border-0 p-0">
+        <DialogHeader className="border-b px-10 py-8">
           <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-8 px-10 py-8">
           <div className="space-y-3">
             <Label htmlFor="edit-doc-title" className="sr-only">
               Название документа
@@ -114,14 +114,14 @@ function EditDocumentDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Введите название документа"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-20 rounded-3xl border-[#dfe1ec] px-6 text-[24px]"
             />
           </div>
 
           <div className="space-y-3">
             <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+              <SelectTrigger className="h-20 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[24px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +135,7 @@ function EditDocumentDialog({
           </div>
 
           {isStaffDocumentTemplate(templateCode) && templateCode !== "health_check" && (
-            <div className="space-y-2 rounded-2xl border border-[#dfe1ec] px-5 py-4">
+            <div className="space-y-2 rounded-3xl border border-[#dfe1ec] px-6 py-5">
               <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
               <div className="text-[22px] leading-[1.35] text-black">{HYGIENE_PERIODICITY_TEXT}</div>
             </div>
@@ -146,7 +146,7 @@ function EditDocumentDialog({
               type="button"
               disabled={isSubmitting}
               onClick={handleSave}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-16 rounded-3xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>

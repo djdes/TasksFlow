@@ -1,0 +1,22 @@
+Verification snapshot for subagent-dispatcher-template-2026-04-11
+Date: 2026-04-11
+
+Checked file:
+- docs/subagent-dispatcher-template.md
+
+Observed facts:
+- Declares active slot limit of 6.
+- Declares 20 staged tasks.
+- Declares four waves with layout 6 + 6 + 6 + 2.
+- Provides slot roster with mixed models:
+  - gpt-5.4
+  - gpt-5.3-codex
+  - gpt-5.3-codex-spark
+  - gpt-5.4-mini
+- Provides a 20-row registry from T01 through T20.
+- Provides a standard subagent reply format.
+- Provides operating instructions and status vocabulary.
+
+Working tree note:
+- git status --short indicated many unrelated existing modifications and untracked files.
+- No unrelated files were edited for this task.

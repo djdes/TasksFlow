@@ -1,0 +1,45 @@
+{
+  "task_id": "subagent-dispatcher-template-2026-04-11",
+  "verdict": "PASS",
+  "verified_at": "2026-04-11",
+  "artifacts": [
+    ".agent/tasks/subagent-dispatcher-template-2026-04-11/spec.md",
+    ".agent/tasks/subagent-dispatcher-template-2026-04-11/evidence.md",
+    ".agent/tasks/subagent-dispatcher-template-2026-04-11/raw/verification-notes.txt",
+    "docs/subagent-dispatcher-template.md"
+  ],
+  "checks": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "summary": "Dispatcher template exists in the repo and is self-contained."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "summary": "Template explicitly supports 20 tasks over a 6-slot pool in four waves."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "summary": "Template records model, slot, status, result, risks, and next step."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "summary": "Template contains practical run instructions, wave rotation, and slot reuse guidance."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "summary": "Fresh verification artifacts were written under the task artifact directory."
+    }
+  ],
+  "commands": [
+    "Get-Content docs\\subagent-dispatcher-template.md",
+    "git status --short"
+  ],
+  "notes": [
+    "Repository was already dirty before this task; verification scoped conclusions to newly added dispatcher files."
+  ]
+}

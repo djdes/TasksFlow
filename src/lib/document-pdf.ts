@@ -21,12 +21,9 @@ import {
 } from "@/lib/cold-equipment-document";
 import {
   CLEANING_DOCUMENT_TEMPLATE_CODE,
-  ACTIVITY_LABELS,
   getCleaningDocumentTitle,
   getCleaningFilePrefix,
   normalizeCleaningDocumentConfig,
-  normalizeCleaningEntryData,
-  type CleaningActivityType,
 } from "@/lib/cleaning-document";
 import {
   FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
@@ -34,6 +31,14 @@ import {
   getFinishedProductFilePrefix,
   normalizeFinishedProductDocumentConfig,
 } from "@/lib/finished-product-document";
+import {
+  PERISHABLE_REJECTION_TEMPLATE_CODE,
+  getPerishableRejectionDocumentTitle,
+  getPerishableRejectionFilePrefix,
+  normalizePerishableRejectionConfig,
+  ORGANOLEPTIC_LABELS,
+  STORAGE_CONDITION_LABELS,
+} from "@/lib/perishable-rejection-document";
 import {
   PRODUCT_WRITEOFF_TEMPLATE_CODE,
   formatProductWriteoffDateLong,
@@ -158,7 +163,6 @@ import {
   getDayNumber,
   getHealthDocumentTitle,
   getHygieneDocumentTitle,
-  getHygienePositionLabel,
   getStatusMeta,
   getWeekdayShort,
   HYGIENE_REGISTER_LEGEND,
@@ -304,16 +308,21 @@ function drawTitle(doc: jsPDF, title: string) {
   doc.text(title, 14, 15);
 }
 
-function getPrintableUsers(users: { id: string; name: string; role: string }[], employeeIds: string[]) {
+function getPrintableUsers(
+  users: { id: string; name: string; role: string; email?: string | null }[],
+  employeeIds: string[]
+) {
   const uniqueIds = [...new Set(employeeIds)];
-  return users
-    .filter((user) => uniqueIds.includes(user.id))
-    .map((user, index) => ({
+  const rosterUsers = users.filter((user) => uniqueIds.includes(user.id));
+
+  return buildHygieneExampleEmployees(rosterUsers, Math.max(rosterUsers.length, 7)).map(
+    (user) => ({
       id: user.id,
-      number: index + 1,
-      name: user.name,
-      position: getHygienePositionLabel(user.role),
-    }));
+      number: user.number,
+      name: user.name || "",
+      position: user.position || "",
+    })
+  );
 }
 
 function centerCell(content: string): CellDef {
@@ -688,7 +697,20 @@ function drawClimateMetaTable(doc: jsPDF, params: {
   doc.setFont("JournalUnicode", "bold");
   doc.text(`Начат  ${getClimateDateLabel(params.dateFrom)}`, x + leftWidth + middleWidth + 3, y + 6.5);
   doc.text(`Окончен  ${getClimateDateLabel(params.dateTo)}`, x + leftWidth + middleWidth + 3, y + 17.5);
-  doc.text("СТР. 1 ИЗ 1", x + leftWidth + middleWidth + 3, y + 28.5);
+}
+
+function stampClimatePageNumbers(doc: jsPDF) {
+  const totalPages = doc.getNumberOfPages();
+  const x = doc.internal.pageSize.getWidth() - 69;
+  const y = 56.5;
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(10);
+
+  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+    doc.setPage(pageNumber);
+    doc.text(`СТР. ${pageNumber} ИЗ ${totalPages}`, x, y);
+  }
 }
 
 function buildClimateNormsBody(config: ClimateDocumentConfig): RowInput[] {
@@ -888,6 +910,8 @@ function drawClimatePdf(doc: jsPDF, params: {
     },
     margin: { left: 10, right: 10 },
   });
+
+  stampClimatePageNumbers(doc);
 }
 
 function drawColdEquipmentPdf(doc: jsPDF, params: {
@@ -962,210 +986,201 @@ function drawCleaningPdf(doc: jsPDF, params: {
   entries: { employeeId: string; date: Date; data: Record<string, unknown> }[];
 }) {
   const config = normalizeCleaningDocumentConfig(params.config);
+  void params.entries;
 
-  // ── Header ───────────────────────────────────────────────────────────────────
-  drawClimateMetaTable(doc, {
+  const dateKeys = buildDateKeys(params.dateFrom, params.dateTo);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const monthDate =
+    dateKeys[0]
+      ? new Date(`${dateKeys[0]}T00:00:00.000Z`)
+      : params.dateFrom instanceof Date
+        ? params.dateFrom
+        : new Date(`${String(params.dateFrom).slice(0, 10)}T00:00:00.000Z`);
+  const monthLabel = monthDate.toLocaleDateString("ru-RU", {
+    month: "long",
+    year: "numeric",
+  }).replace(" г.", " г.");
+  const normalizedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  const journalTitle = params.title || getCleaningDocumentTitle();
+
+  drawJournalHeader(doc, {
     organizationName: params.organizationName,
-    title: getCleaningDocumentTitle(),
-    dateFrom: params.dateFrom,
-    dateTo: params.dateTo,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: journalTitle,
+    withPeriodicity: false,
   });
 
-  // ── Procedure info table ─────────────────────────────────────────────────────
-  const periodicityLines = [
-    `Дезинфекция — ${config.periodicity.disinfectionPerDay} раз(а) в день`,
-    ...(config.ventilationEnabled
-      ? [`Проветривание — ${config.periodicity.ventilationPerDay} раз(а) в день`]
-      : []),
-    `Влажная уборка — ${config.periodicity.wetCleaningPerDay} раз(а) в день`,
-  ].join("\n");
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(12);
+  doc.text(journalTitle.toUpperCase(), pageWidth / 2, 54, { align: "center" });
 
-  const procedureLines = [
-    config.procedure.surfaces ? `Поверхности: ${config.procedure.surfaces}` : null,
-    config.procedure.ventilationRooms ? `Помещения (проветривание): ${config.procedure.ventilationRooms}` : null,
-    config.procedure.wetCleaningRooms ? `Помещения (влажная уборка): ${config.procedure.wetCleaningRooms}` : null,
-    config.procedure.detergent ? `Дезинфицирующее средство: ${config.procedure.detergent}` : null,
-  ].filter(Boolean).join("\n");
+  const matrixRows: RowInput[] = [
+    ...config.rooms.map((room) => [
+      {
+        content: room.name,
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      {
+        content: room.detergent || "—",
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      ...dateKeys.map((dateKey) => centerCell(config.matrix[room.id]?.[dateKey] || "")),
+    ]),
+    ...config.cleaningResponsibles.map((responsible) => [
+      {
+        content: "Ответственный за уборку",
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      {
+        content: `${responsible.code} - ${responsible.userName || "—"}`,
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      ...dateKeys.map((dateKey) => centerCell(config.matrix[responsible.id]?.[dateKey] || "")),
+    ]),
+    ...config.controlResponsibles.map((responsible) => [
+      {
+        content: "Ответственный за контроль",
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      {
+        content: `${responsible.code} - ${responsible.userName || "—"}`,
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      ...dateKeys.map((dateKey) => centerCell(config.matrix[responsible.id]?.[dateKey] || "")),
+    ]),
+  ];
 
-  const responsibleLines = config.responsiblePersons.map((p) => p.title).join("\n");
+  if (matrixRows.length === 0) {
+    matrixRows.push([
+      centerCell("—"),
+      centerCell("—"),
+      ...dateKeys.map(() => centerCell("")),
+    ]);
+  }
+
+  const matrixHead: RowInput[] = [
+    [
+      {
+        content: "Наименование помещения",
+        rowSpan: 2,
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      {
+        content: "Моющие и дезинфицирующие средства",
+        rowSpan: 2,
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+      {
+        content: `Месяц ${normalizedMonthLabel}`,
+        colSpan: Math.max(dateKeys.length, 1),
+        styles: { halign: "center" as const, valign: "middle" as const },
+      },
+    ],
+    dateKeys.length > 0
+      ? dateKeys.map((dateKey) => centerCell(String(Number(dateKey.slice(-2)))))
+      : [centerCell("")],
+  ];
+
+  const columnStyles: Record<number, { cellWidth: number }> = {
+    0: { cellWidth: 56 },
+    1: { cellWidth: 44 },
+  };
+  const dayWidth = dateKeys.length > 0 ? Math.max(8, Math.min(12, 160 / dateKeys.length)) : 12;
+  dateKeys.forEach((_, index) => {
+    columnStyles[index + 2] = { cellWidth: dayWidth };
+  });
 
   autoTable(doc, {
-    startY: 62,
-    head: [[
-      { content: "Процедура", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
-      { content: "Периодичность", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
-      { content: "Ответственные лица", styles: { halign: "center" as const, valign: "middle" as const, fontStyle: "bold" as const } },
-    ]],
-    body: [[
-      { content: procedureLines, styles: { halign: "left" as const, valign: "top" as const } },
-      { content: periodicityLines, styles: { halign: "left" as const, valign: "top" as const } },
-      { content: responsibleLines, styles: { halign: "left" as const, valign: "top" as const } },
-    ]],
+    startY: 60,
+    head: matrixHead,
+    body: matrixRows,
     theme: "grid",
     styles: {
       font: "JournalUnicode",
       fontSize: 8,
-      cellPadding: 2,
+      cellPadding: 1.8,
       lineColor: [0, 0, 0],
+      lineWidth: 0.2,
       textColor: [0, 0, 0],
       overflow: "linebreak",
     },
     headStyles: {
-      fillColor: [242, 242, 242],
+      fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
       fontStyle: "bold",
       lineColor: [0, 0, 0],
+      lineWidth: 0.2,
     },
-    margin: { left: 10, right: 10 },
-    columnStyles: {
-      0: { cellWidth: 110 },
-      1: { cellWidth: 80 },
+    bodyStyles: {
+      lineWidth: 0.2,
     },
+    margin: { left: 16, right: 16 },
+    columnStyles,
   });
 
-  // ── Section title ────────────────────────────────────────────────────────────
-  const afterInfoTable = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 100;
-  const titleY = afterInfoTable + 8;
-  doc.setFont("JournalUnicode", "bold");
-  doc.setFontSize(11);
-  const pageWidth = doc.internal.pageSize.getWidth();
-  doc.text("ЧЕК-ЛИСТ УБОРКИ И ПРОВЕТРИВАНИЯ ПОМЕЩЕНИЙ", pageWidth / 2, titleY, { align: "center" });
+  const afterMatrixY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 140;
+  doc.setFont("JournalUnicode", "italic");
+  const legendY = afterMatrixY + 8;
+  doc.text("Условные обозначения:", 16, legendY);
+  const afterLegendY = renderWrappedTextBlock(
+    doc,
+    config.legend.length > 0 ? config.legend : ["/ - Уборка не проводилась", "T - Текущая", "G - Генеральная"],
+    16,
+    legendY + 5,
+    pageWidth - 32,
+    4.8
+  );
   doc.setFont("JournalUnicode", "normal");
 
-  // ── Main data table ──────────────────────────────────────────────────────────
-  const activityTypes: CleaningActivityType[] = config.ventilationEnabled
-    ? ["disinfection", "ventilation", "wetCleaning"]
-    : ["disinfection", "wetCleaning"];
-
-  // Build entry map: dateKey → activity type → { times, responsibleName }
-  const entryMap = new Map<string, Map<CleaningActivityType, { times: string[]; responsibleName: string }>>();
-  params.entries.forEach((entry) => {
-    const dateKey = toDateKey(entry.date);
-    const data = normalizeCleaningEntryData(entry.data);
-    const actMap = new Map<CleaningActivityType, { times: string[]; responsibleName: string }>();
-    data.activities.forEach((act) => {
-      actMap.set(act.type, { times: act.times, responsibleName: act.responsibleName });
-    });
-    entryMap.set(dateKey, actMap);
-  });
-
-  const dateKeys = buildDateKeys(params.dateFrom, params.dateTo);
-
-  // Determine max time columns per activity (from schedule + actual entries)
-  const maxTimesPerActivity: Record<CleaningActivityType, number> = {
-    disinfection: 1,
-    ventilation: 1,
-    wetCleaning: 1,
-  };
-  activityTypes.forEach((type) => {
-    const schedCount = config.schedule[type].times.length;
-    let maxFromEntries = 0;
-    dateKeys.forEach((dk) => {
-      const times = entryMap.get(dk)?.get(type)?.times ?? [];
-      if (times.length > maxFromEntries) maxFromEntries = times.length;
-    });
-    maxTimesPerActivity[type] = Math.max(schedCount, maxFromEntries, 1);
-  });
-
-  const totalTimeCols = activityTypes.reduce((sum, t) => sum + maxTimesPerActivity[t], 0);
-
-  // Header row 1
-  const headRow1: CellDef[] = [
-    { content: "Дата", rowSpan: 3, styles: { halign: "center" as const, valign: "middle" as const } },
-    { content: "Время", colSpan: totalTimeCols, styles: { halign: "center" as const, valign: "middle" as const } },
-    { content: "ФИО ответственного лица", rowSpan: 3, styles: { halign: "center" as const, valign: "middle" as const } },
-  ];
-
-  // Header row 2: activity labels spanning their time columns
-  const headRow2: CellDef[] = activityTypes.map((type) => ({
-    content: ACTIVITY_LABELS[type],
-    colSpan: maxTimesPerActivity[type],
-    styles: { halign: "center" as const, valign: "middle" as const },
-  }));
-
-  // Header row 3: slot numbers within each activity
-  const headRow3: CellDef[] = activityTypes.flatMap((type) =>
-    Array.from({ length: maxTimesPerActivity[type] }, (_, i) => ({
-      content: String(i + 1),
-      styles: { halign: "center" as const, valign: "middle" as const },
-    }))
-  );
-
-  const head: RowInput[] = [headRow1, headRow2, headRow3];
-
-  // Body: each date produces activityTypes.length sub-rows
-  const body: RowInput[] = [];
-  dateKeys.forEach((dk) => {
-    const [year, month, day] = dk.split("-");
-    const dateLabel = `${day}.${month}.${year}`;
-    const actMap = entryMap.get(dk);
-
-    activityTypes.forEach((type, actIndex) => {
-      const act = actMap?.get(type);
-      const timeCells: CellDef[] = Array.from(
-        { length: maxTimesPerActivity[type] },
-        (_, i) => centerCell(act?.times[i] ?? "")
-      );
-
-      const row: CellDef[] = [];
-
-      if (actIndex === 0) {
-        row.push({
-          content: dateLabel,
-          rowSpan: activityTypes.length,
-          styles: { halign: "center" as const, valign: "middle" as const },
-        });
-      }
-
-      row.push(...timeCells);
-
-      if (actIndex === 0) {
-        row.push({
-          content: act?.responsibleName ?? "",
-          rowSpan: activityTypes.length,
-          styles: { halign: "center" as const, valign: "middle" as const },
-        });
-      }
-
-      body.push(row);
-    });
-  });
-
-  // Column widths
-  const timeColWidth = 14;
-  const colStyles: Record<number, { cellWidth: number }> = {
-    0: { cellWidth: 18 },
-  };
-  let colOffset = 1;
-  activityTypes.forEach((type) => {
-    for (let i = 0; i < maxTimesPerActivity[type]; i++) {
-      colStyles[colOffset + i] = { cellWidth: timeColWidth };
-    }
-    colOffset += maxTimesPerActivity[type];
-  });
-  colStyles[colOffset] = { cellWidth: 40 };
+  const referenceRows: RowInput[] = config.rooms.map((room) => [
+    {
+      content: room.name,
+      styles: { halign: "left" as const, valign: "middle" as const },
+    },
+    {
+      content: room.currentScope.join(", "),
+      styles: { halign: "left" as const, valign: "middle" as const },
+    },
+    {
+      content: room.generalScope.join(", "),
+      styles: { halign: "left" as const, valign: "middle" as const },
+    },
+  ]);
 
   autoTable(doc, {
-    startY: titleY + 6,
-    head,
-    body,
+    startY: afterLegendY + 6,
+    head: [[
+      centerCell("Наименование помещения"),
+      centerCell("Текущая уборка"),
+      centerCell("Генеральная уборка"),
+    ]],
+    body: referenceRows.length > 0 ? referenceRows : [[centerCell("—"), centerCell("—"), centerCell("—")]],
     theme: "grid",
     styles: {
       font: "JournalUnicode",
-      fontSize: 7,
-      cellPadding: 1.5,
+      fontSize: 8,
+      cellPadding: 1.8,
       lineColor: [0, 0, 0],
+      lineWidth: 0.2,
       textColor: [0, 0, 0],
       overflow: "linebreak",
     },
     headStyles: {
-      fillColor: [242, 242, 242],
+      fillColor: [255, 255, 255],
       textColor: [0, 0, 0],
       fontStyle: "bold",
       lineColor: [0, 0, 0],
+      lineWidth: 0.2,
     },
-    margin: { left: 10, right: 10 },
-    columnStyles: colStyles,
+    bodyStyles: {
+      lineWidth: 0.2,
+    },
+    margin: { left: 16, right: 16, bottom: 18 },
+    columnStyles: {
+      0: { cellWidth: 48 },
+      1: { cellWidth: 96 },
+      2: { cellWidth: 96 },
+    },
   });
 }
 
@@ -1667,6 +1682,125 @@ function drawProductWriteoffPdf(doc: jsPDF, params: {
     doc.text(member.employeeName || "________________", 30, signY);
     doc.line(62, signY + 1, 112, signY + 1);
     signY += 8;
+  });
+}
+
+function drawPerishableRejectionPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date;
+  config: ReturnType<typeof normalizePerishableRejectionConfig>;
+}) {
+  drawTitle(doc, params.title);
+  drawJournalHeader(doc, {
+    organizationName: params.organizationName,
+    pageLabel: "СТР. 1 ИЗ 1",
+    journalLabel: params.title,
+    withPeriodicity: false,
+  });
+
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(11);
+  doc.text(
+    `Дата начала: ${params.dateFrom.toLocaleDateString("ru-RU")}`,
+    24,
+    72
+  );
+
+  const rows =
+    params.config.rows.length > 0
+      ? params.config.rows
+      : [
+          {
+            id: "",
+            arrivalDate: "",
+            arrivalTime: "",
+            productName: "",
+            productionDate: "",
+            manufacturer: "",
+            supplier: "",
+            packaging: "",
+            quantity: "",
+            documentNumber: "",
+            organolepticResult: "compliant" as const,
+            storageCondition: "2_6" as const,
+            expiryDate: "",
+            actualSaleDate: "",
+            actualSaleTime: "",
+            responsiblePerson: "",
+            note: "",
+          },
+        ];
+
+  autoTable(doc, {
+    startY: 78,
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.4,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      valign: "middle",
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+    },
+    headStyles: {
+      font: "JournalUnicode",
+      fontStyle: "bold",
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      halign: "center",
+      valign: "middle",
+    },
+    margin: { left: 10, right: 10 },
+    head: [[
+      "№",
+      "Дата, время поступления",
+      "Наименование",
+      "Дата выработки",
+      "Изготовитель / поставщик",
+      "Фасовка / кол-во",
+      "Документ",
+      "Органолептическая оценка",
+      "Условия хранения / срок реализации",
+      "Дата, время реализации",
+      "Ответственное лицо",
+      "Примечание",
+    ]],
+    body: rows.map((row, index) => [
+      String(index + 1),
+      [row.arrivalDate, row.arrivalTime].filter(Boolean).join("\n"),
+      row.productName,
+      row.productionDate,
+      [row.manufacturer, row.supplier].filter(Boolean).join("\n"),
+      [row.packaging, row.quantity].filter(Boolean).join("\n"),
+      row.documentNumber,
+      ORGANOLEPTIC_LABELS[row.organolepticResult] || row.organolepticResult,
+      [
+        STORAGE_CONDITION_LABELS[row.storageCondition] || row.storageCondition,
+        row.expiryDate,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      [row.actualSaleDate, row.actualSaleTime].filter(Boolean).join("\n"),
+      row.responsiblePerson,
+      row.note,
+    ]),
+    columnStyles: {
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 17, halign: "center" },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 18, halign: "center" },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 20 },
+      8: { cellWidth: 24 },
+      9: { cellWidth: 20, halign: "center" },
+      10: { cellWidth: 24 },
+      11: { cellWidth: 24 },
+    },
   });
 }
 
@@ -2184,7 +2318,9 @@ function drawTrainingPlanPdf(doc: jsPDF, params: {
   doc.text(cfg.approveEmployee || "", headerRight, 74, { align: "right" });
   doc.text(
     `« ${cfg.documentDate.slice(8, 10)} » ${new Date(cfg.documentDate).toLocaleDateString("ru-RU", { month: "long" })} ${cfg.year} г.`,
-    headerRight - 6, 80, { align: "center" }
+    headerRight - 6,
+    80,
+    { align: "center" }
   );
 
   doc.setFont("JournalUnicode", "bold");
@@ -2195,10 +2331,18 @@ function drawTrainingPlanPdf(doc: jsPDF, params: {
   const head: RowInput[] = [
     [
       { content: "№ п/п", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-      { content: "Должностная единица,\nподлежащая обучению", rowSpan: 2, styles: { halign: "center", valign: "middle" } },
-      { content: "Требуется обучение по теме:", colSpan: topics.length, styles: { halign: "center", valign: "middle" } },
+      {
+        content: "Должностная единица,\nподлежащая обучению",
+        rowSpan: 2,
+        styles: { halign: "center", valign: "middle" },
+      },
+      {
+        content: "Требуется обучение по теме:",
+        colSpan: topics.length,
+        styles: { halign: "center", valign: "middle" },
+      },
     ],
-    topics.map((t) => ({ content: t.name, styles: { halign: "center", valign: "middle" } })),
+    topics.map((topic) => ({ content: topic.name, styles: { halign: "center", valign: "middle" } })),
   ];
 
   const body: RowInput[] = cfg.rows.map((row, index) => [
@@ -2216,8 +2360,6 @@ function drawTrainingPlanPdf(doc: jsPDF, params: {
       body.push(Array(2 + topics.length).fill(centerCell("")));
     }
   }
-
-  const topicColWidth = topics.length > 0 ? Math.min(30, (pageWidth - 80) / topics.length) : 30;
 
   autoTable(doc, {
     startY: 96,
@@ -2939,7 +3081,13 @@ function buildVisibleUvRuntimeEntries(
 
   return [...byDate.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([, entry]) => entry);
+    .map(([, entry]) => ({
+      ...entry,
+      date:
+        entry.date instanceof Date
+          ? entry.date
+          : new Date(`${String(entry.date).slice(0, 10)}T00:00:00.000Z`),
+    }));
 }
 
 function drawRegisterPdf(doc: jsPDF, params: {
@@ -3517,7 +3665,7 @@ export async function generateJournalDocumentPdf(params: {
       organizationId,
       isActive: true,
     },
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, email: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
   const equipment = await db.equipment.findMany({
@@ -3549,6 +3697,7 @@ export async function generateJournalDocumentPdf(params: {
   const coldConfig = normalizeColdEquipmentDocumentConfig(document.config);
   const cleaningConfig = normalizeCleaningDocumentConfig(document.config);
   const finishedConfig = normalizeFinishedProductDocumentConfig(document.config);
+  const perishableRejectionConfig = normalizePerishableRejectionConfig(document.config);
   const uvRuntimeConfig = normalizeUvRuntimeDocumentConfig(document.config);
   const equipmentCalibrationConfig = normalizeEquipmentCalibrationConfig(document.config);
   const trackedFields = getTrackedFields(document.template.fields);
@@ -3627,6 +3776,13 @@ export async function generateJournalDocumentPdf(params: {
       dateFrom: document.dateFrom,
       dateTo: document.dateTo,
       config: finishedConfig,
+    });
+  } else if (templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE) {
+    drawPerishableRejectionPdf(doc, {
+      organizationName,
+      title: document.title || getPerishableRejectionDocumentTitle(),
+      dateFrom: document.dateFrom,
+      config: perishableRejectionConfig,
     });
   } else if (templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE) {
     drawProductWriteoffPdf(doc, {
@@ -3833,7 +3989,9 @@ export async function generateJournalDocumentPdf(params: {
         : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
           ? getColdEquipmentFilePrefix()
           : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-        ? getCleaningFilePrefix()
+            ? getCleaningFilePrefix()
+            : templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE
+              ? getPerishableRejectionFilePrefix()
           : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
             ? getFinishedProductFilePrefix()
             : templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE

@@ -3,6 +3,10 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+function isValidDate(value: Date) {
+  return Number.isFinite(value.getTime());
+}
+
 /**
  * PUT — upsert a single grid cell (employee + date + data).
  * Called on each cell edit in the grid UI.
@@ -41,7 +45,22 @@ export async function PUT(
 
   // Truncate to date-only (midnight UTC)
   const dateObj = new Date(date);
+  if (!isValidDate(dateObj)) {
+    return NextResponse.json({ error: "Некорректная дата" }, { status: 400 });
+  }
   dateObj.setUTCHours(0, 0, 0, 0);
+
+  const docDateFrom = new Date(doc.dateFrom);
+  docDateFrom.setUTCHours(0, 0, 0, 0);
+  const docDateTo = new Date(doc.dateTo);
+  docDateTo.setUTCHours(0, 0, 0, 0);
+
+  if (dateObj < docDateFrom || dateObj > docDateTo) {
+    return NextResponse.json(
+      { error: "Дата записи должна попадать в период документа" },
+      { status: 400 }
+    );
+  }
 
   const entry = await db.journalDocumentEntry.upsert({
     where: {
@@ -103,6 +122,9 @@ export async function DELETE(
 
   if (body.employeeId && body.date) {
     const dateObj = new Date(body.date);
+    if (!isValidDate(dateObj)) {
+      return NextResponse.json({ error: "Некорректная дата" }, { status: 400 });
+    }
     dateObj.setUTCHours(0, 0, 0, 0);
 
     const result = await db.journalDocumentEntry.deleteMany({
@@ -110,6 +132,17 @@ export async function DELETE(
         documentId,
         employeeId: body.employeeId,
         date: dateObj,
+      },
+    });
+
+    return NextResponse.json({ deleted: result.count });
+  }
+
+  if (body.employeeId) {
+    const result = await db.journalDocumentEntry.deleteMany({
+      where: {
+        documentId,
+        employeeId: body.employeeId,
       },
     });
 
