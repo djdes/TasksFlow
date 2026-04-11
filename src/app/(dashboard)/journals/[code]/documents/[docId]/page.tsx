@@ -606,6 +606,7 @@ export default async function JournalDocumentPage({
         organizationName={organization?.name || 'ООО "Тест"'}
         status={document.status}
         config={normalizeMetalImpurityConfig(document.config)}
+        users={enrichedEmployees}
       />
     );
   }

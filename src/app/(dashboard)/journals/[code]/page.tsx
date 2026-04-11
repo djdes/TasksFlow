@@ -2203,19 +2203,53 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === METAL_IMPURITY_TEMPLATE_CODE) {
-      const metalDocuments = await db.journalDocument.findMany({
-        where: {
-          organizationId: session.user.organizationId,
-          templateId: template.id,
-          status: activeTab,
-        },
-        orderBy: { createdAt: "asc" },
-      });
+      const [metalDocuments, metalUsers, metalProducts, metalSuppliers] = await Promise.all([
+        db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+            status: activeTab,
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+        db.user.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            isActive: true,
+          },
+          select: { id: true, name: true, role: true },
+          orderBy: [{ role: "asc" }, { name: "asc" }],
+        }),
+        db.product.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            isActive: true,
+          },
+          select: { name: true },
+          orderBy: { name: "asc" },
+          take: 25,
+        }),
+        db.batch.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            supplier: { not: null },
+          },
+          select: { supplier: true },
+          orderBy: { supplier: "asc" },
+          distinct: ["supplier"],
+          take: 25,
+        }),
+      ]);
 
       return (
         <MetalImpurityDocumentsClient
           routeCode={code === METAL_IMPURITY_SOURCE_SLUG ? code : resolvedCode}
           activeTab={activeTab}
+          users={metalUsers}
+          availableMaterials={metalProducts.map((item) => item.name).filter(Boolean)}
+          availableSuppliers={metalSuppliers
+            .map((item) => item.supplier || "")
+            .filter(Boolean)}
           documents={metalDocuments.map((document) => ({
             id: document.id,
             title: document.title || METAL_IMPURITY_DOCUMENT_TITLE,

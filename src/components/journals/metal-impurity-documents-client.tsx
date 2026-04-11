@@ -33,9 +33,11 @@ import {
   METAL_IMPURITY_PAGE_TITLE,
   METAL_IMPURITY_RESPONSIBLE_POSITIONS,
   METAL_IMPURITY_TEMPLATE_CODE,
+  type MetalImpurityUser,
   getDefaultMetalImpurityConfig,
   normalizeMetalImpurityConfig,
 } from "@/lib/metal-impurity-document";
+import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 
 type DocumentItem = {
   id: string;
@@ -49,6 +51,9 @@ type Props = {
   activeTab: "active" | "closed";
   routeCode: string;
   documents: DocumentItem[];
+  users: MetalImpurityUser[];
+  availableMaterials: string[];
+  availableSuppliers: string[];
 };
 
 type SettingsState = {
@@ -66,19 +71,44 @@ function formatRuDate(value: string) {
 }
 
 function collectEmployeeOptions(
+  users: MetalImpurityUser[],
   documents: DocumentItem[],
+  roleLabel: string,
   fallbackEmployee: string,
   currentEmployee?: string
 ) {
   const values = new Set<string>([fallbackEmployee]);
   if (currentEmployee) values.add(currentEmployee);
+  for (const user of getUsersForRoleLabel(users, roleLabel)) {
+    values.add(user.name);
+  }
 
   for (const document of documents) {
     const config = normalizeMetalImpurityConfig(document.config);
-    if (config.responsibleEmployee) values.add(config.responsibleEmployee);
+    if (config.responsiblePosition === roleLabel && config.responsibleEmployee) {
+      values.add(config.responsibleEmployee);
+    }
   }
 
   return Array.from(values).filter(Boolean);
+}
+
+function getDefaultState(
+  users: MetalImpurityUser[],
+  availableMaterials: string[],
+  availableSuppliers: string[]
+): SettingsState {
+  const config = getDefaultMetalImpurityConfig({
+    users,
+    materials: availableMaterials,
+    suppliers: availableSuppliers,
+  });
+  return {
+    title: METAL_IMPURITY_DOCUMENT_TITLE,
+    startDate: config.startDate,
+    responsiblePosition: config.responsiblePosition,
+    responsibleEmployee: config.responsibleEmployee,
+  };
 }
 
 function DocumentDialog({
@@ -87,6 +117,7 @@ function DocumentDialog({
   initial,
   submitLabel,
   title,
+  users,
   documents,
   onSubmit,
 }: {
@@ -95,19 +126,23 @@ function DocumentDialog({
   initial: SettingsState;
   submitLabel: string;
   title: string;
+  users: MetalImpurityUser[];
   documents: DocumentItem[];
   onSubmit: (value: SettingsState) => Promise<void>;
 }) {
   const [state, setState] = useState(initial);
   const [submitting, setSubmitting] = useState(false);
+  const defaultEmployee = pickPrimaryManager(users)?.name || getDefaultMetalImpurityConfig().responsibleEmployee;
   const employeeOptions = useMemo(
     () =>
       collectEmployeeOptions(
+        users,
         documents,
-        getDefaultMetalImpurityConfig().responsibleEmployee,
+        state.responsiblePosition,
+        defaultEmployee,
         state.responsibleEmployee
       ),
-    [documents, state.responsibleEmployee]
+    [defaultEmployee, documents, state.responsibleEmployee, state.responsiblePosition, users]
   );
 
   useEffect(() => {
@@ -116,6 +151,13 @@ function DocumentDialog({
       setSubmitting(false);
     }
   }, [initial, open]);
+
+  useEffect(() => {
+    if (!open || employeeOptions.length === 0) return;
+    if (!employeeOptions.includes(state.responsibleEmployee)) {
+      setState((current) => ({ ...current, responsibleEmployee: employeeOptions[0] }));
+    }
+  }, [employeeOptions, open, state.responsibleEmployee]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +188,15 @@ function DocumentDialog({
             <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={state.responsiblePosition}
-              onValueChange={(value) => setState({ ...state, responsiblePosition: value })}
+              onValueChange={(value) =>
+                setState({
+                  ...state,
+                  responsiblePosition: value,
+                  responsibleEmployee:
+                    getUsersForRoleLabel(users, value)[0]?.name ||
+                    state.responsibleEmployee,
+                })
+              }
             >
               <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -250,24 +300,25 @@ export function MetalImpurityDocumentsClient({
   activeTab,
   routeCode,
   documents,
+  users,
+  availableMaterials,
+  availableSuppliers,
 }: Props) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsDocument, setSettingsDocument] = useState<DocumentItem | null>(null);
   const [deleteDocument, setDeleteDocument] = useState<DocumentItem | null>(null);
 
-  const createState = useMemo<SettingsState>(() => {
-    const config = getDefaultMetalImpurityConfig();
-    return {
-      title: METAL_IMPURITY_DOCUMENT_TITLE,
-      startDate: config.startDate,
-      responsiblePosition: config.responsiblePosition,
-      responsibleEmployee: config.responsibleEmployee,
-    };
-  }, []);
+  const createState = useMemo<SettingsState>(
+    () => getDefaultState(users, availableMaterials, availableSuppliers),
+    [availableMaterials, availableSuppliers, users]
+  );
 
   async function createDocument(payload: SettingsState) {
     const config = getDefaultMetalImpurityConfig({
+      users,
+      materials: availableMaterials,
+      suppliers: availableSuppliers,
       date: payload.startDate,
       responsibleName: payload.responsibleEmployee,
       responsiblePosition: payload.responsiblePosition,
@@ -296,6 +347,9 @@ export function MetalImpurityDocumentsClient({
 
   async function saveSettings(document: DocumentItem, payload: SettingsState) {
     const current = normalizeMetalImpurityConfig(document.config, {
+      users,
+      materials: availableMaterials,
+      suppliers: availableSuppliers,
       date: payload.startDate,
       responsibleName: payload.responsibleEmployee,
       responsiblePosition: payload.responsiblePosition,
@@ -339,7 +393,7 @@ export function MetalImpurityDocumentsClient({
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
             {activeTab === "closed"
-              ? `${METAL_IMPURITY_PAGE_TITLE} (Закрытые)`
+              ? `${METAL_IMPURITY_PAGE_TITLE} (Закрытые!!!)`
               : METAL_IMPURITY_PAGE_TITLE}
           </h1>
           <div className="flex items-center gap-3">
@@ -489,6 +543,7 @@ export function MetalImpurityDocumentsClient({
         initial={createState}
         submitLabel="Создать"
         title="Создание документа"
+        users={users}
         documents={documents}
         onSubmit={createDocument}
       />
@@ -515,6 +570,7 @@ export function MetalImpurityDocumentsClient({
         }
         submitLabel="Сохранить"
         title="Настройки документа"
+        users={users}
         documents={documents}
         onSubmit={async (value) => {
           if (!settingsDocument) return;

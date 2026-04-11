@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import {
   createMetalImpurityRow,
-  getDefaultMetalImpurityConfig,
+  getMetalImpurityEmployeeOptions,
   getMetalImpurityOptionName,
   getMetalImpurityValuePerKg,
   METAL_IMPURITY_DOCUMENT_TITLE,
@@ -36,6 +37,7 @@ import {
   type MetalImpurityDocumentConfig,
   type MetalImpurityOption,
   type MetalImpurityRow,
+  type MetalImpurityUser,
 } from "@/lib/metal-impurity-document";
 
 type Props = {
@@ -44,6 +46,7 @@ type Props = {
   organizationName: string;
   status: string;
   config: unknown;
+  users: MetalImpurityUser[];
 };
 
 type RowDialogProps = {
@@ -52,9 +55,9 @@ type RowDialogProps = {
   row: MetalImpurityRow | null;
   materials: MetalImpurityOption[];
   suppliers: MetalImpurityOption[];
+  users: MetalImpurityUser[];
   responsiblePosition: string;
   responsibleEmployee: string;
-  employeeOptions: string[];
   onSave: (row: MetalImpurityRow, additions?: { materialName?: string; supplierName?: string }) => Promise<void>;
 };
 
@@ -70,6 +73,7 @@ type ListEditorSectionProps = {
   onEditChange: (value: string) => void;
   onEditCommit: () => void;
   addPlaceholder: string;
+  onImportClick: () => void;
 };
 
 function formatRuDate(value: string) {
@@ -84,17 +88,6 @@ function formatHeaderDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("ru-RU").replace(/\./g, "-");
-}
-
-function buildEmployeeOptions(config: MetalImpurityDocumentConfig, currentValue: string) {
-  return Array.from(
-    new Set([
-      getDefaultMetalImpurityConfig().responsibleEmployee,
-      config.responsibleEmployee,
-      currentValue,
-      ...config.rows.map((row) => row.responsibleName),
-    ].filter(Boolean))
-  );
 }
 
 function AddableSelectField(props: {
@@ -148,9 +141,9 @@ function RowDialog({
   row,
   materials,
   suppliers,
+  users,
   responsiblePosition,
   responsibleEmployee,
-  employeeOptions,
   onSave,
 }: RowDialogProps) {
   const today = new Date().toISOString().slice(0, 10);
@@ -162,6 +155,16 @@ function RowDialog({
   const [newSupplier, setNewSupplier] = useState("");
   const [newMaterial, setNewMaterial] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const employeeOptions = useMemo(
+    () =>
+      getMetalImpurityEmployeeOptions(
+        users,
+        draftPosition,
+        draftEmployee || responsibleEmployee,
+        [responsibleEmployee, draft.responsibleName]
+      ),
+    [draft.responsibleName, draftEmployee, draftPosition, responsibleEmployee, users]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -171,15 +174,25 @@ function RowDialog({
         date: today,
         materialId: materials[0]?.id || "",
         supplierId: suppliers[0]?.id || "",
+        responsibleRole: responsiblePosition,
         responsibleName: responsibleEmployee,
       });
     setDraft(initialRow);
-    setDraftPosition(responsiblePosition);
+    setDraftPosition(initialRow.responsibleRole || responsiblePosition);
     setDraftEmployee(initialRow.responsibleName || responsibleEmployee);
     setNewSupplier("");
     setNewMaterial("");
     setSubmitting(false);
   }, [materials, open, responsibleEmployee, responsiblePosition, row, suppliers, today]);
+
+  useEffect(() => {
+    if (!open || employeeOptions.length === 0) return;
+    if (!employeeOptions.includes(draftEmployee)) {
+      const nextEmployee = employeeOptions[0];
+      setDraftEmployee(nextEmployee);
+      setDraft((current) => ({ ...current, responsibleName: nextEmployee }));
+    }
+  }, [draftEmployee, employeeOptions, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -272,7 +285,23 @@ function RowDialog({
 
           <div className="space-y-3">
             <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
-            <Select value={draftPosition} onValueChange={setDraftPosition}>
+            <Select
+              value={draftPosition}
+              onValueChange={(value) => {
+                const nextEmployee =
+                  getMetalImpurityEmployeeOptions(users, value, draftEmployee, [
+                    responsibleEmployee,
+                    draft.responsibleName,
+                  ])[0] || draftEmployee;
+                setDraftPosition(value);
+                setDraftEmployee(nextEmployee);
+                setDraft((current) => ({
+                  ...current,
+                  responsibleRole: value,
+                  responsibleName: nextEmployee,
+                }));
+              }}
+            >
               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
@@ -316,7 +345,11 @@ function RowDialog({
                 setSubmitting(true);
                 try {
                   await onSave(
-                    { ...draft, responsibleName: draftEmployee },
+                    {
+                      ...draft,
+                      responsibleRole: draftPosition,
+                      responsibleName: draftEmployee,
+                    },
                     {
                       materialName: newMaterial.trim() || undefined,
                       supplierName: newSupplier.trim() || undefined,
@@ -343,6 +376,7 @@ function SettingsDialog({
   onOpenChange,
   title,
   config,
+  users,
   employeeOptions,
   onSave,
 }: {
@@ -350,6 +384,7 @@ function SettingsDialog({
   onOpenChange: (open: boolean) => void;
   title: string;
   config: MetalImpurityDocumentConfig;
+  users: MetalImpurityUser[];
   employeeOptions: string[];
   onSave: (params: { title: string; config: MetalImpurityDocumentConfig }) => Promise<void>;
 }) {
@@ -363,6 +398,27 @@ function SettingsDialog({
     setDraftConfig(config);
     setSubmitting(false);
   }, [config, open, title]);
+
+  const filteredEmployees = useMemo(
+    () =>
+      getMetalImpurityEmployeeOptions(
+        users,
+        draftConfig.responsiblePosition,
+        draftConfig.responsibleEmployee,
+        employeeOptions
+      ),
+    [draftConfig.responsibleEmployee, draftConfig.responsiblePosition, employeeOptions, users]
+  );
+
+  useEffect(() => {
+    if (!open || filteredEmployees.length === 0) return;
+    if (!filteredEmployees.includes(draftConfig.responsibleEmployee)) {
+      setDraftConfig((current) => ({
+        ...current,
+        responsibleEmployee: filteredEmployees[0],
+      }));
+    }
+  }, [draftConfig.responsibleEmployee, filteredEmployees, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -399,9 +455,16 @@ function SettingsDialog({
             <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={draftConfig.responsiblePosition}
-              onValueChange={(value) =>
-                setDraftConfig({ ...draftConfig, responsiblePosition: value })
-              }
+              onValueChange={(value) => {
+                const nextEmployee =
+                  getMetalImpurityEmployeeOptions(users, value, draftConfig.responsibleEmployee)[0] ||
+                  draftConfig.responsibleEmployee;
+                setDraftConfig({
+                  ...draftConfig,
+                  responsiblePosition: value,
+                  responsibleEmployee: nextEmployee,
+                });
+              }}
             >
               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -427,7 +490,7 @@ function SettingsDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {employeeOptions.map((employee) => (
+                {filteredEmployees.map((employee) => (
                   <SelectItem key={employee} value={employee}>
                     {employee}
                   </SelectItem>
@@ -471,6 +534,7 @@ function ListEditorSection({
   onEditChange,
   onEditCommit,
   addPlaceholder,
+  onImportClick,
 }: ListEditorSectionProps) {
   return (
     <div className="space-y-4">
@@ -523,7 +587,13 @@ function ListEditorSection({
         </div>
 
         <div className="space-y-3 pt-1 text-[14px] text-[#6d7288]">
-          <div className="text-[#5f66ff]">Добавить из файла</div>
+          <button
+            type="button"
+            onClick={onImportClick}
+            className="text-left text-[#5f66ff] underline underline-offset-2"
+          >
+            Добавить из файла
+          </button>
           <div>
             Список должен быть в файле Excel, на первом листе в первом столбце и начинаться с
             первой строки.
@@ -558,6 +628,8 @@ function ListsDialog({
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const materialFileInputRef = useRef<HTMLInputElement>(null);
+  const supplierFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -600,6 +672,31 @@ function ListsDialog({
     setEditingValue("");
   }
 
+  async function importItems(file: File, target: "materials" | "suppliers") {
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, { header: 1 });
+      const items = rows.map((row) => String(row[0] ?? "").trim()).filter(Boolean);
+      if (items.length === 0) throw new Error("empty");
+      setDraft((current) => {
+        const currentItems = target === "materials" ? current.materials : current.suppliers;
+        const existingNames = new Set(currentItems.map((item) => item.name.toLowerCase()));
+        const imported = items
+          .filter((item) => !existingNames.has(item.toLowerCase()))
+          .map((name, index) => ({
+            id: `${target.slice(0, -1)}-import-${Date.now()}-${index}`,
+            name,
+          }));
+        return target === "materials"
+          ? { ...current, materials: [...current.materials, ...imported] }
+          : { ...current, suppliers: [...current.suppliers, ...imported] };
+      });
+    } catch {
+      window.alert("Не удалось импортировать файл");
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[620px] rounded-[32px] border-0 p-0">
@@ -636,6 +733,7 @@ function ListsDialog({
             onEditChange={setEditingValue}
             onEditCommit={commitMaterialEdit}
             addPlaceholder="Введите название нового сырья"
+            onImportClick={() => materialFileInputRef.current?.click()}
           />
 
           <ListEditorSection
@@ -665,6 +763,7 @@ function ListsDialog({
             onEditChange={setEditingValue}
             onEditCommit={commitSupplierEdit}
             addPlaceholder="Введите название нового поставщика"
+            onImportClick={() => supplierFileInputRef.current?.click()}
           />
 
           <div className="flex justify-end">
@@ -686,6 +785,28 @@ function ListsDialog({
             </Button>
           </div>
         </div>
+        <input
+          ref={materialFileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) importItems(file, "materials").catch(() => undefined);
+            event.currentTarget.value = "";
+          }}
+        />
+        <input
+          ref={supplierFileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) importItems(file, "suppliers").catch(() => undefined);
+            event.currentTarget.value = "";
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -697,6 +818,7 @@ export function MetalImpurityDocumentClient({
   organizationName,
   status,
   config: initialConfig,
+  users,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -728,8 +850,14 @@ export function MetalImpurityDocumentClient({
 
   const allSelected = config.rows.length > 0 && selectedRowIds.length === config.rows.length;
   const employeeOptions = useMemo(
-    () => buildEmployeeOptions(config, editingRow?.responsibleName || config.responsibleEmployee),
-    [config, editingRow?.responsibleName]
+    () =>
+      getMetalImpurityEmployeeOptions(
+        users,
+        config.responsiblePosition,
+        editingRow?.responsibleName || config.responsibleEmployee,
+        config.rows.map((row) => row.responsibleName)
+      ),
+    [config.responsibleEmployee, config.responsiblePosition, config.rows, editingRow?.responsibleName, users]
   );
 
   async function persist(
@@ -1067,9 +1195,9 @@ export function MetalImpurityDocumentClient({
         row={editingRow}
         materials={config.materials}
         suppliers={config.suppliers}
+        users={users}
         responsiblePosition={config.responsiblePosition}
         responsibleEmployee={config.responsibleEmployee}
-        employeeOptions={employeeOptions}
         onSave={saveRow}
       />
 
@@ -1078,6 +1206,7 @@ export function MetalImpurityDocumentClient({
         onOpenChange={setSettingsOpen}
         title={documentTitle}
         config={config}
+        users={users}
         employeeOptions={employeeOptions}
         onSave={async ({ title: nextTitle, config: nextConfig }) => {
           await persist(nextTitle.trim() || METAL_IMPURITY_DOCUMENT_TITLE, nextConfig);
