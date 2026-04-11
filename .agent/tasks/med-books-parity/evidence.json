@@ -1,0 +1,36 @@
+{
+  "taskId": "med-books-parity",
+  "date": "2026-04-11",
+  "journalCode": "med_books",
+  "checks": [
+    {
+      "name": "eslint-targeted",
+      "status": "pass",
+      "notes": "No eslint errors in touched med-book files; remaining warnings were pre-existing outside task scope."
+    },
+    {
+      "name": "tsc-noemit",
+      "status": "pass",
+      "artifact": ".agent/tasks/med-books-parity/tsc-output.txt"
+    },
+    {
+      "name": "next-build-alt-distdir",
+      "status": "pass",
+      "artifact": ".agent/tasks/med-books-parity/build-output.txt",
+      "notes": "Build verified through NEXT_DIST_DIR=.next-codex because .next was locked by an existing next dev process."
+    },
+    {
+      "name": "pdf-runtime-call",
+      "status": "blocked",
+      "notes": "Direct generateJournalDocumentPdf runtime call hit Prisma ECONNREFUSED in local environment."
+    }
+  ],
+  "filesTouched": [
+    "src/components/journals/med-book-document-client.tsx",
+    "src/components/journals/med-book-documents-client.tsx",
+    "src/app/api/journal-documents/[id]/entries/route.ts",
+    "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
+    "src/lib/document-pdf.ts",
+    "src/lib/med-book-document.ts"
+  ]
+}
