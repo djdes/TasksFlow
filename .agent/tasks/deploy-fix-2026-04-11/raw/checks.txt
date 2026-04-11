@@ -1,0 +1,5 @@
+npx tsc --noEmit
+status: PASS
+
+npm run build
+status: PASS

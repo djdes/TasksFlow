@@ -1,4 +1,9 @@
+import { getUserRoleLabel } from "@/lib/user-roles";
+
 export const ACCEPTANCE_DOCUMENT_TEMPLATE_CODE = "incoming_control";
+export const ACCEPTANCE_PAGE_TITLE =
+  "Журнал входного контроля сырья, ингредиентов, упаковочных материалов";
+export const ACCEPTANCE_DOCUMENT_TITLE = "Журнал входного контроля сырья";
 
 export type AcceptanceRow = {
   id: string;
@@ -28,6 +33,18 @@ export type AcceptanceDocumentConfig = {
   showPackagingComplianceField: boolean;
   defaultResponsibleTitle: string | null;
   defaultResponsibleUserId: string | null;
+};
+
+type AcceptanceUser = { id: string; name?: string | null; role?: string | null };
+type BuildAcceptanceDocumentConfigParams = {
+  users?: AcceptanceUser[];
+  products?: string[];
+  manufacturers?: string[];
+  suppliers?: string[];
+  date?: string;
+  responsibleTitle?: string | null;
+  responsibleUserId?: string | null;
+  includeSampleRows?: boolean;
 };
 
 function createId(prefix: string) {
@@ -104,6 +121,118 @@ export function getAcceptanceDocumentDefaultConfig(
     showPackagingComplianceField: true,
     defaultResponsibleTitle: null,
     defaultResponsibleUserId: users[0]?.id || null,
+  };
+}
+
+function pickAcceptanceResponsibleUser(users: AcceptanceUser[]) {
+  return (
+    users.find((user) => user.role === "owner") ||
+    users.find((user) => user.role === "technologist") ||
+    users[0] ||
+    null
+  );
+}
+
+function addDays(date: string, delta: number) {
+  const value = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(value.getTime())) return date;
+  value.setDate(value.getDate() + delta);
+  return value.toISOString().slice(0, 10);
+}
+
+function sanitizeList(values: string[]) {
+  return values
+    .map((item) => normalizeText(item))
+    .filter((item, index, array) => item !== "" && array.indexOf(item) === index);
+}
+
+function buildAcceptanceSampleRows(params: {
+  date: string;
+  products: string[];
+  manufacturers: string[];
+  suppliers: string[];
+  responsibleTitle: string;
+  responsibleUserId: string;
+}) {
+  const productA = params.products[0] || "Гастрономия";
+  const productB = params.products[1] || params.products[0] || "Молочная продукция";
+  const manufacturerA = params.manufacturers[0] || "ООО \"Агро-Юг\"";
+  const manufacturerB = params.manufacturers[1] || manufacturerA || "ООО \"Запад-Восток\"";
+  const supplierA = params.suppliers[0] || "ООО \"Метро\"";
+  const supplierB = params.suppliers[1] || supplierA || "ООО \"Агро-Юг\"";
+
+  return [
+    createAcceptanceRow({
+      deliveryDate: params.date,
+      deliveryHour: "11",
+      deliveryMinute: "00",
+      productName: productA,
+      manufacturer: manufacturerA,
+      supplier: supplierA,
+      transportCondition: "satisfactory",
+      packagingCompliance: "compliant",
+      organolepticResult: "satisfactory",
+      expiryDate: params.date,
+      note: "",
+      responsibleTitle: params.responsibleTitle,
+      responsibleUserId: params.responsibleUserId,
+    }),
+    createAcceptanceRow({
+      deliveryDate: addDays(params.date, 1),
+      deliveryHour: "12",
+      deliveryMinute: "15",
+      productName: productB,
+      manufacturer: manufacturerB,
+      supplier: supplierB,
+      transportCondition: "satisfactory",
+      packagingCompliance: "compliant",
+      organolepticResult: "satisfactory",
+      expiryDate: addDays(params.date, 1),
+      note: "",
+      responsibleTitle: params.responsibleTitle,
+      responsibleUserId: params.responsibleUserId,
+    }),
+  ];
+}
+
+export function buildAcceptanceDocumentConfigFromData(
+  params: BuildAcceptanceDocumentConfigParams = {}
+): AcceptanceDocumentConfig {
+  const users = params.users || [];
+  const fallback = getAcceptanceDocumentDefaultConfig(users);
+  const responsibleUser =
+    users.find((user) => user.id === params.responsibleUserId) ||
+    pickAcceptanceResponsibleUser(users);
+  const responsibleTitle =
+    normalizeText(params.responsibleTitle) ||
+    (responsibleUser?.role ? getUserRoleLabel(responsibleUser.role) : "") ||
+    fallback.defaultResponsibleTitle ||
+    "Управляющий";
+  const responsibleUserId =
+    normalizeText(params.responsibleUserId) || responsibleUser?.id || fallback.defaultResponsibleUserId || "";
+  const date = normalizeText(params.date) || new Date().toISOString().slice(0, 10);
+  const products = sanitizeList(params.products || []);
+  const manufacturers = sanitizeList(params.manufacturers || []);
+  const suppliers = sanitizeList(params.suppliers || []);
+
+  return {
+    rows: params.includeSampleRows
+      ? buildAcceptanceSampleRows({
+          date,
+          products,
+          manufacturers,
+          suppliers,
+          responsibleTitle,
+          responsibleUserId,
+        })
+      : [],
+    products,
+    manufacturers,
+    suppliers,
+    expiryFieldLabel: "expiry_deadline",
+    showPackagingComplianceField: true,
+    defaultResponsibleTitle: responsibleTitle || null,
+    defaultResponsibleUserId: responsibleUserId || null,
   };
 }
 
