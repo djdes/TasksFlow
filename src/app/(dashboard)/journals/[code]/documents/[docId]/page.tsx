@@ -135,6 +135,13 @@ import {
   EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
   normalizeEquipmentMaintenanceConfig,
 } from "@/lib/equipment-maintenance-document";
+import { CleaningVentilationChecklistDocumentClient } from "@/components/journals/cleaning-ventilation-checklist-document-client";
+import {
+  CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE,
+  CLEANING_VENTILATION_CHECKLIST_TITLE,
+  normalizeCleaningVentilationConfig,
+  normalizeCleaningVentilationEntryData,
+} from "@/lib/cleaning-ventilation-checklist-document";
 import { SanitaryDayChecklistDocumentClient } from "@/components/journals/sanitary-day-checklist-document-client";
 import {
   SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
@@ -342,13 +349,11 @@ export default async function JournalDocumentPage({
       { id: string; employeeId: string; data: ReturnType<typeof normalizeMedBookEntryData> }
     >();
     for (const entry of document.entries) {
-      if (!rowMap.has(entry.employeeId)) {
-        rowMap.set(entry.employeeId, {
-          id: entry.id,
-          employeeId: entry.employeeId,
-          data: normalizeMedBookEntryData(entry.data),
-        });
-      }
+      rowMap.set(entry.employeeId, {
+        id: entry.id,
+        employeeId: entry.employeeId,
+        data: normalizeMedBookEntryData(entry.data),
+      });
     }
 
     const medRows = Array.from(rowMap.values()).map((entry) => {
@@ -734,6 +739,26 @@ export default async function JournalDocumentPage({
             date: toIsoDate(entry.date),
             data: ((entry.data as Record<string, unknown>) || {}) as Record<string, unknown>,
           }))}
+        />
+      );
+    }
+
+    if (document.template.code === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE) {
+      return (
+        <CleaningVentilationChecklistDocumentClient
+          documentId={document.id}
+          title={document.title || CLEANING_VENTILATION_CHECKLIST_TITLE}
+          organizationName={organization?.name || 'ООО "Тест"'}
+          status={document.status}
+          dateFrom={toIsoDate(document.dateFrom)}
+          users={enrichedEmployees}
+          config={normalizeCleaningVentilationConfig(document.config, enrichedEmployees)}
+          initialEntries={document.entries.map((entry) => ({
+            id: entry.id,
+            date: toIsoDate(entry.date),
+            data: normalizeCleaningVentilationEntryData(entry.data),
+          }))}
+          routeCode={code}
         />
       );
     }
