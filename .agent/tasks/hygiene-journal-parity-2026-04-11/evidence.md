@@ -32,13 +32,13 @@
 Command:
 
 ```powershell
-npx eslint 'src/components/journals/hygiene-document-client.tsx' 'src/components/journals/staff-journal-toolbar.tsx' 'src/components/journals/hygiene-documents-client.tsx' 'src/app/api/journal-documents/[id]/entries/route.ts' 'src/app/api/journal-documents/[id]/pdf/route.ts' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx' 'src/lib/document-pdf.ts'
+npx eslint 'src/components/journals/hygiene-document-client.tsx' 'src/components/journals/staff-journal-toolbar.tsx' 'src/components/journals/hygiene-documents-client.tsx' 'src/app/api/journal-documents/[id]/entries/route.ts' 'src/app/api/journal-documents/[id]/pdf/route.ts' 'src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx' 'src/lib/document-pdf.ts' 'src/components/journals/med-book-document-client.tsx' 'src/lib/cleaning-ventilation-checklist-document.ts'
 ```
 
 Result:
 
 - `0` errors
-- only pre-existing warnings remained in `src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx` and `src/lib/document-pdf.ts`
+- only warnings remained for raw `<img>` usage inside `src/components/journals/med-book-document-client.tsx`
 
 ### Production build
 
@@ -63,9 +63,25 @@ npx tsc --noEmit --pretty false
 
 Result:
 
-- `FAIL`
-- remaining errors are isolated to `src/components/journals/med-book-document-client.tsx`
-- hygiene-related files compiled cleanly after the targeted fixes
+- `PASS`
+- targeted follow-up fixes also removed unrelated blockers in:
+  - `src/components/journals/med-book-document-client.tsx`
+  - `src/app/api/journal-documents/[id]/entries/route.ts`
+  - `src/lib/cleaning-ventilation-checklist-document.ts`
+
+### Production build after type fixes
+
+Command:
+
+```powershell
+$env:NODE_OPTIONS='--max-old-space-size=8192'; npm run build
+```
+
+Result:
+
+- `BLOCKED`
+- build now compiles successfully and reaches `Running TypeScript ...`
+- in this environment the process does not complete within extended waits and remains resource/time blocked
 
 ### DB / PDF runtime probe
 

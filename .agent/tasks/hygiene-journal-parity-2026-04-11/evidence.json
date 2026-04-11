@@ -52,8 +52,7 @@
       "status": "pass_with_warnings",
       "details": [
         "0 errors",
-        "Pre-existing warnings remain in src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
-        "Pre-existing warnings remain in src/lib/document-pdf.ts"
+        "Warnings remain for raw <img> usage in src/components/journals/med-book-document-client.tsx"
       ]
     },
     {
@@ -65,10 +64,18 @@
     },
     {
       "name": "typescript-compile",
-      "status": "fail",
+      "status": "pass",
       "details": [
-        "Remaining errors are isolated to src/components/journals/med-book-document-client.tsx",
-        "Hygiene-related files compile after the targeted fixes"
+        "npx tsc --noEmit --pretty false passed",
+        "Hygiene-related and follow-up repo blockers were fixed"
+      ]
+    },
+    {
+      "name": "next-build-after-type-fixes",
+      "status": "blocked",
+      "details": [
+        "Build compiles successfully and reaches Running TypeScript",
+        "Process does not complete within extended waits in this environment"
       ]
     },
     {
@@ -89,9 +96,8 @@
     "src/lib/document-pdf.ts"
   ],
   "blockers": [
-    "Repo-wide verification is blocked by an active .next/lock from another Next process.",
-    "TypeScript still fails in src/components/journals/med-book-document-client.tsx outside the hygiene scope.",
+    "Next build remains resource/time blocked at Running TypeScript in this environment.",
     "Local database host is unreachable from this environment.",
-    "Locked .next Turbopack cache prevented cache cleanup."
+    "Parallel dev/build processes in the shared workspace interfere with deterministic build timing."
   ]
 }
