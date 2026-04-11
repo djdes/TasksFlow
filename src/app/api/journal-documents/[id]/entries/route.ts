@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
@@ -5,6 +6,10 @@ import { db } from "@/lib/db";
 
 function isValidDate(value: Date) {
   return Number.isFinite(value.getTime());
+}
+
+function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  return value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
 }
 
 /**
@@ -70,16 +75,149 @@ export async function PUT(
         date: dateObj,
       },
     },
-    update: { data },
+    update: { data: toPrismaJsonValue(data) },
     create: {
       documentId,
       employeeId,
       date: dateObj,
-      data,
+      data: toPrismaJsonValue(data),
     },
   });
 
   return NextResponse.json({ entry });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: documentId } = await params;
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+
+  if (!["owner", "technologist"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
+
+  const doc = await db.journalDocument.findUnique({ where: { id: documentId } });
+  if (!doc || doc.organizationId !== session.user.organizationId) {
+    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+  }
+
+  if (doc.status === "closed") {
+    return NextResponse.json({ error: "Документ закрыт" }, { status: 400 });
+  }
+
+  const body = (await request.json().catch(() => null)) as
+    | { entries?: Array<{ employeeId?: string; date?: string; data?: unknown }> }
+    | null;
+
+  if (!body || !Array.isArray(body.entries)) {
+    return NextResponse.json({ error: "entries должны быть массивом" }, { status: 400 });
+  }
+
+  const payloadEntries = body.entries;
+  const docDateFrom = new Date(doc.dateFrom);
+  docDateFrom.setUTCHours(0, 0, 0, 0);
+  const docDateTo = new Date(doc.dateTo);
+  docDateTo.setUTCHours(0, 0, 0, 0);
+
+  const normalizedEntries: Array<{
+    employeeId: string;
+    date: Date;
+    data: unknown;
+  }> = payloadEntries.map((entry) => {
+    if (!entry?.employeeId || !entry.date || entry.data === undefined) {
+      throw new Error("employeeId, date, data обязательны");
+    }
+
+    const dateObj = new Date(entry.date);
+    if (!isValidDate(dateObj)) {
+      throw new Error("Некорректная дата");
+    }
+    dateObj.setUTCHours(0, 0, 0, 0);
+
+    if (dateObj < docDateFrom || dateObj > docDateTo) {
+      throw new Error("Дата записи должна попадать в период документа");
+    }
+
+    return {
+      employeeId: entry.employeeId,
+      date: dateObj,
+      data: entry.data,
+    };
+  });
+
+  const uniqueEmployeeIds = [...new Set(normalizedEntries.map((entry) => entry.employeeId))];
+  const employees = await db.user.findMany({
+    where: {
+      id: { in: uniqueEmployeeIds },
+      organizationId: session.user.organizationId,
+    },
+    select: { id: true },
+  });
+
+  if (employees.length !== uniqueEmployeeIds.length) {
+    return NextResponse.json({ error: "Сотрудник не найден" }, { status: 404 });
+  }
+
+  try {
+    const result = await db.$transaction(async (tx) => {
+      await Promise.all(
+        normalizedEntries.map((entry) =>
+          tx.journalDocumentEntry.upsert({
+            where: {
+              documentId_employeeId_date: {
+                documentId,
+                employeeId: entry.employeeId,
+                date: entry.date,
+              },
+            },
+            update: { data: toPrismaJsonValue(entry.data) },
+            create: {
+              documentId,
+              employeeId: entry.employeeId,
+              date: entry.date,
+              data: toPrismaJsonValue(entry.data),
+            },
+          })
+        )
+      );
+
+      const staleEntries = await tx.journalDocumentEntry.findMany({
+        where: { documentId },
+        select: { id: true, employeeId: true, date: true },
+      });
+
+      const keepKeys = new Set(
+        normalizedEntries.map((entry) => `${entry.employeeId}:${entry.date.toISOString()}`)
+      );
+      const deleteIds = staleEntries
+        .filter((entry) => !keepKeys.has(`${entry.employeeId}:${entry.date.toISOString()}`))
+        .map((entry) => entry.id);
+
+      if (deleteIds.length > 0) {
+        await tx.journalDocumentEntry.deleteMany({
+          where: {
+            documentId,
+            id: { in: deleteIds },
+          },
+        });
+      }
+
+      return tx.journalDocumentEntry.findMany({
+        where: { documentId },
+        orderBy: [{ employeeId: "asc" }, { date: "asc" }],
+      });
+    });
+
+    return NextResponse.json({ entries: result });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Не удалось сохранить записи" },
+      { status: 400 }
+    );
+  }
 }
 
 export async function DELETE(

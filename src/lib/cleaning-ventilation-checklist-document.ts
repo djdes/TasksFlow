@@ -193,10 +193,14 @@ export function normalizeCleaningVentilationConfig(
       ? record.mainResponsibleUserId
       : fallback.mainResponsibleUserId;
 
-  const procedures = Array.isArray(record.procedures)
+  const procedureList = Array.isArray(record.procedures)
+    ? (record.procedures as unknown[])
+    : null;
+
+  const procedures = procedureList
     ? fallback.procedures.map((item) => {
-        const matched = record.procedures?.find?.(
-          (candidate) =>
+        const matched = procedureList.find(
+          (candidate: unknown) =>
             candidate &&
             typeof candidate === "object" &&
             (candidate as Record<string, unknown>).id === item.id
