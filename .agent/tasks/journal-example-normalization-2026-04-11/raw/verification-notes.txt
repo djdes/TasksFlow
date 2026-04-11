@@ -1,0 +1,5 @@
+npx tsc --noEmit
+PASS
+
+npx eslint "src/app/(dashboard)/journals/[code]/page.tsx" src/lib/hygiene-document.ts src/components/journals/pest-control-documents-client.tsx
+PASS

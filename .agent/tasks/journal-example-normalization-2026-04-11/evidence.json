@@ -1,0 +1,27 @@
+{
+  "task_id": "journal-example-normalization-2026-04-11",
+  "status": "PASS",
+  "artifacts": {
+    "changed_files": [
+      "src/app/(dashboard)/journals/[code]/page.tsx",
+      "src/lib/hygiene-document.ts"
+    ]
+  },
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "status": "PASS"
+    },
+    {
+      "command": "npx eslint \"src/app/(dashboard)/journals/[code]/page.tsx\" src/lib/hygiene-document.ts src/components/journals/pest-control-documents-client.tsx",
+      "status": "PASS"
+    }
+  ],
+  "acceptance_criteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS"
+  }
+}

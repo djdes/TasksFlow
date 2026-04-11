@@ -33,6 +33,7 @@ import {
 import { CleaningDocumentsClient } from "@/components/journals/cleaning-documents-client";
 import {
   EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  getDefaultEquipmentCleaningConfig,
   getEquipmentCleaningDocumentTitle,
   getEquipmentCleaningPeriodLabel,
   normalizeEquipmentCleaningConfig,
@@ -55,7 +56,6 @@ import {
 } from "@/lib/med-book-document";
 import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
-  ACCEPTANCE_DOCUMENT_TITLE,
   buildAcceptanceDocumentConfigFromData,
   getAcceptanceDocumentTitle,
   isAcceptanceDocumentTemplate,
@@ -98,8 +98,6 @@ import {
   TRAINING_PLAN_SOURCE_SLUG,
   TRAINING_PLAN_DOCUMENT_TITLE,
   getTrainingPlanDefaultConfig,
-  getTrainingPlanDocumentDateLabel,
-  getTrainingPlanApproveLabel,
 } from "@/lib/training-plan-document";
 import { TrainingPlanDocumentsClient } from "@/components/journals/training-plan-documents-client";
 import {
@@ -163,8 +161,6 @@ import {
 } from "@/lib/equipment-maintenance-document";
 import { SanitaryDayChecklistDocumentsClient } from "@/components/journals/sanitary-day-checklist-documents-client";
 import {
-  SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
-  SANITARY_DAY_CHECKLIST_TITLE,
   getSanitaryDayChecklistTitle,
   isSanitaryDayChecklistTemplate,
   defaultSdcConfig,
@@ -219,6 +215,7 @@ const SOURCE_STYLE_TRACKED_DEMO_CODES = new Set([
   "uv_lamp_runtime",
   "fryer_oil",
 ]);
+const DEMO_ADMIN_EMAIL = "admin@haccp.local";
 
 type TrackedTemplateField = {
   key: string;
@@ -226,6 +223,102 @@ type TrackedTemplateField = {
   label?: string;
   options?: Array<{ value: string; label: string }>;
 };
+
+function isDemoSeedOrganization(users: { email?: string | null }[]) {
+  return users.some((user) => user.email?.trim().toLowerCase() === DEMO_ADMIN_EMAIL);
+}
+
+function getCurrentAndPreviousMonthBounds(referenceDate = new Date()) {
+  const year = referenceDate.getUTCFullYear();
+  const month = referenceDate.getUTCMonth();
+
+  return {
+    activeFrom: new Date(Date.UTC(year, month, 1)),
+    activeTo: new Date(Date.UTC(year, month + 1, 0)),
+    closedFrom: new Date(Date.UTC(year, month - 1, 1)),
+    closedTo: new Date(Date.UTC(year, month, 0)),
+  };
+}
+
+async function normalizeDemoJournalSampleCorpus(params: {
+  templateId: string;
+  organizationId: string;
+  enabled: boolean;
+}) {
+  const { templateId, organizationId, enabled } = params;
+  if (!enabled) return;
+
+  const existing = await db.journalDocument.findMany({
+    where: { templateId, organizationId },
+    select: { status: true },
+  });
+
+  if (existing.length === 0) return;
+
+  const activeCount = existing.filter((document) => document.status === "active").length;
+  const closedCount = existing.filter((document) => document.status === "closed").length;
+
+  if (existing.length === 2 && activeCount === 1 && closedCount === 1) {
+    return;
+  }
+
+  await db.journalDocument.deleteMany({
+    where: { templateId, organizationId },
+  });
+}
+
+async function ensureScanOnlySampleDocuments(params: {
+  templateId: string;
+  organizationId: string;
+  createdById: string;
+  title: string;
+  defaultResponsibleTitle: string | null;
+  responsibleUserId: string | null;
+}) {
+  const {
+    templateId,
+    organizationId,
+    createdById,
+    title,
+    defaultResponsibleTitle,
+    responsibleUserId,
+  } = params;
+
+  const existingCount = await db.journalDocument.count({
+    where: { templateId, organizationId },
+  });
+
+  if (existingCount > 0) return;
+
+  const { activeFrom, activeTo, closedFrom, closedTo } = getCurrentAndPreviousMonthBounds();
+
+  await db.journalDocument.createMany({
+    data: [
+      {
+        templateId,
+        organizationId,
+        title,
+        status: "active",
+        dateFrom: activeFrom,
+        dateTo: activeTo,
+        responsibleTitle: defaultResponsibleTitle,
+        responsibleUserId,
+        createdById,
+      },
+      {
+        templateId,
+        organizationId,
+        title,
+        status: "closed",
+        dateFrom: closedFrom,
+        dateTo: closedTo,
+        responsibleTitle: defaultResponsibleTitle,
+        responsibleUserId,
+        createdById,
+      },
+    ],
+  });
+}
 
 async function ensureStaffJournalSampleDocuments({
   templateCode,
@@ -618,7 +711,6 @@ async function ensurePpeIssuanceSampleDocuments(params: {
   const now = new Date();
   const activeFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const closedFrom1 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const closedFrom2 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
 
   const configs = [
     {
@@ -630,11 +722,6 @@ async function ensurePpeIssuanceSampleDocuments(params: {
       status: "closed" as const,
       dateFrom: closedFrom1,
       config: buildPpeIssuanceDemoConfig(users, closedFrom1),
-    },
-    {
-      status: "closed" as const,
-      dateFrom: closedFrom2,
-      config: buildPpeIssuanceDemoConfig(users, closedFrom2),
     },
   ];
 
@@ -662,15 +749,19 @@ async function ensureTraceabilitySampleDocuments(params: {
 }) {
   const { templateId, organizationId, createdById, users } = params;
 
-  const activeCount = await db.journalDocument.count({
-    where: {
-      templateId,
-      organizationId,
-      status: "active",
-    },
-  });
+  const existingStatuses = new Set(
+    (
+      await db.journalDocument.findMany({
+        where: {
+          templateId,
+          organizationId,
+        },
+        select: { status: true },
+      })
+    ).map((document) => document.status)
+  );
 
-  if (activeCount > 0) return;
+  if (existingStatuses.has("active") && existingStatuses.has("closed")) return;
 
   const products = await db.product.findMany({
     where: {
@@ -766,20 +857,42 @@ async function ensureTraceabilitySampleDocuments(params: {
     defaultResponsibleEmployee: responsibleUser?.name || "Иванов И.И.",
   });
 
-  await db.journalDocument.create({
-    data: {
-      templateId,
-      organizationId,
-      title: config.documentTitle,
-      status: "active",
-      dateFrom: new Date(`${config.dateFrom}T00:00:00.000Z`),
-      dateTo: new Date(`${config.dateFrom}T00:00:00.000Z`),
-      createdById,
-      responsibleUserId: responsibleUser?.id || null,
-      responsibleTitle: defaultResponsibleRole,
-      config,
-    },
-  });
+  if (!existingStatuses.has("active")) {
+    await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: config.documentTitle,
+        status: "active",
+        dateFrom: new Date(`${config.dateFrom}T00:00:00.000Z`),
+        dateTo: new Date(`${config.dateFrom}T00:00:00.000Z`),
+        createdById,
+        responsibleUserId: responsibleUser?.id || null,
+        responsibleTitle: defaultResponsibleRole,
+        config,
+      },
+    });
+  }
+
+  if (!existingStatuses.has("closed")) {
+    await db.journalDocument.create({
+      data: {
+        templateId,
+        organizationId,
+        title: config.documentTitle,
+        status: "closed",
+        dateFrom: new Date("2024-12-01T00:00:00.000Z"),
+        dateTo: new Date("2024-12-01T00:00:00.000Z"),
+        createdById,
+        responsibleUserId: responsibleUser?.id || null,
+        responsibleTitle: defaultResponsibleRole,
+        config: {
+          ...config,
+          dateFrom: "2024-12-01",
+        } as Prisma.InputJsonValue,
+      },
+    });
+  }
 }
 
 async function ensureGlassControlSampleDocuments(params: {
@@ -1147,6 +1260,14 @@ export default async function JournalDocumentsPage({
     select: { id: true, name: true, role: true, email: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
+  const shouldNormalizeDemoSamples = isDemoSeedOrganization(orgUsers);
+
+  await normalizeDemoJournalSampleCorpus({
+    templateId: template.id,
+    organizationId: session.user.organizationId,
+    enabled: shouldNormalizeDemoSamples,
+  });
+
   if (resolvedCode === "hygiene" || resolvedCode === "health_check") {
     await ensureStaffJournalSampleDocuments({
       templateCode: resolvedCode,
@@ -1189,6 +1310,15 @@ export default async function JournalDocumentsPage({
     }
 
     const scanConfig = getScanJournalConfig(resolvedCode);
+    await ensureScanOnlySampleDocuments({
+      templateId: template.id,
+      organizationId: session.user.organizationId,
+      createdById: session.user.id,
+      title: scanConfig?.title || template.name,
+      defaultResponsibleTitle: scanConfig?.defaultResponsibleTitle || null,
+      responsibleUserId: pickPrimaryManager(orgUsers)?.id || null,
+    });
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -1300,6 +1430,35 @@ export default async function JournalDocumentsPage({
       }
     }
 
+    const medBookStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!medBookStatuses.has("closed")) {
+      const { closedFrom } = getCurrentAndPreviousMonthBounds();
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: MED_BOOK_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: closedFrom,
+          dateTo: closedFrom,
+          createdById: session.user.id,
+          config: getDefaultMedBookConfig(),
+        },
+      });
+    }
+
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -1353,6 +1512,34 @@ export default async function JournalDocumentsPage({
       });
     }
 
+    const perishableStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!perishableStatuses.has("closed")) {
+      const { closedFrom, closedTo } = getCurrentAndPreviousMonthBounds();
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: PERISHABLE_REJECTION_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: closedFrom,
+          dateTo: closedTo,
+          createdById: session.user.id,
+          config: getDefaultPerishableRejectionConfig(),
+        },
+      });
+    }
+
     const documents = await db.journalDocument.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -1380,7 +1567,7 @@ export default async function JournalDocumentsPage({
     );
   }
 
-  if (resolvedCode === GLASS_LIST_TEMPLATE_CODE) {
+    if (resolvedCode === GLASS_LIST_TEMPLATE_CODE) {
     const existingCount = await db.journalDocument.count({
       where: {
         organizationId: session.user.organizationId,
@@ -1433,6 +1620,67 @@ export default async function JournalDocumentsPage({
           responsibleUserId: glassListConfig.responsibleUserId || null,
           createdById: session.user.id,
           config: glassListConfig as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    const glassListStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!glassListStatuses.has("closed")) {
+      const [areas, equipment, products] = await Promise.all([
+        db.area.findMany({
+          where: { organizationId: session.user.organizationId },
+          select: { name: true },
+          orderBy: { name: "asc" },
+        }),
+        db.equipment.findMany({
+          where: {
+            area: {
+              organizationId: session.user.organizationId,
+            },
+          },
+          select: { name: true },
+          orderBy: { name: "asc" },
+          take: 10,
+        }),
+        db.product.findMany({
+          where: { organizationId: session.user.organizationId, isActive: true },
+          select: { name: true },
+          orderBy: { name: "asc" },
+          take: 10,
+        }),
+      ]);
+
+      const closedGlassListConfig = buildGlassListConfigFromData({
+        users: orgUsers,
+        areas,
+        equipment,
+        products,
+        referenceDate: new Date(Date.UTC(2025, 0, 1)),
+      });
+
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: closedGlassListConfig.documentName || GLASS_LIST_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: new Date(closedGlassListConfig.documentDate),
+          dateTo: new Date(closedGlassListConfig.documentDate),
+          responsibleTitle: closedGlassListConfig.responsibleTitle || null,
+          responsibleUserId: closedGlassListConfig.responsibleUserId || null,
+          createdById: session.user.id,
+          config: closedGlassListConfig as Prisma.InputJsonValue,
         },
       });
     }
@@ -1506,7 +1754,7 @@ export default async function JournalDocumentsPage({
     );
   }
 
-  if (resolvedCode === STAFF_TRAINING_TEMPLATE_CODE) {
+    if (resolvedCode === STAFF_TRAINING_TEMPLATE_CODE) {
     const existingCount = await db.journalDocument.count({
       where: {
         organizationId: session.user.organizationId,
@@ -1537,6 +1785,38 @@ export default async function JournalDocumentsPage({
           config: {
             ...getDefaultStaffTrainingConfig(),
             rows: seedRows,
+          },
+        },
+      });
+    }
+
+    const staffTrainingStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!staffTrainingStatuses.has("closed")) {
+      const previousYear = new Date().getUTCFullYear() - 1;
+      const closedRows = buildStaffTrainingSeedRows(orgUsers, `${previousYear}-01-01`);
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: STAFF_TRAINING_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: new Date(Date.UTC(previousYear, 0, 1)),
+          dateTo: new Date(Date.UTC(previousYear, 11, 31)),
+          createdById: session.user.id,
+          config: {
+            ...getDefaultStaffTrainingConfig(),
+            rows: closedRows,
           },
         },
       });
@@ -1593,6 +1873,93 @@ export default async function JournalDocumentsPage({
           status: "active",
           dateFrom: new Date(Date.UTC(year, 0, 1)),
           dateTo: new Date(Date.UTC(year, 11, 31)),
+          createdById: session.user.id,
+          config: cfg,
+        },
+      });
+    }
+
+    const equipmentMaintenanceStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!equipmentMaintenanceStatuses.has("closed")) {
+      const previousYear = new Date().getUTCFullYear() - 1;
+      const cfg = getDefaultEquipmentMaintenanceConfig(previousYear);
+      const manager = pickPrimaryManager(orgUsers);
+      const headChef = orgUsers.find((u) => getUserRoleLabel(u.role) === "???-?????") || manager;
+      if (manager) cfg.approveEmployee = manager.name;
+      if (headChef) cfg.responsibleEmployee = headChef.name;
+
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: new Date(Date.UTC(previousYear, 0, 1)),
+          dateTo: new Date(Date.UTC(previousYear, 11, 31)),
+          createdById: session.user.id,
+          config: cfg,
+        },
+      });
+    }
+
+    const equipmentCalibrationStatuses = new Set(
+      (
+        await db.journalDocument.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            templateId: template.id,
+          },
+          select: { status: true },
+        })
+      ).map((document) => document.status)
+    );
+
+    if (!equipmentCalibrationStatuses.has("closed")) {
+      const previousYear = new Date().getUTCFullYear() - 1;
+      const equipmentSource = await db.equipment.findMany({
+        where: {
+          area: {
+            organizationId: session.user.organizationId,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          serialNumber: true,
+          tempMin: true,
+          tempMax: true,
+          area: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [{ area: { name: "asc" } }, { name: "asc" }],
+      });
+      const cfg = buildEquipmentCalibrationConfigFromEquipment(equipmentSource, { year: previousYear });
+      const manager = pickPrimaryManager(orgUsers);
+      if (manager) cfg.approveEmployee = manager.name;
+
+      await db.journalDocument.create({
+        data: {
+          templateId: template.id,
+          organizationId: session.user.organizationId,
+          title: EQUIPMENT_CALIBRATION_DOCUMENT_TITLE,
+          status: "closed",
+          dateFrom: new Date(Date.UTC(previousYear, 0, 1)),
+          dateTo: new Date(Date.UTC(previousYear, 11, 31)),
           createdById: session.user.id,
           config: cfg,
         },
@@ -1714,6 +2081,44 @@ export default async function JournalDocumentsPage({
       templateFields: parsedTemplateFields,
     });
 
+    if (
+      resolvedCode === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
+      resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+    ) {
+      const existingBasicDocumentCount = await db.journalDocument.count({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+        },
+      });
+
+      if (existingBasicDocumentCount === 0) {
+        const { activeFrom, activeTo, closedFrom, closedTo } = getCurrentAndPreviousMonthBounds();
+        await db.journalDocument.createMany({
+          data: [
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getJournalDocumentDefaultTitle(resolvedCode),
+              status: "active",
+              dateFrom: activeFrom,
+              dateTo: activeTo,
+              createdById: session.user.id,
+            },
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getJournalDocumentDefaultTitle(resolvedCode),
+              status: "closed",
+              dateFrom: closedFrom,
+              dateTo: closedTo,
+              createdById: session.user.id,
+            },
+          ],
+        });
+      }
+    }
+
     if (resolvedCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
       const existingCleaningCount = await db.journalDocument.count({
         where: {
@@ -1761,6 +2166,57 @@ export default async function JournalDocumentsPage({
         });
 
       }
+
+      const cleaningStatuses = new Set(
+        (
+          await db.journalDocument.findMany({
+            where: {
+              organizationId: session.user.organizationId,
+              templateId: template.id,
+            },
+            select: { status: true },
+          })
+        ).map((document) => document.status)
+      );
+
+      if (!cleaningStatuses.has("closed")) {
+        const closedReferenceDate = new Date();
+        closedReferenceDate.setUTCMonth(closedReferenceDate.getUTCMonth() - 1);
+        const period = getCleaningCreatePeriodBounds(closedReferenceDate);
+        const cleaningAreas = await db.area.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: {
+            name: "asc",
+          },
+        });
+        const cleaningConfig = applyCleaningAutoFillToConfig({
+          config: defaultCleaningDocumentConfig(orgUsers, cleaningAreas),
+          dateFrom: period.dateFrom,
+          dateTo: period.dateTo,
+        });
+        const responsibleUser = pickPrimaryManager(orgUsers) || orgUsers[0];
+
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: getJournalDocumentDefaultTitle(resolvedCode),
+            status: "closed",
+            dateFrom: new Date(`${period.dateFrom}T00:00:00.000Z`),
+            dateTo: new Date(`${period.dateTo}T00:00:00.000Z`),
+            createdById: session.user.id,
+            responsibleUserId: responsibleUser?.id || null,
+            responsibleTitle: responsibleUser ? "РЈРїСЂР°РІР»СЏСЋС‰РёР№" : null,
+            config: cleaningConfig,
+          },
+        });
+      }
     }
 
     if (resolvedCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
@@ -1768,27 +2224,40 @@ export default async function JournalDocumentsPage({
         where: {
           organizationId: session.user.organizationId,
           templateId: template.id,
-          status: activeTab,
         },
         orderBy: { dateFrom: "asc" },
       });
 
-      if (!existingDocument && activeTab === "active") {
+      if (!existingDocument) {
         const currentDate = new Date();
         const year = currentDate.getUTCFullYear();
         const month = currentDate.getUTCMonth();
         const dateFrom = new Date(Date.UTC(year, month, 1));
         const dateTo = new Date(Date.UTC(year, month + 1, 0));
+        const closedFrom = new Date(Date.UTC(year, month - 1, 1));
+        const closedTo = new Date(Date.UTC(year, month, 0));
 
-        await db.journalDocument.create({
-          data: {
-            templateId: template.id,
-            organizationId: session.user.organizationId,
-            title: getJournalDocumentDefaultTitle(resolvedCode),
-            dateFrom,
-            dateTo,
-            createdById: session.user.id,
-          },
+        await db.journalDocument.createMany({
+          data: [
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getJournalDocumentDefaultTitle(resolvedCode),
+              status: "active",
+              dateFrom,
+              dateTo,
+              createdById: session.user.id,
+            },
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getJournalDocumentDefaultTitle(resolvedCode),
+              status: "closed",
+              dateFrom: closedFrom,
+              dateTo: closedTo,
+              createdById: session.user.id,
+            },
+          ],
         });
       }
     }
@@ -2042,6 +2511,21 @@ export default async function JournalDocumentsPage({
           },
         });
       }
+      if (!disStatuses.has("closed")) {
+        const { closedFrom } = getCurrentAndPreviousMonthBounds();
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: DISINFECTANT_DOCUMENT_TITLE,
+            status: "closed",
+            dateFrom: closedFrom,
+            dateTo: closedFrom,
+            createdById: session.user.id,
+            config: getDisinfectantDefaultConfig() as Prisma.InputJsonValue,
+          },
+        });
+      }
 
       const disDocuments = await db.journalDocument.findMany({
         where: {
@@ -2087,6 +2571,21 @@ export default async function JournalDocumentsPage({
             dateTo: new Date(Date.UTC(now.getUTCFullYear(), 0, 11)),
             createdById: session.user.id,
             config: getTrainingPlanDefaultConfig(now),
+          },
+        });
+      }
+      if (!tpStatuses.has("closed")) {
+        const previousYear = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 11));
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: `${TRAINING_PLAN_DOCUMENT_TITLE} ${previousYear.getUTCFullYear()}`,
+            status: "closed",
+            dateFrom: previousYear,
+            dateTo: previousYear,
+            createdById: session.user.id,
+            config: getTrainingPlanDefaultConfig(previousYear),
           },
         });
       }
@@ -2144,6 +2643,24 @@ export default async function JournalDocumentsPage({
           },
         });
       }
+      if (!auditPlanStatuses.has("closed")) {
+        const defaultConfig = getAuditPlanDefaultConfig({
+          organizationName: 'РћРћРћ "РўРµСЃС‚"',
+          users: orgUsers,
+        });
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: AUDIT_PLAN_DOCUMENT_TITLE,
+            status: "closed",
+            dateFrom: new Date("2025-01-15T00:00:00.000Z"),
+            dateTo: new Date("2025-01-15T00:00:00.000Z"),
+            createdById: session.user.id,
+            config: defaultConfig,
+          },
+        });
+      }
 
       const auditPlanDocuments = await db.journalDocument.findMany({
         where: {
@@ -2176,6 +2693,41 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === EQUIPMENT_CLEANING_TEMPLATE_CODE) {
+      const existingEquipmentCleaningCount = await db.journalDocument.count({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+        },
+      });
+
+      if (existingEquipmentCleaningCount === 0) {
+        const { activeFrom, closedFrom } = getCurrentAndPreviousMonthBounds();
+        await db.journalDocument.createMany({
+          data: [
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getEquipmentCleaningDocumentTitle(),
+              status: "active",
+              dateFrom: activeFrom,
+              dateTo: activeFrom,
+              createdById: session.user.id,
+              config: getDefaultEquipmentCleaningConfig(),
+            },
+            {
+              templateId: template.id,
+              organizationId: session.user.organizationId,
+              title: getEquipmentCleaningDocumentTitle(),
+              status: "closed",
+              dateFrom: closedFrom,
+              dateTo: closedFrom,
+              createdById: session.user.id,
+              config: getDefaultEquipmentCleaningConfig(),
+            },
+          ],
+        });
+      }
+
       const equipmentCleaningDocuments = await db.journalDocument.findMany({
         where: {
           organizationId: session.user.organizationId,
@@ -2492,6 +3044,20 @@ export default async function JournalDocumentsPage({
           },
         });
       }
+      if (!bhStatuses.has("closed")) {
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: BREAKDOWN_HISTORY_DOCUMENT_TITLE,
+            status: "closed",
+            dateFrom: new Date("2021-09-28"),
+            dateTo: new Date("2021-09-28"),
+            createdById: session.user.id,
+            config: getBreakdownHistoryDefaultConfig(),
+          },
+        });
+      }
 
       const bhDocuments = await db.journalDocument.findMany({
         where: {
@@ -2542,6 +3108,31 @@ export default async function JournalDocumentsPage({
             status: "active",
             dateFrom: new Date("2021-10-01"),
             dateTo: new Date("2021-10-01"),
+            createdById: session.user.id,
+            config: buildAccidentDocumentDemoConfig({
+              areaNames,
+              userNames: orgUsers.map((user) => user.name),
+            }),
+          },
+        });
+      }
+      if (!accidentStatuses.has("closed")) {
+        const areaNames = (
+          await db.area.findMany({
+            where: { organizationId: session.user.organizationId },
+            select: { name: true },
+            orderBy: { name: "asc" },
+          })
+        ).map((item) => item.name);
+
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: ACCIDENT_DOCUMENT_TITLE,
+            status: "closed",
+            dateFrom: new Date("2021-09-01"),
+            dateTo: new Date("2021-09-01"),
             createdById: session.user.id,
             config: buildAccidentDocumentDemoConfig({
               areaNames,
@@ -2625,6 +3216,23 @@ export default async function JournalDocumentsPage({
             status: "active",
             dateFrom: today,
             dateTo: today,
+            createdById: session.user.id,
+            config: defaultSdcConfig(),
+          },
+        });
+      }
+
+      const sdcStatuses = new Set(existingSdc.map((document) => document.status));
+      if (!sdcStatuses.has("closed")) {
+        const { closedFrom } = getCurrentAndPreviousMonthBounds();
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: getSanitaryDayChecklistTitle(resolvedCode),
+            status: "closed",
+            dateFrom: closedFrom,
+            dateTo: closedFrom,
             createdById: session.user.id,
             config: defaultSdcConfig(),
           },

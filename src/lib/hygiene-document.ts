@@ -172,62 +172,6 @@ export const HYGIENE_SAMPLE_DOCUMENTS: HygieneSampleDocument[] = [
     responsibleTitle: null,
     periodLabel: "Апрель с 16 по 30",
   },
-  {
-    id: "sample-closed-2",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Май с 1 по 15",
-  },
-  {
-    id: "sample-closed-3",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Май с 16 по 31",
-  },
-  {
-    id: "sample-closed-4",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Июнь с 1 по 15",
-  },
-  {
-    id: "sample-closed-5",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Июнь с 16 по 30",
-  },
-  {
-    id: "sample-closed-6",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Июль с 1 по 15",
-  },
-  {
-    id: "sample-closed-7",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Июль с 16 по 31",
-  },
-  {
-    id: "sample-closed-8",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Август с 1 по 15",
-  },
-  {
-    id: "sample-closed-9",
-    title: "Гигиенический журнал",
-    status: "closed",
-    responsibleTitle: null,
-    periodLabel: "Август с 16 по 31",
-  },
 ];
 
 export const HYGIENE_PERIODICITY_TEXT = HYGIENE_REGISTER_PERIODICITY.join(" ");
@@ -348,16 +292,10 @@ export function getHygieneCreatePeriodBounds(referenceDate = new Date()) {
 export function getHygieneSeedDocumentConfigs(): HygieneSeedDocumentConfig[] {
   return [
     {
-      title: getHygieneDocumentTitle(),
+      title: "Гигиенический журнал — пример на 7 сотрудников",
       status: "active",
       dateFrom: "2026-04-01",
       dateTo: "2026-04-15",
-    },
-    {
-      title: "Гигиенический журнал — пример на 7 сотрудников",
-      status: "active",
-      dateFrom: "2026-09-01",
-      dateTo: "2026-09-15",
       variant: "demo_team",
     },
     {
@@ -365,54 +303,6 @@ export function getHygieneSeedDocumentConfigs(): HygieneSeedDocumentConfig[] {
       status: "closed",
       dateFrom: "2026-04-16",
       dateTo: "2026-04-30",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-05-01",
-      dateTo: "2026-05-15",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-05-16",
-      dateTo: "2026-05-31",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-06-01",
-      dateTo: "2026-06-15",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-06-16",
-      dateTo: "2026-06-30",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-07-01",
-      dateTo: "2026-07-15",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-07-16",
-      dateTo: "2026-07-31",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-08-01",
-      dateTo: "2026-08-15",
-    },
-    {
-      title: getHygieneDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-08-16",
-      dateTo: "2026-08-31",
     },
   ];
 }
@@ -430,54 +320,6 @@ export function getHealthSeedDocumentConfigs(): HygieneSeedDocumentConfig[] {
       status: "closed",
       dateFrom: "2026-04-16",
       dateTo: "2026-04-30",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-05-01",
-      dateTo: "2026-05-15",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-05-16",
-      dateTo: "2026-05-31",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-06-01",
-      dateTo: "2026-06-15",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-06-16",
-      dateTo: "2026-06-30",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-07-01",
-      dateTo: "2026-07-15",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-07-16",
-      dateTo: "2026-07-31",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-08-01",
-      dateTo: "2026-08-15",
-    },
-    {
-      title: getHealthDocumentTitle(),
-      status: "closed",
-      dateFrom: "2026-08-16",
-      dateTo: "2026-08-31",
     },
   ];
 }
@@ -748,7 +590,7 @@ export function isEntryDataEmpty(data: unknown): boolean {
   return Object.keys(data as Record<string, unknown>).length === 0;
 }
 
-export function getJournalHeading(templateCode: string, closed = false): string {
+export function getJournalHeading(templateCode: string): string {
   const base =
     templateCode === "health_check" ? getHealthDocumentTitle() : getHygieneDocumentTitle();
   return base;
