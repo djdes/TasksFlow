@@ -120,6 +120,9 @@ jobs:
               echo ".env not found, skip seed"
             fi
 
+            echo "=== Building app on server ==="
+            npm run build 2>&1 | tail -20
+
             echo "=== Restarting PM2 ==="
             npx pm2 delete haccp-online 2>/dev/null || true
             npx pm2 start npm --name haccp-online --cwd "$(pwd)" -- start 2>&1 | tail -5
