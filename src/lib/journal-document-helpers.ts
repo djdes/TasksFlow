@@ -26,7 +26,6 @@ import {
 import {
   FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
   getFinishedProductDefaultDocumentTitle,
-  getFinishedProductDocumentTitle,
   getFinishedProductPeriodLabel,
 } from "@/lib/finished-product-document";
 import {

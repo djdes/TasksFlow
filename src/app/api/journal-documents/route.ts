@@ -30,7 +30,6 @@ import {
 } from "@/lib/glass-list-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import {
-  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
   getAcceptanceDocumentDefaultConfig,
   isAcceptanceDocumentTemplate,
 } from "@/lib/acceptance-document";
@@ -71,6 +70,11 @@ import {
   EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
   normalizeEquipmentCalibrationConfig,
 } from "@/lib/equipment-calibration-document";
+import {
+  CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE,
+  getDefaultCleaningVentilationConfig,
+  normalizeCleaningVentilationConfig,
+} from "@/lib/cleaning-ventilation-checklist-document";
 import {
   defaultSdcConfig,
   isSanitaryDayChecklistTemplate,
@@ -349,6 +353,11 @@ export async function POST(request: Request) {
           users: cleaningUsers,
           areas: cleaningAreas,
         })
+      : resolvedTemplateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
+      ? normalizeCleaningVentilationConfig(
+          rawConfig ?? getDefaultCleaningVentilationConfig(allUsers),
+          allUsers
+        )
       : resolvedTemplateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
       ? buildFinishedProductConfigFromUsers(
           allUsers,
@@ -433,6 +442,8 @@ export async function POST(request: Request) {
               users: cleaningUsers,
               areas: cleaningAreas,
             })
+          : resolvedTemplateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
+          ? normalizeCleaningVentilationConfig(rawConfig ?? initialConfig, allUsers)
           : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
           ? normalizeSanitationDayConfig(rawConfig ?? initialConfig)
           : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE

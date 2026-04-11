@@ -168,6 +168,14 @@ import {
   getDefaultEquipmentMaintenanceConfig,
 } from "@/lib/equipment-maintenance-document";
 import { SanitaryDayChecklistDocumentsClient } from "@/components/journals/sanitary-day-checklist-documents-client";
+import { CleaningVentilationChecklistDocumentsClient } from "@/components/journals/cleaning-ventilation-checklist-documents-client";
+import {
+  CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE,
+  CLEANING_VENTILATION_CHECKLIST_TITLE,
+  getDefaultCleaningVentilationConfig,
+  getMonthBoundsFromDate as getCleaningVentilationMonthBounds,
+  normalizeCleaningVentilationConfig,
+} from "@/lib/cleaning-ventilation-checklist-document";
 import {
   getSanitaryDayChecklistTitle,
   isSanitaryDayChecklistTemplate,
@@ -3263,6 +3271,78 @@ export default async function JournalDocumentsPage({
             status: document.status as "active" | "closed",
             dateFrom: document.dateFrom.toISOString().slice(0, 10),
             config: document.config,
+          }))}
+        />
+      );
+    }
+
+    if (resolvedCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE) {
+      const existingChecklistDocuments = await db.journalDocument.findMany({
+        where: { templateId: template.id, organizationId: session.user.organizationId },
+        orderBy: { dateFrom: "desc" },
+      });
+
+      const statuses = new Set(existingChecklistDocuments.map((document) => document.status));
+      if (!statuses.has("active")) {
+        const { dateFrom: activeDateFrom, dateTo: activeDateTo } =
+          getCleaningVentilationMonthBounds(new Date().toISOString().slice(0, 10));
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: CLEANING_VENTILATION_CHECKLIST_TITLE,
+            status: "active",
+            dateFrom: new Date(activeDateFrom),
+            dateTo: new Date(activeDateTo),
+            createdById: session.user.id,
+            config: getDefaultCleaningVentilationConfig(orgUsers),
+          },
+        });
+      }
+
+      if (!statuses.has("closed")) {
+        const previousMonth = new Date();
+        previousMonth.setMonth(previousMonth.getMonth() - 1);
+        const { dateFrom: closedDateFrom, dateTo: closedDateTo } =
+          getCleaningVentilationMonthBounds(previousMonth.toISOString().slice(0, 10));
+        await db.journalDocument.create({
+          data: {
+            templateId: template.id,
+            organizationId: session.user.organizationId,
+            title: CLEANING_VENTILATION_CHECKLIST_TITLE,
+            status: "closed",
+            dateFrom: new Date(closedDateFrom),
+            dateTo: new Date(closedDateTo),
+            createdById: session.user.id,
+            config: getDefaultCleaningVentilationConfig(orgUsers),
+          },
+        });
+      }
+
+      const checklistDocuments = await db.journalDocument.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          templateId: template.id,
+          status: activeTab,
+        },
+        orderBy: { dateFrom: "desc" },
+      });
+
+      return (
+        <CleaningVentilationChecklistDocumentsClient
+          routeCode={code}
+          templateCode={resolvedCode}
+          activeTab={activeTab}
+          users={orgUsers}
+          documents={checklistDocuments.map((document) => ({
+            id: document.id,
+            title: document.title || CLEANING_VENTILATION_CHECKLIST_TITLE,
+            status: document.status as "active" | "closed",
+            dateFrom: document.dateFrom.toISOString().slice(0, 10),
+            config:
+              document.config && typeof document.config === "object" && !Array.isArray(document.config)
+                ? normalizeCleaningVentilationConfig(document.config, orgUsers)
+                : null,
           }))}
         />
       );

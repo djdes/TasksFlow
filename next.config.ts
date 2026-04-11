@@ -26,6 +26,7 @@ function getBuildTime(): string {
 }
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   env: {
     NEXT_PUBLIC_BUILD_ID: getBuildId(),
     NEXT_PUBLIC_BUILD_TIME: getBuildTime(),

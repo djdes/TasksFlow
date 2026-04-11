@@ -1,0 +1,15 @@
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.33.214:3001
+- Environments: .env.local, .env
+
+✓ Starting...
+Creating turbopack project { dir: 'C:\\www\\Wesetup.ru', testMode: true }
+✓ Ready in 6.2s
+○ Compiling /login ...
+ GET /login 200 in 10.9s (compile: 10.2s, render: 655ms)
+ GET /login 200 in 16.5s (compile: 16.4s, render: 134ms)
+ POST /api/auth/login 500 in 12.7s (compile: 3.2s, render: 9.6s)
+○ Compiling /journals/[code] ...
+ GET /journals/incoming_control 307 in 47s (compile: 46s, render: 582ms)
+ GET /login 200 in 171ms (compile: 31ms, render: 140ms)

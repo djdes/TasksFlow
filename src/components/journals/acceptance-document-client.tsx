@@ -655,21 +655,9 @@ function IncomingControlEditListsDialog(props: {
   config: AcceptanceDocumentConfig;
   setConfig: (config: AcceptanceDocumentConfig) => void;
 }) {
-  const [products, setProducts] = useState<string[]>([]);
-  const [manufacturers, setManufacturers] = useState<string[]>([]);
-  const [suppliers, setSuppliers] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!props.open) return;
-    setProducts([...props.config.products]);
-    setManufacturers([...props.config.manufacturers]);
-    setSuppliers([...props.config.suppliers]);
-  }, [
-    props.open,
-    props.config.products,
-    props.config.manufacturers,
-    props.config.suppliers,
-  ]);
+  const [products, setProducts] = useState<string[]>(() => [...props.config.products]);
+  const [manufacturers, setManufacturers] = useState<string[]>(() => [...props.config.manufacturers]);
+  const [suppliers, setSuppliers] = useState<string[]>(() => [...props.config.suppliers]);
 
   function handleClose() {
     props.setConfig({ ...props.config, products, manufacturers, suppliers });
@@ -1422,14 +1410,24 @@ export function AcceptanceDocumentClient(props: Props) {
             <thead>
               <tr className="bg-[#f2f2f2]">
                 <th className="w-[44px] border border-black p-2">
-                  <Checkbox checked={allSelected} onCheckedChange={(c) => setSelectedRowIds(c === true ? displayedRows.map((r) => r.id) : [])} disabled={rows.length === 0 || isClosed} />
+                  <Checkbox checked={allSelected} onCheckedChange={(c) => setSelectedRowIds(c === true ? displayedRows.map((r) => r.id) : [])} disabled={displayedRows.length === 0 || isClosed} />
                 </th>
-                <th className="border border-black p-2 text-center">Дата, время поступления продукции, товара</th>
-                <th className="border border-black p-2 text-center">Наименование продукции</th>
+                <th className="border border-black p-2 text-center">
+                  {isProductAcceptance
+                    ? "Дата, время поступления продукции, товара"
+                    : "Дата, время поступления"}
+                </th>
+                <th className="border border-black p-2 text-center">
+                  {isProductAcceptance ? "Наименование продукции" : "Наименование"}
+                </th>
                 <th className="border border-black p-2 text-center">Производитель</th>
                 <th className="border border-black p-2 text-center">Поставщик</th>
                 <th className="border border-black p-2 text-center">Условия транспортировки</th>
-                <th className="border border-black p-2 text-center">Соответствие упаковки, маркировки, гигиенические требования, наличие и правильность оформления товаросопроводительной документации</th>
+                <th className="border border-black p-2 text-center">
+                  {isProductAcceptance
+                    ? "Соответствие упаковки, маркировки, гигиенические требования, наличие и правильность оформления товаросопроводительной документации"
+                    : "Соответствие упаковки, маркировки и товаросопроводительной документации"}
+                </th>
                 <th className="border border-black p-2 text-center">Результаты органолептической оценки доброкачественности</th>
                 <th className="border border-black p-2 text-center">{getExpiryFieldDisplayLabel(config.expiryFieldLabel)}</th>
                 <th className="border border-black p-2 text-center">Примечания</th>

@@ -1,0 +1,51 @@
+{
+  "taskId": "finished-product-parity-2026-04-11",
+  "status": "pending_deploy",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "summary": "Finished-product list flow was aligned to the source visual cues using the local screenshot folder and source capture audit."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "summary": "Closed-tab behavior reflects archive semantics with source-like heading treatment and closed-state actions."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "summary": "Finished-product config and rows remain persisted through the journal-document API flow."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "summary": "Core list/detail actions are meaningful; the placeholder no-op action was removed from the finished-product detail flow."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "summary": "Finished-product print actions open the PDF route instead of browser print."
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "summary": "The app build includes the journal PDF route and the finished-product journal stays in the printable document pipeline."
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "summary": "Targeted ESLint, full TypeScript, and production build verification completed successfully."
+    },
+    {
+      "id": "AC8",
+      "status": "PENDING",
+      "summary": "Push and deploy verification are not recorded yet."
+    }
+  ],
+  "artifacts": [
+    ".agent/tasks/finished-product-parity-2026-04-11/raw/eslint.txt",
+    ".agent/tasks/finished-product-parity-2026-04-11/raw/tsc.txt",
+    ".agent/tasks/finished-product-parity-2026-04-11/raw/build.txt"
+  ]
+}

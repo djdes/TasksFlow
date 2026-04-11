@@ -67,6 +67,12 @@ import {
   PEST_CONTROL_TEMPLATE_CODE,
 } from "@/lib/pest-control-document";
 import {
+  CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE,
+  CLEANING_VENTILATION_CHECKLIST_TITLE,
+  getCleaningVentilationFilePrefix,
+} from "@/lib/cleaning-ventilation-checklist-document";
+import { drawCleaningVentilationChecklistPdf } from "@/lib/cleaning-ventilation-checklist-pdf";
+import {
   getTrackedDocumentTitle,
   isTrackedDocumentTemplate,
   type TrackedDocumentTemplateCode,
@@ -114,6 +120,7 @@ import {
 } from "@/lib/register-document";
 import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  getAcceptanceDocumentTitle,
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import {
@@ -180,6 +187,18 @@ import {
   normalizeEquipmentCleaningConfig,
   normalizeEquipmentCleaningRowData,
 } from "@/lib/equipment-cleaning-document";
+import {
+  EXAMINATION_REFERENCE_DATA,
+  formatMedBookDate,
+  MED_BOOK_DOCUMENT_TITLE,
+  MED_BOOK_PRELIMINARY_PERIODIC_ROWS,
+  MED_BOOK_TEMPLATE_CODE,
+  MED_BOOK_VACCINATION_RULES,
+  normalizeMedBookConfig,
+  normalizeMedBookEntryData,
+  VACCINATION_REFERENCE_DATA,
+  VACCINATION_TYPE_LABELS,
+} from "@/lib/med-book-document";
 
 const FONT_CANDIDATES = [
   "C:\\Windows\\Fonts\\arial.ttf",
@@ -223,6 +242,233 @@ function drawCenteredText(
   lines.forEach((line, index) => {
     doc.text(line, x + width / 2, startY + index * lineHeight, { align: "center" });
   });
+}
+
+function drawMedBookPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  config: ReturnType<typeof normalizeMedBookConfig>;
+  entries: Array<{ employeeId: string; date: Date; data: unknown }>;
+  users: Array<{ id: string; name: string; role: string; email: string | null }>;
+}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const groupedEntries = new Map<string, { employeeId: string; data: ReturnType<typeof normalizeMedBookEntryData> }>();
+
+  for (const entry of params.entries) {
+    groupedEntries.set(entry.employeeId, {
+      employeeId: entry.employeeId,
+      data: normalizeMedBookEntryData(entry.data),
+    });
+  }
+
+  const rows = Array.from(groupedEntries.values()).map((entry, index) => {
+    const user = params.users.find((item) => item.id === entry.employeeId);
+    return {
+      index: index + 1,
+      name: user?.name || "Сотрудник",
+      data: entry.data,
+    };
+  });
+
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(16);
+  doc.text(params.organizationName, pageWidth / 2, 16, { align: "center" });
+  doc.setFontSize(14);
+  doc.text(params.title || MED_BOOK_DOCUMENT_TITLE, pageWidth / 2, 25, { align: "center" });
+
+  autoTable(doc, {
+    startY: 33,
+    head: [[
+      "№ п/п",
+      "Ф.И.О. сотрудника",
+      "Должность",
+      ...params.config.examinations,
+    ]],
+    body: rows.length > 0
+      ? rows.map((row) => [
+          String(row.index),
+          row.name,
+          row.data.positionTitle || "",
+          ...params.config.examinations.map((column) => {
+            const exam = row.data.examinations[column];
+            if (!exam?.date) return "";
+            return exam.expiryDate
+              ? `${formatMedBookDate(exam.date)} / до ${formatMedBookDate(exam.expiryDate)}`
+              : formatMedBookDate(exam.date);
+          }),
+        ])
+      : [Array(3 + params.config.examinations.length).fill("")],
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.4,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [236, 236, 236],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+
+  autoTable(doc, {
+    startY: (((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY) || 33) + 8,
+    head: [[
+      "Предварительные осмотры",
+      "Периодические осмотры",
+    ]],
+    body: MED_BOOK_PRELIMINARY_PERIODIC_ROWS.map((row) => [row.preliminary, row.periodic]),
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.8,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "top",
+    },
+    headStyles: {
+      fillColor: [236, 236, 236],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    pageBreak: "auto",
+  });
+
+  autoTable(doc, {
+    startY: (((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY) || 80) + 8,
+    head: [[
+      "Наименование специалиста / исследования",
+      "Периодичность",
+      "Примечание",
+    ]],
+    body: EXAMINATION_REFERENCE_DATA.map((item) => [item.name, item.periodicity, item.note || "—"]),
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.8,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "top",
+    },
+    headStyles: {
+      fillColor: [236, 236, 236],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    pageBreak: "auto",
+  });
+
+  if (!params.config.includeVaccinations) {
+    return;
+  }
+
+  doc.addPage();
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(16);
+  doc.text("Прививки", pageWidth / 2, 16, { align: "center" });
+
+  autoTable(doc, {
+    startY: 24,
+    head: [[
+      "№ п/п",
+      "Ф.И.О. сотрудника",
+      "Должность",
+      ...params.config.vaccinations,
+      "Примечание",
+    ]],
+    body: rows.length > 0
+      ? rows.map((row) => [
+          String(row.index),
+          row.name,
+          row.data.positionTitle || "",
+          ...params.config.vaccinations.map((column) => {
+            const vaccination = row.data.vaccinations[column];
+            if (!vaccination) return "";
+            if (vaccination.type !== "done") {
+              return VACCINATION_TYPE_LABELS[vaccination.type];
+            }
+            const parts = [
+              vaccination.dose ? `${vaccination.dose}:` : null,
+              vaccination.date ? formatMedBookDate(vaccination.date) : null,
+              vaccination.expiryDate ? `до ${formatMedBookDate(vaccination.expiryDate)}` : null,
+            ].filter(Boolean);
+            return parts.join(" ");
+          }),
+          row.data.note || "",
+        ])
+      : [Array(4 + params.config.vaccinations.length).fill("")],
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.4,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [236, 236, 236],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+  });
+
+  autoTable(doc, {
+    startY: (((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY) || 24) + 8,
+    head: [[
+      "Наименование прививки",
+      "Периодичность",
+    ]],
+    body: VACCINATION_REFERENCE_DATA.map((item) => [item.name, item.periodicity]),
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.8,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      overflow: "linebreak",
+      valign: "top",
+    },
+    headStyles: {
+      fillColor: [236, 236, 236],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+    },
+    margin: { left: 10, right: 10 },
+    pageBreak: "auto",
+  });
+
+  let noteY = (((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY) || 40) + 8;
+  doc.setFont("JournalUnicode", "bold");
+  doc.setFontSize(9);
+  for (const rule of MED_BOOK_VACCINATION_RULES) {
+    if (noteY > doc.internal.pageSize.getHeight() - 12) {
+      doc.addPage();
+      noteY = 16;
+    }
+    const lines = doc.splitTextToSize(rule, pageWidth - 20) as string[];
+    doc.text(lines, 10, noteY);
+    noteY += lines.length * 4.5 + 2;
+  }
 }
 
 function drawJournalHeader(doc: jsPDF, params: {
@@ -1377,7 +1623,7 @@ function drawAcceptancePdf(doc: jsPDF, params: {
   const pageWidth = doc.internal.pageSize.getWidth();
   const centerX = pageWidth / 2;
 
-  drawTitle(doc, params.title || "Журнал входного контроля сырья, ингредиентов, упаковочных материалов");
+  drawTitle(doc, params.title || getAcceptanceDocumentTitle(ACCEPTANCE_DOCUMENT_TEMPLATE_CODE));
   drawJournalHeader(doc, {
     organizationName: params.organizationName,
     pageLabel: "СТР. 1 ИЗ 1",
@@ -3706,6 +3952,7 @@ export async function generateJournalDocumentPdf(params: {
   const traceabilityConfig = normalizeTraceabilityDocumentConfig(document.config);
   const equipmentCleaningConfig = normalizeEquipmentCleaningConfig(document.config);
   const intensiveCoolingConfig = normalizeIntensiveCoolingConfig(document.config, users);
+  const medBookConfig = normalizeMedBookConfig(document.config);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -3768,6 +4015,18 @@ export async function generateJournalDocumentPdf(params: {
         date: entry.date,
         data: (entry.data as Record<string, unknown>) || {},
       })),
+    });
+  } else if (templateCode === MED_BOOK_TEMPLATE_CODE) {
+    drawMedBookPdf(doc, {
+      organizationName,
+      title: document.title || MED_BOOK_DOCUMENT_TITLE,
+      config: medBookConfig,
+      entries: document.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        date: entry.date,
+        data: entry.data,
+      })),
+      users,
     });
   } else if (templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
     drawFinishedProductPdf(doc, {
@@ -3854,7 +4113,7 @@ export async function generateJournalDocumentPdf(params: {
   } else if (templateCode === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE) {
     drawAcceptancePdf(doc, {
       organizationName,
-      title: document.title || "Журнал входного контроля сырья, ингредиентов, упаковочных материалов",
+      title: document.title || getAcceptanceDocumentTitle(templateCode),
       dateFrom: document.dateFrom,
       config: normalizeAcceptanceDocumentConfig(document.config, users),
       users,
@@ -3951,6 +4210,18 @@ export async function generateJournalDocumentPdf(params: {
       })),
       users,
     });
+  } else if (templateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE) {
+    drawCleaningVentilationChecklistPdf(doc, {
+      organizationName,
+      title: document.title || CLEANING_VENTILATION_CHECKLIST_TITLE,
+      dateFrom: document.dateFrom,
+      config: document.config,
+      entries: document.entries.map((entry) => ({
+        date: entry.date,
+        data: entry.data,
+      })),
+      users,
+    });
   } else if (isTrackedDocumentTemplate(templateCode)) {
     drawTrackedPdf(doc, {
       organizationName,
@@ -3988,8 +4259,12 @@ export async function generateJournalDocumentPdf(params: {
         ? getClimateFilePrefix()
         : templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
           ? getColdEquipmentFilePrefix()
-          : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-            ? getCleaningFilePrefix()
+          : templateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
+            ? getCleaningVentilationFilePrefix()
+            : templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+              ? getCleaningFilePrefix()
+            : templateCode === MED_BOOK_TEMPLATE_CODE
+              ? "med-books"
             : templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE
               ? getPerishableRejectionFilePrefix()
           : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE

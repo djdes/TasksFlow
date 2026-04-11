@@ -60,7 +60,7 @@ type DialogState = {
 };
 
 function formatRuDate(value: string) {
-  if (!value) return "вЂ”";
+  if (!value) return "—";
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}-${month}-${year}` : value;
 }

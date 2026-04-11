@@ -1,0 +1,46 @@
+{
+  "taskId": "acceptance-journal-parity-2026-04-11",
+  "status": "partial",
+  "artifacts": {
+    "spec": ".agent/tasks/acceptance-journal-parity-2026-04-11/spec.md",
+    "evidence": ".agent/tasks/acceptance-journal-parity-2026-04-11/evidence.md",
+    "buildLog": ".agent/tasks/acceptance-journal-parity-2026-04-11/raw/build.log",
+    "devStdout": ".agent/tasks/acceptance-journal-parity-2026-04-11/raw/next-dev.out.log",
+    "devStderr": ".agent/tasks/acceptance-journal-parity-2026-04-11/raw/next-dev.err.log",
+    "eslint": ".agent/tasks/acceptance-journal-parity-2026-04-11/raw/eslint.json"
+  },
+  "acceptanceCriteria": {
+    "AC1": {
+      "status": "PASS",
+      "summary": "List page labels and print behavior align with product-acceptance references."
+    },
+    "AC2": {
+      "status": "PASS",
+      "summary": "Document page keeps product-acceptance header/title behavior and route-specific table copy."
+    },
+    "AC3": {
+      "status": "BLOCKED",
+      "summary": "Authenticated end-to-end mutation checks are blocked locally by Prisma ETIMEDOUT during login."
+    },
+    "AC4": {
+      "status": "PASS",
+      "summary": "Touched print actions target the PDF route."
+    },
+    "AC5": {
+      "status": "BLOCKED",
+      "summary": "Organization-scoped code paths remain intact, but runtime verification is blocked by local DB timeout."
+    },
+    "AC6": {
+      "status": "PASS",
+      "summary": "Touched visible Russian strings are stored as proper Cyrillic."
+    },
+    "AC7": {
+      "status": "PASS",
+      "summary": "Proof-loop artifacts were created in the required task directory."
+    },
+    "AC8": {
+      "status": "PENDING",
+      "summary": "Push and deployment observation still pending."
+    }
+  }
+}

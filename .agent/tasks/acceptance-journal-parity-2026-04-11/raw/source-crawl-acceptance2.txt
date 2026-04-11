@@ -1,0 +1,13 @@
+﻿
+Name                                                                 Length
+----                                                                 ------
+01-https-lk-haccp-online-ru-docs-acceptance2journal-1.html            17400
+01-https-lk-haccp-online-ru-docs-acceptance2journal-1.json             2307
+01-https-lk-haccp-online-ru-docs-acceptance2journal-1.png             33829
+02-https-lk-haccp-online-ru-docs-acceptance2journal-1-archive-1.html  13554
+02-https-lk-haccp-online-ru-docs-acceptance2journal-1-archive-1.json   2199
+02-https-lk-haccp-online-ru-docs-acceptance2journal-1-archive-1.png   31083
+summary.json                                                            512
+
+
+
