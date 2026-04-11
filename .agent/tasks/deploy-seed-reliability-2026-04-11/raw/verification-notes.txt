@@ -1,0 +1,11 @@
+Verification notes for deploy-seed-reliability-2026-04-11
+
+1. `git diff -- .github/workflows/deploy.yml`
+   - confirmed the deploy step now runs `npm ci`
+   - confirmed the seed step now runs `npx tsx prisma/seed.ts`
+   - confirmed the old `|| echo "Seed failed, continue deploy"` fallback is gone
+
+2. `rg -n "Installing server dependencies|npm ci$|npx tsx prisma/seed.ts|Seed failed, continue deploy" .github/workflows/deploy.yml`
+   - matched `npm ci` in the workflow
+   - matched `npx tsx prisma/seed.ts`
+   - found no remaining `Seed failed, continue deploy` text

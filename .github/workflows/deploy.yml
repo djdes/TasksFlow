@@ -100,9 +100,9 @@ jobs:
             # Restore .env from backup if it exists
             [ -f .env.bak ] && cp .env.bak .env || true
 
-            echo "=== Installing runtime dependencies ==="
+            echo "=== Installing server dependencies ==="
             [ -s ~/.nvm/nvm.sh ] && . ~/.nvm/nvm.sh || true
-            npm ci --omit=dev 2>&1 | tail -5
+            npm ci 2>&1 | tail -5
 
             echo "=== Generating Prisma client ==="
             npx prisma generate 2>&1 | tail -5
@@ -115,7 +115,7 @@ jobs:
               set -a
               . ./.env
               set +a
-              npx --yes tsx prisma/seed.ts 2>&1 | tail -20 || echo "Seed failed, continue deploy"
+              npx tsx prisma/seed.ts 2>&1 | tail -20
             else
               echo ".env not found, skip seed"
             fi

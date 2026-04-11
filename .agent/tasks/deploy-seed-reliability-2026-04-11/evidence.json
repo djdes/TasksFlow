@@ -1,0 +1,27 @@
+{
+  "task_id": "deploy-seed-reliability-2026-04-11",
+  "root_cause": [
+    "Production deploy installed dependencies with npm ci --omit=dev before running the TypeScript seed script.",
+    "The seed step ignored failures with '|| echo \"Seed failed, continue deploy\"'."
+  ],
+  "changes": [
+    {
+      "file": ".github/workflows/deploy.yml",
+      "summary": "Changed server dependency install from 'npm ci --omit=dev' to 'npm ci'."
+    },
+    {
+      "file": ".github/workflows/deploy.yml",
+      "summary": "Removed failure-swallowing fallback from the seed step so deploy fails if seeding fails."
+    }
+  ],
+  "acceptance_criteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS"
+  },
+  "verification": [
+    "git diff -- .github/workflows/deploy.yml",
+    "rg -n \"Installing server dependencies|npm ci$|npx tsx prisma/seed.ts|Seed failed, continue deploy\" .github/workflows/deploy.yml"
+  ]
+}
