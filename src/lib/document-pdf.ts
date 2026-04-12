@@ -1607,13 +1607,38 @@ function getTrackedFields(fields: unknown): TrackedField[] {
     .filter((field) => field.key !== "");
 }
 
-function getTrackedFieldValue(field: TrackedField, value: unknown) {
+function getTrackedFieldValue(
+  field: TrackedField,
+  value: unknown,
+  resolvers?: {
+    users?: { id: string; name: string }[];
+    equipment?: { id: string; name: string }[];
+  }
+) {
   if (value == null || value === "") return "";
-  if (field.type === "boolean") return value === true ? "Да" : "Нет";
+  if (field.type === "boolean") {
+    return value === true || value === "true" || value === "yes" ? "Да" : "Нет";
+  }
 
   if (field.type === "select") {
     const stringValue = String(value);
     return field.options.find((option) => option.value === stringValue)?.label || stringValue;
+  }
+
+  if (field.type === "employee") {
+    const id = String(value);
+    return resolvers?.users?.find((u) => u.id === id)?.name || id;
+  }
+
+  if (field.type === "equipment") {
+    const id = String(value);
+    return resolvers?.equipment?.find((e) => e.id === id)?.name || id;
+  }
+
+  if (field.type === "date") {
+    const s = String(value);
+    const [y, m, d] = s.slice(0, 10).split("-");
+    return y && m && d ? `${d}-${m}-${y}` : s;
   }
 
   return String(value);
@@ -2865,7 +2890,7 @@ function drawTrackedPdf(doc: jsPDF, params: {
     centerCell(getClimateDateLabel(entry.date)),
     centerCell(userMap[entry.employeeId] || ""),
     ...params.fields.map((field) =>
-      centerCell(getTrackedFieldValue(field, entry.data[field.key]))
+      centerCell(getTrackedFieldValue(field, entry.data[field.key], { users: params.users }))
     ),
   ]);
 
