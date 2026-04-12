@@ -30,6 +30,7 @@ import {
 } from "@/lib/breakdown-history-document";
 
 import { toast } from "sonner";
+import { StickyActionBar } from "@/components/journals/sticky-action-bar";
 type Props = {
   documentId: string;
   title: string;
@@ -418,13 +419,19 @@ export function BreakdownHistoryDocumentClient(props: Props) {
 
   async function handleDeleteSelected() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
-    const nextConfig = {
-      ...config,
-      rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
-    };
-    await persist(title, dateFrom, nextConfig);
-    setSelectedRowIds([]);
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
+    try {
+      const nextConfig = {
+        ...config,
+        rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
+      };
+      await persist(title, dateFrom, nextConfig);
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   async function handleSaveSettings(params: { title: string; dateFrom: string }) {
@@ -503,7 +510,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
 
         {/* Action bar */}
         {isActive && (
-          <div className="flex flex-wrap items-center gap-3">
+          <StickyActionBar>
             <Button
               type="button"
               className="h-14 rounded-2xl bg-[#5563ff] px-6 text-[18px] hover:bg-[#4452ee]"
@@ -539,7 +546,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
                 </Button>
               </div>
             )}
-          </div>
+          </StickyActionBar>
         )}
 
         {/* Data table */}

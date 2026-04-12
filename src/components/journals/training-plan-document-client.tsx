@@ -470,10 +470,17 @@ export function TrainingPlanDocumentClient({
 
   async function deleteSelectedRows() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm(`Удалить выбранные строки (${selectedRowIds.length})?`)) return;
-    const nextRows = normalized.rows.filter((row) => !selectedRowIds.includes(row.id));
-    setSelectedRowIds([]);
-    await patchConfig({ ...normalized, rows: nextRows });
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
+    const idsToRemove = [...selectedRowIds];
+    try {
+      const nextRows = normalized.rows.filter((row) => !idsToRemove.includes(row.id));
+      setSelectedRowIds([]);
+      await patchConfig({ ...normalized, rows: nextRows });
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   const allSelected = normalized.rows.length > 0 && selectedRowIds.length === normalized.rows.length;

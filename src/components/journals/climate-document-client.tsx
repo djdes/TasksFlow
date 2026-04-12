@@ -44,6 +44,7 @@ import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 
 import { toast } from "sonner";
+import { StickyActionBar } from "@/components/journals/sticky-action-bar";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -1101,25 +1102,30 @@ export function ClimateDocumentClient({
 
   async function handleDeleteSelected() {
     if (selectedRowIds.length === 0) return;
-    const confirmed = window.confirm("Удалить выбранные строки?");
+    const count = selectedRowIds.length;
+    const confirmed = window.confirm(`Удалить выбранные строки (${count})?`);
     if (!confirmed) return;
 
-    const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedRowIds }),
-    });
+    try {
+      const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedRowIds }),
+      });
 
-    const result = await response.json().catch(() => null);
-    if (!response.ok) {
-      toast.error(result?.error || "Не удалось удалить строки");
-      return;
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || "Не удалось удалить строки");
+      }
+
+      setRows((currentRows) =>
+        currentRows.filter((row) => !selectedRowIds.includes(row.id))
+      );
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
     }
-
-    setRows((currentRows) =>
-      currentRows.filter((row) => !selectedRowIds.includes(row.id))
-    );
-    setSelectedRowIds([]);
   }
 
   async function handleAutoFillChange(value: boolean) {
@@ -1323,7 +1329,7 @@ export function ClimateDocumentClient({
         </div>
 
         {status === "active" && (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          <StickyActionBar>
             <Button
               type="button"
               onClick={() => setRowDialogOpen(true)}
@@ -1344,7 +1350,7 @@ export function ClimateDocumentClient({
                 Удалить выбранные
               </Button>
             )}
-          </div>
+          </StickyActionBar>
         )}
 
         <div className="overflow-x-auto">

@@ -587,23 +587,28 @@ export function GlassControlDocumentClient(props: Props) {
   async function deleteSelectedRows() {
     const ids = selectedRowIds.filter((id) => !id.startsWith("virtual:"));
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
 
-    if (ids.length > 0) {
-      const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+    try {
+      if (ids.length > 0) {
+        const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
 
-      if (!response.ok) {
-        toast.error("Не удалось удалить строки");
-        return;
+        if (!response.ok) {
+          throw new Error("Не удалось удалить строки");
+        }
       }
-    }
 
-    setRows((current) => current.filter((row) => !selectedRowIds.includes(row.id)));
-    setSelectedRowIds([]);
+      setRows((current) => current.filter((row) => !selectedRowIds.includes(row.id)));
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   async function syncAutoFill(nextValue: boolean) {

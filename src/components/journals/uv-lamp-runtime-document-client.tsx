@@ -899,27 +899,32 @@ export function UvLampRuntimeDocumentClient(props: Props) {
   async function deleteSelectedRows() {
     const deletable = rows.filter((row) => selectedRowIds.includes(row.id) && !row.id.startsWith("virtual:"));
     if (deletable.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
+    const count = deletable.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
 
-    const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: deletable.map((row) => row.id) }),
-    });
+    try {
+      const response = await fetch(`/api/journal-documents/${props.documentId}/entries`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: deletable.map((row) => row.id) }),
+      });
 
-    if (!response.ok) {
-      toast.error("Не удалось удалить выбранные строки");
-      return;
+      if (!response.ok) {
+        throw new Error("Не удалось удалить выбранные строки");
+      }
+
+      setRows((current) =>
+        current.map((row) =>
+          selectedRowIds.includes(row.id)
+            ? { ...row, id: `virtual:${row.date}`, data: { startTime: "", endTime: "" } }
+            : row
+        )
+      );
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
     }
-
-    setRows((current) =>
-      current.map((row) =>
-        selectedRowIds.includes(row.id)
-          ? { ...row, id: `virtual:${row.date}`, data: { startTime: "", endTime: "" } }
-          : row
-      )
-    );
-    setSelectedRowIds([]);
   }
 
   async function handleCloseJournal() {

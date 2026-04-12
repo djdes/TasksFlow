@@ -488,13 +488,19 @@ export function PpeIssuanceDocumentClient(props: Props) {
 
   async function handleDeleteSelected() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm(`Удалить выбранные строки (${selectedRowIds.length})?`)) return;
-    const nextConfig = {
-      ...config,
-      rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
-    };
-    await persist(title, dateFrom, nextConfig);
-    setSelectedRowIds([]);
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
+    try {
+      const nextConfig = {
+        ...config,
+        rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
+      };
+      await persist(title, dateFrom, nextConfig);
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   async function handleCloseJournal() {

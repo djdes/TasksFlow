@@ -482,12 +482,18 @@ export function AccidentDocumentClient(props: Props) {
 
   async function handleDeleteSelected() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
-    await persist(title, dateFrom, {
-      ...config,
-      rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
-    });
-    setSelectedRowIds([]);
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
+    try {
+      await persist(title, dateFrom, {
+        ...config,
+        rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
+      });
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   async function handleSaveSettings(payload: { title: string; dateFrom: string }) {

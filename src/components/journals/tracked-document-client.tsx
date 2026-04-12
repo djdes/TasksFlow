@@ -274,21 +274,26 @@ function TrackedDocumentClientImpl({
 
   async function removeSelectedEntries() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
 
-    const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedRowIds }),
-    });
+    try {
+      const response = await fetch(`/api/journal-documents/${documentId}/entries`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedRowIds }),
+      });
 
-    if (!response.ok) {
-      toast.error("Не удалось удалить строки");
-      return;
+      if (!response.ok) {
+        throw new Error("Не удалось удалить строки");
+      }
+
+      setEntries((current) => current.filter((item) => !selectedRowIds.includes(item.id)));
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
     }
-
-    setEntries((current) => current.filter((item) => !selectedRowIds.includes(item.id)));
-    setSelectedRowIds([]);
   }
 
   return (

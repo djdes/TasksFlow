@@ -558,9 +558,16 @@ export function TraceabilityDocumentClient(props: Props) {
 
   async function deleteSelected() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm(`Удалить выбранные строки (${selectedRowIds.length})?`)) return;
-    setSelectedRowIds([]);
-    await persistConfig({ ...config, rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)) });
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
+    const idsToRemove = [...selectedRowIds];
+    try {
+      setSelectedRowIds([]);
+      await persistConfig({ ...config, rows: config.rows.filter((row) => !idsToRemove.includes(row.id)) });
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   async function finishJournal() {

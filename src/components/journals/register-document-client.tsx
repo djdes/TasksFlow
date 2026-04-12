@@ -39,6 +39,7 @@ import {
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
 import { toast } from "sonner";
+import { StickyActionBar } from "@/components/journals/sticky-action-bar";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -495,15 +496,21 @@ export function RegisterDocumentClient({
 
   async function handleDeleteSelected() {
     if (selectedRowIds.length === 0) return;
-    if (!window.confirm("Удалить выбранные строки?")) return;
+    const count = selectedRowIds.length;
+    if (!window.confirm(`Удалить выбранные строки (${count})?`)) return;
 
-    const nextConfig = {
-      ...config,
-      rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
-    };
+    try {
+      const nextConfig = {
+        ...config,
+        rows: config.rows.filter((row) => !selectedRowIds.includes(row.id)),
+      };
 
-    await persist(documentTitle, nextConfig);
-    setSelectedRowIds([]);
+      await persist(documentTitle, nextConfig);
+      setSelectedRowIds([]);
+      toast.success(`Удалено строк: ${count}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить выбранные строки");
+    }
   }
 
   return (
@@ -584,7 +591,7 @@ export function RegisterDocumentClient({
         </div>
 
         {status === "active" && (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          <StickyActionBar>
             <Button
               type="button"
               onClick={() => {
@@ -609,7 +616,7 @@ export function RegisterDocumentClient({
                 Удалить выбранные
               </Button>
             )}
-          </div>
+          </StickyActionBar>
         )}
 
         <div className="overflow-x-auto rounded-[28px] border border-[#ececf4] bg-white">
