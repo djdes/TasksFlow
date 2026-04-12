@@ -133,7 +133,7 @@ export async function PATCH(
       id: { in: candidateEmployeeIds },
       organizationId: session.user.organizationId,
     },
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, positionTitle: true },
   });
 
   const normalizedEntries: Array<{

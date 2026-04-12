@@ -1,4 +1,4 @@
-import { getUserRoleLabel } from "@/lib/user-roles";
+import { getUserDisplayTitle } from "@/lib/user-roles";
 import {
   AUDIT_PLAN_TEMPLATE_CODE,
   normalizeAuditPlanConfig,
@@ -44,6 +44,7 @@ export type StaffBindingUser = {
   id: string;
   name: string;
   role?: string | null;
+  positionTitle?: string | null;
 };
 
 export type StaffBindingResult = {
@@ -57,8 +58,14 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export function getDbStaffTitle(role: string | null | undefined) {
-  const label = normalizeText(getUserRoleLabel(role));
+export function getDbStaffTitle(
+  userOrRole: string | null | undefined | { role?: string | null; positionTitle?: string | null }
+) {
+  const user =
+    userOrRole && typeof userOrRole === "object"
+      ? userOrRole
+      : { role: userOrRole ?? null, positionTitle: null };
+  const label = normalizeText(getUserDisplayTitle(user));
   return label || "Сотрудник";
 }
 
@@ -94,7 +101,7 @@ export function resolveStaffUser(
     return {
       userId: byId.id,
       userName: byId.name,
-      title: getDbStaffTitle(byId.role),
+      title: getDbStaffTitle(byId),
       matchedBy: "id",
     };
   }
@@ -104,7 +111,7 @@ export function resolveStaffUser(
     return {
       userId: byName.id,
       userName: byName.name,
-      title: getDbStaffTitle(byName.role),
+      title: getDbStaffTitle(byName),
       matchedBy: "name",
     };
   }
@@ -186,7 +193,7 @@ export function reconcileNamedStaffSelection(
 }
 
 export function buildStaffOptionLabel(user: StaffBindingUser) {
-  return `${getDbStaffTitle(user.role)} - ${user.name}`;
+  return `${getDbStaffTitle(user)} - ${user.name}`;
 }
 
 export function reconcileEntryStaffFields(
@@ -197,7 +204,7 @@ export function reconcileEntryStaffFields(
     return value;
   }
 
-  const title = getDbStaffTitle(user.role);
+  const title = getDbStaffTitle(user);
   const record = { ...(value as Record<string, unknown>) };
 
   if ("positionTitle" in record) record.positionTitle = title;

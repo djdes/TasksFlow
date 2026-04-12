@@ -171,6 +171,7 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             role: true,
+            positionTitle: true,
           },
           orderBy: [{ role: "asc" }, { id: "asc" }],
         })
@@ -185,6 +186,7 @@ export async function POST(request: Request) {
       id: true,
       name: true,
       role: true,
+      positionTitle: true,
     },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });

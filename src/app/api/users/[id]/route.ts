@@ -21,6 +21,7 @@ const updateUserSchema = z.object({
     })
     .optional(),
   phone: z.string().trim().nullable().optional(),
+  positionTitle: z.string().trim().max(120).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -49,7 +50,7 @@ export async function PUT(
     }
 
     const body = updateUserSchema.parse(await request.json());
-    const { name, role, phone, isActive } = body;
+    const { name, role, phone, positionTitle, isActive } = body;
 
     if (id === session.user.id && role && normalizeUserRole(role) !== "manager") {
       return NextResponse.json(
@@ -71,6 +72,9 @@ export async function PUT(
         ...(name !== undefined && { name: name.trim() }),
         ...(role !== undefined && { role: toCanonicalUserRole(role) }),
         ...(phone !== undefined && { phone: phone?.trim() || null }),
+        ...(positionTitle !== undefined && {
+          positionTitle: positionTitle?.trim() || null,
+        }),
         ...(isActive !== undefined && { isActive }),
       },
       select: {
@@ -78,6 +82,7 @@ export async function PUT(
         name: true,
         email: true,
         role: true,
+        positionTitle: true,
         isActive: true,
         phone: true,
       },

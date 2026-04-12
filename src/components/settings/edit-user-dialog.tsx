@@ -31,6 +31,7 @@ interface EditUserDialogProps {
     name: string;
     email: string;
     role: string;
+    positionTitle?: string | null;
     phone: string | null;
     isActive: boolean;
   };
@@ -45,12 +46,14 @@ export function EditUserDialog({ user, isSelf }: EditUserDialogProps) {
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(normalizeUserRole(user.role));
   const [phone, setPhone] = useState(user.phone ?? "");
+  const [positionTitle, setPositionTitle] = useState(user.positionTitle ?? "");
   const [isActive, setIsActive] = useState(user.isActive);
 
   function resetForm() {
     setName(user.name);
     setRole(normalizeUserRole(user.role));
     setPhone(user.phone ?? "");
+    setPositionTitle(user.positionTitle ?? "");
     setIsActive(user.isActive);
     setError(null);
   }
@@ -64,7 +67,13 @@ export function EditUserDialog({ user, isSelf }: EditUserDialogProps) {
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, role, phone: phone || null, isActive }),
+        body: JSON.stringify({
+          name,
+          role,
+          positionTitle: positionTitle.trim() || null,
+          phone: phone || null,
+          isActive,
+        }),
       });
 
       if (!response.ok) {
@@ -140,6 +149,19 @@ export function EditUserDialog({ user, isSelf }: EditUserDialogProps) {
                 Нельзя изменить свою должность
               </p>
             )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-user-position">Название должности</Label>
+            <Input
+              id="edit-user-position"
+              value={positionTitle}
+              onChange={(e) => setPositionTitle(e.target.value)}
+              placeholder="Например: Повар холодного цеха"
+            />
+            <p className="text-xs text-muted-foreground">
+              Отображается в журналах вместо обобщённой роли. Оставьте пустым,
+              чтобы использовать стандартную подпись роли.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-user-phone">Телефон</Label>

@@ -152,7 +152,7 @@ export async function dispatchExternalEntries(params: {
   const employeeIds = [...new Set(normalized.map((e) => e.employeeId))];
   const employees = await db.user.findMany({
     where: { id: { in: employeeIds }, organizationId },
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, positionTitle: true },
   });
   const employeesById = new Map(employees.map((u) => [u.id, u]));
   for (const id of employeeIds) {

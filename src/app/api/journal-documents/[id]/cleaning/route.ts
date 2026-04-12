@@ -39,7 +39,7 @@ export async function POST(
         organizationId: session.user.organizationId,
         isActive: true,
       },
-      select: { id: true, name: true, role: true },
+      select: { id: true, name: true, role: true, positionTitle: true },
       orderBy: [{ role: "asc" }, { name: "asc" }],
     }),
     db.area.findMany({

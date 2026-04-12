@@ -85,6 +85,22 @@ export function getUserRoleLabel(role: string | null | undefined): string {
   return normalized || "Сотрудник";
 }
 
+/**
+ * Resolve the display title for an employee on a journal. Prefers the free-form
+ * `positionTitle` stored on the User record, falling back to the role-based label
+ * so unmigrated data keeps working. Use this instead of `getUserRoleLabel(role)`
+ * whenever a journal needs to show "what this person does" — otherwise a cook
+ * working the hot kitchen can end up labelled identically to the bar cook, or a
+ * legacy `waiter` role ends up overwriting a more specific title.
+ */
+export function getUserDisplayTitle(
+  user: { role?: string | null; positionTitle?: string | null } | null | undefined
+): string {
+  const raw = typeof user?.positionTitle === "string" ? user.positionTitle.trim() : "";
+  if (raw) return raw;
+  return getUserRoleLabel(user?.role);
+}
+
 export function getPermissionRole(role: string | null | undefined): string {
   switch (normalizeUserRole(role)) {
     case "manager":

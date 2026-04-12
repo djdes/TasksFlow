@@ -13,7 +13,7 @@ import {
 import { InviteUserDialog } from "@/components/settings/invite-user-dialog";
 import { EditUserDialog } from "@/components/settings/edit-user-dialog";
 import { DeleteButton } from "@/components/settings/delete-button";
-import { getUserRoleLabel, isManagerRole } from "@/lib/user-roles";
+import { getUserDisplayTitle, isManagerRole } from "@/lib/user-roles";
 
 export default async function UsersSettingsPage() {
   const session = await requireAuth();
@@ -26,6 +26,7 @@ export default async function UsersSettingsPage() {
       name: true,
       email: true,
       role: true,
+      positionTitle: true,
       isActive: true,
       phone: true,
     },
@@ -72,7 +73,7 @@ export default async function UsersSettingsPage() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell className="text-sm">{user.phone ?? "—"}</TableCell>
-                  <TableCell>{getUserRoleLabel(user.role)}</TableCell>
+                  <TableCell>{getUserDisplayTitle(user)}</TableCell>
                   <TableCell>
                     {user.isActive ? (
                       <Badge variant="default">Активен</Badge>

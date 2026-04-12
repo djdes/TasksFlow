@@ -42,6 +42,10 @@ model User {
   phone           String?
   passwordHash    String
   role            String         @default("cook")
+  // Free-form job title that overrides the role-based label in journals.
+  // Lets the same "cook" role user be displayed as "Повар холодного цеха" or
+  // "Официант" per employee, instead of flipping between journals.
+  positionTitle   String?
   organizationId  String
   organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   telegramChatId    String?
