@@ -634,7 +634,7 @@ function ReceiptDialog(props: {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                  <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                   {usersForRole(props.users, active.responsibleRole).map(
                     (u) => (
                       <SelectItem key={u.id} value={u.id}>
@@ -874,7 +874,7 @@ function ConsumptionDialog(props: {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                  <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                   {usersForRole(props.users, active.responsibleRole).map(
                     (u) => (
                       <SelectItem key={u.id} value={u.id}>
@@ -1015,7 +1015,7 @@ function DocumentSettingsDialog(props: {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                 {usersForRole(props.users, state.responsibleRole).map(
                   (u) => (
                     <SelectItem key={u.id} value={u.id}>

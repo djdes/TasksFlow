@@ -7,8 +7,8 @@ import {
 
 export const METAL_IMPURITY_TEMPLATE_CODE = "metal_impurity";
 export const METAL_IMPURITY_SOURCE_SLUG = "metalimpurityjournal";
-export const METAL_IMPURITY_PAGE_TITLE = "Р–СѓСЂРЅР°Р» СѓС‡РµС‚Р° РјРµС‚Р°Р»Р»РѕРїСЂРёРјРµСЃРµР№ РІ СЃС‹СЂСЊРµ";
-export const METAL_IMPURITY_DOCUMENT_TITLE = "Р–СѓСЂРЅР°Р» СѓС‡РµС‚Р° РјРµС‚Р°Р»Р»РѕРїСЂРёРјРµСЃРµР№";
+export const METAL_IMPURITY_PAGE_TITLE = "Журнал учета металлопримесей в сырье";
+export const METAL_IMPURITY_DOCUMENT_TITLE = "Журнал учета металлопримесей";
 export const METAL_IMPURITY_RESPONSIBLE_POSITIONS = USER_ROLE_LABEL_VALUES;
 
 export type MetalImpurityUser = {
@@ -125,7 +125,7 @@ export function getDefaultMetalImpurityConfig(params?: {
 }): MetalImpurityDocumentConfig {
   const startDate = params?.date || new Date().toISOString().slice(0, 10);
   const materialNames =
-    params?.materials?.filter(Boolean) || ["РњСѓРєР°", "РњСѓРєР° РїС€РµРЅРёС‡РЅР°СЏ РІ/СЃ"];
+    params?.materials?.filter(Boolean) || ["Мука", "Мука пшеничная в/с"];
   const supplierNames =
     params?.suppliers?.filter(Boolean) || ['РРџ "Р РѕРјР°С€РєР°"', 'РћРћРћ "РђРіСЂРѕ-Р®Рі"'];
   const materials = materialNames.map((name, index) => ({
@@ -249,7 +249,7 @@ export function getMetalImpurityValuePerKg(
 }
 
 export function getMetalImpurityOptionName(options: MetalImpurityOption[], id: string) {
-  return options.find((item) => item.id === id)?.name || "вЂ”";
+  return options.find((item) => item.id === id)?.name || "—";
 }
 
 export function getMetalImpurityEmployeeOptions(

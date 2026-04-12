@@ -87,15 +87,15 @@ export function EquipmentMaintenanceDocumentsClient({
   }, [editingDoc]);
 
   async function handleDelete(docId: string, docTitle: string) {
-    if (!window.confirm(`РЈРґР°Р»РёС‚СЊ РґРѕРєСѓРјРµРЅС‚ "${docTitle}"?`)) return;
+    if (!window.confirm(`Удалить документ "${docTitle}"?`)) return;
     const response = await fetch(`/api/journal-documents/${docId}`, { method: "DELETE" });
     if (!response.ok) throw new Error("Не удалось удалить документ");
     router.refresh();
   }
 
   async function handleStatusChange(docId: string, newStatus: "active" | "closed", docTitle: string) {
-    const label = newStatus === "closed" ? "РћС‚РїСЂР°РІРёС‚СЊ РІ Р·Р°РєСЂС‹С‚С‹Рµ" : "РћС‚РїСЂР°РІРёС‚СЊ РІ Р°РєС‚РёРІРЅС‹Рµ";
-    if (!window.confirm(`${label} РґРѕРєСѓРјРµРЅС‚ "${docTitle}"?`)) return;
+    const label = newStatus === "closed" ? "Отправить в закрытые" : "Отправить в активные";
+    if (!window.confirm(`${label} документ "${docTitle}"?`)) return;
     const response = await fetch(`/api/journal-documents/${docId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -160,7 +160,7 @@ export function EquipmentMaintenanceDocumentsClient({
   return (
     <div className="space-y-8">
       <JournalTopBar
-        heading="Р“СЂР°С„РёРє РїСЂРѕС„РёР»Р°РєС‚РёС‡РµСЃРєРѕРіРѕ РѕР±СЃР»СѓР¶РёРІР°РЅРёСЏ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ"
+        heading="График профилактического обслуживания оборудования"
         activeTab={activeTab}
         templateCode={templateCode}
         templateName={templateName}
@@ -180,19 +180,19 @@ export function EquipmentMaintenanceDocumentsClient({
                 <div className="text-[24px] font-semibold text-black">{doc.title}</div>
               </Link>
               <div className="text-center">
-                <div className="text-[12px] text-[#85889b]">Р“РѕРґ</div>
+                <div className="text-[12px] text-[#85889b]">Год</div>
                 <div className="text-[18px] font-semibold">{cfg.year}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">Р”РѕР»Р¶РЅРѕСЃС‚СЊ &quot;РЈС‚РІРµСЂР¶РґР°СЋ&quot;</div>
+                <div className="text-[12px] text-[#85889b]">Должность &quot;Утверждаю&quot;</div>
                 <div className="text-[14px] font-semibold">{cfg.approveRole}: {cfg.approveEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">РћС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Р№</div>
+                <div className="text-[12px] text-[#85889b]">Ответственный</div>
                 <div className="text-[14px] font-semibold">{cfg.responsibleRole}: {cfg.responsibleEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">Р”Р°С‚Р° РґРѕРєСѓРјРµРЅС‚Р°</div>
+                <div className="text-[12px] text-[#85889b]">Дата документа</div>
                 <div className="text-[18px] font-semibold">{formatMaintenanceDate(cfg.documentDate)}</div>
               </div>
               <DropdownMenu>
@@ -205,28 +205,28 @@ export function EquipmentMaintenanceDocumentsClient({
                   {doc.status === "active" && (
                     <>
                       <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px]" onSelect={() => setEditingDoc(doc)}>
-                        <Pencil className="mr-3 size-5 text-[#6f7282]" /> РќР°СЃС‚СЂРѕР№РєРё
+                        <Pencil className="mr-3 size-5 text-[#6f7282]" /> Настройки
                       </DropdownMenuItem>
                       <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px]" onSelect={() => handleCopy(doc)}>
-                        <Copy className="mr-3 size-5 text-[#6f7282]" /> РЎРґРµР»Р°С‚СЊ РєРѕРїРёСЋ
+                        <Copy className="mr-3 size-5 text-[#6f7282]" /> Сделать копию
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px]" onSelect={() => openDocumentPdf(doc.id)}>
-                    <Printer className="mr-3 size-5 text-[#6f7282]" /> РџРµС‡Р°С‚СЊ
+                    <Printer className="mr-3 size-5 text-[#6f7282]" /> Печать
                   </DropdownMenuItem>
                   {doc.status === "active" ? (
                     <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px]" onSelect={() => handleStatusChange(doc.id, "closed", doc.title)}>
-                      <Archive className="mr-3 size-5 text-[#6f7282]" /> РћС‚РїСЂР°РІРёС‚СЊ РІ Р·Р°РєСЂС‹С‚С‹Рµ
+                      <Archive className="mr-3 size-5 text-[#6f7282]" /> Отправить в закрытые
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px]" onSelect={() => handleStatusChange(doc.id, "active", doc.title)}>
-                      <ArchiveRestore className="mr-3 size-5 text-[#6f7282]" /> РћС‚РїСЂР°РІРёС‚СЊ РІ Р°РєС‚РёРІРЅС‹Рµ
+                      <ArchiveRestore className="mr-3 size-5 text-[#6f7282]" /> Отправить в активные
                     </DropdownMenuItem>
                   )}
                   {doc.status === "active" && (
                     <DropdownMenuItem className="h-12 rounded-xl px-3 text-[16px] text-[#ff3b30] focus:text-[#ff3b30]" onSelect={() => handleDelete(doc.id, doc.title)}>
-                      <Trash2 className="mr-3 size-5 text-[#ff3b30]" /> РЈРґР°Р»РёС‚СЊ
+                      <Trash2 className="mr-3 size-5 text-[#ff3b30]" /> Удалить
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -239,19 +239,19 @@ export function EquipmentMaintenanceDocumentsClient({
       <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
           <DialogHeader className="border-b px-6 py-5">
-            <DialogTitle className="text-[24px] font-medium text-black">РќР°СЃС‚СЂРѕР№РєРё РґРѕРєСѓРјРµРЅС‚Р°</DialogTitle>
+            <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-6 py-5">
             <div className="space-y-2">
-              <Label>РќР°Р·РІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°</Label>
+              <Label>Название документа</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Р”Р°С‚Р° РґРѕРєСѓРјРµРЅС‚Р°</Label>
+              <Label>Дата документа</Label>
               <Input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Р“РѕРґ</Label>
+              <Label>Год</Label>
               <Select value={year} onValueChange={setYear}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -262,56 +262,56 @@ export function EquipmentMaintenanceDocumentsClient({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Р”РѕР»Р¶РЅРѕСЃС‚СЊ &quot;РЈС‚РІРµСЂР¶РґР°СЋ&quot;</Label>
+              <Label>Должность &quot;Утверждаю&quot;</Label>
               <Select value={approveRole} onValueChange={(value) => {
                 const user = users.find((item) => getUserRoleLabel(item.role) === value);
                 setApproveRole(value);
                 setApproveEmployeeId(user?.id || "");
                 setApproveEmployee(user?.name || approveEmployee);
               }}>
-                <SelectTrigger><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>РЎРѕС‚СЂСѓРґРЅРёРє</Label>
+              <Label>Сотрудник</Label>
               <Select value={approveEmployeeId} onValueChange={(value) => {
                 const user = users.find((item) => item.id === value);
                 setApproveEmployeeId(value);
                 setApproveEmployee(user?.name || approveEmployee);
                 if (user) setApproveRole(getUserRoleLabel(user.role));
               }}>
-                <SelectTrigger><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {users.map((u) => <SelectItem key={u.id} value={u.id}>{buildStaffOptionLabel(u)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Р”РѕР»Р¶РЅРѕСЃС‚СЊ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕРіРѕ</Label>
+              <Label>Должность ответственного</Label>
               <Select value={responsibleRole} onValueChange={(value) => {
                 const user = users.find((item) => getUserRoleLabel(item.role) === value);
                 setResponsibleRole(value);
                 setResponsibleEmployeeId(user?.id || "");
                 setResponsibleEmployee(user?.name || responsibleEmployee);
               }}>
-                <SelectTrigger><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>РЎРѕС‚СЂСѓРґРЅРёРє</Label>
+              <Label>Сотрудник</Label>
               <Select value={responsibleEmployeeId} onValueChange={(value) => {
                 const user = users.find((item) => item.id === value);
                 setResponsibleEmployeeId(value);
                 setResponsibleEmployee(user?.name || responsibleEmployee);
                 if (user) setResponsibleRole(getUserRoleLabel(user.role));
               }}>
-                <SelectTrigger><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {users.map((u) => <SelectItem key={u.id} value={u.id}>{buildStaffOptionLabel(u)}</SelectItem>)}
                 </SelectContent>
@@ -319,7 +319,7 @@ export function EquipmentMaintenanceDocumentsClient({
             </div>
             <div className="flex justify-end">
               <Button onClick={saveSettings} disabled={isSaving}>
-                {isSaving ? "РЎРѕС…СЂР°РЅРµРЅРёРµ..." : "РЎРѕС…СЂР°РЅРёС‚СЊ"}
+                {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
           </div>

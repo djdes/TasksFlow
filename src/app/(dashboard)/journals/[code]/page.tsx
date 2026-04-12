@@ -2312,7 +2312,7 @@ export default async function JournalDocumentsPage({
             dateTo: new Date(`${period.dateTo}T00:00:00.000Z`),
             createdById: session.user.id,
             responsibleUserId: responsibleUser?.id || null,
-            responsibleTitle: responsibleUser ? "РЈРїСЂР°РІР»СЏСЋС‰РёР№" : null,
+            responsibleTitle: responsibleUser ? "Управляющий" : null,
             config: cleaningConfig,
           },
         });
@@ -2737,7 +2737,7 @@ export default async function JournalDocumentsPage({
       }
       if (!auditPlanStatuses.has("closed")) {
         const defaultConfig = getAuditPlanDefaultConfig({
-          organizationName: 'РћРћРћ "РўРµСЃС‚"',
+          organizationName: 'ООО "Тест"',
           users: orgUsers,
         });
         await db.journalDocument.create({
@@ -3555,7 +3555,7 @@ export default async function JournalDocumentsPage({
 
       const trackedHeading =
         isAcceptanceDocumentTemplate(resolvedCode)
-          ? "Р–СѓСЂРЅР°Р» РїСЂРёРµРјРєРё Рё РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂРѕР»СЏ РїСЂРѕРґСѓРєС†РёРё"
+          ? "Журнал приемки и входного контроля продукции"
           : template.name;
 
       return (

@@ -179,7 +179,7 @@ function DocumentSettingsDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                 {usersForRole(props.users, state.approveRole).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {buildStaffOptionLabel(user)}

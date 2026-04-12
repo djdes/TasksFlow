@@ -513,7 +513,7 @@ export function StaffTrainingDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {buildStaffOptionLabel(user)}

@@ -247,7 +247,7 @@ function DocumentDialog({
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                  <SelectItem value="__empty__">- Выберите значение -</SelectItem>
                   {employeeOptions.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {buildStaffOptionLabel(employee)}

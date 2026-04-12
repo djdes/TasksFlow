@@ -327,7 +327,7 @@ export default async function JournalDocumentPage({
         routeCode={code}
         title={document.title}
         templateCode={resolvedCode}
-        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        organizationName={organization?.name || 'ООО "Тест"'}
         status={document.status as "active" | "closed"}
         dateFrom={toDateKey(document.dateFrom)}
         config={normalizeEquipmentCleaningConfig(document.config)}
@@ -414,7 +414,7 @@ export default async function JournalDocumentPage({
       <GlassListDocumentClient
         documentId={document.id}
         title={document.title}
-        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        organizationName={organization?.name || 'ООО "Тест"'}
         status={document.status}
         initialConfig={normalizeGlassListConfig(document.config)}
         users={enrichedEmployees}
@@ -668,7 +668,7 @@ export default async function JournalDocumentPage({
         documentId={document.id}
         routeCode={code}
         title={document.title}
-        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        organizationName={organization?.name || 'ООО "Тест"'}
         dateFrom={toDateKey(document.dateFrom)}
         dateTo={toDateKey(document.dateTo)}
         status={document.status}

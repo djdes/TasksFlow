@@ -1,0 +1,240 @@
+{
+  "health_check": {
+    "folder": "Журнал здоровья",
+    "n_jpgs": 9,
+    "first": "029 - 'Журнал здоровья'.jpg",
+    "mid": "033 - 'Журнал здоровья'.jpg",
+    "last": "037 - 'Журнал Здоровья'.jpg"
+  },
+  "climate_control": {
+    "folder": "Бланк контроля температуры и влажности",
+    "n_jpgs": 14,
+    "first": "FireShot Pro Webpage Capture 427 - 'Бланк контроля температуры и влажности I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 434 - 'Бланк контроля температуры и влажности I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 440 - 'Бланк контроля температуры и влажности I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "cold_equipment_control": {
+    "folder": "Журнал контроля температурного режима холодильного и морозильного оборудования",
+    "n_jpgs": 13,
+    "first": "FireShot Pro Webpage Capture 441 - 'Журнал контроля температурного режима холодильного и морозильного оборудования I Haccp-Onli_' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 447 - 'Журнал контроля температурного режима холодильного и морозильного оборудования I Haccp-Onli_' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 453 - 'Журнал контроля температурного режима холодильного и морозильного оборудования I Haccp-Onli_' - lk.haccp-online.ru.jpg"
+  },
+  "cleaning": {
+    "folder": "Журнал уборки",
+    "n_jpgs": 14,
+    "first": "FireShot Pro Webpage Capture 397 - 'Журнал уборки I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 404 - 'Журнал уборки I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 410 - 'Журнал уборки I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "general_cleaning": {
+    "folder": "График и учет генеральных уборок",
+    "n_jpgs": 15,
+    "first": "FireShot Pro Webpage Capture 454 - 'График и учет генеральных уборок I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 461 - 'График и учет генеральных уборок I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 468 - 'График ген. уборок I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "uv_lamp_runtime": {
+    "folder": "Журнал учета работы УФ бактерицидной установки",
+    "n_jpgs": 14,
+    "first": "FireShot Pro Webpage Capture 469 - 'Журнал учета работы УФ бактерицидной установки I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 476 - 'Журнал учета работы УФ бактерицидной установки I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 482 - 'Журнал учета работы I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "finished_product": {
+    "folder": "Журнал бракеража готовой пищевой продукции",
+    "n_jpgs": 18,
+    "first": "FireShot Pro Webpage Capture 483 - 'Бракеражный журнал I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 492 - 'Бракеражный журнал I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 500 - 'Бракеражный журнал I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "perishable_rejection": {
+    "folder": "Журнал бракеража скоропортящейся пищевой продукции",
+    "n_jpgs": 12,
+    "first": "054 - 'Бракеражный журнал'.jpg",
+    "mid": "060 - 'Журнал бракеража'.jpg",
+    "last": "065 - 'Журнал бракеража'.jpg"
+  },
+  "incoming_control": {
+    "folder": "Журнал приемки и входного контроля продукции",
+    "n_jpgs": 16,
+    "first": "038 - 'Журнал приемки и входного контроля продукции'.jpg",
+    "mid": "046 - 'Журнал приемки'.jpg",
+    "last": "053 - 'Журнал приемки'.jpg"
+  },
+  "fryer_oil": {
+    "folder": "Журнал учета использования фритюрных жиров",
+    "n_jpgs": 8,
+    "first": "011 - 'Журнал учета использования фритюрных жиров'.jpg",
+    "mid": "015 - 'Журнал учета использования фритюрных жиров'.jpg",
+    "last": "018 - 'Журнал учета использования фритюрных жиров'.jpg"
+  },
+  "med_books": {
+    "folder": "Медицинские книжки",
+    "n_jpgs": 9,
+    "first": "001 - 'Медицинские книжки'.jpg",
+    "mid": "005 - 'Мед. книжки'.jpg",
+    "last": "009 - 'Мед. книжки'.jpg"
+  },
+  "training_plan": {
+    "folder": "План обучения персонала",
+    "n_jpgs": 14,
+    "first": "080 - 'План обучения персонала'.jpg",
+    "mid": "087 - 'План обучения 2025'.jpg",
+    "last": "093 - 'План обучения 2025'.jpg"
+  },
+  "staff_training": {
+    "folder": "Журнал регистрации инструктажей (обучения) сотрудников",
+    "n_jpgs": 16,
+    "first": "094 - 'Журнал регистрации инструктажей (обучения) сотрудников I Haccp-Online_ сервис электронных ж_'.jpg",
+    "mid": "102 - 'Журнал регистрации инструктажей'.jpg",
+    "last": "109 - 'Журнал регистрации инструктажей'.jpg"
+  },
+  "disinfectant_usage": {
+    "folder": "Журнал учета дезинфицирующих средств",
+    "n_jpgs": 15,
+    "first": "110 - 'Журнал учета дезинфицирующих средств'.jpg",
+    "mid": "117 - 'Журнал учета дез. средств'.jpg",
+    "last": "124 - 'Журнал учета дез. средств'.jpg"
+  },
+  "sanitary_day_control": {
+    "folder": "Чек-лист (памятка) проведения санитарного дня",
+    "n_jpgs": 14,
+    "first": "125 - 'Чек-лист (памятка) проведения санитарного дня'.jpg",
+    "mid": "132 - 'Чек-лист'.jpg",
+    "last": "138 - 'Чек-лист'.jpg"
+  },
+  "equipment_maintenance": {
+    "folder": "График профилактического обслуживания оборудования",
+    "n_jpgs": 15,
+    "first": "139 - 'График профилактического обслуживания оборудования I Haccp-Online_ сервис электронных журна_'.jpg",
+    "mid": "146 - 'График профилактического обслуживания оборудования I Haccp-Online_ сервис электронных журна_'.jpg",
+    "last": "153 - 'HACCP ONLINE - Grafik.pdf'.jpg"
+  },
+  "breakdown_history": {
+    "folder": "Карточка истории поломок",
+    "n_jpgs": 13,
+    "first": "154 - 'Карточка истории поломок'.jpg",
+    "mid": "160 - 'Карточка истории поломок'.jpg",
+    "last": "166 - 'HACCP ONLINE - Kartochka_istorii_polomok.pdf'.jpg"
+  },
+  "equipment_calibration": {
+    "folder": "График поверки средств измерений",
+    "n_jpgs": 14,
+    "first": "167 - 'График поверки средств измерений'.jpg",
+    "mid": "174 - 'График поверки средств измерений'.jpg",
+    "last": "180 - 'График поверки'.jpg"
+  },
+  "ppe_issuance": {
+    "folder": "Журнал учета выдачи СИЗ",
+    "n_jpgs": 14,
+    "first": "199 - 'Журнал учета выдачи СИЗ'.jpg",
+    "mid": "206 - 'Журнал учета выдачи СИЗ'.jpg",
+    "last": "212 - 'Журнал учета выдачи СИЗ'.jpg"
+  },
+  "accident_journal": {
+    "folder": "Журнал учета аварий",
+    "n_jpgs": 11,
+    "first": "213 - 'Журнал учета аварий'.jpg",
+    "mid": "218 - 'Журнал учета аварий'.jpg",
+    "last": "223 - 'Журнал учета аварий'.jpg"
+  },
+  "complaint_register": {
+    "folder": "Журнал регистрации жалоб",
+    "n_jpgs": 12,
+    "first": "224 - 'Журнал регистрации жалоб'.jpg",
+    "mid": "230 - 'Журнал регистрации жалоб'.jpg",
+    "last": "235 - 'Журнал регистрации жалоб'.jpg"
+  },
+  "product_writeoff": {
+    "folder": "Акт забраковки",
+    "n_jpgs": 16,
+    "first": "236 - 'Акт забраковки'.jpg",
+    "mid": "244 - 'Акт забраковки'.jpg",
+    "last": "251 - 'Акт забраковки'.jpg"
+  },
+  "audit_plan": {
+    "folder": "План-программа внутренних аудитов",
+    "n_jpgs": 15,
+    "first": "252 - 'План-программа внутренних аудитов'.jpg",
+    "mid": "259 - 'План-программа внутренних аудитов'.jpg",
+    "last": "266 - 'План-программа аудитов'.jpg"
+  },
+  "audit_protocol": {
+    "folder": "Протокол внутреннего аудита",
+    "n_jpgs": 15,
+    "first": "267 - 'Протокол внутреннего аудита'.jpg",
+    "mid": "274 - 'Протокол внутреннего аудита'.jpg",
+    "last": "281 - 'Протокол внутреннего аудита'.jpg"
+  },
+  "audit_report": {
+    "folder": "Отчет о внутреннем аудите",
+    "n_jpgs": 15,
+    "first": "282 - 'Отчет о внутреннем аудите'.jpg",
+    "mid": "289 - 'Отчет о внутреннем аудите'.jpg",
+    "last": "296 - 'Отчет о внутреннем аудите'.jpg"
+  },
+  "traceability_test": {
+    "folder": "Журнал прослеживаемости продукции",
+    "n_jpgs": 16,
+    "first": "297 - 'Журнал прослеживаемости продукции'.jpg",
+    "mid": "305 - 'Журнал прослеживаемости'.jpg",
+    "last": "312 - 'Журнал прослеживаемости'.jpg"
+  },
+  "metal_impurity": {
+    "folder": "Журнал учета металлопримесей",
+    "n_jpgs": 24,
+    "first": "313 - 'Журнал учета металлопримесей в сырье'.jpg",
+    "mid": "322 - 'Журнал учета металлопримесей в сырье'.jpg",
+    "last": "327 - 'Журнал учета металлопримесей'.jpg"
+  },
+  "equipment_cleaning": {
+    "folder": "Журнал мойки и дезинфекции оборудования",
+    "n_jpgs": 13,
+    "first": "FireShot Pro Webpage Capture 328 - 'Журнал мойки и дезинфекции оборудования I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 334 - 'Журнал мойки и дезинфекции оборудования I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 340 - 'Журнал мойки и дезинфекции оборудования I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "intensive_cooling": {
+    "folder": "Журнал контроля интенсивного охлаждения горячих блюд",
+    "n_jpgs": 12,
+    "first": "FireShot Pro Webpage Capture 341 - 'Журнал контроля интенсивного охлаждения горячих блюд I Haccp-Online_ сервис электронных жур_' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 347 - 'Журнал контроля I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 352 - 'Журнал контроля I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "glass_items_list": {
+    "folder": "Перечень изделий из стекла и хрупкого пластика",
+    "n_jpgs": 13,
+    "first": "FireShot Pro Webpage Capture 353 - 'Перечень изделий из стекла и хрупкого пластика I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 359 - 'Перечень изделий из стекла и хрупкого пластика I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 365 - 'Перечень изделий I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "glass_control": {
+    "folder": "Журнал контроля изделий из стекла и хрупкого пластика",
+    "n_jpgs": 13,
+    "first": "FireShot Pro Webpage Capture 366 - 'Журнал контроля изделий из стекла и хрупкого пластика I Haccp-Online_ сервис электронных жу_' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 372 - 'Журнал контроля изделий из стекла и хрупкого пластика I Haccp-Online_ сервис электронных жу_' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 378 - 'Журнал контроля изделий I Haccp-Online_ сервис электронных журналов' - lk.haccp-online.ru.jpg"
+  },
+  "pest_control": {
+    "folder": "Журнал учета дезинфекции, дезинсекции и дератизации",
+    "n_jpgs": 13,
+    "first": "FireShot Pro Webpage Capture 379 - 'Журнал учета дезинфекции, дезинсекции и дератизации I Haccp-Online_ сервис электронных журн_' - lk.haccp-online.ru.jpg",
+    "mid": "FireShot Pro Webpage Capture 385 - 'Журнал учета дезинфекции, дезинсекции и дератизации I Haccp-Online_ сервис электронных журн_' - lk.haccp-online.ru.jpg",
+    "last": "FireShot Pro Webpage Capture 391 - 'Журнал учета дезинфекции, дезинсекции и дератизации I Haccp-Online_ сервис электронных журн_' - lk.haccp-online.ru.jpg"
+  },
+  "incoming_raw_materials_control": {
+    "folder": "Журнал входного контроля сырья, ингредиентов, упаковочных материалов",
+    "n_jpgs": 18,
+    "first": "181 - 'Журнал входного контроля сырья, ингредиентов, упаковочных материалов I Haccp-Online_ сервис_'.jpg",
+    "mid": "190 - 'Журнал входного контроля сырья'.jpg",
+    "last": "198 - 'Журнал входного контроля сырья'.jpg"
+  },
+  "cleaning_ventilation_checklist": {
+    "folder": "Чек-лист уборки и проветривания помещений",
+    "n_jpgs": 14,
+    "first": "066 - 'Чек-лист уборки и проветривания помещений'.jpg",
+    "mid": "073 - 'Чек-лист уборки и проветривания помещений'.jpg",
+    "last": "079 - 'Чек-лист уборки и проветривания помещений'.jpg"
+  }
+}
