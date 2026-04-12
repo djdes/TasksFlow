@@ -1,19 +1,13 @@
 # journals-full-audit — блокеры
 
-## BLOCKER-1: sanitary_day_control без выделенного PDF drawer
+## BLOCKER-1: sanitary_day_control без выделенного PDF drawer — RESOLVED 2026-04-12
 
-Код шаблона: `sanitary_day_control` (title «Чек-лист (памятка) проведения санитарного дня»).
+Исправлено в коммите `d89734a` (push 2026-04-12, deployed, prod `.build-sha` = `d89734a`):
 
-UI-клиент: `src/components/journals/sanitary-day-checklist-document-client.tsx` — полноценный чек-лист с зонами и пунктами (config.zones, config.items).
+- Новый файл `src/lib/sanitary-day-checklist-pdf.ts` с `drawSanitaryDayChecklistPdf`.
+- Роутинг добавлен в `src/lib/document-pdf.ts` (template `sanitary_day_control` → dedicated drawer, больше не падает в `drawTrackedPdf`).
+- Файловый префикс `sanitary-day-checklist`.
 
-PDF: падает в generic `drawTrackedPdf`, template.fields = [] → PDF только с колонками «Дата / Ответственный», пустой.
-
-### Что нужно сделать
-
-1. Написать `src/lib/sanitary-day-checklist-pdf.ts` с функцией `drawSanitaryDayChecklistPdf(doc, params)`.
-2. Прочитать эталонный JPG из `c:/www/Wesetup.ru/journals/Чек-лист (памятка) проведения санитарного дня/` для структуры.
-3. Отрисовать шапку (drawJournalHeader / собственная), затем таблицу по зонам с пунктами.
-4. Добавить ветку в `generateJournalDocumentPdf` (`document-pdf.ts`) для template.code === SANITARY_DAY_CHECKLIST_TEMPLATE_CODE.
-5. Верифицировать через /api/journal-documents/[id]/pdf.
-
-Ориентировочно: 150-200 строк, 30-60 минут.
+Верификация prod:
+- `GET /api/journal-documents/cmnsk5x7d00049gtsrye8rcgl/pdf` → 200, `Content-Type: application/pdf`, 438 818 байт.
+- Текст PDF содержит: org name, `СИСТЕМА ХАССП`, `СТР. 1 ИЗ 1`, `ЧЕК-ЛИСТ (ПАМЯТКА) ПРОВЕДЕНИЯ САНИТАРНОГО ДНЯ`, `ДАТА ПРОВЕДЕНИЯ 21.04.2026`, блок `ОБЩИЕ ПРИНЦИПЫ` с буллетами, таблицу `№ п/п / Действия / Отметка времени`, заголовок зоны `1. <ZONE>`, строки элементов, подписи `ВЫПОЛНИЛ:` / `ПРОВЕРИЛ:`. Mojibake отсутствует.

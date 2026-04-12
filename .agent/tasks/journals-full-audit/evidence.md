@@ -53,7 +53,7 @@ UI (`sanitary-day-checklist-document-client.tsx`) хранит `config.zones[]` 
 
 Для корректного фикса нужен отдельный `drawSanitaryDayChecklistPdf`, аналогичный `drawCleaningVentilationChecklistPdf`. Объём работы — ~150-200 строк нового кода + тест с эталонным JPG.
 
-**Статус: скипнут.** Помечен блокером для следующей итерации.
+**Статус: RESOLVED 2026-04-12 в коммите `d89734a`.** Добавлен dedicated drawer `drawSanitaryDayChecklistPdf` в `src/lib/sanitary-day-checklist-pdf.ts`, роутинг в `src/lib/document-pdf.ts`. Prod-верификация: `/api/journal-documents/cmnsk5x7d00049gtsrye8rcgl/pdf` → 200, 438 818 байт, структура ОК (шапка, общие принципы, зонированная таблица № / Действия / Отметка времени, подписи).
 
 ## Не пройденные проверки
 
