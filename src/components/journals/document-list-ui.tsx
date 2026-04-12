@@ -22,49 +22,37 @@ export function JournalTopBar(props: {
   const compact = props.compact ?? true;
 
   return (
-    <div className={compact ? "rounded-[28px] bg-white p-8 shadow-sm" : ""}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1
-            className={
-              compact
-                ? "text-[32px] font-semibold tracking-[-0.03em] text-black"
-                : "text-[62px] font-semibold tracking-[-0.04em] text-black"
-            }
-          >
-            {props.heading}
-          </h1>
-          <div className={compact ? "mt-4 flex flex-wrap gap-3" : "mt-0 flex items-center gap-4"}>
-            <Button
-              variant="outline"
-              className={
-                compact
-                  ? "h-12 rounded-2xl border-[#e6e9f5] px-5 text-[16px] text-black shadow-none"
-                  : "h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
-              }
-              asChild
-            >
-              <Link href="/sanpin">
-                <BookOpenText className={compact ? "size-5" : "size-6"} />
-                Инструкция
-              </Link>
-            </Button>
-            {props.activeTab === "active" && (
-              <CreateDocumentDialog
-                templateCode={props.templateCode}
-                templateName={props.templateName}
-                users={props.users}
-                triggerClassName={
-                  compact
-                    ? "h-12 rounded-2xl bg-[#5b66ff] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
-                    : "h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] font-medium text-white hover:bg-[#4c58ff]"
-                }
-                triggerLabel="Создать документ"
-                triggerIcon={<Plus className={compact ? "size-5" : "size-7"} />}
-              />
-            )}
-          </div>
-        </div>
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <h1
+        className={
+          compact
+            ? "text-[54px] font-semibold tracking-[-0.04em] text-black"
+            : "text-[62px] font-semibold tracking-[-0.04em] text-black"
+        }
+      >
+        {props.heading}
+      </h1>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          className="h-12 rounded-xl border-[#eef0fb] px-4 text-[14px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          asChild
+        >
+          <Link href="/sanpin">
+            <BookOpenText className="size-4" />
+            Инструкция
+          </Link>
+        </Button>
+        {props.activeTab === "active" && (
+          <CreateDocumentDialog
+            templateCode={props.templateCode}
+            templateName={props.templateName}
+            users={props.users}
+            triggerClassName="h-12 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
+            triggerLabel="Создать документ"
+            triggerIcon={<Plus className="size-4" />}
+          />
+        )}
       </div>
     </div>
   );
