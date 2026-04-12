@@ -57,6 +57,11 @@ function emptyCommissionMember() {
   return createProductWriteoffCommissionMember({ role: ROLE_OPTIONS[0] });
 }
 
+function getRoleLabelByUserId(users: UserItem[], userId: string) {
+  const user = users.find((item) => item.id === userId);
+  return user ? getUserRoleLabel(user.role) : "";
+}
+
 function actDateParts(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return { day: "__", month: "", year: "____" };
@@ -91,6 +96,7 @@ export function ProductWriteoffDocumentClient({
     row: emptyRow(),
     newProductName: "",
   });
+  const [rowDialogProductOptions, setRowDialogProductOptions] = useState<string[]>([]);
   const [commissionDialog, setCommissionDialog] = useState<CommissionDialogState>({
     open: false,
     index: null,
@@ -161,7 +167,10 @@ export function ProductWriteoffDocumentClient({
     }
 
     const ok = await persistConfig(nextConfig);
-    if (ok) setRowDialog({ open: false, index: null, row: emptyRow(), newProductName: "" });
+    if (ok) {
+      setRowDialog({ open: false, index: null, row: emptyRow(), newProductName: "" });
+      setRowDialogProductOptions([]);
+    }
   }
 
   async function deleteSelectedRows() {
@@ -178,9 +187,15 @@ export function ProductWriteoffDocumentClient({
       toast.error("Выберите сотрудника");
       return;
     }
+    const normalizedMember = {
+      ...commissionDialog.member,
+      role:
+        getRoleLabelByUserId(users, commissionDialog.member.employeeId) ||
+        commissionDialog.member.role,
+    };
     const nextConfig = structuredClone(config) as ProductWriteoffConfig;
-    if (commissionDialog.index === null) nextConfig.commissionMembers.push(commissionDialog.member);
-    else nextConfig.commissionMembers[commissionDialog.index] = commissionDialog.member;
+    if (commissionDialog.index === null) nextConfig.commissionMembers.push(normalizedMember);
+    else nextConfig.commissionMembers[commissionDialog.index] = normalizedMember;
     const ok = await persistConfig(nextConfig);
     if (ok) setCommissionDialog({ open: false, index: null, member: emptyCommissionMember() });
   }
@@ -259,7 +274,7 @@ export function ProductWriteoffDocumentClient({
           <div className="flex gap-4 print:hidden">
             {!isClosed && (
               <>
-                <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4957fb]" onClick={() => setRowDialog({ open: true, index: null, row: emptyRow(), newProductName: "" })}>
+                <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4957fb]" onClick={() => { setRowDialog({ open: true, index: null, row: emptyRow(), newProductName: "" }); setRowDialogProductOptions(productOptions); }}>
                   <Plus className="size-6" />
                   Добавить
                 </Button>
@@ -313,6 +328,7 @@ export function ProductWriteoffDocumentClient({
                   if (isClosed) return;
                   if ((event.target as HTMLElement).closest("button")) return;
                   setRowDialog({ open: true, index, row, newProductName: "" });
+                  setRowDialogProductOptions(productOptions);
                 }}>
                   {!isClosed && <td className="border border-black p-2 text-center align-top print:hidden"><Checkbox checked={selectedRows.includes(row.id)} onCheckedChange={(checked) => setSelectedRows((prev) => checked === true ? [...new Set([...prev, row.id])] : prev.filter((id) => id !== row.id))} /></td>}
                   <td className="border border-black p-2 text-center align-top">{index + 1}</td>
@@ -379,7 +395,11 @@ export function ProductWriteoffDocumentClient({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={rowDialog.open} onOpenChange={(open) => !open && setRowDialog({ open: false, index: null, row: emptyRow(), newProductName: "" })}>
+      <Dialog open={rowDialog.open} onOpenChange={(open) => {
+        if (open) return;
+        setRowDialog({ open: false, index: null, row: emptyRow(), newProductName: "" });
+        setRowDialogProductOptions([]);
+      }}>
         <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[720px] overflow-y-auto rounded-[28px] border-0 p-0">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[24px] font-medium text-black">{rowDialog.index === null ? "Добавление новой строки" : "Редактирование строки"}</DialogTitle>
@@ -389,13 +409,22 @@ export function ProductWriteoffDocumentClient({
               <Label>Наименование ТМЦ</Label>
               <select value={rowDialog.row.productName} onChange={(event) => setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: event.target.value } }))} className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-white px-5 text-[18px]">
                 <option value="">Выберите из списка</option>
-                {productOptions.map((item) => (
+                {(rowDialogProductOptions.length > 0 ? rowDialogProductOptions : productOptions).map((item) => (
                   <option key={item} value={item}>{item}</option>
                 ))}
               </select>
               <div className="flex gap-3">
                 <Input value={rowDialog.newProductName} onChange={(event) => setRowDialog((prev) => ({ ...prev, newProductName: event.target.value }))} placeholder="Добавить название новых ТМЦ" className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]" />
-                <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: prev.newProductName.trim() || prev.row.productName } }))}>
+                <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
+                  const item = rowDialog.newProductName.trim();
+                  if (!item) return;
+                  setRowDialogProductOptions((current) => (
+                    current.some((value) => value.toLowerCase() === item.toLowerCase())
+                      ? current
+                      : [...current, item]
+                  ));
+                  setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: item }, newProductName: "" }));
+                }}>
                   <Plus className="size-6" />
                 </Button>
               </div>
@@ -447,7 +476,7 @@ export function ProductWriteoffDocumentClient({
               <Label>Сотрудник</Label>
               <select value={commissionDialog.member.employeeId} onChange={(event) => {
                 const user = users.find((item) => item.id === event.target.value);
-                setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, employeeId: event.target.value, employeeName: user?.name || "" } }));
+                setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, employeeId: event.target.value, employeeName: user?.name || "", role: user ? getUserRoleLabel(user.role) : prev.member.role } }));
               }} className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                 <option value="">Выберите сотрудника</option>
                 {users.map((user) => (

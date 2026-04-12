@@ -1,0 +1,32 @@
+{
+  "batch": "addable-pdf-batch",
+  "scope": [
+    "acceptance-document-client",
+    "metal-impurity-document-client",
+    "product-writeoff-document-client",
+    "document-pdf"
+  ],
+  "defects": [
+    {
+      "class": "inline-add-visible-option",
+      "type": "systemic",
+      "files": [
+        "src/components/journals/acceptance-document-client.tsx",
+        "src/components/journals/metal-impurity-document-client.tsx",
+        "src/components/journals/product-writeoff-document-client.tsx"
+      ]
+    },
+    {
+      "class": "pdf-empty-body-fallback",
+      "type": "systemic",
+      "files": [
+        "src/lib/document-pdf.ts"
+      ]
+    }
+  ],
+  "verification": {
+    "eslint": "PASS_WITH_WARNINGS",
+    "tsc": "BLOCKED_UNRELATED"
+  },
+  "blocker": "src/components/journals/training-plan-documents-client.tsx SettingsState mismatch in current worktree"
+}

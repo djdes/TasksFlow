@@ -45,6 +45,7 @@ import {
   getProductWriteoffFilePrefix,
   normalizeProductWriteoffConfig,
 } from "@/lib/product-writeoff-document";
+import { normalizeJournalStaffBoundConfig } from "@/lib/journal-staff-binding";
 import {
   GLASS_LIST_TEMPLATE_CODE,
   formatGlassListDateLong,
@@ -608,6 +609,13 @@ function centerCell(content: string): CellDef {
     content,
     styles: { halign: "center", valign: "middle" },
   };
+}
+
+function ensurePdfBodyRows(body: RowInput[], columnCount: number, minRows = 3): RowInput[] {
+  if (body.length > 0) return body;
+  return Array.from({ length: minRows }, () =>
+    Array.from({ length: columnCount }, () => centerCell(""))
+  );
 }
 
 function formatDateTime(
@@ -1234,7 +1242,7 @@ function drawColdEquipmentPdf(doc: jsPDF, params: {
   autoTable(doc, {
     startY: 66,
     head,
-    body,
+    body: ensurePdfBodyRows(body, equipment.length + 2),
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -1526,7 +1534,7 @@ function drawFinishedProductPdf(doc: jsPDF, params: {
   autoTable(doc, {
     startY: 66,
     head,
-    body,
+    body: ensurePdfBodyRows(body, headRow.length),
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -1734,7 +1742,7 @@ function drawAcceptancePdf(doc: jsPDF, params: {
     startY: 66,
     margin: { left: 14, right: 14 },
     head,
-    body,
+    body: ensurePdfBodyRows(body, 9),
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -2828,7 +2836,7 @@ function drawTrackedPdf(doc: jsPDF, params: {
   autoTable(doc, {
     startY: 66,
     head,
-    body,
+    body: ensurePdfBodyRows(body, params.fields.length + 2),
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -2942,7 +2950,11 @@ function drawPestControlPdf(doc: jsPDF, params: {
       ];
     });
 
-  bodyRows.push(["", "", "", "", "", "", "", ""]);
+  if (bodyRows.length === 0) {
+    bodyRows.push(...Array.from({ length: 3 }, () => ["", "", "", "", "", "", "", ""]));
+  } else {
+    bodyRows.push(["", "", "", "", "", "", "", ""]);
+  }
 
   autoTable(doc, {
     startY: 66,
@@ -3469,7 +3481,7 @@ function drawUvRuntimePdf(doc: jsPDF, params: {
   autoTable(doc, {
     startY: specEndY,
     head,
-    body,
+    body: body.length > 1 ? body : [...body, ...ensurePdfBodyRows([], 6, 2)],
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -3568,7 +3580,7 @@ function drawRegisterPdf(doc: jsPDF, params: {
   autoTable(doc, {
     startY: 66,
     head,
-    body,
+    body: ensurePdfBodyRows(body, params.fields.length + 1),
     theme: "grid",
     styles: {
       font: "JournalUnicode",
@@ -4428,25 +4440,26 @@ export async function generateJournalDocumentPdf(params: {
   const monthLabel = formatMonthLabel(document.dateFrom, document.dateTo);
   const employeeIds = document.entries.map((entry) => entry.employeeId);
   const entryMap: Record<string, Record<string, unknown>> = {};
-  const climateConfig = normalizeClimateDocumentConfig(document.config);
-  const coldConfig = normalizeColdEquipmentDocumentConfig(document.config);
-  const cleaningConfig = normalizeCleaningDocumentConfig(document.config);
-  const finishedConfig = normalizeFinishedProductDocumentConfig(document.config);
-  const perishableRejectionConfig = normalizePerishableRejectionConfig(document.config);
-  const uvRuntimeConfig = normalizeUvRuntimeDocumentConfig(document.config);
-  const equipmentCalibrationConfig = normalizeEquipmentCalibrationConfig(document.config);
+  const reconciledConfig = normalizeJournalStaffBoundConfig(templateCode, document.config, users);
+  const climateConfig = normalizeClimateDocumentConfig(reconciledConfig);
+  const coldConfig = normalizeColdEquipmentDocumentConfig(reconciledConfig);
+  const cleaningConfig = normalizeCleaningDocumentConfig(reconciledConfig);
+  const finishedConfig = normalizeFinishedProductDocumentConfig(reconciledConfig);
+  const perishableRejectionConfig = normalizePerishableRejectionConfig(reconciledConfig);
+  const uvRuntimeConfig = normalizeUvRuntimeDocumentConfig(reconciledConfig);
+  const equipmentCalibrationConfig = normalizeEquipmentCalibrationConfig(reconciledConfig);
   const trackedFields = getTrackedFields(document.template.fields);
   const registerFields = parseRegisterFields(document.template.fields);
-  const registerConfig = normalizeRegisterDocumentConfig(document.config, registerFields);
-  const traceabilityConfig = normalizeTraceabilityDocumentConfig(document.config);
-  const equipmentCleaningConfig = normalizeEquipmentCleaningConfig(document.config);
-  const intensiveCoolingConfig = normalizeIntensiveCoolingConfig(document.config, users);
-  const medBookConfig = normalizeMedBookConfig(document.config);
-  const auditPlanConfig = normalizeAuditPlanConfig(document.config);
-  const auditProtocolConfig = normalizeAuditProtocolConfig(document.config);
-  const auditReportConfig = normalizeAuditReportConfig(document.config);
-  const metalImpurityConfig = normalizeMetalImpurityConfig(document.config);
-  const disinfectantConfig = normalizeDisinfectantConfig(document.config);
+  const registerConfig = normalizeRegisterDocumentConfig(reconciledConfig, registerFields);
+  const traceabilityConfig = normalizeTraceabilityDocumentConfig(reconciledConfig);
+  const equipmentCleaningConfig = normalizeEquipmentCleaningConfig(reconciledConfig);
+  const intensiveCoolingConfig = normalizeIntensiveCoolingConfig(reconciledConfig, users);
+  const medBookConfig = normalizeMedBookConfig(reconciledConfig);
+  const auditPlanConfig = normalizeAuditPlanConfig(reconciledConfig);
+  const auditProtocolConfig = normalizeAuditProtocolConfig(reconciledConfig);
+  const auditReportConfig = normalizeAuditReportConfig(reconciledConfig);
+  const metalImpurityConfig = normalizeMetalImpurityConfig(reconciledConfig);
+  const disinfectantConfig = normalizeDisinfectantConfig(reconciledConfig);
 
   document.entries.forEach((entry) => {
     entryMap[makeCellKey(entry.employeeId, toDateKey(entry.date))] =
@@ -4553,10 +4566,10 @@ export async function generateJournalDocumentPdf(params: {
       organizationName,
       title: document.title || "Акт забраковки",
       dateFrom: document.dateFrom,
-      config: normalizeProductWriteoffConfig(document.config),
+      config: normalizeProductWriteoffConfig(reconciledConfig),
     });
   } else if (templateCode === GLASS_LIST_TEMPLATE_CODE) {
-    const glassListConfig = normalizeGlassListConfig(document.config);
+    const glassListConfig = normalizeGlassListConfig(reconciledConfig);
     drawGlassListPdf(doc, {
       organizationName,
       title: document.title || "Перечень изделий",
@@ -4575,7 +4588,7 @@ export async function generateJournalDocumentPdf(params: {
       status: document.status,
       responsibleName:
         users.find((user) => user.id === document.responsibleUserId)?.name || "",
-      config: normalizeGlassControlConfig(document.config),
+      config: normalizeGlassControlConfig(reconciledConfig),
       entries: document.entries.map((entry) => ({
         date: entry.date,
         employeeId: entry.employeeId,
@@ -4587,13 +4600,13 @@ export async function generateJournalDocumentPdf(params: {
     drawSanitationDayPdf(doc, {
       organizationName,
       title: document.title || SANITATION_DAY_DOCUMENT_TITLE,
-      config: normalizeSanitationDayConfig(document.config),
+      config: normalizeSanitationDayConfig(reconciledConfig),
     });
   } else if (templateCode === TRAINING_PLAN_TEMPLATE_CODE) {
     drawTrainingPlanPdf(doc, {
       organizationName,
       title: document.title || TRAINING_PLAN_HEADING,
-      config: normalizeTrainingPlanConfig(document.config),
+      config: normalizeTrainingPlanConfig(reconciledConfig),
     });
   } else if (templateCode === AUDIT_PLAN_TEMPLATE_CODE) {
     drawAuditPlanPdf(doc, {
@@ -4632,14 +4645,14 @@ export async function generateJournalDocumentPdf(params: {
       organizationName,
       title: document.title || BREAKDOWN_HISTORY_HEADING,
       dateFrom: document.dateFrom,
-      config: normalizeBreakdownHistoryDocumentConfig(document.config),
+      config: normalizeBreakdownHistoryDocumentConfig(reconciledConfig),
     });
   } else if (templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
     drawAccidentPdf(doc, {
       organizationName,
       title: document.title || ACCIDENT_DOCUMENT_HEADING,
       dateFrom: document.dateFrom,
-      config: normalizeAccidentDocumentConfig(document.config),
+      config: normalizeAccidentDocumentConfig(reconciledConfig),
     });
   } else if (templateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE) {
     drawEquipmentCalibrationPdf(doc, {
@@ -4652,7 +4665,7 @@ export async function generateJournalDocumentPdf(params: {
       organizationName,
       title: document.title || getAcceptanceDocumentTitle(templateCode),
       dateFrom: document.dateFrom,
-      config: normalizeAcceptanceDocumentConfig(document.config, users),
+      config: normalizeAcceptanceDocumentConfig(reconciledConfig, users),
       users,
     });
   } else if (templateCode === PPE_ISSUANCE_TEMPLATE_CODE) {
@@ -4660,7 +4673,7 @@ export async function generateJournalDocumentPdf(params: {
       organizationName,
       title: document.title || PPE_ISSUANCE_DOCUMENT_TITLE,
       dateFrom: document.dateFrom,
-      config: normalizePpeIssuanceConfig(document.config, users),
+      config: normalizePpeIssuanceConfig(reconciledConfig, users),
       users,
     });
   } else if (templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
@@ -4715,7 +4728,7 @@ export async function generateJournalDocumentPdf(params: {
       title: document.title || getFryerOilDocumentTitle(),
       dateFrom: document.dateFrom,
       dateTo: document.dateTo,
-      config: normalizeFryerOilDocumentConfig(document.config),
+      config: normalizeFryerOilDocumentConfig(reconciledConfig),
       entries: document.entries.map((entry) => ({
         employeeId: entry.employeeId,
         date: entry.date,

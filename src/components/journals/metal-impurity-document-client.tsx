@@ -154,6 +154,8 @@ function RowDialog({
   const [draftEmployee, setDraftEmployee] = useState(responsibleEmployee);
   const [newSupplier, setNewSupplier] = useState("");
   const [newMaterial, setNewMaterial] = useState("");
+  const [materialOptions, setMaterialOptions] = useState<MetalImpurityOption[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<MetalImpurityOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const employeeOptions = useMemo(
     () =>
@@ -182,8 +184,17 @@ function RowDialog({
     setDraftEmployee(initialRow.responsibleName || responsibleEmployee);
     setNewSupplier("");
     setNewMaterial("");
+    setMaterialOptions(materials);
+    setSupplierOptions(suppliers);
     setSubmitting(false);
   }, [materials, open, responsibleEmployee, responsiblePosition, row, suppliers, today]);
+
+  function appendOption(items: MetalImpurityOption[], nextItem: MetalImpurityOption) {
+    if (items.some((item) => item.id === nextItem.id || item.name.toLowerCase() === nextItem.name.toLowerCase())) {
+      return items;
+    }
+    return [...items, nextItem];
+  }
 
   useEffect(() => {
     if (!open || employeeOptions.length === 0) return;
@@ -219,7 +230,7 @@ function RowDialog({
           <AddableSelectField
             label="Поставщик"
             value={draft.supplierId}
-            options={suppliers}
+            options={supplierOptions}
             selectPlaceholder="Выберите из списка или добавьте новое"
             addPlaceholder="Добавить название нового поставщика"
             addValue={newSupplier}
@@ -228,7 +239,9 @@ function RowDialog({
             onAdd={() => {
               const value = newSupplier.trim();
               if (!value) return;
-              setDraft({ ...draft, supplierId: `new-supplier:${value}` });
+              const nextId = `new-supplier:${value}`;
+              setSupplierOptions((current) => appendOption(current, { id: nextId, name: value }));
+              setDraft({ ...draft, supplierId: nextId });
               setNewSupplier("");
             }}
           />
@@ -236,7 +249,7 @@ function RowDialog({
           <AddableSelectField
             label="Сырье"
             value={draft.materialId}
-            options={materials}
+            options={materialOptions}
             selectPlaceholder="Выберите из списка или добавьте новое"
             addPlaceholder="Добавить название нового сырья"
             addValue={newMaterial}
@@ -245,7 +258,9 @@ function RowDialog({
             onAdd={() => {
               const value = newMaterial.trim();
               if (!value) return;
-              setDraft({ ...draft, materialId: `new-material:${value}` });
+              const nextId = `new-material:${value}`;
+              setMaterialOptions((current) => appendOption(current, { id: nextId, name: value }));
+              setDraft({ ...draft, materialId: nextId });
               setNewMaterial("");
             }}
           />

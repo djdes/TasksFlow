@@ -1,0 +1,17 @@
+
+C:\www\Wesetup.ru\src\components\journals\acceptance-document-client.tsx
+     5:3   warning  'CalendarDays' is defined but never used        @typescript-eslint/no-unused-vars
+    20:34  warning  'getUserRoleLabel' is defined but never used    @typescript-eslint/no-unused-vars
+   459:10  warning  'EditListsDialog' is defined but never used     @typescript-eslint/no-unused-vars
+  1159:10  warning  'isPending' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\www\Wesetup.ru\src\components\journals\product-writeoff-document-client.tsx
+  13:34  warning  'getUserRoleLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\www\Wesetup.ru\src\lib\document-pdf.ts
+   620:10  warning  'formatDateTime' is defined but never used          @typescript-eslint/no-unused-vars
+  1738:9   warning  'monthColWidth' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  2688:9   warning  'marginLeft' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+? 8 problems (0 errors, 8 warnings)
+

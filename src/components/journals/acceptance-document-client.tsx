@@ -149,6 +149,12 @@ function RowDialog(props: {
   const [newProduct, setNewProduct] = useState("");
   const [newManufacturer, setNewManufacturer] = useState("");
   const [newSupplier, setNewSupplier] = useState("");
+  const [productOptions, setProductOptions] = useState<string[]>([]);
+  const [manufacturerOptions, setManufacturerOptions] = useState<string[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<string[]>([]);
+  const [addedProducts, setAddedProducts] = useState<string[]>([]);
+  const [addedManufacturers, setAddedManufacturers] = useState<string[]>([]);
+  const [addedSuppliers, setAddedSuppliers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -164,18 +170,68 @@ function RowDialog(props: {
     setNewProduct("");
     setNewManufacturer("");
     setNewSupplier("");
-  }, [props.config.defaultResponsibleUserId, props.config.defaultResponsibleTitle, props.initialRow, props.open]);
+    setProductOptions(props.config.products);
+    setManufacturerOptions(props.config.manufacturers);
+    setSupplierOptions(props.config.suppliers);
+    setAddedProducts([]);
+    setAddedManufacturers([]);
+    setAddedSuppliers([]);
+  }, [
+    props.config.defaultResponsibleUserId,
+    props.config.defaultResponsibleTitle,
+    props.config.manufacturers,
+    props.config.products,
+    props.config.suppliers,
+    props.initialRow,
+    props.open,
+  ]);
 
   function setValue<K extends keyof AcceptanceRow>(key: K, value: AcceptanceRow[K]) {
     setRow((current) => ({ ...current, [key]: value }));
   }
 
+  function appendUnique(list: string[], value: string) {
+    const normalized = value.trim();
+    if (!normalized) return list;
+    if (list.some((item) => item.toLowerCase() === normalized.toLowerCase())) return list;
+    return [...list, normalized];
+  }
+
+  function addInlineOption(kind: "product" | "manufacturer" | "supplier") {
+    if (kind === "product") {
+      const value = newProduct.trim();
+      if (!value) return;
+      setProductOptions((current) => appendUnique(current, value));
+      setAddedProducts((current) => appendUnique(current, value));
+      setValue("productName", value);
+      setNewProduct("");
+      return;
+    }
+
+    if (kind === "manufacturer") {
+      const value = newManufacturer.trim();
+      if (!value) return;
+      setManufacturerOptions((current) => appendUnique(current, value));
+      setAddedManufacturers((current) => appendUnique(current, value));
+      setValue("manufacturer", value);
+      setNewManufacturer("");
+      return;
+    }
+
+    const value = newSupplier.trim();
+    if (!value) return;
+    setSupplierOptions((current) => appendUnique(current, value));
+    setAddedSuppliers((current) => appendUnique(current, value));
+    setValue("supplier", value);
+    setNewSupplier("");
+  }
+
   async function handleSave() {
     setIsSubmitting(true);
     try {
-      const newProducts = newProduct.trim() ? [newProduct.trim()] : [];
-      const newManufacturers = newManufacturer.trim() ? [newManufacturer.trim()] : [];
-      const newSuppliers = newSupplier.trim() ? [newSupplier.trim()] : [];
+      const newProducts = appendUnique(addedProducts, newProduct.trim());
+      const newManufacturers = appendUnique(addedManufacturers, newManufacturer.trim());
+      const newSuppliers = appendUnique(addedSuppliers, newSupplier.trim());
       // If user typed new product but didn't select, use it
       const finalRow = { ...row };
       if (newProduct.trim() && !finalRow.productName) finalRow.productName = newProduct.trim();
@@ -237,7 +293,7 @@ function RowDialog(props: {
               {/* Наименование продукции */}
               <div className="space-y-2">
                 <Label className="font-semibold">Наименование продукции</Label>
-                {props.config.products.map((item) => (
+                {productOptions.map((item) => (
                   <label key={item} className="flex items-center gap-3 text-[15px]">
                     <input type="radio" name="product" checked={row.productName === item} onChange={() => setValue("productName", item)} className="size-4 accent-[#5863f8]" />
                     {item}
@@ -245,7 +301,7 @@ function RowDialog(props: {
                 ))}
                 <div className="flex gap-2">
                   <Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="Добавить название новой продукции" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => { if (newProduct.trim()) { setValue("productName", newProduct.trim()); } }}>
+                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("product")}>
                     <Plus className="size-5" />
                   </Button>
                 </div>
@@ -257,12 +313,12 @@ function RowDialog(props: {
                 <Select value={row.manufacturer} onValueChange={(v) => setValue("manufacturer", v)}>
                   <SelectTrigger className="h-12 rounded-xl border-[#dfe1ec] text-[15px]"><SelectValue placeholder="Выберите из списка или добавьте нового" /></SelectTrigger>
                   <SelectContent>
-                    {props.config.manufacturers.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    {manufacturerOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <div className="flex gap-2">
                   <Input value={newManufacturer} onChange={(e) => setNewManufacturer(e.target.value)} placeholder="Добавить название нового производителя" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => { if (newManufacturer.trim()) { setValue("manufacturer", newManufacturer.trim()); } }}>
+                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("manufacturer")}>
                     <Plus className="size-5" />
                   </Button>
                 </div>
@@ -274,12 +330,12 @@ function RowDialog(props: {
                 <Select value={row.supplier} onValueChange={(v) => setValue("supplier", v)}>
                   <SelectTrigger className="h-12 rounded-xl border-[#dfe1ec] text-[15px]"><SelectValue placeholder="Выберите из списка или добавьте нового" /></SelectTrigger>
                   <SelectContent>
-                    {props.config.suppliers.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    {supplierOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <div className="flex gap-2">
                   <Input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder="Добавить название нового поставщика" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => { if (newSupplier.trim()) { setValue("supplier", newSupplier.trim()); } }}>
+                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("supplier")}>
                     <Plus className="size-5" />
                   </Button>
                 </div>

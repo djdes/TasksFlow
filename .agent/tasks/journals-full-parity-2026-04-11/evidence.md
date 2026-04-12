@@ -197,3 +197,24 @@ These are not runtime failures anymore. They are proof gaps: live/detail/docprin
 - Full packaged runtime proof for every edit/save/delete/archive interaction is still incomplete, even though list/detail/create/print is now covered across all 35.
 - The next likely systemic visual classes are already narrowed to fixed-column mobile grids, wide table defaults, and oversized list headings.
 - The fixed-column mobile grid class is now addressed for six journals, and the wide-table class is now addressed across five detail journals, leaving oversized list headings as the next likely systemic visual pass.
+
+## Addable/PDF batch
+
+- New systemic UX class fixed:
+  - inline add buttons now append the new option to the visible list immediately and select it immediately
+  - covered in:
+    - `src/components/journals/acceptance-document-client.tsx`
+    - `src/components/journals/metal-impurity-document-client.tsx`
+    - `src/components/journals/product-writeoff-document-client.tsx`
+- New systemic PDF class fixed:
+  - empty printable tables now keep visible blank rows instead of collapsing
+  - covered in:
+    - `src/lib/document-pdf.ts`
+- Batch artifacts:
+  - `raw/addable-pdf-batch.md`
+  - `raw/addable-pdf-batch.json`
+  - `raw/addable-pdf-eslint-latest.txt`
+  - `raw/addable-pdf-tsc-latest.txt`
+- Fresh checks for this batch:
+  - focused `eslint` on touched files: `PASS` with warnings only
+  - repo-wide `tsc`: blocked by existing unrelated `SettingsState` mismatch in `src/components/journals/training-plan-documents-client.tsx`
