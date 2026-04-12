@@ -57,3 +57,5 @@ haccp-deploy.tar.gz
 
 # local editor
 .vscode/
+.agent/backups/
+.agent/tasks/journals-external-api/raw/
