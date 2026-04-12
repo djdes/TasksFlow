@@ -33,6 +33,7 @@ export type ReceiptRow = {
   unit: MeasureUnit;
   expiryDate: string;
   responsibleRole: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
 };
 
@@ -48,11 +49,13 @@ export type ConsumptionRow = {
   remainder: number;
   remainderUnit: MeasureUnit;
   responsibleRole: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
 };
 
 export type DisinfectantDocumentConfig = {
   responsibleRole: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
   subdivisions: SubdivisionRow[];
   receipts: ReceiptRow[];
@@ -131,6 +134,7 @@ function normalizeReceipt(value: unknown): ReceiptRow | null {
     unit: safeMeasureUnit(s.unit),
     expiryDate: safeText(s.expiryDate),
     responsibleRole: safeText(s.responsibleRole),
+    responsibleEmployeeId: safeText(s.responsibleEmployeeId) || null,
     responsibleEmployee: safeText(s.responsibleEmployee),
   };
 }
@@ -150,6 +154,7 @@ function normalizeConsumption(value: unknown): ConsumptionRow | null {
     remainder: safeNumber(s.remainder),
     remainderUnit: safeMeasureUnit(s.remainderUnit),
     responsibleRole: safeText(s.responsibleRole),
+    responsibleEmployeeId: safeText(s.responsibleEmployeeId) || null,
     responsibleEmployee: safeText(s.responsibleEmployee),
   };
 }
@@ -164,6 +169,8 @@ export function normalizeDisinfectantConfig(
 
   return {
     responsibleRole: safeText(source.responsibleRole) || fallback.responsibleRole,
+    responsibleEmployeeId:
+      safeText(source.responsibleEmployeeId) || fallback.responsibleEmployeeId || null,
     responsibleEmployee: safeText(source.responsibleEmployee) || fallback.responsibleEmployee,
     subdivisions: Array.isArray(source.subdivisions)
       ? source.subdivisions
@@ -188,6 +195,7 @@ export function normalizeDisinfectantConfig(
 export function getDisinfectantDefaultConfig(): DisinfectantDocumentConfig {
   return {
     responsibleRole: "Управляющий",
+    responsibleEmployeeId: null,
     responsibleEmployee: "",
     subdivisions: [
       {
@@ -285,7 +293,8 @@ export function createEmptySubdivision(): SubdivisionRow {
 
 export function createEmptyReceipt(
   defaultRole: string,
-  defaultEmployee: string
+  defaultEmployee: string,
+  defaultEmployeeId?: string | null
 ): ReceiptRow {
   return {
     id: createId(),
@@ -295,13 +304,15 @@ export function createEmptyReceipt(
     unit: "kg",
     expiryDate: new Date().toISOString().slice(0, 10),
     responsibleRole: defaultRole,
+    responsibleEmployeeId: defaultEmployeeId || null,
     responsibleEmployee: defaultEmployee,
   };
 }
 
 export function createEmptyConsumption(
   defaultRole: string,
-  defaultEmployee: string
+  defaultEmployee: string,
+  defaultEmployeeId?: string | null
 ): ConsumptionRow {
   return {
     id: createId(),
@@ -315,6 +326,7 @@ export function createEmptyConsumption(
     remainder: 0,
     remainderUnit: "kg",
     responsibleRole: defaultRole,
+    responsibleEmployeeId: defaultEmployeeId || null,
     responsibleEmployee: defaultEmployee,
   };
 }

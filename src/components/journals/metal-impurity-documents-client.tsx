@@ -37,6 +37,7 @@ import {
   getDefaultMetalImpurityConfig,
   normalizeMetalImpurityConfig,
 } from "@/lib/metal-impurity-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 
@@ -61,6 +62,7 @@ type SettingsState = {
   title: string;
   startDate: string;
   responsiblePosition: string;
+  responsibleEmployeeId: string;
   responsibleEmployee: string;
 };
 
@@ -75,23 +77,26 @@ function collectEmployeeOptions(
   users: MetalImpurityUser[],
   documents: DocumentItem[],
   roleLabel: string,
-  fallbackEmployee: string,
-  currentEmployee?: string
+  fallbackEmployeeId?: string | null,
+  currentEmployeeId?: string | null
 ) {
-  const values = new Set<string>([fallbackEmployee]);
-  if (currentEmployee) values.add(currentEmployee);
+  const values = new Set<string>();
+  if (fallbackEmployeeId) values.add(fallbackEmployeeId);
+  if (currentEmployeeId) values.add(currentEmployeeId);
   for (const user of getUsersForRoleLabel(users, roleLabel)) {
-    values.add(user.name);
+    values.add(user.id);
   }
 
   for (const document of documents) {
     const config = normalizeMetalImpurityConfig(document.config);
-    if (config.responsiblePosition === roleLabel && config.responsibleEmployee) {
-      values.add(config.responsibleEmployee);
+    if (config.responsiblePosition === roleLabel && config.responsibleEmployeeId) {
+      values.add(config.responsibleEmployeeId);
     }
   }
 
-  return Array.from(values).filter(Boolean);
+  return Array.from(values)
+    .map((employeeId) => users.find((user) => user.id === employeeId) || null)
+    .filter((user): user is MetalImpurityUser => user !== null);
 }
 
 function getDefaultState(
@@ -108,6 +113,7 @@ function getDefaultState(
     title: METAL_IMPURITY_DOCUMENT_TITLE,
     startDate: config.startDate,
     responsiblePosition: config.responsiblePosition,
+    responsibleEmployeeId: config.responsibleEmployeeId || "",
     responsibleEmployee: config.responsibleEmployee,
   };
 }
@@ -135,17 +141,17 @@ function DocumentDialog({
 }) {
   const [state, setState] = useState(initial);
   const [submitting, setSubmitting] = useState(false);
-  const defaultEmployee = pickPrimaryManager(users)?.name || getDefaultMetalImpurityConfig().responsibleEmployee;
+  const defaultEmployeeId = pickPrimaryManager(users)?.id || "";
   const employeeOptions = useMemo(
     () =>
       collectEmployeeOptions(
         users,
         documents,
         state.responsiblePosition,
-        defaultEmployee,
-        state.responsibleEmployee
+        defaultEmployeeId,
+        state.responsibleEmployeeId
       ),
-    [defaultEmployee, documents, state.responsibleEmployee, state.responsiblePosition, users]
+    [defaultEmployeeId, documents, state.responsibleEmployeeId, state.responsiblePosition, users]
   );
 
   useEffect(() => {
@@ -157,10 +163,14 @@ function DocumentDialog({
 
   useEffect(() => {
     if (!open || employeeOptions.length === 0) return;
-    if (!employeeOptions.includes(state.responsibleEmployee)) {
-      setState((current) => ({ ...current, responsibleEmployee: employeeOptions[0] }));
+    if (!employeeOptions.some((user) => user.id === state.responsibleEmployeeId)) {
+      setState((current) => ({
+        ...current,
+        responsibleEmployeeId: employeeOptions[0]?.id || "",
+        responsibleEmployee: employeeOptions[0]?.name || "",
+      }));
     }
-  }, [employeeOptions, open, state.responsibleEmployee]);
+  }, [employeeOptions, open, state.responsibleEmployeeId]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,12 +202,14 @@ function DocumentDialog({
             <Select
               value={state.responsiblePosition}
               onValueChange={(value) =>
-                setState({
-                  ...state,
-                  responsiblePosition: value,
-                  responsibleEmployee:
-                    getUsersForRoleLabel(users, value)[0]?.name ||
-                    state.responsibleEmployee,
+                setState((current) => {
+                  const user = getUsersForRoleLabel(users, value)[0] || null;
+                  return {
+                    ...current,
+                    responsiblePosition: value,
+                    responsibleEmployeeId: user?.id || current.responsibleEmployeeId,
+                    responsibleEmployee: user?.name || current.responsibleEmployee,
+                  };
                 })
               }
             >
@@ -217,16 +229,28 @@ function DocumentDialog({
             <div className="space-y-3">
               <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
               <Select
-                value={state.responsibleEmployee}
-                onValueChange={(value) => setState({ ...state, responsibleEmployee: value })}
+                value={state.responsibleEmployeeId || "__empty__"}
+                onValueChange={(value) => {
+                  if (value === "__empty__") {
+                    setState({ ...state, responsibleEmployeeId: "", responsibleEmployee: "" });
+                    return;
+                  }
+                  const user = users.find((item) => item.id === value) || null;
+                  setState({
+                    ...state,
+                    responsibleEmployeeId: value,
+                    responsibleEmployee: user?.name || "",
+                  });
+                }}
               >
                 <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                   {employeeOptions.map((employee) => (
-                    <SelectItem key={employee} value={employee}>
-                      {employee}
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {buildStaffOptionLabel(employee)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -319,16 +343,13 @@ export function MetalImpurityDocumentsClient({
     [availableMaterials, availableSuppliers, users]
   );
 
-  function resolveResponsibleUserId(employeeName: string) {
-    return users.find((user) => user.name === employeeName)?.id ?? null;
-  }
-
   async function createDocument(payload: SettingsState) {
     const config = getDefaultMetalImpurityConfig({
       users,
       materials: availableMaterials,
       suppliers: availableSuppliers,
       date: payload.startDate,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleName: payload.responsibleEmployee,
       responsiblePosition: payload.responsiblePosition,
     });
@@ -342,7 +363,7 @@ export function MetalImpurityDocumentsClient({
         dateFrom: payload.startDate,
         dateTo: payload.startDate,
         responsibleTitle: payload.responsiblePosition,
-        responsibleUserId: resolveResponsibleUserId(config.responsibleEmployee),
+        responsibleUserId: payload.responsibleEmployeeId || config.responsibleEmployeeId || null,
         config,
       }),
     });
@@ -362,6 +383,7 @@ export function MetalImpurityDocumentsClient({
       materials: availableMaterials,
       suppliers: availableSuppliers,
       date: payload.startDate,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleName: payload.responsibleEmployee,
       responsiblePosition: payload.responsiblePosition,
     });
@@ -374,11 +396,12 @@ export function MetalImpurityDocumentsClient({
         dateFrom: payload.startDate,
         dateTo: current.endDate || payload.startDate,
         responsibleTitle: payload.responsiblePosition,
-        responsibleUserId: resolveResponsibleUserId(payload.responsibleEmployee),
+        responsibleUserId: payload.responsibleEmployeeId || current.responsibleEmployeeId || null,
         config: {
           ...current,
           startDate: payload.startDate,
           responsiblePosition: payload.responsiblePosition,
+          responsibleEmployeeId: payload.responsibleEmployeeId || null,
           responsibleEmployee: payload.responsibleEmployee,
         },
       }),
@@ -574,6 +597,7 @@ export function MetalImpurityDocumentsClient({
                   return {
                     startDate: config.startDate,
                     responsiblePosition: config.responsiblePosition,
+                    responsibleEmployeeId: config.responsibleEmployeeId || "",
                     responsibleEmployee: config.responsibleEmployee,
                   };
                 })(),

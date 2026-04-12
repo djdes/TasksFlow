@@ -19,6 +19,7 @@ export type TrainingPlanConfig = {
   year: number;
   documentDate: string;
   approveRole: string;
+  approveEmployeeId?: string | null;
   approveEmployee: string;
   topics: { id: string; name: string }[];
   rows: TrainingPositionRow[];
@@ -158,6 +159,7 @@ export function getTrainingPlanDefaultConfig(date = new Date()): TrainingPlanCon
     year,
     documentDate: toDateKey(documentDate),
     approveRole: "Управляющий",
+    approveEmployeeId: null,
     approveEmployee: "Иванов И.И.",
     topics: DEFAULT_TOPICS,
     rows: buildDefaultRows(year),
@@ -182,6 +184,7 @@ export function normalizeTrainingPlanConfig(config: unknown): TrainingPlanConfig
     year,
     documentDate: dateKey,
     approveRole: safeText(source.approveRole) || fallback.approveRole,
+    approveEmployeeId: safeText(source.approveEmployeeId) || fallback.approveEmployeeId || null,
     approveEmployee: safeText(source.approveEmployee) || fallback.approveEmployee,
     topics: normalizedTopics,
     rows: rows.length > 0 ? rows : buildDefaultRows(year),

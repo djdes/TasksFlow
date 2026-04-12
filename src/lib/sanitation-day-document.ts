@@ -34,8 +34,10 @@ export type SanitationDayConfig = {
   year: number;
   documentDate: string;
   approveRole: string;
+  approveEmployeeId?: string | null;
   approveEmployee: string;
   responsibleRole: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
   rows: SanitationRoomRow[];
 };
@@ -114,8 +116,10 @@ export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayC
     year,
     documentDate: toDateKey(d),
     approveRole: "Управляющий",
+    approveEmployeeId: null,
     approveEmployee: "Иванов И.И.",
     responsibleRole: "Управляющий",
+    responsibleEmployeeId: null,
     responsibleEmployee: "Иванов И.И.",
     rows: [
       {
@@ -158,8 +162,11 @@ export function normalizeSanitationDayConfig(config: unknown): SanitationDayConf
     year: safeYear(source.year, fallback.year),
     documentDate: safeText(source.documentDate) || fallback.documentDate,
     approveRole: safeText(source.approveRole) || fallback.approveRole,
+    approveEmployeeId: safeText(source.approveEmployeeId) || fallback.approveEmployeeId || null,
     approveEmployee: safeText(source.approveEmployee) || fallback.approveEmployee,
     responsibleRole: safeText(source.responsibleRole) || fallback.responsibleRole,
+    responsibleEmployeeId:
+      safeText(source.responsibleEmployeeId) || fallback.responsibleEmployeeId || null,
     responsibleEmployee:
       safeText(source.responsibleEmployee) || fallback.responsibleEmployee,
     rows: normalizeRows(source.rows),

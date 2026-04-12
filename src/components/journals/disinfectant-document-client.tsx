@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import {
   DISINFECTANT_HEADING,
   DISINFECTANT_DOCUMENT_TITLE,
@@ -598,6 +599,7 @@ function ReceiptDialog(props: {
                   setRow({
                     ...active,
                     responsibleRole: v,
+                    responsibleEmployeeId: user?.id || null,
                     responsibleEmployee:
                       user?.name || active.responsibleEmployee,
                   });
@@ -618,19 +620,25 @@ function ReceiptDialog(props: {
             <div className="space-y-2">
               <Label className="text-[16px] text-[#73738a]">Сотрудник</Label>
               <Select
-                value={active.responsibleEmployee}
-                onValueChange={(v) =>
-                  setRow({ ...active, responsibleEmployee: v })
-                }
+                value={active.responsibleEmployeeId || "__empty__"}
+                onValueChange={(v) => {
+                  if (v === "__empty__") {
+                    setRow({ ...active, responsibleEmployeeId: null, responsibleEmployee: "" });
+                    return;
+                  }
+                  const user = props.users.find((item) => item.id === v);
+                  setRow({ ...active, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
+                }}
               >
                 <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                   {usersForRole(props.users, active.responsibleRole).map(
                     (u) => (
-                      <SelectItem key={u.id} value={u.name}>
-                        {u.name}
+                      <SelectItem key={u.id} value={u.id}>
+                        {buildStaffOptionLabel(u)}
                       </SelectItem>
                     )
                   )}
@@ -831,6 +839,7 @@ function ConsumptionDialog(props: {
                   setRow({
                     ...active,
                     responsibleRole: v,
+                    responsibleEmployeeId: user?.id || null,
                     responsibleEmployee:
                       user?.name || active.responsibleEmployee,
                   });
@@ -851,19 +860,25 @@ function ConsumptionDialog(props: {
             <div className="space-y-2">
               <Label className="text-[16px] text-[#73738a]">Сотрудник</Label>
               <Select
-                value={active.responsibleEmployee}
-                onValueChange={(v) =>
-                  setRow({ ...active, responsibleEmployee: v })
-                }
+                value={active.responsibleEmployeeId || "__empty__"}
+                onValueChange={(v) => {
+                  if (v === "__empty__") {
+                    setRow({ ...active, responsibleEmployeeId: null, responsibleEmployee: "" });
+                    return;
+                  }
+                  const user = props.users.find((item) => item.id === v);
+                  setRow({ ...active, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
+                }}
               >
                 <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                   {usersForRole(props.users, active.responsibleRole).map(
                     (u) => (
-                      <SelectItem key={u.id} value={u.name}>
-                        {u.name}
+                      <SelectItem key={u.id} value={u.id}>
+                        {buildStaffOptionLabel(u)}
                       </SelectItem>
                     )
                   )}
@@ -904,11 +919,13 @@ function DocumentSettingsDialog(props: {
   initial: {
     title: string;
     responsibleRole: string;
+    responsibleEmployeeId: string;
     responsibleEmployee: string;
   };
   onSubmit: (value: {
     title: string;
     responsibleRole: string;
+    responsibleEmployeeId: string;
     responsibleEmployee: string;
   }) => Promise<void>;
 }) {
@@ -963,6 +980,7 @@ function DocumentSettingsDialog(props: {
                 setState({
                   ...state,
                   responsibleRole: v,
+                  responsibleEmployeeId: user?.id || "",
                   responsibleEmployee:
                     user?.name || state.responsibleEmployee,
                 });
@@ -983,19 +1001,25 @@ function DocumentSettingsDialog(props: {
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
             <Select
-              value={state.responsibleEmployee}
-              onValueChange={(v) =>
-                setState({ ...state, responsibleEmployee: v })
-              }
+              value={state.responsibleEmployeeId || "__empty__"}
+              onValueChange={(v) => {
+                if (v === "__empty__") {
+                  setState({ ...state, responsibleEmployeeId: "", responsibleEmployee: "" });
+                  return;
+                }
+                const user = props.users.find((item) => item.id === v);
+                setState({ ...state, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
+              }}
             >
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                 {usersForRole(props.users, state.responsibleRole).map(
                   (u) => (
-                    <SelectItem key={u.id} value={u.name}>
-                      {u.name}
+                    <SelectItem key={u.id} value={u.id}>
+                      {buildStaffOptionLabel(u)}
                     </SelectItem>
                   )
                 )}
@@ -1695,7 +1719,8 @@ export function DisinfectantDocumentClient({
         users={users}
         initial={createEmptyReceipt(
           normalized.responsibleRole,
-          normalized.responsibleEmployee
+          normalized.responsibleEmployee,
+          normalized.responsibleEmployeeId
         )}
         onSubmit={addReceipt}
         dialogTitle="Добавление новой строки"
@@ -1716,7 +1741,8 @@ export function DisinfectantDocumentClient({
         users={users}
         initial={createEmptyConsumption(
           normalized.responsibleRole,
-          normalized.responsibleEmployee
+          normalized.responsibleEmployee,
+          normalized.responsibleEmployeeId
         )}
         onSubmit={addConsumption}
         dialogTitle="Добавление новой строки"
@@ -1738,6 +1764,7 @@ export function DisinfectantDocumentClient({
         initial={{
           title,
           responsibleRole: normalized.responsibleRole,
+          responsibleEmployeeId: normalized.responsibleEmployeeId || "",
           responsibleEmployee: normalized.responsibleEmployee,
         }}
         onSubmit={async (value) => {
@@ -1745,6 +1772,7 @@ export function DisinfectantDocumentClient({
             {
               ...normalized,
               responsibleRole: value.responsibleRole,
+              responsibleEmployeeId: value.responsibleEmployeeId || null,
               responsibleEmployee: value.responsibleEmployee,
             },
             value.title.trim() || title

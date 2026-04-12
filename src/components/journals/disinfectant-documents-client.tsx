@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import {
   DISINFECTANT_HEADING,
   DISINFECTANT_DOCUMENT_TITLE,
@@ -63,6 +64,7 @@ type Props = {
 type SettingsState = {
   title: string;
   responsibleRole: string;
+  responsibleEmployeeId: string;
   responsibleEmployee: string;
 };
 
@@ -148,6 +150,7 @@ function SettingsDialog(props: {
                   setState({
                     ...activeState,
                     responsibleRole: v,
+                    responsibleEmployeeId: user?.id || "",
                     responsibleEmployee:
                       user?.name || activeState.responsibleEmployee,
                   });
@@ -168,10 +171,15 @@ function SettingsDialog(props: {
             <div className="space-y-2">
               <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
-                value={activeState.responsibleEmployee}
-                onValueChange={(v) =>
-                  setState({ ...activeState, responsibleEmployee: v })
-                }
+                value={activeState.responsibleEmployeeId}
+                onValueChange={(v) => {
+                  const user = props.users.find((item) => item.id === v);
+                  setState({
+                    ...activeState,
+                    responsibleEmployeeId: v,
+                    responsibleEmployee: user?.name || activeState.responsibleEmployee,
+                  });
+                }}
               >
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
                   <SelectValue placeholder="- Выберите значение -" />
@@ -179,8 +187,8 @@ function SettingsDialog(props: {
                 <SelectContent>
                   {usersForRole(props.users, activeState.responsibleRole).map(
                     (u) => (
-                      <SelectItem key={u.id} value={u.name}>
-                        {u.name}
+                      <SelectItem key={u.id} value={u.id}>
+                        {buildStaffOptionLabel(u)}
                       </SelectItem>
                     )
                   )}
@@ -224,6 +232,7 @@ export function DisinfectantDocumentsClient({
     const config: DisinfectantDocumentConfig = {
       ...defaultConfig,
       responsibleRole: payload.responsibleRole,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleEmployee: payload.responsibleEmployee,
       subdivisions: [],
       receipts: [],
@@ -257,6 +266,7 @@ export function DisinfectantDocumentsClient({
     const config: DisinfectantDocumentConfig = {
       ...currentConfig,
       responsibleRole: payload.responsibleRole,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleEmployee: payload.responsibleEmployee,
     };
     const response = await fetch(`/api/journal-documents/${documentId}`, {
@@ -306,6 +316,7 @@ export function DisinfectantDocumentsClient({
     () => ({
       title: "",
       responsibleRole: defaultConfig.responsibleRole,
+      responsibleEmployeeId: defaultConfig.responsibleEmployeeId || "",
       responsibleEmployee: defaultConfig.responsibleEmployee,
     }),
     []
@@ -488,6 +499,9 @@ export function DisinfectantDocumentsClient({
                 responsibleRole: normalizeDisinfectantConfig(
                   settingsTarget.config
                 ).responsibleRole,
+                responsibleEmployeeId: normalizeDisinfectantConfig(
+                  settingsTarget.config
+                ).responsibleEmployeeId || "",
                 responsibleEmployee: normalizeDisinfectantConfig(
                   settingsTarget.config
                 ).responsibleEmployee,

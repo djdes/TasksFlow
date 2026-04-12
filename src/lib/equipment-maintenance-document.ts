@@ -29,8 +29,10 @@ export type EquipmentMaintenanceConfig = {
   year: number;
   documentDate: string;
   approveRole: string;
+  approveEmployeeId?: string | null;
   approveEmployee: string;
   responsibleRole: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
 };
 
@@ -86,8 +88,10 @@ export function getDefaultEquipmentMaintenanceConfig(
     year,
     documentDate: `${year}-01-01`,
     approveRole: "Управляющий",
+    approveEmployeeId: null,
     approveEmployee: "Иванов И.И.",
     responsibleRole: "Шеф-повар",
+    responsibleEmployeeId: null,
     responsibleEmployee: "Петров П.П.",
     rows: [
       createEquipmentMaintenanceRow({
@@ -146,8 +150,12 @@ export function normalizeEquipmentMaintenanceConfig(
     year,
     documentDate: normalizeText(record.documentDate) || defaults.documentDate,
     approveRole: normalizeText(record.approveRole) || defaults.approveRole,
+    approveEmployeeId:
+      normalizeText(record.approveEmployeeId) || defaults.approveEmployeeId || null,
     approveEmployee: normalizeText(record.approveEmployee) || defaults.approveEmployee,
     responsibleRole: normalizeText(record.responsibleRole) || defaults.responsibleRole,
+    responsibleEmployeeId:
+      normalizeText(record.responsibleEmployeeId) || defaults.responsibleEmployeeId || null,
     responsibleEmployee: normalizeText(record.responsibleEmployee) || defaults.responsibleEmployee,
   };
 }

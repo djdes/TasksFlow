@@ -18,6 +18,10 @@ import {
   SANITATION_DAY_TEMPLATE_CODE,
   normalizeSanitationDayConfig,
 } from "@/lib/sanitation-day-document";
+import {
+  normalizeJournalStaffBoundConfig,
+  reconcileResponsibleAssignment,
+} from "@/lib/journal-staff-binding";
 
 function isValidDate(value: Date) {
   return Number.isFinite(value.getTime());
@@ -77,6 +81,28 @@ export async function PATCH(
 
   const body = await request.json();
   const data: Record<string, unknown> = {};
+  const needsTemplateLookup =
+    doc.templateId &&
+    (body.config !== undefined ||
+      body.responsibleTitle !== undefined ||
+      body.responsibleUserId !== undefined);
+  const template = needsTemplateLookup
+    ? await db.journalTemplate.findUnique({
+        where: { id: doc.templateId },
+        select: { code: true },
+      })
+    : null;
+  const allUsers =
+    needsTemplateLookup
+      ? await db.user.findMany({
+          where: {
+            organizationId: session.user.organizationId,
+            isActive: true,
+          },
+          select: { id: true, name: true, role: true },
+          orderBy: [{ role: "asc" }, { name: "asc" }],
+        })
+      : [];
 
   if (
     doc.status === "closed" &&
@@ -114,33 +140,65 @@ export async function PATCH(
     );
   }
 
-  if (body.config !== undefined && doc.templateId) {
-    const template = await db.journalTemplate.findUnique({
-      where: { id: doc.templateId },
-      select: { code: true },
-    });
-
-    if (template?.code === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
+  if (body.config !== undefined && template?.code) {
+    if (template.code === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
       data.config = normalizeClimateDocumentConfig(body.config);
-    } else if (template?.code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
+    } else if (template.code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
       data.config = normalizeColdEquipmentDocumentConfig(body.config);
-    } else if (template?.code === TRAINING_PLAN_TEMPLATE_CODE) {
-      data.config = normalizeTrainingPlanConfig(body.config);
-    } else if (template?.code === SANITATION_DAY_TEMPLATE_CODE) {
-      const normalized = normalizeSanitationDayConfig(body.config);
+    } else if (template.code === TRAINING_PLAN_TEMPLATE_CODE) {
+      data.config = normalizeJournalStaffBoundConfig(
+        template.code,
+        normalizeTrainingPlanConfig(body.config),
+        allUsers
+      );
+    } else if (template.code === SANITATION_DAY_TEMPLATE_CODE) {
+      const normalized = normalizeJournalStaffBoundConfig(
+        template.code,
+        normalizeSanitationDayConfig(body.config),
+        allUsers
+      ) as Record<string, unknown>;
       data.config = {
         ...normalized,
-        year: normalized.year || nextDateFrom.getUTCFullYear(),
-        documentDate: normalized.documentDate || nextDateFrom.toISOString().slice(0, 10),
+        year:
+          typeof normalized.year === "number"
+            ? normalized.year
+            : nextDateFrom.getUTCFullYear(),
+        documentDate:
+          typeof normalized.documentDate === "string" && normalized.documentDate
+            ? normalized.documentDate
+            : nextDateFrom.toISOString().slice(0, 10),
       };
+    } else {
+      data.config = normalizeJournalStaffBoundConfig(
+        template.code,
+        body.config,
+        allUsers
+      );
     }
+  }
+
+  if (
+    body.responsibleTitle !== undefined ||
+    body.responsibleUserId !== undefined
+  ) {
+    const reconciled = reconcileResponsibleAssignment(allUsers, {
+      responsibleUserId:
+        body.responsibleUserId !== undefined
+          ? body.responsibleUserId
+          : doc.responsibleUserId,
+      responsibleTitle:
+        body.responsibleTitle !== undefined
+          ? body.responsibleTitle
+          : doc.responsibleTitle,
+    });
+
+    data.responsibleUserId = reconciled.responsibleUserId;
+    data.responsibleTitle = reconciled.responsibleTitle;
   }
 
   if (body.title !== undefined) data.title = body.title;
   if (body.status !== undefined) data.status = body.status;
   if (body.autoFill !== undefined) data.autoFill = body.autoFill;
-  if (body.responsibleTitle !== undefined) data.responsibleTitle = body.responsibleTitle;
-  if (body.responsibleUserId !== undefined) data.responsibleUserId = body.responsibleUserId;
   if (body.config !== undefined && data.config === undefined) data.config = body.config;
   if (body.dateFrom !== undefined) data.dateFrom = nextDateFrom;
   if (body.dateTo !== undefined) data.dateTo = nextDateTo;

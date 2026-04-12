@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import {
   AUDIT_PLAN_DOCUMENT_TITLE,
   AUDIT_PLAN_HEADING,
@@ -72,6 +73,7 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
 };
 
@@ -97,6 +99,7 @@ function toUiState(document: AuditPlanDocumentItem, users: UserItem[]): Settings
     documentDate: cfg.documentDate,
     year: String(cfg.year),
     approveRole: cfg.approveRole,
+    approveEmployeeId: cfg.approveEmployeeId || "",
     approveEmployee: cfg.approveEmployee,
   };
 }
@@ -203,6 +206,7 @@ function SettingsDialog(props: {
                   setState({
                     ...activeState,
                     approveRole: v,
+                    approveEmployeeId: user?.id || "",
                     approveEmployee: user?.name || activeState.approveEmployee,
                   });
                 }}
@@ -222,16 +226,23 @@ function SettingsDialog(props: {
             <div className="space-y-2">
               <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
               <Select
-                value={activeState.approveEmployee}
-                onValueChange={(v) => setState({ ...activeState, approveEmployee: v })}
+                value={activeState.approveEmployeeId}
+                onValueChange={(v) => {
+                  const user = props.users.find((item) => item.id === v);
+                  setState({
+                    ...activeState,
+                    approveEmployeeId: v,
+                    approveEmployee: user?.name || activeState.approveEmployee,
+                  });
+                }}
               >
                 <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
                   {usersForRole(props.users, activeState.approveRole).map((u) => (
-                    <SelectItem key={u.id} value={u.name}>
-                      {u.name}
+                    <SelectItem key={u.id} value={u.id}>
+                      {buildStaffOptionLabel(u)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -278,6 +289,7 @@ export function AuditPlanDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
     };
 
@@ -311,6 +323,7 @@ export function AuditPlanDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
     };
     const response = await fetch(`/api/journal-documents/${documentId}`, {
@@ -384,6 +397,7 @@ export function AuditPlanDocumentsClient({
       documentDate: defaultConfig.documentDate,
       year: String(defaultConfig.year),
       approveRole: defaultConfig.approveRole,
+      approveEmployeeId: defaultConfig.approveEmployeeId || "",
       approveEmployee: defaultConfig.approveEmployee,
     }),
     [defaultConfig]

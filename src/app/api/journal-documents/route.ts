@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
@@ -80,6 +81,10 @@ import {
   isSanitaryDayChecklistTemplate,
 } from "@/lib/sanitary-day-checklist-document";
 import { isManagementRole, pickPrimaryManager } from "@/lib/user-roles";
+import {
+  normalizeJournalStaffBoundConfig,
+  reconcileResponsibleAssignment,
+} from "@/lib/journal-staff-binding";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -414,6 +419,12 @@ export async function POST(request: Request) {
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;
 
+  const normalizedStaffConfig = normalizeJournalStaffBoundConfig(
+    resolvedTemplateCode,
+    config ?? initialConfig ?? undefined,
+    allUsers
+  );
+
   const cleaningControlRole =
     resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? cleaningUsers.find(
@@ -426,12 +437,26 @@ export async function POST(request: Request) {
         )?.role || null
       : null;
 
+  const responsible = reconcileResponsibleAssignment(allUsers, {
+    responsibleUserId,
+    responsibleTitle:
+      responsibleTitle ||
+      (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
+        ? ((initialConfig as { responsibleTitle?: string } | undefined)?.responsibleTitle || null)
+        : null) ||
+      (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+        ? ((initialConfig as { controlResponsibles?: Array<{ title?: string }> } | undefined)
+            ?.controlResponsibles?.[0]?.title ||
+          getHygienePositionLabel(cleaningControlRole || "owner"))
+        : null),
+  });
+
   const doc = await db.journalDocument.create({
     data: {
       templateId: template.id,
       organizationId: session.user.organizationId,
       title: title || template.name,
-      config:
+      config: (
         resolvedTemplateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE
           ? equipmentCalibrationConfig
           : resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
@@ -442,22 +467,27 @@ export async function POST(request: Request) {
           : resolvedTemplateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
           ? normalizeCleaningVentilationConfig(rawConfig ?? initialConfig, allUsers)
           : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
-          ? normalizeSanitationDayConfig(rawConfig ?? initialConfig)
+          ? normalizedStaffConfig
           : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
-          ? {
-              ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
-              ...((rawConfig || {}) as Record<string, unknown>),
-            }
+          ? normalizeJournalStaffBoundConfig(
+              resolvedTemplateCode,
+              {
+                ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
+                ...((rawConfig || {}) as Record<string, unknown>),
+              },
+              allUsers
+            )
           : resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
           ? {
               ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
               ...((rawConfig || {}) as Record<string, unknown>),
             }
-          : config ?? initialConfig ?? undefined,
+          : normalizedStaffConfig
+      ) as Prisma.InputJsonValue | undefined,
       dateFrom: new Date(dateFrom),
       dateTo: new Date(dateTo),
       responsibleUserId:
-        responsibleUserId ||
+        responsible.responsibleUserId ||
         (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
           ? ((initialConfig as { responsibleUserId?: string } | undefined)?.responsibleUserId || null)
           : null) ||
@@ -467,16 +497,7 @@ export async function POST(request: Request) {
             cleaningDefaults?.responsibleControlUserId ||
             null)
           : null),
-      responsibleTitle:
-        responsibleTitle ||
-        (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
-          ? ((initialConfig as { responsibleTitle?: string } | undefined)?.responsibleTitle || null)
-          : null) ||
-        (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-          ? ((initialConfig as { controlResponsibles?: Array<{ title?: string }> } | undefined)
-              ?.controlResponsibles?.[0]?.title ||
-            getHygienePositionLabel(cleaningControlRole || "owner"))
-          : null),
+      responsibleTitle: responsible.responsibleTitle,
       createdById: session.user.id,
     },
   });

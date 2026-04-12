@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { reconcileEntryStaffFields } from "@/lib/journal-staff-binding";
 
 function isValidDate(value: Date) {
   return Number.isFinite(value.getTime());
@@ -75,12 +76,12 @@ export async function PUT(
         date: dateObj,
       },
     },
-    update: { data: toPrismaJsonValue(data) },
+    update: { data: toPrismaJsonValue(reconcileEntryStaffFields(data, employee)) },
     create: {
       documentId,
       employeeId,
       date: dateObj,
-      data: toPrismaJsonValue(data),
+      data: toPrismaJsonValue(reconcileEntryStaffFields(data, employee)),
     },
   });
 
@@ -122,6 +123,19 @@ export async function PATCH(
   const docDateTo = new Date(doc.dateTo);
   docDateTo.setUTCHours(0, 0, 0, 0);
 
+  const candidateEmployeeIds = [...new Set(
+    payloadEntries
+      .map((entry) => (entry?.employeeId ? String(entry.employeeId) : ""))
+      .filter(Boolean)
+  )];
+  const employees = await db.user.findMany({
+    where: {
+      id: { in: candidateEmployeeIds },
+      organizationId: session.user.organizationId,
+    },
+    select: { id: true, name: true, role: true },
+  });
+
   const normalizedEntries: Array<{
     employeeId: string;
     date: Date;
@@ -141,21 +155,16 @@ export async function PATCH(
       throw new Error("Дата записи должна попадать в период документа");
     }
 
+    const employee = employees.find((item) => item.id === entry.employeeId);
+
     return {
       employeeId: entry.employeeId,
       date: dateObj,
-      data: entry.data,
+      data: employee ? reconcileEntryStaffFields(entry.data, employee) : entry.data,
     };
   });
 
   const uniqueEmployeeIds = [...new Set(normalizedEntries.map((entry) => entry.employeeId))];
-  const employees = await db.user.findMany({
-    where: {
-      id: { in: uniqueEmployeeIds },
-      organizationId: session.user.organizationId,
-    },
-    select: { id: true },
-  });
 
   if (employees.length !== uniqueEmployeeIds.length) {
     return NextResponse.json({ error: "Сотрудник не найден" }, { status: 404 });

@@ -39,6 +39,7 @@ import {
   type StaffTrainingRow,
 } from "@/lib/staff-training-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type Props = {
   documentId: string;
@@ -85,6 +86,7 @@ export function StaffTrainingDocumentClient({
   const [draftRow, setDraftRow] = useState<StaffTrainingRow>(() =>
     createStaffTrainingRow({
       date: nowDate(),
+      employeeId: users[0]?.id || null,
       employeeName: users[0]?.name || "",
       employeePosition: users[0]
         ? getHygienePositionLabel(users[0].role)
@@ -93,8 +95,6 @@ export function StaffTrainingDocumentClient({
   );
 
   const isClosed = status === "closed";
-
-  const personOptions = useMemo(() => users.map((u) => u.name), [users]);
 
   /* ---------- persistence ---------- */
 
@@ -158,6 +158,7 @@ export function StaffTrainingDocumentClient({
     setDraftRow(
       createStaffTrainingRow({
         date: nowDate(),
+        employeeId: users[0]?.id || null,
         employeeName: users[0]?.name || "",
         employeePosition: users[0]
           ? getHygienePositionLabel(users[0].role)
@@ -495,12 +496,13 @@ export function StaffTrainingDocumentClient({
 
             <Label>Ф.И.О. инструктируемого</Label>
             <Select
-              value={draftRow.employeeName}
+              value={draftRow.employeeId || "__empty__"}
               onValueChange={(val) => {
-                const user = users.find((u) => u.name === val);
+                const user = users.find((u) => u.id === val);
                 setDraftRow((prev) => ({
                   ...prev,
-                  employeeName: val,
+                  employeeId: user?.id || null,
+                  employeeName: user?.name || "",
                   employeePosition: user
                     ? getHygienePositionLabel(user.role)
                     : prev.employeePosition,
@@ -511,9 +513,10 @@ export function StaffTrainingDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {personOptions.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {buildStaffOptionLabel(user)}
                   </SelectItem>
                 ))}
               </SelectContent>

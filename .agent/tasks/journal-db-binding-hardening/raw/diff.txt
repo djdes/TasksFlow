@@ -1,0 +1,943 @@
+diff --git a/src/components/journals/metal-impurity-document-client.tsx b/src/components/journals/metal-impurity-document-client.tsx
+index c758cfb..2ae4e61 100644
+--- a/src/components/journals/metal-impurity-document-client.tsx
++++ b/src/components/journals/metal-impurity-document-client.tsx
+@@ -38,6 +38,7 @@ import {
+   type MetalImpurityRow,
+   type MetalImpurityUser,
+ } from "@/lib/metal-impurity-document";
++import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
+ 
+ type Props = {
+   documentId: string;
+@@ -56,6 +57,7 @@ type RowDialogProps = {
+   suppliers: MetalImpurityOption[];
+   users: MetalImpurityUser[];
+   responsiblePosition: string;
++  responsibleEmployeeId?: string | null;
+   responsibleEmployee: string;
+   onSave: (row: MetalImpurityRow, additions?: { materialName?: string; supplierName?: string }) => Promise<void>;
+ };
+@@ -143,15 +145,20 @@ function RowDialog({
+   suppliers,
+   users,
+   responsiblePosition,
++  responsibleEmployeeId,
+   responsibleEmployee,
+   onSave,
+ }: RowDialogProps) {
+   const today = new Date().toISOString().slice(0, 10);
+   const [draft, setDraft] = useState<MetalImpurityRow>(
+-    createMetalImpurityRow({ date: today, responsibleName: responsibleEmployee })
++    createMetalImpurityRow({
++      date: today,
++      responsibleEmployeeId: responsibleEmployeeId || null,
++      responsibleName: responsibleEmployee,
++    })
+   );
+   const [draftPosition, setDraftPosition] = useState(responsiblePosition);
+-  const [draftEmployee, setDraftEmployee] = useState(responsibleEmployee);
++  const [draftEmployeeId, setDraftEmployeeId] = useState(responsibleEmployeeId || "");
+   const [newSupplier, setNewSupplier] = useState("");
+   const [newMaterial, setNewMaterial] = useState("");
+   const [materialOptions, setMaterialOptions] = useState<MetalImpurityOption[]>([]);
+@@ -162,10 +169,10 @@ function RowDialog({
+       getMetalImpurityEmployeeOptions(
+         users,
+         draftPosition,
+-        draftEmployee || responsibleEmployee,
+-        [responsibleEmployee, draft.responsibleName]
++        draftEmployeeId || responsibleEmployeeId || null,
++        [responsibleEmployeeId, draft.responsibleEmployeeId]
+       ),
+-    [draft.responsibleName, draftEmployee, draftPosition, responsibleEmployee, users]
++    [draft.responsibleEmployeeId, draftEmployeeId, draftPosition, responsibleEmployeeId, users]
+   );
+ 
+   useEffect(() => {
+@@ -177,17 +184,18 @@ function RowDialog({
+         materialId: materials[0]?.id || "",
+         supplierId: suppliers[0]?.id || "",
+         responsibleRole: responsiblePosition,
++        responsibleEmployeeId: responsibleEmployeeId || null,
+         responsibleName: responsibleEmployee,
+       });
+     setDraft(initialRow);
+     setDraftPosition(initialRow.responsibleRole || responsiblePosition);
+-    setDraftEmployee(initialRow.responsibleName || responsibleEmployee);
++    setDraftEmployeeId(initialRow.responsibleEmployeeId || responsibleEmployeeId || "");
+     setNewSupplier("");
+     setNewMaterial("");
+     setMaterialOptions(materials);
+     setSupplierOptions(suppliers);
+     setSubmitting(false);
+-  }, [materials, open, responsibleEmployee, responsiblePosition, row, suppliers, today]);
++  }, [materials, open, responsibleEmployee, responsibleEmployeeId, responsiblePosition, row, suppliers, today]);
+ 
+   function appendOption(items: MetalImpurityOption[], nextItem: MetalImpurityOption) {
+     if (items.some((item) => item.id === nextItem.id || item.name.toLowerCase() === nextItem.name.toLowerCase())) {
+@@ -198,12 +206,16 @@ function RowDialog({
+ 
+   useEffect(() => {
+     if (!open || employeeOptions.length === 0) return;
+-    if (!employeeOptions.includes(draftEmployee)) {
+-      const nextEmployee = employeeOptions[0];
+-      setDraftEmployee(nextEmployee);
+-      setDraft((current) => ({ ...current, responsibleName: nextEmployee }));
++    if (!employeeOptions.some((employee) => employee.id === draftEmployeeId)) {
++      const nextEmployee = employeeOptions[0] || null;
++      setDraftEmployeeId(nextEmployee?.id || "");
++      setDraft((current) => ({
++        ...current,
++        responsibleEmployeeId: nextEmployee?.id || null,
++        responsibleName: nextEmployee?.name || "",
++      }));
+     }
+-  }, [draftEmployee, employeeOptions, open]);
++  }, [draftEmployeeId, employeeOptions, open]);
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+@@ -304,16 +316,17 @@ function RowDialog({
+               value={draftPosition}
+               onValueChange={(value) => {
+                 const nextEmployee =
+-                  getMetalImpurityEmployeeOptions(users, value, draftEmployee, [
+-                    responsibleEmployee,
+-                    draft.responsibleName,
+-                  ])[0] || draftEmployee;
++                  getMetalImpurityEmployeeOptions(users, value, draftEmployeeId, [
++                    responsibleEmployeeId,
++                    draft.responsibleEmployeeId,
++                  ])[0] || null;
+                 setDraftPosition(value);
+-                setDraftEmployee(nextEmployee);
++                setDraftEmployeeId(nextEmployee?.id || "");
+                 setDraft((current) => ({
+                   ...current,
+                   responsibleRole: value,
+-                  responsibleName: nextEmployee,
++                  responsibleEmployeeId: nextEmployee?.id || null,
++                  responsibleName: nextEmployee?.name || "",
+                 }));
+               }}
+             >
+@@ -333,19 +346,30 @@ function RowDialog({
+           <div className="space-y-3">
+             <Label className="text-[18px] text-[#73738a]">—ÓÚÛ‰ÌËÍ</Label>
+             <Select
+-              value={draftEmployee}
++              value={draftEmployeeId || "__empty__"}
+               onValueChange={(value) => {
+-                setDraftEmployee(value);
+-                setDraft({ ...draft, responsibleName: value });
++                if (value === "__empty__") {
++                  setDraftEmployeeId("");
++                  setDraft({ ...draft, responsibleEmployeeId: null, responsibleName: "" });
++                  return;
++                }
++                const user = users.find((item) => item.id === value) || null;
++                setDraftEmployeeId(value);
++                setDraft({
++                  ...draft,
++                  responsibleEmployeeId: value,
++                  responsibleName: user?.name || "",
++                });
+               }}
+             >
+               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+                 <SelectValue placeholder="- ¬˚·ÂËÚÂ ÁÌ‡˜ÂÌËÂ -" />
+               </SelectTrigger>
+               <SelectContent>
++                <SelectItem value="__empty__">- –í—ã–±–µ—Ä–∏—Ç–µ –∑–Ω–∞—á–µ–Ω–∏–µ -</SelectItem>
+                 {employeeOptions.map((employee) => (
+-                  <SelectItem key={employee} value={employee}>
+-                    {employee}
++                  <SelectItem key={employee.id} value={employee.id}>
++                    {buildStaffOptionLabel(employee)}
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+@@ -363,7 +387,9 @@ function RowDialog({
+                     {
+                       ...draft,
+                       responsibleRole: draftPosition,
+-                      responsibleName: draftEmployee,
++                      responsibleEmployeeId: draftEmployeeId || null,
++                      responsibleName:
++                        users.find((user) => user.id === draftEmployeeId)?.name || draft.responsibleName,
+                     },
+                     {
+                       materialName: newMaterial.trim() || undefined,
+@@ -400,7 +426,7 @@ function SettingsDialog({
+   title: string;
+   config: MetalImpurityDocumentConfig;
+   users: MetalImpurityUser[];
+-  employeeOptions: string[];
++  employeeOptions: MetalImpurityUser[];
+   onSave: (params: { title: string; config: MetalImpurityDocumentConfig }) => Promise<void>;
+ }) {
+   const [draftTitle, setDraftTitle] = useState(title);
+@@ -419,21 +445,22 @@ function SettingsDialog({
+       getMetalImpurityEmployeeOptions(
+         users,
+         draftConfig.responsiblePosition,
+-        draftConfig.responsibleEmployee,
+-        employeeOptions
++        draftConfig.responsibleEmployeeId || null,
++        employeeOptions.map((employee) => employee.id)
+       ),
+-    [draftConfig.responsibleEmployee, draftConfig.responsiblePosition, employeeOptions, users]
++    [draftConfig.responsibleEmployeeId, draftConfig.responsiblePosition, employeeOptions, users]
+   );
+ 
+   useEffect(() => {
+     if (!open || filteredEmployees.length === 0) return;
+-    if (!filteredEmployees.includes(draftConfig.responsibleEmployee)) {
++    if (!filteredEmployees.some((employee) => employee.id === draftConfig.responsibleEmployeeId)) {
+       setDraftConfig((current) => ({
+         ...current,
+-        responsibleEmployee: filteredEmployees[0],
++        responsibleEmployeeId: filteredEmployees[0]?.id || null,
++        responsibleEmployee: filteredEmployees[0]?.name || "",
+       }));
+     }
+-  }, [draftConfig.responsibleEmployee, filteredEmployees, open]);
++  }, [draftConfig.responsibleEmployeeId, filteredEmployees, open]);
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+@@ -472,12 +499,13 @@ function SettingsDialog({
+               value={draftConfig.responsiblePosition}
+               onValueChange={(value) => {
+                 const nextEmployee =
+-                  getMetalImpurityEmployeeOptions(users, value, draftConfig.responsibleEmployee)[0] ||
+-                  draftConfig.responsibleEmployee;
++                  getMetalImpurityEmployeeOptions(users, value, draftConfig.responsibleEmployeeId)[0] ||
++                  null;
+                 setDraftConfig({
+                   ...draftConfig,
+                   responsiblePosition: value,
+-                  responsibleEmployee: nextEmployee,
++                  responsibleEmployeeId: nextEmployee?.id || draftConfig.responsibleEmployeeId || null,
++                  responsibleEmployee: nextEmployee?.name || draftConfig.responsibleEmployee,
+                 });
+               }}
+             >
+@@ -496,18 +524,32 @@ function SettingsDialog({
+           <div className="space-y-3">
+             <Label className="text-[18px] text-[#73738a]">—ÓÚÛ‰ÌËÍ</Label>
+             <Select
+-              value={draftConfig.responsibleEmployee}
+-              onValueChange={(value) =>
+-                setDraftConfig({ ...draftConfig, responsibleEmployee: value })
+-              }
++              value={draftConfig.responsibleEmployeeId || "__empty__"}
++              onValueChange={(value) => {
++                if (value === "__empty__") {
++                  setDraftConfig({
++                    ...draftConfig,
++                    responsibleEmployeeId: null,
++                    responsibleEmployee: "",
++                  });
++                  return;
++                }
++                const user = users.find((item) => item.id === value) || null;
++                setDraftConfig({
++                  ...draftConfig,
++                  responsibleEmployeeId: value,
++                  responsibleEmployee: user?.name || "",
++                });
++              }}
+             >
+               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+                 <SelectValue placeholder="- ¬˚·ÂËÚÂ ÁÌ‡˜ÂÌËÂ -" />
+               </SelectTrigger>
+               <SelectContent>
++                <SelectItem value="__empty__">- –í—ã–±–µ—Ä–∏—Ç–µ –∑–Ω–∞—á–µ–Ω–∏–µ -</SelectItem>
+                 {filteredEmployees.map((employee) => (
+-                  <SelectItem key={employee} value={employee}>
+-                    {employee}
++                  <SelectItem key={employee.id} value={employee.id}>
++                    {buildStaffOptionLabel(employee)}
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+@@ -886,10 +928,10 @@ export function MetalImpurityDocumentClient({
+       getMetalImpurityEmployeeOptions(
+         users,
+         config.responsiblePosition,
+-        editingRow?.responsibleName || config.responsibleEmployee,
+-        config.rows.map((row) => row.responsibleName)
++        editingRow?.responsibleEmployeeId || config.responsibleEmployeeId || null,
++        config.rows.map((row) => row.responsibleEmployeeId)
+       ),
+-    [config.responsibleEmployee, config.responsiblePosition, config.rows, editingRow?.responsibleName, users]
++    [config.responsibleEmployeeId, config.responsiblePosition, config.rows, editingRow?.responsibleEmployeeId, users]
+   );
+ 
+   async function persist(
+@@ -897,8 +939,6 @@ export function MetalImpurityDocumentClient({
+     nextConfig: MetalImpurityDocumentConfig,
+     patch?: Record<string, unknown>
+   ) {
+-    const responsibleUserId =
+-      users.find((user) => user.name === nextConfig.responsibleEmployee)?.id ?? null;
+     const response = await fetch(`/api/journal-documents/${documentId}`, {
+       method: "PATCH",
+       headers: { "Content-Type": "application/json" },
+@@ -907,7 +947,7 @@ export function MetalImpurityDocumentClient({
+         dateFrom: nextConfig.startDate,
+         dateTo: nextConfig.endDate || nextConfig.startDate,
+         responsibleTitle: nextConfig.responsiblePosition,
+-        responsibleUserId,
++        responsibleUserId: nextConfig.responsibleEmployeeId || null,
+         config: nextConfig,
+         ...patch,
+       }),
+@@ -1228,6 +1268,7 @@ export function MetalImpurityDocumentClient({
+         suppliers={config.suppliers}
+         users={users}
+         responsiblePosition={config.responsiblePosition}
++        responsibleEmployeeId={config.responsibleEmployeeId}
+         responsibleEmployee={config.responsibleEmployee}
+         onSave={saveRow}
+       />
+diff --git a/src/components/journals/metal-impurity-documents-client.tsx b/src/components/journals/metal-impurity-documents-client.tsx
+index e769276..678553e 100644
+--- a/src/components/journals/metal-impurity-documents-client.tsx
++++ b/src/components/journals/metal-impurity-documents-client.tsx
+@@ -37,6 +37,7 @@ import {
+   getDefaultMetalImpurityConfig,
+   normalizeMetalImpurityConfig,
+ } from "@/lib/metal-impurity-document";
++import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
+ import { openDocumentPdf } from "@/lib/open-document-pdf";
+ import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
+ 
+@@ -61,6 +62,7 @@ type SettingsState = {
+   title: string;
+   startDate: string;
+   responsiblePosition: string;
++  responsibleEmployeeId: string;
+   responsibleEmployee: string;
+ };
+ 
+@@ -75,23 +77,26 @@ function collectEmployeeOptions(
+   users: MetalImpurityUser[],
+   documents: DocumentItem[],
+   roleLabel: string,
+-  fallbackEmployee: string,
+-  currentEmployee?: string
++  fallbackEmployeeId?: string | null,
++  currentEmployeeId?: string | null
+ ) {
+-  const values = new Set<string>([fallbackEmployee]);
+-  if (currentEmployee) values.add(currentEmployee);
++  const values = new Set<string>();
++  if (fallbackEmployeeId) values.add(fallbackEmployeeId);
++  if (currentEmployeeId) values.add(currentEmployeeId);
+   for (const user of getUsersForRoleLabel(users, roleLabel)) {
+-    values.add(user.name);
++    values.add(user.id);
+   }
+ 
+   for (const document of documents) {
+     const config = normalizeMetalImpurityConfig(document.config);
+-    if (config.responsiblePosition === roleLabel && config.responsibleEmployee) {
+-      values.add(config.responsibleEmployee);
++    if (config.responsiblePosition === roleLabel && config.responsibleEmployeeId) {
++      values.add(config.responsibleEmployeeId);
+     }
+   }
+ 
+-  return Array.from(values).filter(Boolean);
++  return Array.from(values)
++    .map((employeeId) => users.find((user) => user.id === employeeId) || null)
++    .filter((user): user is MetalImpurityUser => user !== null);
+ }
+ 
+ function getDefaultState(
+@@ -108,6 +113,7 @@ function getDefaultState(
+     title: METAL_IMPURITY_DOCUMENT_TITLE,
+     startDate: config.startDate,
+     responsiblePosition: config.responsiblePosition,
++    responsibleEmployeeId: config.responsibleEmployeeId || "",
+     responsibleEmployee: config.responsibleEmployee,
+   };
+ }
+@@ -135,17 +141,17 @@ function DocumentDialog({
+ }) {
+   const [state, setState] = useState(initial);
+   const [submitting, setSubmitting] = useState(false);
+-  const defaultEmployee = pickPrimaryManager(users)?.name || getDefaultMetalImpurityConfig().responsibleEmployee;
++  const defaultEmployeeId = pickPrimaryManager(users)?.id || "";
+   const employeeOptions = useMemo(
+     () =>
+       collectEmployeeOptions(
+         users,
+         documents,
+         state.responsiblePosition,
+-        defaultEmployee,
+-        state.responsibleEmployee
++        defaultEmployeeId,
++        state.responsibleEmployeeId
+       ),
+-    [defaultEmployee, documents, state.responsibleEmployee, state.responsiblePosition, users]
++    [defaultEmployeeId, documents, state.responsibleEmployeeId, state.responsiblePosition, users]
+   );
+ 
+   useEffect(() => {
+@@ -157,10 +163,14 @@ function DocumentDialog({
+ 
+   useEffect(() => {
+     if (!open || employeeOptions.length === 0) return;
+-    if (!employeeOptions.includes(state.responsibleEmployee)) {
+-      setState((current) => ({ ...current, responsibleEmployee: employeeOptions[0] }));
++    if (!employeeOptions.some((user) => user.id === state.responsibleEmployeeId)) {
++      setState((current) => ({
++        ...current,
++        responsibleEmployeeId: employeeOptions[0]?.id || "",
++        responsibleEmployee: employeeOptions[0]?.name || "",
++      }));
+     }
+-  }, [employeeOptions, open, state.responsibleEmployee]);
++  }, [employeeOptions, open, state.responsibleEmployeeId]);
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+@@ -192,12 +202,14 @@ function DocumentDialog({
+             <Select
+               value={state.responsiblePosition}
+               onValueChange={(value) =>
+-                setState({
+-                  ...state,
+-                  responsiblePosition: value,
+-                  responsibleEmployee:
+-                    getUsersForRoleLabel(users, value)[0]?.name ||
+-                    state.responsibleEmployee,
++                setState((current) => {
++                  const user = getUsersForRoleLabel(users, value)[0] || null;
++                  return {
++                    ...current,
++                    responsiblePosition: value,
++                    responsibleEmployeeId: user?.id || current.responsibleEmployeeId,
++                    responsibleEmployee: user?.name || current.responsibleEmployee,
++                  };
+                 })
+               }
+             >
+@@ -217,16 +229,28 @@ function DocumentDialog({
+             <div className="space-y-3">
+               <Label className="text-[18px] text-[#73738a]">—ÓÚÛ‰ÌËÍ</Label>
+               <Select
+-                value={state.responsibleEmployee}
+-                onValueChange={(value) => setState({ ...state, responsibleEmployee: value })}
++                value={state.responsibleEmployeeId || "__empty__"}
++                onValueChange={(value) => {
++                  if (value === "__empty__") {
++                    setState({ ...state, responsibleEmployeeId: "", responsibleEmployee: "" });
++                    return;
++                  }
++                  const user = users.find((item) => item.id === value) || null;
++                  setState({
++                    ...state,
++                    responsibleEmployeeId: value,
++                    responsibleEmployee: user?.name || "",
++                  });
++                }}
+               >
+                 <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
+                   <SelectValue placeholder="- ¬˚·ÂËÚÂ ÁÌ‡˜ÂÌËÂ -" />
+                 </SelectTrigger>
+                 <SelectContent>
++                  <SelectItem value="__empty__">- –í—ã–±–µ—Ä–∏—Ç–µ –∑–Ω–∞—á–µ–Ω–∏–µ -</SelectItem>
+                   {employeeOptions.map((employee) => (
+-                    <SelectItem key={employee} value={employee}>
+-                      {employee}
++                    <SelectItem key={employee.id} value={employee.id}>
++                      {buildStaffOptionLabel(employee)}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+@@ -319,16 +343,13 @@ export function MetalImpurityDocumentsClient({
+     [availableMaterials, availableSuppliers, users]
+   );
+ 
+-  function resolveResponsibleUserId(employeeName: string) {
+-    return users.find((user) => user.name === employeeName)?.id ?? null;
+-  }
+-
+   async function createDocument(payload: SettingsState) {
+     const config = getDefaultMetalImpurityConfig({
+       users,
+       materials: availableMaterials,
+       suppliers: availableSuppliers,
+       date: payload.startDate,
++      responsibleEmployeeId: payload.responsibleEmployeeId || null,
+       responsibleName: payload.responsibleEmployee,
+       responsiblePosition: payload.responsiblePosition,
+     });
+@@ -342,7 +363,7 @@ export function MetalImpurityDocumentsClient({
+         dateFrom: payload.startDate,
+         dateTo: payload.startDate,
+         responsibleTitle: payload.responsiblePosition,
+-        responsibleUserId: resolveResponsibleUserId(config.responsibleEmployee),
++        responsibleUserId: payload.responsibleEmployeeId || config.responsibleEmployeeId || null,
+         config,
+       }),
+     });
+@@ -362,6 +383,7 @@ export function MetalImpurityDocumentsClient({
+       materials: availableMaterials,
+       suppliers: availableSuppliers,
+       date: payload.startDate,
++      responsibleEmployeeId: payload.responsibleEmployeeId || null,
+       responsibleName: payload.responsibleEmployee,
+       responsiblePosition: payload.responsiblePosition,
+     });
+@@ -374,11 +396,12 @@ export function MetalImpurityDocumentsClient({
+         dateFrom: payload.startDate,
+         dateTo: current.endDate || payload.startDate,
+         responsibleTitle: payload.responsiblePosition,
+-        responsibleUserId: resolveResponsibleUserId(payload.responsibleEmployee),
++        responsibleUserId: payload.responsibleEmployeeId || current.responsibleEmployeeId || null,
+         config: {
+           ...current,
+           startDate: payload.startDate,
+           responsiblePosition: payload.responsiblePosition,
++          responsibleEmployeeId: payload.responsibleEmployeeId || null,
+           responsibleEmployee: payload.responsibleEmployee,
+         },
+       }),
+@@ -574,6 +597,7 @@ export function MetalImpurityDocumentsClient({
+                   return {
+                     startDate: config.startDate,
+                     responsiblePosition: config.responsiblePosition,
++                    responsibleEmployeeId: config.responsibleEmployeeId || "",
+                     responsibleEmployee: config.responsibleEmployee,
+                   };
+                 })(),
+diff --git a/src/lib/journal-staff-binding.ts b/src/lib/journal-staff-binding.ts
+index 16b5886..e81dbde 100644
+--- a/src/lib/journal-staff-binding.ts
++++ b/src/lib/journal-staff-binding.ts
+@@ -19,6 +19,26 @@ import {
+   PRODUCT_WRITEOFF_TEMPLATE_CODE,
+   normalizeProductWriteoffConfig,
+ } from "@/lib/product-writeoff-document";
++import {
++  DISINFECTANT_TEMPLATE_CODE,
++  normalizeDisinfectantConfig,
++} from "@/lib/disinfectant-document";
++import {
++  STAFF_TRAINING_TEMPLATE_CODE,
++  normalizeStaffTrainingConfig,
++} from "@/lib/staff-training-document";
++import {
++  EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
++  normalizeEquipmentMaintenanceConfig,
++} from "@/lib/equipment-maintenance-document";
++import {
++  EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
++  normalizeEquipmentCalibrationConfig,
++} from "@/lib/equipment-calibration-document";
++import {
++  METAL_IMPURITY_TEMPLATE_CODE,
++  normalizeMetalImpurityConfig,
++} from "@/lib/metal-impurity-document";
+ 
+ export type StaffBindingUser = {
+   id: string;
+@@ -329,6 +349,184 @@ function reconcileProductWriteoffConfigUsers(users: StaffBindingUser[], value: u
+   };
+ }
+ 
++function reconcileEquipmentMaintenanceConfigUsers(
++  users: StaffBindingUser[],
++  value: unknown
++) {
++  const raw = value as
++    | {
++        approveEmployeeId?: unknown;
++        responsibleEmployeeId?: unknown;
++      }
++    | null
++    | undefined;
++  const config = normalizeEquipmentMaintenanceConfig(value);
++  const approve = reconcileNamedStaffSelection(users, {
++    userId: raw?.approveEmployeeId,
++    userName: config.approveEmployee,
++    title: config.approveRole,
++    fallbackTitle: config.approveRole,
++  });
++  const responsible = reconcileNamedStaffSelection(users, {
++    userId: raw?.responsibleEmployeeId,
++    userName: config.responsibleEmployee,
++    title: config.responsibleRole,
++    fallbackTitle: config.responsibleRole,
++  });
++
++  return {
++    ...config,
++    approveEmployeeId: approve.userId,
++    approveEmployee: approve.userName ?? config.approveEmployee,
++    approveRole: approve.title ?? config.approveRole,
++    responsibleEmployeeId: responsible.userId,
++    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
++    responsibleRole: responsible.title ?? config.responsibleRole,
++  };
++}
++
++function reconcileEquipmentCalibrationConfigUsers(
++  users: StaffBindingUser[],
++  value: unknown
++) {
++  const config = normalizeEquipmentCalibrationConfig(value);
++  const approve = reconcileNamedStaffSelection(users, {
++    userId: (value as { approveEmployeeId?: unknown } | null | undefined)?.approveEmployeeId,
++    userName: config.approveEmployee,
++    title: config.approveRole,
++    fallbackTitle: config.approveRole,
++  });
++
++  return {
++    ...config,
++    approveEmployeeId: approve.userId,
++    approveEmployee: approve.userName ?? config.approveEmployee,
++    approveRole: approve.title ?? config.approveRole,
++  };
++}
++
++function reconcileDisinfectantConfigUsers(users: StaffBindingUser[], value: unknown) {
++  const raw = value as
++    | {
++        responsibleEmployeeId?: unknown;
++        receipts?: Array<{ responsibleEmployeeId?: unknown }>;
++        consumptions?: Array<{ responsibleEmployeeId?: unknown }>;
++      }
++    | null
++    | undefined;
++  const config = normalizeDisinfectantConfig(value);
++  const responsible = reconcileNamedStaffSelection(users, {
++    userId: raw?.responsibleEmployeeId,
++    userName: config.responsibleEmployee,
++    title: config.responsibleRole,
++    fallbackTitle: config.responsibleRole,
++  });
++
++  return {
++    ...config,
++    responsibleEmployeeId: responsible.userId,
++    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
++    responsibleRole: responsible.title ?? config.responsibleRole,
++    receipts: config.receipts.map((receipt, index) => {
++      const selection = reconcileNamedStaffSelection(users, {
++        userId: raw?.receipts?.[index]?.responsibleEmployeeId,
++        userName: receipt.responsibleEmployee,
++        title: receipt.responsibleRole,
++        fallbackTitle: receipt.responsibleRole,
++      });
++      return {
++        ...receipt,
++        responsibleEmployeeId: selection.userId,
++        responsibleEmployee: selection.userName ?? receipt.responsibleEmployee,
++        responsibleRole: selection.title ?? receipt.responsibleRole,
++      };
++    }),
++    consumptions: config.consumptions.map((consumption, index) => {
++      const selection = reconcileNamedStaffSelection(users, {
++        userId: raw?.consumptions?.[index]?.responsibleEmployeeId,
++        userName: consumption.responsibleEmployee,
++        title: consumption.responsibleRole,
++        fallbackTitle: consumption.responsibleRole,
++      });
++      return {
++        ...consumption,
++        responsibleEmployeeId: selection.userId,
++        responsibleEmployee: selection.userName ?? consumption.responsibleEmployee,
++        responsibleRole: selection.title ?? consumption.responsibleRole,
++      };
++    }),
++  };
++}
++
++function reconcileStaffTrainingConfigUsers(users: StaffBindingUser[], value: unknown) {
++  const raw = value as
++    | {
++        rows?: Array<{ employeeId?: unknown }>;
++      }
++    | null
++    | undefined;
++  const config = normalizeStaffTrainingConfig(value);
++
++  return {
++    ...config,
++    rows: config.rows.map((row, index) => {
++      const selection = reconcileNamedStaffSelection(users, {
++        userId: raw?.rows?.[index]?.employeeId,
++        userName: row.employeeName,
++        title: row.employeePosition,
++        fallbackTitle: row.employeePosition,
++      });
++
++      return {
++        ...row,
++        employeeId: selection.userId,
++        employeeName: selection.userName ?? row.employeeName,
++        employeePosition: selection.title ?? row.employeePosition,
++      };
++    }),
++  };
++}
++
++function reconcileMetalImpurityConfigUsers(users: StaffBindingUser[], value: unknown) {
++  const raw = value as
++    | {
++        responsibleEmployeeId?: unknown;
++        rows?: Array<{ responsibleEmployeeId?: unknown }>;
++      }
++    | null
++    | undefined;
++  const config = normalizeMetalImpurityConfig(value);
++  const responsible = reconcileNamedStaffSelection(users, {
++    userId: raw?.responsibleEmployeeId,
++    userName: config.responsibleEmployee,
++    title: config.responsiblePosition,
++    fallbackTitle: config.responsiblePosition,
++  });
++
++  return {
++    ...config,
++    responsibleEmployeeId: responsible.userId,
++    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
++    responsiblePosition: responsible.title ?? config.responsiblePosition,
++    rows: config.rows.map((row, index) => {
++      const selection = reconcileNamedStaffSelection(users, {
++        userId: raw?.rows?.[index]?.responsibleEmployeeId,
++        userName: row.responsibleName,
++        title: row.responsibleRole,
++        fallbackTitle: row.responsibleRole || responsible.title || config.responsiblePosition,
++      });
++
++      return {
++        ...row,
++        responsibleEmployeeId: selection.userId,
++        responsibleName: selection.userName ?? row.responsibleName,
++        responsibleRole:
++          selection.title ?? row.responsibleRole ?? responsible.title ?? config.responsiblePosition,
++      };
++    }),
++  };
++}
++
+ export function normalizeJournalStaffBoundConfig(
+   templateCode: string,
+   value: unknown,
+@@ -345,6 +543,16 @@ export function normalizeJournalStaffBoundConfig(
+       return reconcileTraceabilityConfigUsers(users, value);
+     case PRODUCT_WRITEOFF_TEMPLATE_CODE:
+       return reconcileProductWriteoffConfigUsers(users, value);
++    case EQUIPMENT_MAINTENANCE_TEMPLATE_CODE:
++      return reconcileEquipmentMaintenanceConfigUsers(users, value);
++    case EQUIPMENT_CALIBRATION_TEMPLATE_CODE:
++      return reconcileEquipmentCalibrationConfigUsers(users, value);
++    case DISINFECTANT_TEMPLATE_CODE:
++      return reconcileDisinfectantConfigUsers(users, value);
++    case STAFF_TRAINING_TEMPLATE_CODE:
++      return reconcileStaffTrainingConfigUsers(users, value);
++    case METAL_IMPURITY_TEMPLATE_CODE:
++      return reconcileMetalImpurityConfigUsers(users, value);
+     default:
+       return value;
+   }
+diff --git a/src/lib/metal-impurity-document.ts b/src/lib/metal-impurity-document.ts
+index 6524468..315c607 100644
+--- a/src/lib/metal-impurity-document.ts
++++ b/src/lib/metal-impurity-document.ts
+@@ -3,16 +3,19 @@ import {
+   getUserRoleLabel,
+   getUsersForRoleLabel,
+   pickPrimaryManager,
+-  type UserLike,
+ } from "@/lib/user-roles";
+ 
+ export const METAL_IMPURITY_TEMPLATE_CODE = "metal_impurity";
+ export const METAL_IMPURITY_SOURCE_SLUG = "metalimpurityjournal";
+-export const METAL_IMPURITY_PAGE_TITLE = "∆ÛÌ‡Î Û˜ÂÚ‡ ÏÂÚ‡ÎÎÓÔËÏÂÒÂÈ ‚ Ò˚¸Â";
+-export const METAL_IMPURITY_DOCUMENT_TITLE = "∆ÛÌ‡Î Û˜ÂÚ‡ ÏÂÚ‡ÎÎÓÔËÏÂÒÂÈ";
++export const METAL_IMPURITY_PAGE_TITLE = "–ñ—É—Ä–Ω–∞–ª —É—á–µ—Ç–∞ –º–µ—Ç–∞–ª–ª–æ–ø—Ä–∏–º–µ—Å–µ–π –≤ —Å—ã—Ä—å–µ";
++export const METAL_IMPURITY_DOCUMENT_TITLE = "–ñ—É—Ä–Ω–∞–ª —É—á–µ—Ç–∞ –º–µ—Ç–∞–ª–ª–æ–ø—Ä–∏–º–µ—Å–µ–π";
+ export const METAL_IMPURITY_RESPONSIBLE_POSITIONS = USER_ROLE_LABEL_VALUES;
+ 
+-export type MetalImpurityUser = Pick<UserLike, "id" | "name" | "role">;
++export type MetalImpurityUser = {
++  id: string;
++  name: string;
++  role: string;
++};
+ 
+ export type MetalImpurityOption = {
+   id: string;
+@@ -28,6 +31,7 @@ export type MetalImpurityRow = {
+   impurityQuantityG: string;
+   impurityCharacteristic: string;
+   responsibleRole: string;
++  responsibleEmployeeId: string | null;
+   responsibleName: string;
+ };
+ 
+@@ -35,6 +39,7 @@ export type MetalImpurityDocumentConfig = {
+   startDate: string;
+   endDate: string;
+   responsiblePosition: string;
++  responsibleEmployeeId: string | null;
+   responsibleEmployee: string;
+   materials: MetalImpurityOption[];
+   suppliers: MetalImpurityOption[];
+@@ -84,6 +89,7 @@ function normalizeRows(value: unknown, fallback: MetalImpurityRow[]) {
+         impurityQuantityG: safeText(source.impurityQuantityG),
+         impurityCharacteristic: safeText(source.impurityCharacteristic),
+         responsibleRole: safeText(source.responsibleRole),
++        responsibleEmployeeId: safeText(source.responsibleEmployeeId) || null,
+         responsibleName: safeText(source.responsibleName),
+       };
+     })
+@@ -103,6 +109,7 @@ export function createMetalImpurityRow(params?: Partial<MetalImpurityRow>): Meta
+     impurityQuantityG: params?.impurityQuantityG || "",
+     impurityCharacteristic: params?.impurityCharacteristic || "",
+     responsibleRole: params?.responsibleRole || METAL_IMPURITY_RESPONSIBLE_POSITIONS[0],
++    responsibleEmployeeId: params?.responsibleEmployeeId || null,
+     responsibleName: params?.responsibleName || "",
+   };
+ }
+@@ -111,15 +118,16 @@ export function getDefaultMetalImpurityConfig(params?: {
+   users?: MetalImpurityUser[];
+   materials?: string[];
+   suppliers?: string[];
++  responsibleEmployeeId?: string | null;
+   responsibleName?: string;
+   responsiblePosition?: string;
+   date?: string;
+ }): MetalImpurityDocumentConfig {
+   const startDate = params?.date || new Date().toISOString().slice(0, 10);
+   const materialNames =
+-    params?.materials?.filter(Boolean) || ["ÃÛÍ‡", "ÃÛÍ‡ Ô¯ÂÌË˜Ì‡ˇ ‚/Ò"];
++    params?.materials?.filter(Boolean) || ["–ú—É–∫–∞", "–ú—É–∫–∞ –ø—à–µ–Ω–∏—á–Ω–∞—è –≤/—Å"];
+   const supplierNames =
+-    params?.suppliers?.filter(Boolean) || ['»œ "–ÓÏ‡¯Í‡"', 'ŒŒŒ "¿„Ó-ﬁ„"'];
++    params?.suppliers?.filter(Boolean) || ['–ò–ü "–†–æ–º–∞—à–∫–∞"', '–û–û–û "–ê–≥—Ä–æ-–Æ–≥"'];
+   const materials = materialNames.map((name, index) => ({
+     id: `mat-${index + 1}`,
+     name,
+@@ -131,12 +139,19 @@ export function getDefaultMetalImpurityConfig(params?: {
+   const manager = params?.users?.length ? pickPrimaryManager(params.users) : null;
+   const defaultRole = manager ? getUserRoleLabel(manager.role) : METAL_IMPURITY_RESPONSIBLE_POSITIONS[0];
+   const responsiblePosition = params?.responsiblePosition || defaultRole;
++  const responsibleUser =
++    (params?.responsibleEmployeeId
++      ? params.users?.find((user) => user.id === params.responsibleEmployeeId) || null
++      : null) ||
++    getUsersForRoleLabel(params?.users || [], responsiblePosition)[0] ||
++    manager ||
++    params?.users?.[0] ||
++    null;
+   const responsibleEmployee =
+     params?.responsibleName ||
+-    getUsersForRoleLabel(params?.users || [], responsiblePosition)[0]?.name ||
+-    manager?.name ||
+-    params?.users?.[0]?.name ||
+-    "»‚‡ÌÓ‚ ».».";
++    responsibleUser?.name ||
++    "–ò–≤–∞–Ω–æ–≤ –ò.–ò.";
++  const responsibleEmployeeId = responsibleUser?.id || params?.responsibleEmployeeId || null;
+   const secondRowDate = new Date(`${startDate}T00:00:00`);
+   secondRowDate.setDate(secondRowDate.getDate() + 16);
+   const secondRowDateKey = Number.isNaN(secondRowDate.getTime())
+@@ -147,6 +162,7 @@ export function getDefaultMetalImpurityConfig(params?: {
+     startDate,
+     endDate: "",
+     responsiblePosition,
++    responsibleEmployeeId,
+     responsibleEmployee,
+     materials,
+     suppliers,
+@@ -159,6 +175,7 @@ export function getDefaultMetalImpurityConfig(params?: {
+         impurityQuantityG: "0",
+         impurityCharacteristic: "",
+         responsibleRole: responsiblePosition,
++        responsibleEmployeeId,
+         responsibleName: responsibleEmployee,
+       }),
+       createMetalImpurityRow({
+@@ -169,6 +186,7 @@ export function getDefaultMetalImpurityConfig(params?: {
+         impurityQuantityG: "3",
+         impurityCharacteristic: "",
+         responsibleRole: responsiblePosition,
++        responsibleEmployeeId,
+         responsibleName: responsibleEmployee,
+       }),
+     ],
+@@ -181,6 +199,7 @@ export function normalizeMetalImpurityConfig(
+     users?: MetalImpurityUser[];
+     materials?: string[];
+     suppliers?: string[];
++    responsibleEmployeeId?: string | null;
+     responsibleName?: string;
+     responsiblePosition?: string;
+     date?: string;
+@@ -200,6 +219,8 @@ export function normalizeMetalImpurityConfig(
+       source.responsiblePosition,
+       fallback.responsiblePosition
+     ),
++    responsibleEmployeeId:
++      safeText(source.responsibleEmployeeId) || fallback.responsibleEmployeeId || null,
+     responsibleEmployee: safeText(
+       source.responsibleEmployee,
+       fallback.responsibleEmployee
+@@ -211,6 +232,7 @@ export function normalizeMetalImpurityConfig(
+       materialId: row.materialId || materials[0]?.id || "",
+       supplierId: row.supplierId || suppliers[0]?.id || "",
+       responsibleRole: row.responsibleRole || fallback.responsiblePosition,
++      responsibleEmployeeId: row.responsibleEmployeeId || fallback.responsibleEmployeeId || null,
+       responsibleName: row.responsibleName || fallback.responsibleEmployee,
+     })),
+   };
+@@ -227,21 +249,28 @@ export function getMetalImpurityValuePerKg(
+ }
+ 
+ export function getMetalImpurityOptionName(options: MetalImpurityOption[], id: string) {
+-  return options.find((item) => item.id === id)?.name || "ó";
++  return options.find((item) => item.id === id)?.name || "‚Äî";
+ }
+ 
+ export function getMetalImpurityEmployeeOptions(
+   users: MetalImpurityUser[],
+   roleLabel: string,
+-  currentEmployee?: string,
+-  fallbackEmployees: string[] = []
+-): string[] {
+-  const values = new Set<string>(
+-    fallbackEmployees.filter(Boolean)
+-  );
+-  if (currentEmployee) values.add(currentEmployee);
++  currentEmployeeId?: string | null,
++  fallbackEmployeeIds: Array<string | null | undefined> = []
++): MetalImpurityUser[] {
++  const values = new Set<string>();
++  for (const fallbackEmployeeId of fallbackEmployeeIds) {
++    if (typeof fallbackEmployeeId === "string" && fallbackEmployeeId.trim()) {
++      values.add(fallbackEmployeeId);
++    }
++  }
++  if (currentEmployeeId) values.add(currentEmployeeId);
+   for (const user of getUsersForRoleLabel(users, roleLabel)) {
+-    values.add(user.name);
++    if (typeof user.id === "string" && user.id.trim()) {
++      values.add(user.id);
++    }
+   }
+-  return Array.from(values).filter(Boolean);
++  return Array.from(values)
++    .map((employeeId) => users.find((user) => user.id === employeeId) || null)
++    .filter((user): user is MetalImpurityUser => user !== null);
+ }

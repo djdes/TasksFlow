@@ -27,6 +27,7 @@ export const ATTESTATION_RESULTS = [
 export type StaffTrainingRow = {
   id: string;
   date: string;
+  employeeId?: string | null;
   employeeName: string;
   employeePosition: string;
   topic: string;
@@ -59,6 +60,7 @@ export function createStaffTrainingRow(
   return {
     id: overrides.id || createId("training-row"),
     date: normalizeText(overrides.date),
+    employeeId: normalizeText(overrides.employeeId) || null,
     employeeName: normalizeText(overrides.employeeName),
     employeePosition: normalizeText(overrides.employeePosition),
     topic: normalizeText(overrides.topic),
@@ -92,6 +94,7 @@ export function buildStaffTrainingSeedRows(
       rows.push(
         createStaffTrainingRow({
           date: dateKey,
+          employeeId: null,
           employeeName: user.name,
           employeePosition: getUserRoleLabel(user.role),
           topic,

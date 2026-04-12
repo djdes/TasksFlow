@@ -1,0 +1,1 @@
+No residual name-based selector matches in src/components/journals.

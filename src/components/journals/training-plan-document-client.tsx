@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   createEmptyTrainingRow,
@@ -44,6 +45,7 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
 };
 
@@ -299,6 +301,7 @@ function DocumentSettingsDialog(props: {
                 setState({
                   ...state,
                   approveRole: value,
+                  approveEmployeeId: user?.id || "",
                   approveEmployee: user?.name || state.approveEmployee,
                 });
               }}
@@ -318,16 +321,29 @@ function DocumentSettingsDialog(props: {
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
             <Select
-              value={state.approveEmployee}
-              onValueChange={(value) => setState({ ...state, approveEmployee: value })}
+              value={state.approveEmployeeId || "__empty__"}
+              onValueChange={(value) => {
+                if (value === "__empty__") {
+                  setState({ ...state, approveEmployeeId: "", approveEmployee: "" });
+                  return;
+                }
+                const user = props.users.find((item) => item.id === value);
+                setState({
+                  ...state,
+                  approveEmployeeId: value,
+                  approveEmployee: user?.name || "",
+                  approveRole: user ? getUserRoleLabel(user.role) : state.approveRole,
+                });
+              }}
             >
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                 {usersForRole(props.users, state.approveRole).map((user) => (
-                  <SelectItem key={user.id} value={user.name}>
-                    {user.name}
+                  <SelectItem key={user.id} value={user.id}>
+                    {buildStaffOptionLabel(user)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -378,6 +394,7 @@ export function TrainingPlanDocumentClient({
     documentDate: normalized.documentDate,
     year: String(normalized.year),
     approveRole: normalized.approveRole,
+    approveEmployeeId: normalized.approveEmployeeId || "",
     approveEmployee: normalized.approveEmployee,
   };
 
@@ -677,6 +694,7 @@ export function TrainingPlanDocumentClient({
             year: Number(value.year),
             documentDate: value.documentDate,
             approveRole: value.approveRole,
+            approveEmployeeId: value.approveEmployeeId || null,
             approveEmployee: value.approveEmployee,
           });
           await patchConfig(nextConfig, value.title.trim() || title);

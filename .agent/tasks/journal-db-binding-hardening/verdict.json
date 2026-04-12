@@ -1,0 +1,58 @@
+{
+  "task_id": "journal-db-binding-hardening",
+  "overall_verdict": "FAIL",
+  "criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "reason": "Proof-loop artifacts exist and validate returned valid: true."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "reason": "Shared create/update/entries API paths reconcile DB-backed staff fields."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "reason": "Metal-impurity list/document selectors now store employee ids, and the fresh residual selector scan found no old name-based matches."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "reason": "Metal-impurity config and rows now preserve responsibleEmployeeId and are normalized through the shared staff-binding layer."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "reason": "This pass improved systemic DB-binding parity by adding metal-impurity to the same hardened rule set."
+    },
+    {
+      "id": "AC6",
+      "status": "UNKNOWN",
+      "reason": "Print route and reconciled PDF data path are intact, but a fresh all-journal print/PDF verification pass was not completed."
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "reason": "The defect class was rechecked globally with a fresh residual scan after the metal-impurity fix."
+    },
+    {
+      "id": "AC8",
+      "status": "FAIL",
+      "reason": "Completion cannot be claimed while AC6 remains UNKNOWN."
+    }
+  ],
+  "commands_run": [
+    "npx tsc --noEmit",
+    "npx eslint src/lib/metal-impurity-document.ts src/lib/journal-staff-binding.ts src/components/journals/metal-impurity-documents-client.tsx src/components/journals/metal-impurity-document-client.tsx",
+    "rg residual selector scan",
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journal-db-binding-hardening"
+  ],
+  "artifacts_used": [
+    ".agent/tasks/journal-db-binding-hardening/raw/build.txt",
+    ".agent/tasks/journal-db-binding-hardening/raw/lint.txt",
+    ".agent/tasks/journal-db-binding-hardening/raw/staff-binding-scan.txt",
+    ".agent/tasks/journal-db-binding-hardening/raw/diff.txt"
+  ]
+}

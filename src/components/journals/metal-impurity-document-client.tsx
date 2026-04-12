@@ -38,6 +38,7 @@ import {
   type MetalImpurityRow,
   type MetalImpurityUser,
 } from "@/lib/metal-impurity-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type Props = {
   documentId: string;
@@ -56,6 +57,7 @@ type RowDialogProps = {
   suppliers: MetalImpurityOption[];
   users: MetalImpurityUser[];
   responsiblePosition: string;
+  responsibleEmployeeId?: string | null;
   responsibleEmployee: string;
   onSave: (row: MetalImpurityRow, additions?: { materialName?: string; supplierName?: string }) => Promise<void>;
 };
@@ -143,15 +145,20 @@ function RowDialog({
   suppliers,
   users,
   responsiblePosition,
+  responsibleEmployeeId,
   responsibleEmployee,
   onSave,
 }: RowDialogProps) {
   const today = new Date().toISOString().slice(0, 10);
   const [draft, setDraft] = useState<MetalImpurityRow>(
-    createMetalImpurityRow({ date: today, responsibleName: responsibleEmployee })
+    createMetalImpurityRow({
+      date: today,
+      responsibleEmployeeId: responsibleEmployeeId || null,
+      responsibleName: responsibleEmployee,
+    })
   );
   const [draftPosition, setDraftPosition] = useState(responsiblePosition);
-  const [draftEmployee, setDraftEmployee] = useState(responsibleEmployee);
+  const [draftEmployeeId, setDraftEmployeeId] = useState(responsibleEmployeeId || "");
   const [newSupplier, setNewSupplier] = useState("");
   const [newMaterial, setNewMaterial] = useState("");
   const [materialOptions, setMaterialOptions] = useState<MetalImpurityOption[]>([]);
@@ -162,10 +169,10 @@ function RowDialog({
       getMetalImpurityEmployeeOptions(
         users,
         draftPosition,
-        draftEmployee || responsibleEmployee,
-        [responsibleEmployee, draft.responsibleName]
+        draftEmployeeId || responsibleEmployeeId || null,
+        [responsibleEmployeeId, draft.responsibleEmployeeId]
       ),
-    [draft.responsibleName, draftEmployee, draftPosition, responsibleEmployee, users]
+    [draft.responsibleEmployeeId, draftEmployeeId, draftPosition, responsibleEmployeeId, users]
   );
 
   useEffect(() => {
@@ -177,17 +184,18 @@ function RowDialog({
         materialId: materials[0]?.id || "",
         supplierId: suppliers[0]?.id || "",
         responsibleRole: responsiblePosition,
+        responsibleEmployeeId: responsibleEmployeeId || null,
         responsibleName: responsibleEmployee,
       });
     setDraft(initialRow);
     setDraftPosition(initialRow.responsibleRole || responsiblePosition);
-    setDraftEmployee(initialRow.responsibleName || responsibleEmployee);
+    setDraftEmployeeId(initialRow.responsibleEmployeeId || responsibleEmployeeId || "");
     setNewSupplier("");
     setNewMaterial("");
     setMaterialOptions(materials);
     setSupplierOptions(suppliers);
     setSubmitting(false);
-  }, [materials, open, responsibleEmployee, responsiblePosition, row, suppliers, today]);
+  }, [materials, open, responsibleEmployee, responsibleEmployeeId, responsiblePosition, row, suppliers, today]);
 
   function appendOption(items: MetalImpurityOption[], nextItem: MetalImpurityOption) {
     if (items.some((item) => item.id === nextItem.id || item.name.toLowerCase() === nextItem.name.toLowerCase())) {
@@ -198,12 +206,16 @@ function RowDialog({
 
   useEffect(() => {
     if (!open || employeeOptions.length === 0) return;
-    if (!employeeOptions.includes(draftEmployee)) {
-      const nextEmployee = employeeOptions[0];
-      setDraftEmployee(nextEmployee);
-      setDraft((current) => ({ ...current, responsibleName: nextEmployee }));
+    if (!employeeOptions.some((employee) => employee.id === draftEmployeeId)) {
+      const nextEmployee = employeeOptions[0] || null;
+      setDraftEmployeeId(nextEmployee?.id || "");
+      setDraft((current) => ({
+        ...current,
+        responsibleEmployeeId: nextEmployee?.id || null,
+        responsibleName: nextEmployee?.name || "",
+      }));
     }
-  }, [draftEmployee, employeeOptions, open]);
+  }, [draftEmployeeId, employeeOptions, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -304,16 +316,17 @@ function RowDialog({
               value={draftPosition}
               onValueChange={(value) => {
                 const nextEmployee =
-                  getMetalImpurityEmployeeOptions(users, value, draftEmployee, [
-                    responsibleEmployee,
-                    draft.responsibleName,
-                  ])[0] || draftEmployee;
+                  getMetalImpurityEmployeeOptions(users, value, draftEmployeeId, [
+                    responsibleEmployeeId,
+                    draft.responsibleEmployeeId,
+                  ])[0] || null;
                 setDraftPosition(value);
-                setDraftEmployee(nextEmployee);
+                setDraftEmployeeId(nextEmployee?.id || "");
                 setDraft((current) => ({
                   ...current,
                   responsibleRole: value,
-                  responsibleName: nextEmployee,
+                  responsibleEmployeeId: nextEmployee?.id || null,
+                  responsibleName: nextEmployee?.name || "",
                 }));
               }}
             >
@@ -333,19 +346,30 @@ function RowDialog({
           <div className="space-y-3">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
             <Select
-              value={draftEmployee}
+              value={draftEmployeeId || "__empty__"}
               onValueChange={(value) => {
-                setDraftEmployee(value);
-                setDraft({ ...draft, responsibleName: value });
+                if (value === "__empty__") {
+                  setDraftEmployeeId("");
+                  setDraft({ ...draft, responsibleEmployeeId: null, responsibleName: "" });
+                  return;
+                }
+                const user = users.find((item) => item.id === value) || null;
+                setDraftEmployeeId(value);
+                setDraft({
+                  ...draft,
+                  responsibleEmployeeId: value,
+                  responsibleName: user?.name || "",
+                });
               }}
             >
               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                 {employeeOptions.map((employee) => (
-                  <SelectItem key={employee} value={employee}>
-                    {employee}
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {buildStaffOptionLabel(employee)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -363,7 +387,9 @@ function RowDialog({
                     {
                       ...draft,
                       responsibleRole: draftPosition,
-                      responsibleName: draftEmployee,
+                      responsibleEmployeeId: draftEmployeeId || null,
+                      responsibleName:
+                        users.find((user) => user.id === draftEmployeeId)?.name || draft.responsibleName,
                     },
                     {
                       materialName: newMaterial.trim() || undefined,
@@ -400,7 +426,7 @@ function SettingsDialog({
   title: string;
   config: MetalImpurityDocumentConfig;
   users: MetalImpurityUser[];
-  employeeOptions: string[];
+  employeeOptions: MetalImpurityUser[];
   onSave: (params: { title: string; config: MetalImpurityDocumentConfig }) => Promise<void>;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
@@ -419,21 +445,22 @@ function SettingsDialog({
       getMetalImpurityEmployeeOptions(
         users,
         draftConfig.responsiblePosition,
-        draftConfig.responsibleEmployee,
-        employeeOptions
+        draftConfig.responsibleEmployeeId || null,
+        employeeOptions.map((employee) => employee.id)
       ),
-    [draftConfig.responsibleEmployee, draftConfig.responsiblePosition, employeeOptions, users]
+    [draftConfig.responsibleEmployeeId, draftConfig.responsiblePosition, employeeOptions, users]
   );
 
   useEffect(() => {
     if (!open || filteredEmployees.length === 0) return;
-    if (!filteredEmployees.includes(draftConfig.responsibleEmployee)) {
+    if (!filteredEmployees.some((employee) => employee.id === draftConfig.responsibleEmployeeId)) {
       setDraftConfig((current) => ({
         ...current,
-        responsibleEmployee: filteredEmployees[0],
+        responsibleEmployeeId: filteredEmployees[0]?.id || null,
+        responsibleEmployee: filteredEmployees[0]?.name || "",
       }));
     }
-  }, [draftConfig.responsibleEmployee, filteredEmployees, open]);
+  }, [draftConfig.responsibleEmployeeId, filteredEmployees, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -472,12 +499,13 @@ function SettingsDialog({
               value={draftConfig.responsiblePosition}
               onValueChange={(value) => {
                 const nextEmployee =
-                  getMetalImpurityEmployeeOptions(users, value, draftConfig.responsibleEmployee)[0] ||
-                  draftConfig.responsibleEmployee;
+                  getMetalImpurityEmployeeOptions(users, value, draftConfig.responsibleEmployeeId)[0] ||
+                  null;
                 setDraftConfig({
                   ...draftConfig,
                   responsiblePosition: value,
-                  responsibleEmployee: nextEmployee,
+                  responsibleEmployeeId: nextEmployee?.id || draftConfig.responsibleEmployeeId || null,
+                  responsibleEmployee: nextEmployee?.name || draftConfig.responsibleEmployee,
                 });
               }}
             >
@@ -496,18 +524,32 @@ function SettingsDialog({
           <div className="space-y-3">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
             <Select
-              value={draftConfig.responsibleEmployee}
-              onValueChange={(value) =>
-                setDraftConfig({ ...draftConfig, responsibleEmployee: value })
-              }
+              value={draftConfig.responsibleEmployeeId || "__empty__"}
+              onValueChange={(value) => {
+                if (value === "__empty__") {
+                  setDraftConfig({
+                    ...draftConfig,
+                    responsibleEmployeeId: null,
+                    responsibleEmployee: "",
+                  });
+                  return;
+                }
+                const user = users.find((item) => item.id === value) || null;
+                setDraftConfig({
+                  ...draftConfig,
+                  responsibleEmployeeId: value,
+                  responsibleEmployee: user?.name || "",
+                });
+              }}
             >
               <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                 {filteredEmployees.map((employee) => (
-                  <SelectItem key={employee} value={employee}>
-                    {employee}
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {buildStaffOptionLabel(employee)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -886,10 +928,10 @@ export function MetalImpurityDocumentClient({
       getMetalImpurityEmployeeOptions(
         users,
         config.responsiblePosition,
-        editingRow?.responsibleName || config.responsibleEmployee,
-        config.rows.map((row) => row.responsibleName)
+        editingRow?.responsibleEmployeeId || config.responsibleEmployeeId || null,
+        config.rows.map((row) => row.responsibleEmployeeId)
       ),
-    [config.responsibleEmployee, config.responsiblePosition, config.rows, editingRow?.responsibleName, users]
+    [config.responsibleEmployeeId, config.responsiblePosition, config.rows, editingRow?.responsibleEmployeeId, users]
   );
 
   async function persist(
@@ -897,8 +939,6 @@ export function MetalImpurityDocumentClient({
     nextConfig: MetalImpurityDocumentConfig,
     patch?: Record<string, unknown>
   ) {
-    const responsibleUserId =
-      users.find((user) => user.name === nextConfig.responsibleEmployee)?.id ?? null;
     const response = await fetch(`/api/journal-documents/${documentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -907,7 +947,7 @@ export function MetalImpurityDocumentClient({
         dateFrom: nextConfig.startDate,
         dateTo: nextConfig.endDate || nextConfig.startDate,
         responsibleTitle: nextConfig.responsiblePosition,
-        responsibleUserId,
+        responsibleUserId: nextConfig.responsibleEmployeeId || null,
         config: nextConfig,
         ...patch,
       }),
@@ -1228,6 +1268,7 @@ export function MetalImpurityDocumentClient({
         suppliers={config.suppliers}
         users={users}
         responsiblePosition={config.responsiblePosition}
+        responsibleEmployeeId={config.responsibleEmployeeId}
         responsibleEmployee={config.responsibleEmployee}
         onSave={saveRow}
       />

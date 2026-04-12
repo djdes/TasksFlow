@@ -34,6 +34,7 @@ import {
   DAY_OPTIONS,
   formatMaintenanceDate,
 } from "@/lib/equipment-maintenance-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type Props = {
   documentId: string;
@@ -81,8 +82,14 @@ export function EquipmentMaintenanceDocumentClient({
   const [settingsDate, setSettingsDate] = useState(config.documentDate);
   const [settingsYear, setSettingsYear] = useState(config.year);
   const [settingsApproveRole, setSettingsApproveRole] = useState(config.approveRole);
+  const [settingsApproveEmployeeId, setSettingsApproveEmployeeId] = useState(
+    config.approveEmployeeId || ""
+  );
   const [settingsApproveEmployee, setSettingsApproveEmployee] = useState(config.approveEmployee);
   const [settingsResponsibleRole, setSettingsResponsibleRole] = useState(config.responsibleRole);
+  const [settingsResponsibleEmployeeId, setSettingsResponsibleEmployeeId] = useState(
+    config.responsibleEmployeeId || ""
+  );
   const [settingsResponsibleEmployee, setSettingsResponsibleEmployee] = useState(config.responsibleEmployee);
 
   // Add row draft state
@@ -213,8 +220,10 @@ export function EquipmentMaintenanceDocumentClient({
       documentDate: settingsDate,
       year: settingsYear,
       approveRole: settingsApproveRole,
+      approveEmployeeId: settingsApproveEmployeeId || null,
       approveEmployee: settingsApproveEmployee,
       responsibleRole: settingsResponsibleRole,
+      responsibleEmployeeId: settingsResponsibleEmployeeId || null,
       responsibleEmployee: settingsResponsibleEmployee,
     };
     setConfig(nextConfig);
@@ -259,8 +268,10 @@ export function EquipmentMaintenanceDocumentClient({
               setSettingsDate(config.documentDate);
               setSettingsYear(config.year);
               setSettingsApproveRole(config.approveRole);
+              setSettingsApproveEmployeeId(config.approveEmployeeId || "");
               setSettingsApproveEmployee(config.approveEmployee);
               setSettingsResponsibleRole(config.responsibleRole);
+              setSettingsResponsibleEmployeeId(config.responsibleEmployeeId || "");
               setSettingsResponsibleEmployee(config.responsibleEmployee);
               setSettingsOpen(true);
             }}
@@ -682,7 +693,12 @@ export function EquipmentMaintenanceDocumentClient({
             <Label>Должность &laquo;Утверждаю&raquo;</Label>
             <Select
               value={settingsApproveRole}
-              onValueChange={setSettingsApproveRole}
+              onValueChange={(value) => {
+                const user = users.find((item) => getUserRoleLabel(item.role) === value);
+                setSettingsApproveRole(value);
+                setSettingsApproveEmployeeId(user?.id || "");
+                setSettingsApproveEmployee(user?.name || settingsApproveEmployee);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="- Выберите значение -" />
@@ -698,16 +714,21 @@ export function EquipmentMaintenanceDocumentClient({
 
             <Label>Сотрудник (утверждает)</Label>
             <Select
-              value={settingsApproveEmployee}
-              onValueChange={setSettingsApproveEmployee}
+              value={settingsApproveEmployeeId}
+              onValueChange={(value) => {
+                const user = users.find((item) => item.id === value);
+                setSettingsApproveEmployeeId(value);
+                setSettingsApproveEmployee(user?.name || settingsApproveEmployee);
+                if (user) setSettingsApproveRole(getUserRoleLabel(user.role));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.name}>
-                    {u.name}
+                  <SelectItem key={u.id} value={u.id}>
+                    {buildStaffOptionLabel(u)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -716,7 +737,12 @@ export function EquipmentMaintenanceDocumentClient({
             <Label>Должность ответственного</Label>
             <Select
               value={settingsResponsibleRole}
-              onValueChange={setSettingsResponsibleRole}
+              onValueChange={(value) => {
+                const user = users.find((item) => getUserRoleLabel(item.role) === value);
+                setSettingsResponsibleRole(value);
+                setSettingsResponsibleEmployeeId(user?.id || "");
+                setSettingsResponsibleEmployee(user?.name || settingsResponsibleEmployee);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="- Выберите значение -" />
@@ -732,16 +758,21 @@ export function EquipmentMaintenanceDocumentClient({
 
             <Label>Сотрудник (ответственный)</Label>
             <Select
-              value={settingsResponsibleEmployee}
-              onValueChange={setSettingsResponsibleEmployee}
+              value={settingsResponsibleEmployeeId}
+              onValueChange={(value) => {
+                const user = users.find((item) => item.id === value);
+                setSettingsResponsibleEmployeeId(value);
+                setSettingsResponsibleEmployee(user?.name || settingsResponsibleEmployee);
+                if (user) setSettingsResponsibleRole(getUserRoleLabel(user.role));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.name}>
-                    {u.name}
+                  <SelectItem key={u.id} value={u.id}>
+                    {buildStaffOptionLabel(u)}
                   </SelectItem>
                 ))}
               </SelectContent>

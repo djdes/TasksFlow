@@ -32,6 +32,7 @@ import {
   normalizeEquipmentCalibrationConfig,
   formatCalibrationDate,
 } from "@/lib/equipment-calibration-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 const POSITION_OPTIONS = USER_ROLE_LABEL_VALUES;
 
@@ -66,6 +67,7 @@ export function EquipmentCalibrationDocumentsClient({
   const [docDate, setDocDate] = useState("");
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [approveRole, setApproveRole] = useState("");
+  const [approveEmployeeId, setApproveEmployeeId] = useState("");
   const [approveEmployee, setApproveEmployee] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -76,6 +78,7 @@ export function EquipmentCalibrationDocumentsClient({
     setDocDate(cfg.documentDate);
     setYear(String(cfg.year));
     setApproveRole(cfg.approveRole);
+    setApproveEmployeeId(cfg.approveEmployeeId || "");
     setApproveEmployee(cfg.approveEmployee);
   }, [editingDoc]);
 
@@ -131,6 +134,7 @@ export function EquipmentCalibrationDocumentsClient({
             year: Number(year),
             documentDate: docDate,
             approveRole,
+            approveEmployeeId: approveEmployeeId || null,
             approveEmployee,
           },
         }),
@@ -251,7 +255,12 @@ export function EquipmentCalibrationDocumentsClient({
             </div>
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Р”РѕР»Р¶РЅРѕСЃС‚СЊ &quot;РЈС‚РІРµСЂР¶РґР°СЋ&quot;</Label>
-              <Select value={approveRole} onValueChange={setApproveRole}>
+              <Select value={approveRole} onValueChange={(value) => {
+                const user = users.find((item) => getUserRoleLabel(item.role) === value);
+                setApproveRole(value);
+                setApproveEmployeeId(user?.id || "");
+                setApproveEmployee(user?.name || approveEmployee);
+              }}>
                 <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
                 <SelectContent>
                   {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -260,10 +269,15 @@ export function EquipmentCalibrationDocumentsClient({
             </div>
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">РЎРѕС‚СЂСѓРґРЅРёРє</Label>
-              <Select value={approveEmployee} onValueChange={setApproveEmployee}>
+              <Select value={approveEmployeeId} onValueChange={(value) => {
+                const user = users.find((item) => item.id === value);
+                setApproveEmployeeId(value);
+                setApproveEmployee(user?.name || approveEmployee);
+                if (user) setApproveRole(getUserRoleLabel(user.role));
+              }}>
                 <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -" /></SelectTrigger>
                 <SelectContent>
-                  {users.map((u) => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                  {users.map((u) => <SelectItem key={u.id} value={u.id}>{buildStaffOptionLabel(u)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

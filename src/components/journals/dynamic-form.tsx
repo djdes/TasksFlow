@@ -49,6 +49,7 @@ type AreaItem = {
 type EmployeeItem = {
   id: string;
   name: string;
+  role?: string | null;
 };
 
 type ProductItem = {
@@ -512,7 +513,7 @@ export function DynamicForm({
                   </SelectTrigger>
                   <SelectContent>
                     {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.name}>
+                      <SelectItem key={emp.id} value={emp.id}>
                         {emp.name}
                       </SelectItem>
                     ))}

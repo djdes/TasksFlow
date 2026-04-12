@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
+import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   SANITATION_MONTHS,
   createEmptySanitationRow,
@@ -40,8 +41,10 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
   responsibleRole: string;
+  responsibleEmployeeId: string;
   responsibleEmployee: string;
 };
 
@@ -272,6 +275,7 @@ function DocumentSettingsDialog(props: {
               setState((current) => ({
                 ...current,
                 approveRole: value,
+                approveEmployeeId: user?.id || "",
                 approveEmployee: user?.name || current.approveEmployee,
               }));
             }}
@@ -289,16 +293,33 @@ function DocumentSettingsDialog(props: {
           </Select>
 
           <Select
-            value={state.approveEmployee}
-            onValueChange={(value) => setState((current) => ({ ...current, approveEmployee: value }))}
+            value={state.approveEmployeeId || "__empty__"}
+            onValueChange={(value) => {
+              if (value === "__empty__") {
+                setState((current) => ({
+                  ...current,
+                  approveEmployeeId: "",
+                  approveEmployee: "",
+                }));
+                return;
+              }
+              const user = props.users.find((item) => item.id === value);
+              setState((current) => ({
+                ...current,
+                approveEmployeeId: value,
+                approveEmployee: user?.name || "",
+                approveRole: user ? getUserRoleLabel(user.role) : current.approveRole,
+              }));
+            }}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
               <SelectValue placeholder="Сотрудник" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__empty__">- Выберите значение -</SelectItem>
               {usersForRole(props.users, state.approveRole).map((user) => (
-                <SelectItem key={user.id} value={user.name}>
-                  {user.name}
+                <SelectItem key={user.id} value={user.id}>
+                  {buildStaffOptionLabel(user)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -311,6 +332,7 @@ function DocumentSettingsDialog(props: {
               setState((current) => ({
                 ...current,
                 responsibleRole: value,
+                responsibleEmployeeId: user?.id || "",
                 responsibleEmployee: user?.name || current.responsibleEmployee,
               }));
             }}
@@ -328,16 +350,33 @@ function DocumentSettingsDialog(props: {
           </Select>
 
           <Select
-            value={state.responsibleEmployee}
-            onValueChange={(value) => setState((current) => ({ ...current, responsibleEmployee: value }))}
+            value={state.responsibleEmployeeId || "__empty__"}
+            onValueChange={(value) => {
+              if (value === "__empty__") {
+                setState((current) => ({
+                  ...current,
+                  responsibleEmployeeId: "",
+                  responsibleEmployee: "",
+                }));
+                return;
+              }
+              const user = props.users.find((item) => item.id === value);
+              setState((current) => ({
+                ...current,
+                responsibleEmployeeId: value,
+                responsibleEmployee: user?.name || "",
+                responsibleRole: user ? getUserRoleLabel(user.role) : current.responsibleRole,
+              }));
+            }}
           >
             <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
               <SelectValue placeholder="Сотрудник" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__empty__">- Выберите значение -</SelectItem>
               {usersForRole(props.users, state.responsibleRole).map((user) => (
-                <SelectItem key={user.id} value={user.name}>
-                  {user.name}
+                <SelectItem key={user.id} value={user.id}>
+                  {buildStaffOptionLabel(user)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -456,8 +495,10 @@ export function SanitationDayDocumentClient({
     documentDate: normalized.documentDate,
     year: String(normalized.year),
     approveRole: normalized.approveRole,
+    approveEmployeeId: normalized.approveEmployeeId || "",
     approveEmployee: normalized.approveEmployee,
     responsibleRole: normalized.responsibleRole,
+    responsibleEmployeeId: normalized.responsibleEmployeeId || "",
     responsibleEmployee: normalized.responsibleEmployee,
   };
 
@@ -796,8 +837,10 @@ export function SanitationDayDocumentClient({
             year: Number(value.year),
             documentDate: value.documentDate,
             approveRole: value.approveRole,
+            approveEmployeeId: value.approveEmployeeId || null,
             approveEmployee: value.approveEmployee,
             responsibleRole: value.responsibleRole,
+            responsibleEmployeeId: value.responsibleEmployeeId || null,
             responsibleEmployee: value.responsibleEmployee,
           });
           await patchConfig(next, value.title.trim() || title);

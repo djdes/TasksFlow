@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import {
   SANITATION_DAY_DOCUMENT_TITLE,
   SANITATION_DAY_HEADING,
@@ -61,8 +62,10 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
   responsibleRole: string;
+  responsibleEmployeeId: string;
   responsibleEmployee: string;
 };
 
@@ -88,8 +91,10 @@ function toUiState(document: SanitationDocumentItem): SettingsState {
     documentDate: normalized.documentDate,
     year: String(normalized.year),
     approveRole: normalized.approveRole,
+    approveEmployeeId: normalized.approveEmployeeId || "",
     approveEmployee: normalized.approveEmployee,
     responsibleRole: normalized.responsibleRole,
+    responsibleEmployeeId: normalized.responsibleEmployeeId || "",
     responsibleEmployee: normalized.responsibleEmployee,
   };
 }
@@ -198,6 +203,7 @@ function SettingsDialog(props: {
                   setState({
                     ...activeState,
                     approveRole: value,
+                    approveEmployeeId: firstUser?.id || "",
                     approveEmployee: firstUser?.name || activeState.approveEmployee,
                   });
                 }}
@@ -218,16 +224,23 @@ function SettingsDialog(props: {
             <div className="space-y-2">
               <Label className="text-[22px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
-                value={activeState.approveEmployee}
-                onValueChange={(value) => setState({ ...activeState, approveEmployee: value })}
+                value={activeState.approveEmployeeId}
+                onValueChange={(value) => {
+                  const user = props.users.find((item) => item.id === value);
+                  setState({
+                    ...activeState,
+                    approveEmployeeId: value,
+                    approveEmployee: user?.name || activeState.approveEmployee,
+                  });
+                }}
               >
                 <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
                   {usersForRole(props.users, activeState.approveRole).map((user) => (
-                    <SelectItem key={user.id} value={user.name}>
-                      {user.name}
+                    <SelectItem key={user.id} value={user.id}>
+                      {buildStaffOptionLabel(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -243,6 +256,7 @@ function SettingsDialog(props: {
                   setState({
                     ...activeState,
                     responsibleRole: value,
+                    responsibleEmployeeId: firstUser?.id || "",
                     responsibleEmployee: firstUser?.name || activeState.responsibleEmployee,
                   });
                 }}
@@ -263,16 +277,23 @@ function SettingsDialog(props: {
             <div className="space-y-2">
               <Label className="text-[22px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
-                value={activeState.responsibleEmployee}
-                onValueChange={(value) => setState({ ...activeState, responsibleEmployee: value })}
+                value={activeState.responsibleEmployeeId}
+                onValueChange={(value) => {
+                  const user = props.users.find((item) => item.id === value);
+                  setState({
+                    ...activeState,
+                    responsibleEmployeeId: value,
+                    responsibleEmployee: user?.name || activeState.responsibleEmployee,
+                  });
+                }}
               >
                 <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
                   {usersForRole(props.users, activeState.responsibleRole).map((user) => (
-                    <SelectItem key={user.id} value={user.name}>
-                      {user.name}
+                    <SelectItem key={user.id} value={user.id}>
+                      {buildStaffOptionLabel(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -363,8 +384,10 @@ export function SanitationDayDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
       responsibleRole: payload.responsibleRole,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleEmployee: payload.responsibleEmployee,
       rows: [createEmptySanitationRow("Производство 1 этаж")],
     } as SanitationDayConfig;
@@ -402,8 +425,10 @@ export function SanitationDayDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
       responsibleRole: payload.responsibleRole,
+      responsibleEmployeeId: payload.responsibleEmployeeId || null,
       responsibleEmployee: payload.responsibleEmployee,
     };
 
@@ -495,8 +520,10 @@ export function SanitationDayDocumentsClient({
       documentDate: cfg.documentDate,
       year: String(cfg.year),
       approveRole: cfg.approveRole,
+      approveEmployeeId: cfg.approveEmployeeId || "",
       approveEmployee: cfg.approveEmployee,
       responsibleRole: cfg.responsibleRole,
+      responsibleEmployeeId: cfg.responsibleEmployeeId || "",
       responsibleEmployee: cfg.responsibleEmployee,
     };
   }, []);

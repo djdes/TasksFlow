@@ -46,6 +46,7 @@ import {
   normalizeTrainingPlanConfig,
   type TrainingPlanConfig,
 } from "@/lib/training-plan-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type UserItem = { id: string; name: string; role: string };
 
@@ -71,6 +72,7 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
 };
 
@@ -96,6 +98,7 @@ function toUiState(document: TrainingPlanDocumentItem): SettingsState {
     documentDate: cfg.documentDate,
     year: String(cfg.year),
     approveRole: cfg.approveRole,
+    approveEmployeeId: cfg.approveEmployeeId || "",
     approveEmployee: cfg.approveEmployee,
   };
 }
@@ -202,6 +205,7 @@ function SettingsDialog(props: {
                   setState({
                     ...activeState,
                     approveRole: value,
+                    approveEmployeeId: user?.id || "",
                     approveEmployee: user?.name || activeState.approveEmployee,
                   });
                 }}
@@ -221,16 +225,23 @@ function SettingsDialog(props: {
             <div className="space-y-2">
               <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
-                value={activeState.approveEmployee}
-                onValueChange={(value) => setState({ ...activeState, approveEmployee: value })}
+                value={activeState.approveEmployeeId}
+                onValueChange={(value) => {
+                  const user = props.users.find((item) => item.id === value);
+                  setState({
+                    ...activeState,
+                    approveEmployeeId: value,
+                    approveEmployee: user?.name || activeState.approveEmployee,
+                  });
+                }}
               >
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
                   {usersForRole(props.users, activeState.approveRole).map((user) => (
-                    <SelectItem key={user.id} value={user.name}>
-                      {user.name}
+                    <SelectItem key={user.id} value={user.id}>
+                      {buildStaffOptionLabel(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -274,6 +285,7 @@ export function TrainingPlanDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
     };
 
@@ -309,6 +321,7 @@ export function TrainingPlanDocumentsClient({
       year: Number(payload.year),
       documentDate: payload.documentDate,
       approveRole: payload.approveRole,
+      approveEmployeeId: payload.approveEmployeeId || null,
       approveEmployee: payload.approveEmployee,
     };
 
@@ -361,6 +374,7 @@ export function TrainingPlanDocumentsClient({
       documentDate: defaultConfig.documentDate,
       year: String(defaultConfig.year),
       approveRole: defaultConfig.approveRole,
+      approveEmployeeId: defaultConfig.approveEmployeeId || "",
       approveEmployee: defaultConfig.approveEmployee,
     };
   }, []);

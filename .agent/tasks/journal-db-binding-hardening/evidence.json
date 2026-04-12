@@ -1,0 +1,112 @@
+{
+  "task_id": "journal-db-binding-hardening",
+  "overall_status": "FAIL",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "text": "Proof-loop artifacts exist and validate for the task.",
+      "status": "PASS",
+      "proof": [
+        ".agent/tasks/journal-db-binding-hardening/spec.md",
+        ".agent/tasks/journal-db-binding-hardening/evidence.md",
+        ".agent/tasks/journal-db-binding-hardening/evidence.json",
+        ".agent/tasks/journal-db-binding-hardening/verdict.json",
+        "python ...task_loop.py validate --task-id journal-db-binding-hardening => valid: true"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC2",
+      "text": "Shared API entrypoints reconcile DB-backed employee/title drift.",
+      "status": "PASS",
+      "proof": [
+        "src/app/api/journal-documents/route.ts",
+        "src/app/api/journal-documents/[id]/route.ts",
+        "src/app/api/journal-documents/[id]/entries/route.ts",
+        "src/lib/journal-staff-binding.ts"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC3",
+      "text": "Shared and high-impact UIs persist employee selection by user.id rather than plain employee name.",
+      "status": "PASS",
+      "proof": [
+        "src/components/journals/metal-impurity-documents-client.tsx",
+        "src/components/journals/metal-impurity-document-client.tsx",
+        ".agent/tasks/journal-db-binding-hardening/raw/staff-binding-scan.txt"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC4",
+      "text": "Legacy journal configs remain readable and normalize back to DB users where possible.",
+      "status": "PASS",
+      "proof": [
+        "src/lib/metal-impurity-document.ts",
+        "src/lib/journal-staff-binding.ts"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC5",
+      "text": "Affected journal flows are reconciled to DB-backed staff references without breaking current rendering.",
+      "status": "PASS",
+      "proof": [
+        "metal-impurity added to shared normalization and both document/list clients",
+        ".agent/tasks/journal-db-binding-hardening/raw/diff.txt"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC6",
+      "text": "Print behavior remains correct and uses reconciled employee/title data.",
+      "status": "UNKNOWN",
+      "proof": [
+        "src/lib/document-pdf.ts still consumes reconciled config",
+        "print route shape preserved"
+      ],
+      "gaps": [
+        "Fresh per-journal runtime print/PDF verification was not completed in this pass."
+      ]
+    },
+    {
+      "id": "AC7",
+      "text": "Every discovered systemic defect class is rechecked across all mapped journals.",
+      "status": "PASS",
+      "proof": [
+        ".agent/tasks/journal-db-binding-hardening/raw/staff-binding-scan.txt"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC8",
+      "text": "Fresh verification is run against the current repository state and completion is claimed only when every criterion is PASS.",
+      "status": "FAIL",
+      "proof": [
+        ".agent/tasks/journal-db-binding-hardening/raw/build.txt",
+        ".agent/tasks/journal-db-binding-hardening/raw/lint.txt",
+        ".agent/tasks/journal-db-binding-hardening/raw/staff-binding-scan.txt",
+        ".agent/tasks/journal-db-binding-hardening/verdict.json"
+      ],
+      "gaps": [
+        "AC6 remains UNKNOWN, so overall completion cannot be claimed."
+      ]
+    }
+  ],
+  "changed_files": [
+    "src/lib/metal-impurity-document.ts",
+    "src/lib/journal-staff-binding.ts",
+    "src/components/journals/metal-impurity-documents-client.tsx",
+    "src/components/journals/metal-impurity-document-client.tsx"
+  ],
+  "commands_for_fresh_verifier": [
+    "npx tsc --noEmit",
+    "npx eslint src/lib/metal-impurity-document.ts src/lib/journal-staff-binding.ts src/components/journals/metal-impurity-documents-client.tsx src/components/journals/metal-impurity-document-client.tsx",
+    "rg residual selector scan",
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journal-db-binding-hardening"
+  ],
+  "known_gaps": [
+    "Fresh all-journal print/PDF proof is still missing."
+  ]
+}

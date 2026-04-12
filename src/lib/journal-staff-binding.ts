@@ -19,6 +19,26 @@ import {
   PRODUCT_WRITEOFF_TEMPLATE_CODE,
   normalizeProductWriteoffConfig,
 } from "@/lib/product-writeoff-document";
+import {
+  DISINFECTANT_TEMPLATE_CODE,
+  normalizeDisinfectantConfig,
+} from "@/lib/disinfectant-document";
+import {
+  STAFF_TRAINING_TEMPLATE_CODE,
+  normalizeStaffTrainingConfig,
+} from "@/lib/staff-training-document";
+import {
+  EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
+  normalizeEquipmentMaintenanceConfig,
+} from "@/lib/equipment-maintenance-document";
+import {
+  EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
+  normalizeEquipmentCalibrationConfig,
+} from "@/lib/equipment-calibration-document";
+import {
+  METAL_IMPURITY_TEMPLATE_CODE,
+  normalizeMetalImpurityConfig,
+} from "@/lib/metal-impurity-document";
 
 export type StaffBindingUser = {
   id: string;
@@ -329,6 +349,184 @@ function reconcileProductWriteoffConfigUsers(users: StaffBindingUser[], value: u
   };
 }
 
+function reconcileEquipmentMaintenanceConfigUsers(
+  users: StaffBindingUser[],
+  value: unknown
+) {
+  const raw = value as
+    | {
+        approveEmployeeId?: unknown;
+        responsibleEmployeeId?: unknown;
+      }
+    | null
+    | undefined;
+  const config = normalizeEquipmentMaintenanceConfig(value);
+  const approve = reconcileNamedStaffSelection(users, {
+    userId: raw?.approveEmployeeId,
+    userName: config.approveEmployee,
+    title: config.approveRole,
+    fallbackTitle: config.approveRole,
+  });
+  const responsible = reconcileNamedStaffSelection(users, {
+    userId: raw?.responsibleEmployeeId,
+    userName: config.responsibleEmployee,
+    title: config.responsibleRole,
+    fallbackTitle: config.responsibleRole,
+  });
+
+  return {
+    ...config,
+    approveEmployeeId: approve.userId,
+    approveEmployee: approve.userName ?? config.approveEmployee,
+    approveRole: approve.title ?? config.approveRole,
+    responsibleEmployeeId: responsible.userId,
+    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
+    responsibleRole: responsible.title ?? config.responsibleRole,
+  };
+}
+
+function reconcileEquipmentCalibrationConfigUsers(
+  users: StaffBindingUser[],
+  value: unknown
+) {
+  const config = normalizeEquipmentCalibrationConfig(value);
+  const approve = reconcileNamedStaffSelection(users, {
+    userId: (value as { approveEmployeeId?: unknown } | null | undefined)?.approveEmployeeId,
+    userName: config.approveEmployee,
+    title: config.approveRole,
+    fallbackTitle: config.approveRole,
+  });
+
+  return {
+    ...config,
+    approveEmployeeId: approve.userId,
+    approveEmployee: approve.userName ?? config.approveEmployee,
+    approveRole: approve.title ?? config.approveRole,
+  };
+}
+
+function reconcileDisinfectantConfigUsers(users: StaffBindingUser[], value: unknown) {
+  const raw = value as
+    | {
+        responsibleEmployeeId?: unknown;
+        receipts?: Array<{ responsibleEmployeeId?: unknown }>;
+        consumptions?: Array<{ responsibleEmployeeId?: unknown }>;
+      }
+    | null
+    | undefined;
+  const config = normalizeDisinfectantConfig(value);
+  const responsible = reconcileNamedStaffSelection(users, {
+    userId: raw?.responsibleEmployeeId,
+    userName: config.responsibleEmployee,
+    title: config.responsibleRole,
+    fallbackTitle: config.responsibleRole,
+  });
+
+  return {
+    ...config,
+    responsibleEmployeeId: responsible.userId,
+    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
+    responsibleRole: responsible.title ?? config.responsibleRole,
+    receipts: config.receipts.map((receipt, index) => {
+      const selection = reconcileNamedStaffSelection(users, {
+        userId: raw?.receipts?.[index]?.responsibleEmployeeId,
+        userName: receipt.responsibleEmployee,
+        title: receipt.responsibleRole,
+        fallbackTitle: receipt.responsibleRole,
+      });
+      return {
+        ...receipt,
+        responsibleEmployeeId: selection.userId,
+        responsibleEmployee: selection.userName ?? receipt.responsibleEmployee,
+        responsibleRole: selection.title ?? receipt.responsibleRole,
+      };
+    }),
+    consumptions: config.consumptions.map((consumption, index) => {
+      const selection = reconcileNamedStaffSelection(users, {
+        userId: raw?.consumptions?.[index]?.responsibleEmployeeId,
+        userName: consumption.responsibleEmployee,
+        title: consumption.responsibleRole,
+        fallbackTitle: consumption.responsibleRole,
+      });
+      return {
+        ...consumption,
+        responsibleEmployeeId: selection.userId,
+        responsibleEmployee: selection.userName ?? consumption.responsibleEmployee,
+        responsibleRole: selection.title ?? consumption.responsibleRole,
+      };
+    }),
+  };
+}
+
+function reconcileStaffTrainingConfigUsers(users: StaffBindingUser[], value: unknown) {
+  const raw = value as
+    | {
+        rows?: Array<{ employeeId?: unknown }>;
+      }
+    | null
+    | undefined;
+  const config = normalizeStaffTrainingConfig(value);
+
+  return {
+    ...config,
+    rows: config.rows.map((row, index) => {
+      const selection = reconcileNamedStaffSelection(users, {
+        userId: raw?.rows?.[index]?.employeeId,
+        userName: row.employeeName,
+        title: row.employeePosition,
+        fallbackTitle: row.employeePosition,
+      });
+
+      return {
+        ...row,
+        employeeId: selection.userId,
+        employeeName: selection.userName ?? row.employeeName,
+        employeePosition: selection.title ?? row.employeePosition,
+      };
+    }),
+  };
+}
+
+function reconcileMetalImpurityConfigUsers(users: StaffBindingUser[], value: unknown) {
+  const raw = value as
+    | {
+        responsibleEmployeeId?: unknown;
+        rows?: Array<{ responsibleEmployeeId?: unknown }>;
+      }
+    | null
+    | undefined;
+  const config = normalizeMetalImpurityConfig(value);
+  const responsible = reconcileNamedStaffSelection(users, {
+    userId: raw?.responsibleEmployeeId,
+    userName: config.responsibleEmployee,
+    title: config.responsiblePosition,
+    fallbackTitle: config.responsiblePosition,
+  });
+
+  return {
+    ...config,
+    responsibleEmployeeId: responsible.userId,
+    responsibleEmployee: responsible.userName ?? config.responsibleEmployee,
+    responsiblePosition: responsible.title ?? config.responsiblePosition,
+    rows: config.rows.map((row, index) => {
+      const selection = reconcileNamedStaffSelection(users, {
+        userId: raw?.rows?.[index]?.responsibleEmployeeId,
+        userName: row.responsibleName,
+        title: row.responsibleRole,
+        fallbackTitle: row.responsibleRole || responsible.title || config.responsiblePosition,
+      });
+
+      return {
+        ...row,
+        responsibleEmployeeId: selection.userId,
+        responsibleName: selection.userName ?? row.responsibleName,
+        responsibleRole:
+          selection.title ?? row.responsibleRole ?? responsible.title ?? config.responsiblePosition,
+      };
+    }),
+  };
+}
+
 export function normalizeJournalStaffBoundConfig(
   templateCode: string,
   value: unknown,
@@ -345,6 +543,16 @@ export function normalizeJournalStaffBoundConfig(
       return reconcileTraceabilityConfigUsers(users, value);
     case PRODUCT_WRITEOFF_TEMPLATE_CODE:
       return reconcileProductWriteoffConfigUsers(users, value);
+    case EQUIPMENT_MAINTENANCE_TEMPLATE_CODE:
+      return reconcileEquipmentMaintenanceConfigUsers(users, value);
+    case EQUIPMENT_CALIBRATION_TEMPLATE_CODE:
+      return reconcileEquipmentCalibrationConfigUsers(users, value);
+    case DISINFECTANT_TEMPLATE_CODE:
+      return reconcileDisinfectantConfigUsers(users, value);
+    case STAFF_TRAINING_TEMPLATE_CODE:
+      return reconcileStaffTrainingConfigUsers(users, value);
+    case METAL_IMPURITY_TEMPLATE_CODE:
+      return reconcileMetalImpurityConfigUsers(users, value);
     default:
       return value;
   }

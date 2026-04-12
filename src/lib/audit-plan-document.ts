@@ -29,6 +29,7 @@ export type AuditPlanConfig = {
   year: number;
   documentDate: string;
   approveRole: string;
+  approveEmployeeId?: string | null;
   approveEmployee: string;
   columns: AuditPlanColumn[];
   sections: AuditPlanSection[];
@@ -289,6 +290,7 @@ export function getAuditPlanDefaultConfig(params?: {
     year,
     documentDate,
     approveRole: resolveRoleLabel(approveUser?.role || "owner"),
+    approveEmployeeId: (approveUser as { id?: string } | undefined)?.id || null,
     approveEmployee: approveUser?.name || "Иванов И.И.",
     columns,
     sections: buildDefaultSections(),
@@ -384,6 +386,7 @@ export function normalizeAuditPlanConfig(
     year: safeYear(source.year, fallback.year),
     documentDate: safeText(source.documentDate, fallback.documentDate),
     approveRole: safeText(source.approveRole, fallback.approveRole),
+    approveEmployeeId: safeText(source.approveEmployeeId) || fallback.approveEmployeeId || null,
     approveEmployee: safeText(source.approveEmployee, fallback.approveEmployee),
     columns,
     sections,

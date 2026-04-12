@@ -34,6 +34,7 @@ export type TraceabilityRow = {
   incoming: TraceabilityIncomingBlock;
   outgoing: TraceabilityOutgoingBlock;
   responsibleRole: string | null;
+  responsibleEmployeeId: string | null;
   responsibleEmployee: string | null;
 };
 
@@ -46,6 +47,7 @@ export type TraceabilityDocumentConfig = {
   productList: string[];
   rows: TraceabilityRow[];
   defaultResponsibleRole: string | null;
+  defaultResponsibleEmployeeId: string | null;
   defaultResponsibleEmployee: string | null;
 };
 
@@ -63,7 +65,8 @@ const TRACEABILITY_DEFAULTS: TraceabilityDocumentConfig = {
   productList: ["Пельмени"],
   rows: [],
   defaultResponsibleRole: "Управляющий",
-  defaultResponsibleEmployee: "Иванов И.И.",
+  defaultResponsibleEmployeeId: null,
+  defaultResponsibleEmployee: "",
 };
 
 function createId(prefix: string) {
@@ -226,6 +229,10 @@ export function createTraceabilityRow(
   const hasOutgoingShockTemp =
     overrides.outgoing && Object.prototype.hasOwnProperty.call(overrides.outgoing, "shockTemp");
   const hasResponsibleRole = Object.prototype.hasOwnProperty.call(overrides, "responsibleRole");
+  const hasResponsibleEmployeeId = Object.prototype.hasOwnProperty.call(
+    overrides,
+    "responsibleEmployeeId"
+  );
   const hasResponsibleEmployee = Object.prototype.hasOwnProperty.call(
     overrides,
     "responsibleEmployee"
@@ -270,6 +277,9 @@ export function createTraceabilityRow(
     responsibleRole: hasResponsibleRole
       ? normalizeNullableText(overrides.responsibleRole)
       : TRACEABILITY_DEFAULTS.defaultResponsibleRole,
+    responsibleEmployeeId: hasResponsibleEmployeeId
+      ? normalizeNullableText(overrides.responsibleEmployeeId)
+      : TRACEABILITY_DEFAULTS.defaultResponsibleEmployeeId,
     responsibleEmployee: hasResponsibleEmployee
       ? normalizeNullableText(overrides.responsibleEmployee)
       : TRACEABILITY_DEFAULTS.defaultResponsibleEmployee,
@@ -297,6 +307,7 @@ export function normalizeTraceabilityRow(value: unknown): TraceabilityRow {
     incoming: normalizeIncoming(incoming),
     outgoing: normalizeOutgoing(outgoing),
     responsibleRole: normalizeNullableText(record.responsibleRole),
+    responsibleEmployeeId: normalizeNullableText(record.responsibleEmployeeId),
     responsibleEmployee: normalizeNullableText(record.responsibleEmployee),
   });
 }
@@ -333,6 +344,9 @@ export function normalizeTraceabilityDocumentConfig(
   const documentTitle = normalizeText(record.documentTitle);
   const dateFrom = normalizeDateString(record.dateFrom);
   const defaultResponsibleRole = normalizeNullableText(record.defaultResponsibleRole);
+  const defaultResponsibleEmployeeId = normalizeNullableText(
+    record.defaultResponsibleEmployeeId
+  );
   const defaultResponsibleEmployee = normalizeNullableText(
     record.defaultResponsibleEmployee
   );
@@ -359,6 +373,8 @@ export function normalizeTraceabilityDocumentConfig(
     rows,
     defaultResponsibleRole:
       defaultResponsibleRole ?? TRACEABILITY_DEFAULTS.defaultResponsibleRole,
+    defaultResponsibleEmployeeId:
+      defaultResponsibleEmployeeId ?? TRACEABILITY_DEFAULTS.defaultResponsibleEmployeeId,
     defaultResponsibleEmployee:
       defaultResponsibleEmployee ?? TRACEABILITY_DEFAULTS.defaultResponsibleEmployee,
   };

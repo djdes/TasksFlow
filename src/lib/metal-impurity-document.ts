@@ -3,16 +3,19 @@ import {
   getUserRoleLabel,
   getUsersForRoleLabel,
   pickPrimaryManager,
-  type UserLike,
 } from "@/lib/user-roles";
 
 export const METAL_IMPURITY_TEMPLATE_CODE = "metal_impurity";
 export const METAL_IMPURITY_SOURCE_SLUG = "metalimpurityjournal";
-export const METAL_IMPURITY_PAGE_TITLE = "Журнал учета металлопримесей в сырье";
-export const METAL_IMPURITY_DOCUMENT_TITLE = "Журнал учета металлопримесей";
+export const METAL_IMPURITY_PAGE_TITLE = "Р–СѓСЂРЅР°Р» СѓС‡РµС‚Р° РјРµС‚Р°Р»Р»РѕРїСЂРёРјРµСЃРµР№ РІ СЃС‹СЂСЊРµ";
+export const METAL_IMPURITY_DOCUMENT_TITLE = "Р–СѓСЂРЅР°Р» СѓС‡РµС‚Р° РјРµС‚Р°Р»Р»РѕРїСЂРёРјРµСЃРµР№";
 export const METAL_IMPURITY_RESPONSIBLE_POSITIONS = USER_ROLE_LABEL_VALUES;
 
-export type MetalImpurityUser = Pick<UserLike, "id" | "name" | "role">;
+export type MetalImpurityUser = {
+  id: string;
+  name: string;
+  role: string;
+};
 
 export type MetalImpurityOption = {
   id: string;
@@ -28,6 +31,7 @@ export type MetalImpurityRow = {
   impurityQuantityG: string;
   impurityCharacteristic: string;
   responsibleRole: string;
+  responsibleEmployeeId: string | null;
   responsibleName: string;
 };
 
@@ -35,6 +39,7 @@ export type MetalImpurityDocumentConfig = {
   startDate: string;
   endDate: string;
   responsiblePosition: string;
+  responsibleEmployeeId: string | null;
   responsibleEmployee: string;
   materials: MetalImpurityOption[];
   suppliers: MetalImpurityOption[];
@@ -84,6 +89,7 @@ function normalizeRows(value: unknown, fallback: MetalImpurityRow[]) {
         impurityQuantityG: safeText(source.impurityQuantityG),
         impurityCharacteristic: safeText(source.impurityCharacteristic),
         responsibleRole: safeText(source.responsibleRole),
+        responsibleEmployeeId: safeText(source.responsibleEmployeeId) || null,
         responsibleName: safeText(source.responsibleName),
       };
     })
@@ -103,6 +109,7 @@ export function createMetalImpurityRow(params?: Partial<MetalImpurityRow>): Meta
     impurityQuantityG: params?.impurityQuantityG || "",
     impurityCharacteristic: params?.impurityCharacteristic || "",
     responsibleRole: params?.responsibleRole || METAL_IMPURITY_RESPONSIBLE_POSITIONS[0],
+    responsibleEmployeeId: params?.responsibleEmployeeId || null,
     responsibleName: params?.responsibleName || "",
   };
 }
@@ -111,15 +118,16 @@ export function getDefaultMetalImpurityConfig(params?: {
   users?: MetalImpurityUser[];
   materials?: string[];
   suppliers?: string[];
+  responsibleEmployeeId?: string | null;
   responsibleName?: string;
   responsiblePosition?: string;
   date?: string;
 }): MetalImpurityDocumentConfig {
   const startDate = params?.date || new Date().toISOString().slice(0, 10);
   const materialNames =
-    params?.materials?.filter(Boolean) || ["Мука", "Мука пшеничная в/с"];
+    params?.materials?.filter(Boolean) || ["РњСѓРєР°", "РњСѓРєР° РїС€РµРЅРёС‡РЅР°СЏ РІ/СЃ"];
   const supplierNames =
-    params?.suppliers?.filter(Boolean) || ['ИП "Ромашка"', 'ООО "Агро-Юг"'];
+    params?.suppliers?.filter(Boolean) || ['РРџ "Р РѕРјР°С€РєР°"', 'РћРћРћ "РђРіСЂРѕ-Р®Рі"'];
   const materials = materialNames.map((name, index) => ({
     id: `mat-${index + 1}`,
     name,
@@ -131,12 +139,19 @@ export function getDefaultMetalImpurityConfig(params?: {
   const manager = params?.users?.length ? pickPrimaryManager(params.users) : null;
   const defaultRole = manager ? getUserRoleLabel(manager.role) : METAL_IMPURITY_RESPONSIBLE_POSITIONS[0];
   const responsiblePosition = params?.responsiblePosition || defaultRole;
+  const responsibleUser =
+    (params?.responsibleEmployeeId
+      ? params.users?.find((user) => user.id === params.responsibleEmployeeId) || null
+      : null) ||
+    getUsersForRoleLabel(params?.users || [], responsiblePosition)[0] ||
+    manager ||
+    params?.users?.[0] ||
+    null;
   const responsibleEmployee =
     params?.responsibleName ||
-    getUsersForRoleLabel(params?.users || [], responsiblePosition)[0]?.name ||
-    manager?.name ||
-    params?.users?.[0]?.name ||
-    "Иванов И.И.";
+    responsibleUser?.name ||
+    "РРІР°РЅРѕРІ Р.Р.";
+  const responsibleEmployeeId = responsibleUser?.id || params?.responsibleEmployeeId || null;
   const secondRowDate = new Date(`${startDate}T00:00:00`);
   secondRowDate.setDate(secondRowDate.getDate() + 16);
   const secondRowDateKey = Number.isNaN(secondRowDate.getTime())
@@ -147,6 +162,7 @@ export function getDefaultMetalImpurityConfig(params?: {
     startDate,
     endDate: "",
     responsiblePosition,
+    responsibleEmployeeId,
     responsibleEmployee,
     materials,
     suppliers,
@@ -159,6 +175,7 @@ export function getDefaultMetalImpurityConfig(params?: {
         impurityQuantityG: "0",
         impurityCharacteristic: "",
         responsibleRole: responsiblePosition,
+        responsibleEmployeeId,
         responsibleName: responsibleEmployee,
       }),
       createMetalImpurityRow({
@@ -169,6 +186,7 @@ export function getDefaultMetalImpurityConfig(params?: {
         impurityQuantityG: "3",
         impurityCharacteristic: "",
         responsibleRole: responsiblePosition,
+        responsibleEmployeeId,
         responsibleName: responsibleEmployee,
       }),
     ],
@@ -181,6 +199,7 @@ export function normalizeMetalImpurityConfig(
     users?: MetalImpurityUser[];
     materials?: string[];
     suppliers?: string[];
+    responsibleEmployeeId?: string | null;
     responsibleName?: string;
     responsiblePosition?: string;
     date?: string;
@@ -200,6 +219,8 @@ export function normalizeMetalImpurityConfig(
       source.responsiblePosition,
       fallback.responsiblePosition
     ),
+    responsibleEmployeeId:
+      safeText(source.responsibleEmployeeId) || fallback.responsibleEmployeeId || null,
     responsibleEmployee: safeText(
       source.responsibleEmployee,
       fallback.responsibleEmployee
@@ -211,6 +232,7 @@ export function normalizeMetalImpurityConfig(
       materialId: row.materialId || materials[0]?.id || "",
       supplierId: row.supplierId || suppliers[0]?.id || "",
       responsibleRole: row.responsibleRole || fallback.responsiblePosition,
+      responsibleEmployeeId: row.responsibleEmployeeId || fallback.responsibleEmployeeId || null,
       responsibleName: row.responsibleName || fallback.responsibleEmployee,
     })),
   };
@@ -227,21 +249,28 @@ export function getMetalImpurityValuePerKg(
 }
 
 export function getMetalImpurityOptionName(options: MetalImpurityOption[], id: string) {
-  return options.find((item) => item.id === id)?.name || "—";
+  return options.find((item) => item.id === id)?.name || "вЂ”";
 }
 
 export function getMetalImpurityEmployeeOptions(
   users: MetalImpurityUser[],
   roleLabel: string,
-  currentEmployee?: string,
-  fallbackEmployees: string[] = []
-): string[] {
-  const values = new Set<string>(
-    fallbackEmployees.filter(Boolean)
-  );
-  if (currentEmployee) values.add(currentEmployee);
-  for (const user of getUsersForRoleLabel(users, roleLabel)) {
-    values.add(user.name);
+  currentEmployeeId?: string | null,
+  fallbackEmployeeIds: Array<string | null | undefined> = []
+): MetalImpurityUser[] {
+  const values = new Set<string>();
+  for (const fallbackEmployeeId of fallbackEmployeeIds) {
+    if (typeof fallbackEmployeeId === "string" && fallbackEmployeeId.trim()) {
+      values.add(fallbackEmployeeId);
+    }
   }
-  return Array.from(values).filter(Boolean);
+  if (currentEmployeeId) values.add(currentEmployeeId);
+  for (const user of getUsersForRoleLabel(users, roleLabel)) {
+    if (typeof user.id === "string" && user.id.trim()) {
+      values.add(user.id);
+    }
+  }
+  return Array.from(values)
+    .map((employeeId) => users.find((user) => user.id === employeeId) || null)
+    .filter((user): user is MetalImpurityUser => user !== null);
 }

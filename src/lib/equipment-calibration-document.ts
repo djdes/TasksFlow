@@ -18,6 +18,7 @@ export type EquipmentCalibrationConfig = {
   year: number;
   documentDate: string;
   approveRole: string;
+  approveEmployeeId?: string | null;
   approveEmployee: string;
 };
 
@@ -86,6 +87,7 @@ export function getDefaultEquipmentCalibrationConfig(
     year,
     documentDate: `${year}-01-12`,
     approveRole: "Управляющий",
+    approveEmployeeId: null,
     approveEmployee: "Иванов И.И.",
     rows: [
       createCalibrationRow({
@@ -139,6 +141,8 @@ export function normalizeEquipmentCalibrationConfig(
     year,
     documentDate: normalizeText(record.documentDate) || defaults.documentDate,
     approveRole: normalizeText(record.approveRole) || defaults.approveRole,
+    approveEmployeeId:
+      normalizeText(record.approveEmployeeId) || defaults.approveEmployeeId || null,
     approveEmployee: normalizeText(record.approveEmployee) || defaults.approveEmployee,
   };
 }

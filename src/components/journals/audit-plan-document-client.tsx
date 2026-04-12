@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { getDistinctRoleLabels, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   AUDIT_PLAN_DOCUMENT_TITLE,
@@ -48,6 +49,7 @@ type SettingsState = {
   documentDate: string;
   year: string;
   approveRole: string;
+  approveEmployeeId: string;
   approveEmployee: string;
 };
 
@@ -141,6 +143,7 @@ function DocumentSettingsDialog(props: {
                 setState({
                   ...state,
                   approveRole: value,
+                  approveEmployeeId: user?.id || "",
                   approveEmployee: user?.name || state.approveEmployee,
                 });
               }}
@@ -159,14 +162,27 @@ function DocumentSettingsDialog(props: {
           </div>
           <div className="space-y-2">
             <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
-            <Select value={state.approveEmployee} onValueChange={(value) => setState({ ...state, approveEmployee: value })}>
+            <Select value={state.approveEmployeeId || "__empty__"} onValueChange={(value) => {
+              if (value === "__empty__") {
+                setState({ ...state, approveEmployeeId: "", approveEmployee: "" });
+                return;
+              }
+              const user = props.users.find((item) => item.id === value);
+              setState({
+                ...state,
+                approveEmployeeId: value,
+                approveEmployee: user?.name || "",
+                approveRole: user ? getUserRoleLabel(user.role) : state.approveRole,
+              });
+            }}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__empty__">- Р’С‹Р±РµСЂРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ -</SelectItem>
                 {usersForRole(props.users, state.approveRole).map((user) => (
-                  <SelectItem key={user.id} value={user.name}>
-                    {user.name}
+                  <SelectItem key={user.id} value={user.id}>
+                    {buildStaffOptionLabel(user)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -542,6 +558,7 @@ export function AuditPlanDocumentClient({
     documentDate: normalized.documentDate,
     year: String(normalized.year),
     approveRole: normalized.approveRole,
+    approveEmployeeId: normalized.approveEmployeeId || "",
     approveEmployee: normalized.approveEmployee,
   };
 
@@ -726,10 +743,10 @@ export function AuditPlanDocumentClient({
                     {readOnly ? (
                       column.auditorName || "—"
                     ) : (
-                      <select className="w-full bg-transparent text-center text-[16px] outline-none" value={column.auditorName} onChange={(e) => void updateColumnAuditor(column.id, e.target.value)}>
+                      <select className="w-full bg-transparent text-center text-[16px] outline-none" value={users.find((user) => user.name === column.auditorName)?.id || ""} onChange={(e) => void updateColumnAuditor(column.id, users.find((user) => user.id === e.target.value)?.name || "")}>
                         <option value="">Добавить ФИО</option>
                         {users.map((user) => (
-                          <option key={user.id} value={user.name}>{user.name}</option>
+                          <option key={user.id} value={user.id}>{user.name}</option>
                         ))}
                       </select>
                     )}
@@ -781,7 +798,7 @@ export function AuditPlanDocumentClient({
       </section>
 
       <DocumentSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} users={users} initial={settingsState} onSubmit={async (value) => {
-        const nextConfig = normalizeAuditPlanConfig({ ...normalized, year: Number(value.year), documentDate: value.documentDate, approveRole: value.approveRole, approveEmployee: value.approveEmployee });
+        const nextConfig = normalizeAuditPlanConfig({ ...normalized, year: Number(value.year), documentDate: value.documentDate, approveRole: value.approveRole, approveEmployeeId: value.approveEmployeeId || null, approveEmployee: value.approveEmployee });
         await patchConfig(nextConfig, value.title.trim() || title);
       }} />
 

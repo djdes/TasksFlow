@@ -33,6 +33,7 @@ import {
   calculateNextCalibrationDate,
   isCalibrationOverdue,
 } from "@/lib/equipment-calibration-document";
+import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type Props = {
   documentId: string;
@@ -72,6 +73,9 @@ export function EquipmentCalibrationDocumentClient({
   const [settingsDate, setSettingsDate] = useState(config.documentDate);
   const [settingsYear, setSettingsYear] = useState(config.year);
   const [settingsApproveRole, setSettingsApproveRole] = useState(config.approveRole);
+  const [settingsApproveEmployeeId, setSettingsApproveEmployeeId] = useState(
+    config.approveEmployeeId || ""
+  );
   const [settingsApproveEmployee, setSettingsApproveEmployee] = useState(config.approveEmployee);
 
   // Add row draft state
@@ -219,6 +223,7 @@ export function EquipmentCalibrationDocumentClient({
       documentDate: settingsDate,
       year: settingsYear,
       approveRole: settingsApproveRole,
+      approveEmployeeId: settingsApproveEmployeeId || null,
       approveEmployee: settingsApproveEmployee,
     };
     setConfig(nextConfig);
@@ -265,6 +270,7 @@ export function EquipmentCalibrationDocumentClient({
             setSettingsDate(config.documentDate);
             setSettingsYear(config.year);
             setSettingsApproveRole(config.approveRole);
+            setSettingsApproveEmployeeId(config.approveEmployeeId || "");
             setSettingsApproveEmployee(config.approveEmployee);
             setSettingsOpen(true);
           }}
@@ -709,7 +715,12 @@ export function EquipmentCalibrationDocumentClient({
               <Label className="text-[14px] text-[#6f7282]">Должность &quot;Утверждаю&quot;</Label>
               <Select
                 value={settingsApproveRole}
-                onValueChange={setSettingsApproveRole}
+                onValueChange={(value) => {
+                  const user = users.find((item) => getUserRoleLabel(item.role) === value);
+                  setSettingsApproveRole(value);
+                  setSettingsApproveEmployeeId(user?.id || "");
+                  setSettingsApproveEmployee(user?.name || settingsApproveEmployee);
+                }}
               >
                 <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                   <SelectValue placeholder="- Выберите значение -" />
@@ -724,15 +735,20 @@ export function EquipmentCalibrationDocumentClient({
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Сотрудник</Label>
               <Select
-                value={settingsApproveEmployee}
-                onValueChange={setSettingsApproveEmployee}
+                value={settingsApproveEmployeeId}
+                onValueChange={(value) => {
+                  const user = users.find((item) => item.id === value);
+                  setSettingsApproveEmployeeId(value);
+                  setSettingsApproveEmployee(user?.name || settingsApproveEmployee);
+                  if (user) setSettingsApproveRole(getUserRoleLabel(user.role));
+                }}
               >
                 <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((u) => (
-                    <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                    <SelectItem key={u.id} value={u.id}>{buildStaffOptionLabel(u)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
