@@ -3510,6 +3510,9 @@ export default async function JournalDocumentsPage({
               title: document.title || getJournalDocumentDefaultTitle(resolvedCode),
               status: document.status as "active" | "closed",
               responsibleTitle: document.responsibleTitle,
+              responsibleUserName: document.responsibleUserId
+                ? orgUsers.find((user) => user.id === document.responsibleUserId)?.name || null
+                : null,
               periodLabel: getJournalDocumentPeriodLabel(
                 resolvedCode,
                 document.dateFrom,

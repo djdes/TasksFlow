@@ -772,7 +772,13 @@ export function ColdEquipmentDocumentClient({
 
               <div className="flex flex-wrap items-center gap-6 pt-2 text-[20px]">
                 <div className="rounded-[20px] bg-white px-6 py-4">
-                  Ответственный: {responsibleTitle || "Не назначен"}
+                  Ответственный: {(() => {
+                    const userName = responsibleUserId
+                      ? employees.find((employee) => employee.id === responsibleUserId)?.name || null
+                      : null;
+                    if (responsibleTitle && userName) return `${responsibleTitle}: ${userName}`;
+                    return responsibleTitle || userName || "Не назначен";
+                  })()}
                 </div>
                 <div className="rounded-[20px] bg-white px-6 py-4">
                   Период: {getColdEquipmentDateLabel(dateFrom)} - {getColdEquipmentDateLabel(dateTo)}

@@ -41,6 +41,7 @@ type JournalListDocument = {
   title: string;
   status: "active" | "closed";
   responsibleTitle: string | null;
+  responsibleUserName: string | null;
   periodLabel: string;
   dateFrom: string;
   dateTo: string;
@@ -315,7 +316,9 @@ export function ColdEquipmentDocumentsClient({
                 <Link href={href} className="border-l border-[#e7eaf3] px-10 py-9">
                   <div className="text-[18px] text-[#8a8fa2]">Ответственный</div>
                   <div className="mt-2 text-[24px] font-medium text-black">
-                    {document.responsibleTitle || "Не назначен"}
+                    {document.responsibleTitle && document.responsibleUserName
+                      ? `${document.responsibleTitle}: ${document.responsibleUserName}`
+                      : document.responsibleTitle || document.responsibleUserName || "Не назначен"}
                   </div>
                 </Link>
 
