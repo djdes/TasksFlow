@@ -1,84 +1,89 @@
 {
-    "task_id":  "journals-full-parity-2026-04-11",
-    "overall_verdict":  "FAIL",
-    "criteria":  [
-                     {
-                         "id":  "AC1",
-                         "status":  "PASS",
-                         "reason":  "Inventory exists and tracks the active 35-journal set."
-                     },
-                     {
-                         "id":  "AC2",
-                         "status":  "PASS",
-                         "reason":  "Implementation mapping is documented and prior wiring gaps were fixed."
-                     },
-                     {
-                         "id":  "AC3",
-                         "status":  "PASS",
-                         "reason":  "Live/source mapping exists for the 35 active journals, including the sanitation1journal alias."
-                     },
-                     {
-                         "id":  "AC4",
-                         "status":  "FAIL",
-                         "reason":  "Visual input readiness is documented for all 35 journals and fresh live detail captures now exist for all 35, but completed reviewed visual verdicts are still missing."
-                     },
-                     {
-                         "id":  "AC5",
-                         "status":  "FAIL",
-                         "reason":  "Proof depth improved with fresh live detail captures for 35/35 journals and live print PDF evidence for every print-expected journal, but the bundle still lacks explicit reviewed visual outcomes journal by journal."
-                     },
-                     {
-                         "id":  "AC6",
-                         "status":  "UNKNOWN",
-                         "reason":  "The current bundle contains strong cross-journal code-path proof, but still lacks runtime DB/data-flow verification for all 35 journals; local PostgreSQL is currently unreachable."
-                     },
-                     {
-                         "id":  "AC7",
-                         "status":  "UNKNOWN",
-                         "reason":  "Critical-button wiring proof exists across the full journal set, but runtime confirmation is still incomplete and the local DB-backed runtime is currently blocked."
-                     },
-                     {
-                         "id":  "AC8",
-                         "status":  "UNKNOWN",
-                         "reason":  "The code-level print divergence is closed and the live evidence bundle now proves non-empty PDF downloads for every print-expected journal; med_books is aligned as no-print-expected, but application-runtime proof is still blocked locally."
-                     },
-                     {
-                         "id":  "AC9",
-                         "status":  "PASS",
-                         "reason":  "The discovered systemic classes were rechecked across the active 35 via inventory, behavior, print, and defect-propagation artifacts."
-                     },
-                     {
-                         "id":  "AC10",
-                         "status":  "PASS",
-                         "reason":  "Required proof-loop artifacts exist in task scope."
-                     },
-                     {
-                         "id":  "AC11",
-                         "status":  "PASS",
-                         "reason":  "Fresh TypeScript and lint verification ran after the latest code edits."
-                     },
-                     {
-                         "id":  "AC12",
-                         "status":  "FAIL",
-                         "reason":  "The task cannot be claimed complete while AC4 and AC5 are failing and AC6-AC8 still lack full runtime proof."
-                     }
-                 ],
-    "commands_run":  [
-                         "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py status --task-id journals-full-parity-2026-04-11",
-                         "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journals-full-parity-2026-04-11",
-                         "npx tsc --noEmit",
-                         "npx eslint src/components/journals/med-book-documents-client.tsx src/components/journals/med-book-document-client.tsx scripts/capture-source-docprints.ts scripts/capture-source-details.ts"
-                     ],
-    "artifacts_used":  [
-                           ".agent/tasks/journals-full-parity-2026-04-11/inventory.md",
-                           ".agent/tasks/journals-full-parity-2026-04-11/evidence.md",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/implementation-matrix.json",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-matrix.json",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/print-matrix.json",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/behavior-matrix.json",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/behavior-proof-notes.md",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/live-proof-matrix.json",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/build-latest.txt",
-                           ".agent/tasks/journals-full-parity-2026-04-11/raw/eslint-latest.txt"
-                       ]
+  "task_id": "journals-full-parity-2026-04-11",
+  "overall_verdict": "FAIL",
+  "criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "reason": "Inventory artifacts still cover the 35 active journal templates."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "reason": "Implementation mapping remains documented in the inventory and implementation matrix, including the previously risky shared journal routes."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "reason": "Live/source mapping artifacts still cover the active 35-journal set and include the fixed sanitation1journal alias."
+    },
+    {
+      "id": "AC4",
+      "status": "FAIL",
+      "reason": "Visual review proof is still incomplete and internally inconsistent: the reviewed visual matrix marks all 35 journals blocked, while only two batch-review artifacts record reviewed outcomes for 12 journals."
+    },
+    {
+      "id": "AC5",
+      "status": "FAIL",
+      "reason": "The bundle shows some visual parity progress, but it still does not provide a complete 35-journal reviewed verdict matrix that distinguishes matched, fixed, and blocked outcomes journal by journal."
+    },
+    {
+      "id": "AC6",
+      "status": "UNKNOWN",
+      "reason": "Server-backed PostgreSQL evidence materially improves this criterion: the real dataset contains admin@haccp.local and a demo organization with 74 journal documents, proving the removed shared delete branch was a real data-loss risk on the actual server-backed flow. However, the task still lacks packaged end-to-end runtime proof for loading, saving, editing, and persistence across the full 35-journal set."
+    },
+    {
+      "id": "AC7",
+      "status": "UNKNOWN",
+      "reason": "Server-backed evidence materially strengthens create/open reasoning because it proves the shared disappearing-document bug affected the real demo dataset, not just a hypothetical local seed. Cross-journal button wiring is documented, but the current artifacts still do not prove runtime correctness for every critical action across all 35 journals."
+    },
+    {
+      "id": "AC8",
+      "status": "UNKNOWN",
+      "reason": "Code-level print divergence is cleaned up and existing live proof shows non-empty PDF downloads for print-expected journals, but the current repository proof still does not show application-runtime print verification journal by journal for the active 35."
+    },
+    {
+      "id": "AC9",
+      "status": "PASS",
+      "reason": "The discovered defect classes were rechecked across the active 35, and the destructive list-route defect was fixed in shared code rather than patched journal by journal."
+    },
+    {
+      "id": "AC10",
+      "status": "PASS",
+      "reason": "Required proof-loop artifacts remain present and validation passes."
+    },
+    {
+      "id": "AC11",
+      "status": "PASS",
+      "reason": "This verifier pass used the current repository state and fresh command runs, including proof-loop validation plus current TypeScript and focused lint checks."
+    },
+    {
+      "id": "AC12",
+      "status": "FAIL",
+      "reason": "Completion cannot be claimed because AC4 and AC5 still fail, and AC6 through AC8 remain unproven at runtime."
+    }
+  ],
+  "commands_run": [
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py status --task-id journals-full-parity-2026-04-11",
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journals-full-parity-2026-04-11",
+    "npx tsc --noEmit",
+    "npx eslint \"src/app/(dashboard)/journals/[code]/page.tsx\"",
+    "rg -n \"normalizeDemoJournalSampleCorpus|admin@haccp\\.local|deleteMany\\(\" \"src/app/(dashboard)/journals/[code]/page.tsx\" -n -S"
+  ],
+  "artifacts_used": [
+    ".agent/tasks/journals-full-parity-2026-04-11/spec.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/evidence.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/evidence.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/inventory.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/implementation-matrix.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/reviewed-visual-matrix.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-batch-1-review.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-batch-2-review.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/live-proof-matrix.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/behavior-matrix.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/behavior-proof-notes.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/shared-demo-normalization-scan-2026-04-12.txt",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/server-db-meta-2026-04-12.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/server-demo-risk-2026-04-12.txt"
+  ]
 }

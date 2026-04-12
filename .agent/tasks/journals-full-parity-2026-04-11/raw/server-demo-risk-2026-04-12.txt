@@ -1,0 +1,14 @@
+cleaning	4	active=4,closed=0
+cleaning_ventilation_checklist	3	active=2,closed=1
+defrosting_control	1	active=1,closed=0
+demo_docs_total	74	
+demo_org	cmnm40ikt00002ktseet6fd5y	
+dishwashing_control	1	active=1,closed=0
+disinfectant_usage	2	active=2,closed=0
+equipment_calibration	3	active=3,closed=0
+equipment_maintenance	5	active=4,closed=1
+finished_product	1	active=1,closed=0
+general_cleaning	5	active=4,closed=1
+sanitary_day_control	3	active=1,closed=2
+traceability_test	3	active=1,closed=2
+waste_disposal_control	1	active=1,closed=0

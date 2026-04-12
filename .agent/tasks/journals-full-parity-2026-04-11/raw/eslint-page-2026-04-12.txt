@@ -1,0 +1,2 @@
+command: npx eslint src/app/(dashboard)/journals/[code]/page.tsx
+exit_code: 0

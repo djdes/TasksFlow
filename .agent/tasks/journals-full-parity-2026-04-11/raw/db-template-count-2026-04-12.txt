@@ -1,0 +1,25 @@
+command: prisma db execute template-count query
+exit_code: 1
+Loaded Prisma config from prisma.config.ts.
+System.Management.Automation.RemoteException
+Error: 
+unknown or unexpected option: --schema
+System.Management.Automation.RemoteException
+Usage
+System.Management.Automation.RemoteException
+  $ prisma db execute [options]
+System.Management.Automation.RemoteException
+  The datasource URL configuration is read from the Prisma config file (e.g., prisma.config.ts).
+System.Management.Automation.RemoteException
+Options
+System.Management.Automation.RemoteException
+-h, --help            Display this help message
+--config              Custom path to your Prisma config file
+System.Management.Automation.RemoteException
+Script input, only 1 must be provided:
+--file                Path to a file. The content will be sent as the script to be executed
+System.Management.Automation.RemoteException
+Flags
+System.Management.Automation.RemoteException
+--stdin              Use the terminal standard input as the script to be executed
+System.Management.Automation.RemoteException

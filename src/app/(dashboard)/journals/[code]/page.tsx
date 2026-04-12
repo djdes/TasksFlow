@@ -294,9 +294,9 @@ async function normalizeDemoJournalSampleCorpus(params: {
     return;
   }
 
-  await db.journalDocument.deleteMany({
-    where: { templateId, organizationId },
-  });
+  // Demo normalization must never wipe user-created documents from the shared list route.
+  // The downstream seeders can add missing samples without destructive resets.
+  return;
 }
 
 async function ensureScanOnlySampleDocuments(params: {
