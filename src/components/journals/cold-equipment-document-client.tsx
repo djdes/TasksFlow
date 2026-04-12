@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ChevronDown,
   ChevronUp,
   Pencil,
@@ -449,6 +450,7 @@ export function ColdEquipmentDocumentClient({
   const [equipmentDialogOpen, setEquipmentDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<ColdEquipmentConfigItem | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const dateKeys = useMemo(() => buildDateKeys(dateFrom, dateTo), [dateFrom, dateTo]);
   const rowByDate = useMemo(
@@ -530,15 +532,25 @@ export function ColdEquipmentDocumentClient({
       return;
     }
 
-    await persistDocument({
-      config: {
-        ...config,
-        equipment: nextEquipment,
-      },
-    });
-    await syncEntries();
-    setSelectedEquipmentIds((current) => current.filter((value) => value !== itemId));
-    router.refresh();
+    setIsDeleting(true);
+    try {
+      await persistDocument({
+        config: {
+          ...config,
+          equipment: nextEquipment,
+        },
+      });
+      await syncEntries();
+      setSelectedEquipmentIds((current) => current.filter((value) => value !== itemId));
+      router.refresh();
+      toast.success("Строка удалена");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Не удалось удалить строку"
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   async function handleDeleteSelectedEquipment() {
@@ -552,17 +564,27 @@ export function ColdEquipmentDocumentClient({
       return;
     }
 
-    if (!window.confirm("Удалить выбранные строки оборудования?")) return;
+    if (!window.confirm(`Удалить выбранные строки (${selectedEquipmentIds.length})?`)) return;
 
-    await persistDocument({
-      config: {
-        ...config,
-        equipment: nextEquipment,
-      },
-    });
-    await syncEntries();
-    setSelectedEquipmentIds([]);
-    router.refresh();
+    setIsDeleting(true);
+    try {
+      await persistDocument({
+        config: {
+          ...config,
+          equipment: nextEquipment,
+        },
+      });
+      await syncEntries();
+      setSelectedEquipmentIds([]);
+      router.refresh();
+      toast.success(`Удалено строк: ${selectedEquipmentIds.length}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Не удалось удалить выбранные строки"
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   async function handleAutoFillChange(value: boolean) {
@@ -669,16 +691,17 @@ export function ColdEquipmentDocumentClient({
   return (
     <div className="bg-white text-black">
       <div className="mx-auto max-w-[1880px] px-6 py-8">
-        <div className="mb-6 flex flex-wrap items-center gap-3 text-[14px] text-[#7c7f92]">
-          <Link href="/journals/cold_equipment_control" className="hover:text-black">
-            {organizationName}
-          </Link>
-          <span>›</span>
-          <Link href="/journals/cold_equipment_control" className="hover:text-black">
-            Журнал контроля температурного режима холодильного и морозильного оборудования
-          </Link>
-          <span>›</span>
-          <span className="text-black">{documentTitle}</span>
+        <div className="mb-6">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-11 rounded-[14px] px-3 text-[15px] text-[#5566f6] hover:bg-[#eef1ff]"
+          >
+            <Link href="/journals/cold_equipment_control">
+              <ArrowLeft className="size-5" />
+              Журналы
+            </Link>
+          </Button>
         </div>
 
         <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -795,7 +818,7 @@ export function ColdEquipmentDocumentClient({
         </div>
 
         {status === "active" ? (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="sticky top-0 z-30 -mx-6 mb-6 flex flex-wrap items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
             <Button
               type="button"
               onClick={() => {
@@ -813,10 +836,11 @@ export function ColdEquipmentDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={handleDeleteSelectedEquipment}
-                className="h-18 rounded-[22px] border-[#ffd7d3] px-8 text-[20px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                disabled={isDeleting}
+                className="h-18 rounded-[22px] border-[#ffd7d3] px-8 text-[20px] text-[#ff3b30] hover:bg-[#fff3f2] disabled:opacity-60"
               >
                 <Trash2 className="size-6" />
-                Удалить выбранные
+                {isDeleting ? "Удаление..." : `Удалить выбранные (${selectedEquipmentIds.length})`}
               </Button>
             ) : null}
           </div>
