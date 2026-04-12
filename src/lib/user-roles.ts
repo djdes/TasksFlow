@@ -5,7 +5,15 @@ export const USER_ROLE_VALUES = [
   "waiter",
 ] as const;
 
+export const LEGACY_USER_ROLE_VALUES = [
+  "owner",
+  "technologist",
+  "operator",
+] as const;
+
 export type UserRole = (typeof USER_ROLE_VALUES)[number];
+export type LegacyUserRole = (typeof LEGACY_USER_ROLE_VALUES)[number];
+export type KnownUserRole = UserRole | LegacyUserRole;
 
 export type UserLike = {
   id?: string;
@@ -45,9 +53,27 @@ export const MANAGER_ROLES: UserRole[] = ["manager"];
 export const MANAGEMENT_ROLES: UserRole[] = ["manager", "head_chef"];
 export const STAFF_ROLES: UserRole[] = ["head_chef", "cook", "waiter"];
 
+export function isUserRoleValue(role: string | null | undefined): role is UserRole {
+  return !!role && USER_ROLE_VALUES.includes(role as UserRole);
+}
+
+export function isLegacyUserRoleValue(
+  role: string | null | undefined
+): role is LegacyUserRole {
+  return !!role && LEGACY_USER_ROLE_VALUES.includes(role as LegacyUserRole);
+}
+
 export function normalizeUserRole(role: string | null | undefined): string {
   if (!role) return "cook";
   return LEGACY_TO_ROLE[role] || role;
+}
+
+export function toCanonicalUserRole(
+  role: string | null | undefined,
+  fallback: UserRole = "cook"
+): UserRole {
+  const normalized = normalizeUserRole(role);
+  return isUserRoleValue(normalized) ? normalized : fallback;
 }
 
 export function getUserRoleLabel(role: string | null | undefined): string {
@@ -107,6 +133,26 @@ export function hasAnyUserRole(
   return allowedRoles.includes(normalizeUserRole(role));
 }
 
+export function hasNormalizedUserRole(
+  role: string | null | undefined,
+  expectedRole: UserRole
+): boolean {
+  return normalizeUserRole(role) === expectedRole;
+}
+
+export function pickUserByRolePriority<
+  T extends { role?: string | null }
+>(users: T[], roles: readonly UserRole[]): T | null {
+  for (const role of roles) {
+    const match = users.find((user) => hasNormalizedUserRole(user.role, role));
+    if (match) {
+      return match;
+    }
+  }
+
+  return users[0] || null;
+}
+
 export function isManagerRole(role: string | null | undefined): boolean {
   return hasAnyUserRole(role, MANAGER_ROLES);
 }
@@ -121,22 +167,14 @@ export function getDbRoleValuesWithLegacy(
   return [...new Set(roles.flatMap((role) => [role, ...(ROLE_TO_LEGACY[role] || [])]))];
 }
 
-export function pickPrimaryManager<T extends UserLike>(users: T[]): T | null {
-  return (
-    users.find((user) => normalizeUserRole(user.role) === "manager") ||
-    users.find((user) => normalizeUserRole(user.role) === "head_chef") ||
-    users[0] ||
-    null
-  );
+export function pickPrimaryManager<T extends { role?: string | null }>(
+  users: T[]
+): T | null {
+  return pickUserByRolePriority(users, ["manager", "head_chef"]);
 }
 
-export function pickPrimaryStaff<T extends UserLike>(users: T[]): T | null {
-  return (
-    users.find((user) => normalizeUserRole(user.role) === "cook") ||
-    users.find((user) => normalizeUserRole(user.role) === "waiter") ||
-    users.find((user) => normalizeUserRole(user.role) === "head_chef") ||
-    users.find((user) => normalizeUserRole(user.role) === "manager") ||
-    users[0] ||
-    null
-  );
+export function pickPrimaryStaff<T extends { role?: string | null }>(
+  users: T[]
+): T | null {
+  return pickUserByRolePriority(users, ["cook", "waiter", "head_chef", "manager"]);
 }

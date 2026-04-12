@@ -5,7 +5,11 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendInviteEmail } from "@/lib/email";
-import { isManagerRole, USER_ROLE_VALUES } from "@/lib/user-roles";
+import {
+  isManagerRole,
+  toCanonicalUserRole,
+  USER_ROLE_VALUES,
+} from "@/lib/user-roles";
 
 const inviteUserSchema = z.object({
   name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
         name: validatedData.name,
         email: validatedData.email,
         passwordHash,
-        role: validatedData.role,
+        role: toCanonicalUserRole(validatedData.role),
         phone: validatedData.phone || null,
         organizationId: session.user.organizationId,
       },

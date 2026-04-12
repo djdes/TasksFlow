@@ -12,6 +12,7 @@ import {
   syncColdEquipmentEntryDataWithConfig,
 } from "@/lib/cold-equipment-document";
 import { toDateKey } from "@/lib/hygiene-document";
+import { isManagementRole, pickPrimaryManager } from "@/lib/user-roles";
 
 type ColdEquipmentAction = "apply_auto_fill" | "sync_entries";
 
@@ -24,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
@@ -118,10 +119,7 @@ export async function POST(
   });
 
   const responsibleUserId =
-    document.responsibleUserId ||
-    users.find((user) => user.role === "owner")?.id ||
-    users.find((user) => user.role === "technologist")?.id ||
-    users[0]?.id;
+    document.responsibleUserId || pickPrimaryManager(users)?.id;
 
   if (!responsibleUserId) {
     return NextResponse.json(

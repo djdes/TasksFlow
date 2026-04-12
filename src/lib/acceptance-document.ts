@@ -1,5 +1,6 @@
 ﻿import { getUserRoleLabel } from "@/lib/user-roles";
 
+import { pickPrimaryManager } from "@/lib/user-roles";
 export const ACCEPTANCE_DOCUMENT_TEMPLATE_CODE = "incoming_control";
 export const RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE =
   "incoming_raw_materials_control";
@@ -146,6 +147,8 @@ function normalizeStringList(value: unknown) {
 export function getAcceptanceDocumentDefaultConfig(
   users: Array<{ id: string; role?: string | null }>
 ): AcceptanceDocumentConfig {
+  const defaultResponsibleUserId = pickPrimaryManager(users)?.id || users[0]?.id || null;
+
   return {
     rows: [],
     products: [],
@@ -154,17 +157,12 @@ export function getAcceptanceDocumentDefaultConfig(
     expiryFieldLabel: "expiry_deadline",
     showPackagingComplianceField: true,
     defaultResponsibleTitle: null,
-    defaultResponsibleUserId: users[0]?.id || null,
+    defaultResponsibleUserId,
   };
 }
 
 function pickAcceptanceResponsibleUser(users: AcceptanceUser[]) {
-  return (
-    users.find((user) => user.role === "owner") ||
-    users.find((user) => user.role === "technologist") ||
-    users[0] ||
-    null
-  );
+  return pickPrimaryManager(users);
 }
 
 function addDays(date: string, delta: number) {

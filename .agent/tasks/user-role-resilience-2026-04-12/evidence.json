@@ -1,0 +1,51 @@
+{
+  "task_id": "user-role-resilience-2026-04-12",
+  "status": "PASS",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "evidence": "User update and invite APIs persist canonical role values only."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "evidence": "Changed permission checks use normalized management-role helpers."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "evidence": "Changed document builders use shared role selectors for responsible defaults."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "evidence": "Changed document flows no longer hardcode legacy role comparisons for user selection."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "evidence": "Normalized labels/selectors keep changed-role users usable in affected documents."
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "evidence": "eslint and tsc passed on the updated code."
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "evidence": "Prisma schema validation passed."
+    }
+  ],
+  "artifacts": {
+    "spec": ".agent/tasks/user-role-resilience-2026-04-12/spec.md",
+    "evidence": ".agent/tasks/user-role-resilience-2026-04-12/evidence.md",
+    "raw": [
+      ".agent/tasks/user-role-resilience-2026-04-12/raw/eslint.txt",
+      ".agent/tasks/user-role-resilience-2026-04-12/raw/tsc.txt",
+      ".agent/tasks/user-role-resilience-2026-04-12/raw/prisma-validate.txt",
+      ".agent/tasks/user-role-resilience-2026-04-12/raw/diff.txt"
+    ]
+  }
+}

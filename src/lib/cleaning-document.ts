@@ -1,5 +1,9 @@
 import { buildDateKeys, coerceUtcDate, formatMonthLabel, isWeekend, toDateKey } from "@/lib/hygiene-document";
-import { getUserRoleLabel } from "@/lib/user-roles";
+import {
+  getUserRoleLabel,
+  pickPrimaryManager,
+  pickPrimaryStaff,
+} from "@/lib/user-roles";
 
 export const CLEANING_DOCUMENT_TEMPLATE_CODE = "cleaning";
 export const CLEANING_PAGE_TITLE = "Журнал уборки";
@@ -315,23 +319,13 @@ function buildDefaultRooms(areas?: AreaLike[]): CleaningRoomItem[] {
 
 function getPrimaryCleaningUser(users?: UserLike[]) {
   if (!users || users.length === 0) return null;
-  return (
-    users.find((user) => user.role === "operator") ||
-    users.find((user) => user.role === "technologist") ||
-    users.find((user) => user.role === "owner") ||
-    users[0]
-  );
+  return pickPrimaryStaff(users);
 }
 
 function getPrimaryControlUser(users?: UserLike[], excludeUserId?: string | null) {
   if (!users || users.length === 0) return null;
-  return (
-    users.find((user) => user.id !== excludeUserId && user.role === "owner") ||
-    users.find((user) => user.id !== excludeUserId && user.role === "technologist") ||
-    users.find((user) => user.id !== excludeUserId && user.role === "operator") ||
-    users.find((user) => user.id !== excludeUserId) ||
-    users[0]
-  );
+  const availableUsers = users.filter((user) => user.id !== excludeUserId);
+  return pickPrimaryManager(availableUsers) || availableUsers[0] || users[0];
 }
 
 function getRoleTitle(role: string, fallback: string) {
@@ -1037,16 +1031,10 @@ export function normalizeCleaningEntryData(value: unknown): CleaningEntryData {
 }
 
 export function getDefaultCleaningResponsibleIds(users: Array<{ id: string; role: string }>) {
-  const responsibleCleaningUserId =
-    users.find((user) => user.role === "operator")?.id ||
-    users.find((user) => user.role === "technologist")?.id ||
-    users.find((user) => user.role === "owner")?.id ||
-    users[0]?.id ||
-    null;
+  const responsibleCleaningUserId = pickPrimaryStaff(users)?.id || null;
 
   const responsibleControlUserId =
-    users.find((user) => user.role === "owner")?.id ||
-    users.find((user) => user.role === "technologist")?.id ||
+    pickPrimaryManager(users.filter((user) => user.id !== responsibleCleaningUserId))?.id ||
     users.find((user) => user.id !== responsibleCleaningUserId)?.id ||
     responsibleCleaningUserId;
 

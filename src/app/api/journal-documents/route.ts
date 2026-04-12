@@ -79,6 +79,7 @@ import {
   defaultSdcConfig,
   isSanitaryDayChecklistTemplate,
 } from "@/lib/sanitary-day-checklist-document";
+import { isManagementRole, pickPrimaryManager } from "@/lib/user-roles";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
@@ -312,11 +313,7 @@ export async function POST(request: Request) {
       : undefined;
 
   const calibrationYear = Number(String(dateFrom).slice(0, 4)) || new Date().getUTCFullYear();
-  const calibrationOwner =
-    allUsers.find((user) => user.role === "owner") ||
-    allUsers.find((user) => user.role === "technologist") ||
-    allUsers[0] ||
-    null;
+  const calibrationOwner = pickPrimaryManager(allUsers);
   const calibrationProvidedRows =
     rawConfig && Array.isArray(rawConfig.rows) && rawConfig.rows.length > 0
       ? normalizeEquipmentCalibrationConfig(rawConfig).rows

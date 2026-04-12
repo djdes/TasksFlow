@@ -1,8 +1,28 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/server-session";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isManagerRole, normalizeUserRole } from "@/lib/user-roles";
+import { getServerSession } from "@/lib/server-session";
+import {
+  isLegacyUserRoleValue,
+  isManagerRole,
+  isUserRoleValue,
+  normalizeUserRole,
+  toCanonicalUserRole,
+} from "@/lib/user-roles";
+
+const updateUserSchema = z.object({
+  name: z.string().trim().min(2).optional(),
+  role: z
+    .string()
+    .trim()
+    .refine((value) => isUserRoleValue(value) || isLegacyUserRoleValue(value), {
+      message: "Выберите корректную должность",
+    })
+    .optional(),
+  phone: z.string().trim().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
 
 export async function PUT(
   request: Request,
@@ -28,10 +48,9 @@ export async function PUT(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    const body = await request.json();
+    const body = updateUserSchema.parse(await request.json());
     const { name, role, phone, isActive } = body;
 
-    // Prevent owner from demoting themselves
     if (id === session.user.id && role && normalizeUserRole(role) !== "manager") {
       return NextResponse.json(
         { error: "Нельзя изменить свою роль" },
@@ -39,7 +58,6 @@ export async function PUT(
       );
     }
 
-    // Prevent deactivating yourself
     if (id === session.user.id && isActive === false) {
       return NextResponse.json(
         { error: "Нельзя деактивировать себя" },
@@ -51,17 +69,34 @@ export async function PUT(
       where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
-        ...(role !== undefined && { role }),
+        ...(role !== undefined && { role: toCanonicalUserRole(role) }),
         ...(phone !== undefined && { phone: phone?.trim() || null }),
         ...(isActive !== undefined && { isActive }),
       },
-      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        phone: true,
+      },
     });
 
     return NextResponse.json({ user: updated });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message || "Некорректные данные" },
+        { status: 400 }
+      );
+    }
+
     console.error("User update error:", error);
-    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Внутренняя ошибка сервера" },
+      { status: 500 }
+    );
   }
 }
 
@@ -93,7 +128,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    // Soft delete — deactivate
     await db.user.update({
       where: { id },
       data: { isActive: false },
@@ -102,6 +136,9 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("User deletion error:", error);
-    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Внутренняя ошибка сервера" },
+      { status: 500 }
+    );
   }
 }

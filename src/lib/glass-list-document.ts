@@ -1,3 +1,5 @@
+import { pickPrimaryManager } from "@/lib/user-roles";
+
 export const GLASS_LIST_TEMPLATE_CODE = "glass_items_list";
 export const GLASS_LIST_SOURCE_SLUG = "glasslist";
 export const GLASS_LIST_PAGE_TITLE =
@@ -111,11 +113,7 @@ export function buildGlassListConfigFromData(params: {
 }) {
   const { users, areas, equipment, products, referenceDate = new Date() } = params;
   const defaults = getDefaultGlassListConfig(referenceDate);
-  const responsibleUser =
-    users.find((user) => user.role === "owner") ||
-    users.find((user) => user.role === "technologist") ||
-    users[0] ||
-    null;
+  const responsibleUser = pickPrimaryManager(users);
 
   const location =
     areas.find((area) => area.name.toLowerCase().includes("производ"))?.name ||

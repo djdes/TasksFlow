@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { USER_ROLE_OPTIONS } from "@/lib/user-roles";
+import { normalizeUserRole, USER_ROLE_OPTIONS } from "@/lib/user-roles";
 
 const roles = USER_ROLE_OPTIONS;
 
@@ -43,13 +43,13 @@ export function EditUserDialog({ user, isSelf }: EditUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(user.name);
-  const [role, setRole] = useState(user.role);
+  const [role, setRole] = useState(normalizeUserRole(user.role));
   const [phone, setPhone] = useState(user.phone ?? "");
   const [isActive, setIsActive] = useState(user.isActive);
 
   function resetForm() {
     setName(user.name);
-    setRole(user.role);
+    setRole(normalizeUserRole(user.role));
     setPhone(user.phone ?? "");
     setIsActive(user.isActive);
     setError(null);

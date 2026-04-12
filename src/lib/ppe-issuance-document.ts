@@ -1,4 +1,5 @@
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
+import { normalizeUserRole, pickPrimaryManager } from "@/lib/user-roles";
 
 export const PPE_ISSUANCE_TEMPLATE_CODE = "ppe_issuance";
 export const PPE_ISSUANCE_SOURCE_SLUG = "issuancesizjournal";
@@ -56,12 +57,7 @@ function normalizeNumber(value: unknown, fallback = 0) {
 }
 
 function pickDefaultIssuer(users: UserLike[]) {
-  return (
-    users.find((user) => user.role === "owner") ||
-    users.find((user) => user.role === "technologist") ||
-    users[0] ||
-    null
-  );
+  return pickPrimaryManager(users);
 }
 
 export function createPpeIssuanceRow(
@@ -155,7 +151,9 @@ export function buildPpeIssuanceDemoConfig(
   const defaultIssuer =
     users.find((user) => user.id === base.defaultIssuerUserId) || pickDefaultIssuer(users);
 
-  const recipients = users.filter((user) => user.role !== "owner");
+  const recipients = users.filter(
+    (user) => normalizeUserRole(user.role) !== "manager"
+  );
   const selectedRecipients = (recipients.length > 0 ? recipients : users).slice(0, 3);
   const monthStart = formatMonthStartOffset(referenceDate, 0);
   const issueDate = formatDate(new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), 17)));
@@ -175,7 +173,7 @@ export function buildPpeIssuanceDemoConfig(
         clothingSetsCount: 1,
         capCount: 1,
         recipientUserId: user.id,
-        recipientTitle: getHygienePositionLabel(user.role || "operator"),
+        recipientTitle: getHygienePositionLabel(user.role || "cook"),
         issuerUserId: defaultIssuer?.id || "",
         issuerTitle: defaultIssuer?.role
           ? getHygienePositionLabel(defaultIssuer.role)

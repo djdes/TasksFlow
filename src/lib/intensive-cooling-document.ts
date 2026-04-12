@@ -1,3 +1,5 @@
+import { getUserRoleLabel, normalizeUserRole, pickPrimaryManager } from "@/lib/user-roles";
+
 export const INTENSIVE_COOLING_TEMPLATE_CODE = "intensive_cooling";
 export const INTENSIVE_COOLING_SOURCE_SLUG = "intensivecoolingjournal";
 export const INTENSIVE_COOLING_DOCUMENT_TITLE =
@@ -46,9 +48,15 @@ function normalizeStringList(value: unknown) {
 }
 
 export function getResponsibleTitleByRole(role?: string | null) {
-  if (role === "technologist") return "Технолог";
-  if (role === "chef") return "Шеф-повар";
-  if (role === "manager") return "Менеджер";
+  const normalized = normalizeUserRole(role);
+  if (
+    normalized === "manager" ||
+    normalized === "head_chef" ||
+    normalized === "cook" ||
+    normalized === "waiter"
+  ) {
+    return getUserRoleLabel(normalized);
+  }
   return "Управляющий";
 }
 
@@ -75,7 +83,7 @@ export function getDefaultIntensiveCoolingConfig(
   users: Array<{ id: string; name: string; role?: string | null }>,
   dishSuggestions: string[] = []
 ): IntensiveCoolingConfig {
-  const defaultResponsibleUser = users[0] || null;
+  const defaultResponsibleUser = pickPrimaryManager(users);
 
   return {
     rows: [],
