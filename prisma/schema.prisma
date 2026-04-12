@@ -312,3 +312,25 @@ model JournalDocumentEntry {
   @@unique([documentId, employeeId, date])
   @@index([documentId, date])
 }
+
+// Audit log for every request hitting the external integration API.
+// Keeps raw payload + outcome so we can debug upstream apps (employee app, sensor feed)
+// without touching production logs.
+model JournalExternalLog {
+  id              String   @id @default(cuid())
+  organizationId  String?
+  journalCode     String?
+  date            DateTime?
+  source          String?   // e.g. "employee_app" | "sensor" | "manual"
+  tokenHint       String?   // last 4 chars of token used
+  httpStatus      Int
+  status          String    // "ok" | "error"
+  errorMessage    String?
+  documentId      String?
+  entriesWritten  Int       @default(0)
+  payload         Json?
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([journalCode, createdAt])
+}

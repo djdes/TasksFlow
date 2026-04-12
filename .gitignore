@@ -59,3 +59,9 @@ haccp-deploy.tar.gz
 .vscode/
 .agent/backups/
 .agent/tasks/journals-external-api/raw/
+.external-token.secret
+.sensor-token.secret
+*.secret
+
+.agent/tasks/journals-external-api/.external-token.secret
+.agent/tasks/journals-external-api/.sensor-token.secret
