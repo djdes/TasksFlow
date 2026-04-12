@@ -31,6 +31,7 @@ import {
   type RegisterDocumentRow,
 } from "@/lib/register-document";
 
+import { toast } from "sonner";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -91,7 +92,7 @@ function ComplaintRowDialog({
       await onSave(draft);
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения строки");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения строки");
     } finally {
       setSubmitting(false);
     }
@@ -220,7 +221,7 @@ function SettingsDialog({
       await onSave({ title: draftTitle, dateFrom: draftDate });
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения настроек");
     } finally {
       setSubmitting(false);
     }
@@ -287,7 +288,7 @@ function FinishDialog({
       await onFinish();
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка завершения журнала");
+      toast.error(error instanceof Error ? error.message : "Ошибка завершения журнала");
     } finally {
       setSubmitting(false);
     }
@@ -428,7 +429,7 @@ export function ComplaintDocumentClient({
               variant="outline"
               onClick={() =>
                 handleDeleteSelected().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка удаления строк")
+                  toast.error(error instanceof Error ? error.message : "Ошибка удаления строк")
                 )
               }
               disabled={isPending}

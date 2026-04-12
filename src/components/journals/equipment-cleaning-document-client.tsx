@@ -32,6 +32,7 @@ import {
   type EquipmentCleaningRowData,
 } from "@/lib/equipment-cleaning-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -205,7 +206,7 @@ export function EquipmentCleaningDocumentClient({
         data: emptyEquipmentCleaningRow(),
       });
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения строки");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения строки");
     } finally {
       setIsSaving(false);
     }
@@ -220,7 +221,7 @@ export function EquipmentCleaningDocumentClient({
       body: JSON.stringify({ ids: selectedIds }),
     });
     if (!response.ok) {
-      window.alert("Не удалось удалить строки");
+      toast.error("Не удалось удалить строки");
       return;
     }
 
@@ -249,7 +250,7 @@ export function EquipmentCleaningDocumentClient({
       setSettingsOpen(false);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить настройки журнала");
+      toast.error("Не удалось сохранить настройки журнала");
     } finally {
       setIsSaving(false);
     }
@@ -272,7 +273,7 @@ export function EquipmentCleaningDocumentClient({
       router.push(`/journals/${journalRouteCode}?tab=closed`);
       router.refresh();
     } catch {
-      window.alert("Не удалось закрыть журнал");
+      toast.error("Не удалось закрыть журнал");
     } finally {
       setIsClosing(false);
     }
@@ -297,7 +298,7 @@ export function EquipmentCleaningDocumentClient({
             className="flex items-center gap-2 rounded-[16px] bg-[#fff4f4] px-4 py-2 text-[18px] text-[#ff3b30]"
             onClick={() => {
               deleteSelectedRows().catch(() => {
-                window.alert("Не удалось удалить строки");
+                toast.error("Не удалось удалить строки");
               });
             }}
           >

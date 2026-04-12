@@ -40,6 +40,7 @@ import {
 } from "@/lib/metal-impurity-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -770,7 +771,7 @@ function ListsDialog({
           : { ...current, suppliers: [...current.suppliers, ...imported] };
       });
     } catch {
-      window.alert("Не удалось импортировать файл");
+      toast.error("Не удалось импортировать файл");
     }
   }
 
@@ -1053,7 +1054,7 @@ export function MetalImpurityDocumentClient({
               disabled={isPending}
               onClick={() =>
                 deleteSelectedRows().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка удаления")
+                  toast.error(error instanceof Error ? error.message : "Ошибка удаления")
                 )
               }
               className="h-14 rounded-[12px] border-[#ffd7d3] px-6 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
@@ -1306,7 +1307,7 @@ export function MetalImpurityDocumentClient({
               type="button"
               onClick={() =>
                 finishJournal().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка закрытия")
+                  toast.error(error instanceof Error ? error.message : "Ошибка закрытия")
                 )
               }
               className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"

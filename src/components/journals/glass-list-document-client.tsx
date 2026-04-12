@@ -18,6 +18,7 @@ import {
   type GlassListRow,
 } from "@/lib/glass-list-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -94,7 +95,7 @@ export function GlassListDocumentClient({
       router.refresh();
       return true;
     } catch {
-      window.alert("Не удалось сохранить документ");
+      toast.error("Не удалось сохранить документ");
       return false;
     } finally {
       setSaving(false);

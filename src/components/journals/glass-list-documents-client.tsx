@@ -35,6 +35,7 @@ import {
   type GlassListConfig,
 } from "@/lib/glass-list-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -347,7 +348,7 @@ export function GlassListDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сделать копию документа");
+      toast.error("Не удалось сделать копию документа");
       return;
     }
 

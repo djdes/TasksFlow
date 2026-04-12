@@ -34,6 +34,7 @@ import {
 } from "@/lib/equipment-calibration-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 const POSITION_OPTIONS = USER_ROLE_LABEL_VALUES;
 
 type JournalListDocument = {
@@ -143,7 +144,7 @@ export function EquipmentCalibrationDocumentsClient({
       setEditingDoc(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить");
+      toast.error("Не удалось сохранить");
     } finally {
       setIsSaving(false);
     }

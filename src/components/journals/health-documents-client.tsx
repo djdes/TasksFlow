@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { toast } from "sonner";
 type HealthListDocument = {
   id: string;
   title: string;
@@ -78,7 +79,7 @@ function EditDocumentDialog(props: {
       props.onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(
+      toast.error(
         error instanceof Error ? error.message : "Не удалось сохранить настройки документа"
       );
     } finally {
@@ -219,7 +220,7 @@ export function HealthDocumentsClient(props: Props) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      window.alert(data?.error || "Ошибка удаления документа");
+      toast.error(data?.error || "Ошибка удаления документа");
       return;
     }
 

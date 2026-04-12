@@ -49,6 +49,7 @@ import {
 } from "@/lib/audit-plan-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type AuditPlanDocumentItem = {
@@ -305,7 +306,7 @@ export function AuditPlanDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -337,7 +338,7 @@ export function AuditPlanDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось сохранить документ");
+      toast.error("Не удалось сохранить документ");
       return;
     }
     router.refresh();
@@ -348,7 +349,7 @@ export function AuditPlanDocumentsClient({
       method: "DELETE",
     });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     setDeleteTarget(null);
@@ -362,7 +363,7 @@ export function AuditPlanDocumentsClient({
       body: JSON.stringify({ status: newStatus }),
     });
     if (!response.ok) {
-      window.alert("Не удалось изменить статус документа");
+      toast.error("Не удалось изменить статус документа");
       return;
     }
     setArchiveTarget(null);
@@ -383,7 +384,7 @@ export function AuditPlanDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось сделать копию документа");
+      toast.error("Не удалось сделать копию документа");
       return;
     }
     const data = (await response.json()) as { document: { id: string } };
@@ -526,7 +527,7 @@ export function AuditPlanDocumentsClient({
                       className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                       onSelect={() =>
                         void openDocumentPdf(document.id).catch((error) =>
-                          window.alert(
+                          toast.error(
                             error instanceof Error ? error.message : "Не удалось открыть PDF"
                           )
                         )

@@ -39,6 +39,7 @@ import {
   normalizeAcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 
+import { toast } from "sonner";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -146,7 +147,7 @@ function EditTrackedDocumentDialog({
       onOpenChange(false);
       onSaved();
     } catch {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +307,7 @@ function TrackedDocumentsClientImpl({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

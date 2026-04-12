@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -59,7 +60,7 @@ export function StaffTrainingDocumentsClient({
     if (!window.confirm(`Удалить документ "${titleValue}"?`)) return;
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();
@@ -85,7 +86,7 @@ export function StaffTrainingDocumentsClient({
       setEditingDocument(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
     } finally {
       setIsSaving(false);
     }

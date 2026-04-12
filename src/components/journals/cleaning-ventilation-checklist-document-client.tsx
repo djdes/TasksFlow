@@ -42,6 +42,7 @@ import {
   type CleaningVentilationResponsible,
 } from "@/lib/cleaning-ventilation-checklist-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -586,7 +587,7 @@ export function CleaningVentilationChecklistDocumentClient({
             className="flex items-center gap-3 rounded-2xl bg-[#fff1ef] px-6 py-4 text-[18px] text-[#ff3b30]"
             onClick={() => {
               clearSelectedRows().catch((error) =>
-                window.alert(error instanceof Error ? error.message : "Не удалось удалить строки")
+                toast.error(error instanceof Error ? error.message : "Не удалось удалить строки")
               );
             }}
           >
@@ -644,7 +645,7 @@ export function CleaningVentilationChecklistDocumentClient({
                 disabled={!isActive}
                 onCheckedChange={(checked) => {
                   persistConfig({ ...config, autoFillEnabled: checked === true }).catch((error) =>
-                    window.alert(error instanceof Error ? error.message : "Не удалось сохранить настройки")
+                    toast.error(error instanceof Error ? error.message : "Не удалось сохранить настройки")
                   );
                 }}
                 className="size-7 rounded-[10px]"
@@ -687,7 +688,7 @@ export function CleaningVentilationChecklistDocumentClient({
                               : item
                           );
                           persistConfig({ ...config, procedures: nextProcedures }).catch((error) =>
-                            window.alert(error instanceof Error ? error.message : "Не удалось сохранить настройки")
+                            toast.error(error instanceof Error ? error.message : "Не удалось сохранить настройки")
                           );
                         }}
                       />
@@ -704,7 +705,7 @@ export function CleaningVentilationChecklistDocumentClient({
                           item.id === procedure.id ? { ...item, responsibleUserId: value } : item
                         );
                         persistConfig({ ...config, procedures: nextProcedures }).catch((error) =>
-                          window.alert(error instanceof Error ? error.message : "Не удалось сохранить настройки")
+                          toast.error(error instanceof Error ? error.message : "Не удалось сохранить настройки")
                         );
                       }}
                     >
@@ -729,7 +730,7 @@ export function CleaningVentilationChecklistDocumentClient({
                   disabled={!isActive}
                   onCheckedChange={(checked) => {
                     persistConfig({ ...config, skipWeekends: checked === true }).catch((error) =>
-                      window.alert(error instanceof Error ? error.message : "Не удалось сохранить настройки")
+                      toast.error(error instanceof Error ? error.message : "Не удалось сохранить настройки")
                     );
                   }}
                   className="size-6 rounded-[10px]"
@@ -823,7 +824,7 @@ export function CleaningVentilationChecklistDocumentClient({
                                     (item) => item.id !== responsible.id
                                   ),
                                 }).catch((error) =>
-                                  window.alert(
+                                  toast.error(
                                     error instanceof Error
                                       ? error.message
                                       : "Не удалось обновить список ответственных"
@@ -861,7 +862,7 @@ export function CleaningVentilationChecklistDocumentClient({
               type="button"
               onClick={() => {
                 addManualDate().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Не удалось добавить дату")
+                  toast.error(error instanceof Error ? error.message : "Не удалось добавить дату")
                 );
               }}
               className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[16px] text-white hover:bg-[#4554ff]"
@@ -947,7 +948,7 @@ export function CleaningVentilationChecklistDocumentClient({
                             onChange={(value) => {
                               updateProcedureTime(row.dateKey, procedure, timeIndex, value).catch(
                                 (error) =>
-                                  window.alert(
+                                  toast.error(
                                     error instanceof Error
                                       ? error.message
                                       : "Не удалось сохранить время"

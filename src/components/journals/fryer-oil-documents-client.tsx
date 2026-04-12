@@ -23,6 +23,7 @@ import {
 import { FRYER_OIL_PAGE_TITLE } from "@/lib/fryer-oil-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -90,7 +91,7 @@ function FryerOilSettingsDialog(props: {
       props.onOpenChange(false);
       props.onSaved();
     } catch {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +175,7 @@ export function FryerOilDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 
@@ -292,7 +293,7 @@ export function FryerOilDocumentsClient(props: Props) {
                       className="h-11 rounded-lg px-3 text-[14px]"
                       onSelect={() => {
                         void openDocumentPdf(document.id).catch((error) =>
-                          window.alert(
+                          toast.error(
                             error instanceof Error ? error.message : "Не удалось открыть PDF"
                           )
                         );

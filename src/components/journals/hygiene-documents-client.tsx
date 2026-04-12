@@ -37,6 +37,7 @@ import {
 } from "@/lib/journal-document-helpers";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -97,7 +98,7 @@ function EditDocumentDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось сохранить настройки документа");
+      toast.error(error instanceof Error ? error.message : "Не удалось сохранить настройки документа");
     } finally {
       setIsSubmitting(false);
     }
@@ -255,7 +256,7 @@ export function HygieneDocumentsClient({
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      window.alert(data?.error || "Ошибка удаления документа");
+      toast.error(data?.error || "Ошибка удаления документа");
       return;
     }
 

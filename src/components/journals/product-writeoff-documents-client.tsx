@@ -28,6 +28,7 @@ import {
   type ProductWriteoffConfig,
 } from "@/lib/product-writeoff-document";
 
+import { toast } from "sonner";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -134,7 +135,7 @@ export function ProductWriteoffDocumentsClient({
     if (!window.confirm(`Удалить документ "${title}"?`)) return;
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();
@@ -146,7 +147,7 @@ export function ProductWriteoffDocumentsClient({
       await patchDocument(documentId, { status: "closed" });
       router.refresh();
     } catch {
-      window.alert("Не удалось изменить статус документа");
+      toast.error("Не удалось изменить статус документа");
     }
   }
 
@@ -163,7 +164,7 @@ export function ProductWriteoffDocumentsClient({
       setEditingDocument(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
     } finally {
       setIsSaving(false);
     }

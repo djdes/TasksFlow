@@ -49,6 +49,7 @@ import {
 } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -525,7 +526,7 @@ export function ColdEquipmentDocumentClient({
   async function handleDeleteEquipment(itemId: string) {
     const nextEquipment = config.equipment.filter((item) => item.id !== itemId);
     if (nextEquipment.length === 0) {
-      window.alert("В журнале должна остаться хотя бы одна строка оборудования.");
+      toast.error("В журнале должна остаться хотя бы одна строка оборудования.");
       return;
     }
 
@@ -547,7 +548,7 @@ export function ColdEquipmentDocumentClient({
       (item) => !selectedEquipmentIds.includes(item.id)
     );
     if (nextEquipment.length === 0) {
-      window.alert("В журнале должна остаться хотя бы одна строка оборудования.");
+      toast.error("В журнале должна остаться хотя бы одна строка оборудования.");
       return;
     }
 
@@ -587,7 +588,7 @@ export function ColdEquipmentDocumentClient({
       router.refresh();
     } catch (error) {
       setCheckedAutoFill(!value);
-      window.alert(
+      toast.error(
         error instanceof Error ? error.message : "Ошибка обновления автозаполнения"
       );
     } finally {
@@ -602,7 +603,7 @@ export function ColdEquipmentDocumentClient({
   ) {
     const employeeId = rowByDate[dateKey]?.employeeId || responsibleUserId || employees[0]?.id;
     if (!employeeId) {
-      window.alert("Нет сотрудника, которого можно назначить ответственным.");
+      toast.error("Нет сотрудника, которого можно назначить ответственным.");
       return;
     }
 
@@ -638,7 +639,7 @@ export function ColdEquipmentDocumentClient({
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.entry) {
-      window.alert(result?.error || "Не удалось сохранить значение");
+      toast.error(result?.error || "Не удалось сохранить значение");
       return;
     }
 
@@ -661,7 +662,7 @@ export function ColdEquipmentDocumentClient({
     try {
       await openDocumentPdf(documentId);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось открыть PDF");
+      toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF");
     }
   }
 

@@ -38,6 +38,7 @@ import {
 } from "@/lib/register-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -163,7 +164,7 @@ function RowDialog({
       await onSave(row);
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения строки");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения строки");
     } finally {
       setIsSubmitting(false);
     }
@@ -177,7 +178,7 @@ function RowDialog({
       await onDelete(initialRow.id);
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка удаления строки");
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления строки");
     } finally {
       setIsSubmitting(false);
     }
@@ -325,7 +326,7 @@ function SettingsDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения настроек");
     } finally {
       setIsSubmitting(false);
     }

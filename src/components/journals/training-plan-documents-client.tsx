@@ -48,6 +48,7 @@ import {
 } from "@/lib/training-plan-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type TrainingPlanDocumentItem = {
@@ -302,7 +303,7 @@ export function TrainingPlanDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -337,7 +338,7 @@ export function TrainingPlanDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить");
+      toast.error("Не удалось сохранить");
       return;
     }
 
@@ -348,7 +349,7 @@ export function TrainingPlanDocumentsClient({
     if (!window.confirm(`Удалить документ "${documentTitle}"?`)) return;
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить");
+      toast.error("Не удалось удалить");
       return;
     }
     router.refresh();
@@ -361,7 +362,7 @@ export function TrainingPlanDocumentsClient({
       body: JSON.stringify({ status: newStatus }),
     });
     if (!response.ok) {
-      window.alert("Ошибка");
+      toast.error("Ошибка");
       return;
     }
     router.refresh();

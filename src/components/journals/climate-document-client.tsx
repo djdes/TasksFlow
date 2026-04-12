@@ -42,6 +42,7 @@ import {
 } from "@/lib/climate-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -141,7 +142,7 @@ function RoomDialog({
 
   async function handleSave() {
     if (!temperatureEnabled && !humidityEnabled) {
-      window.alert("Нужно оставить включённой хотя бы одну норму для помещения.");
+      toast.error("Нужно оставить включённой хотя бы одну норму для помещения.");
       return;
     }
 
@@ -165,7 +166,7 @@ function RoomDialog({
       await onSave(room);
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения помещения");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения помещения");
     } finally {
       setIsSubmitting(false);
     }
@@ -178,7 +179,7 @@ function RoomDialog({
       await onDelete(initialRoom.id);
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка удаления помещения");
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления помещения");
     } finally {
       setIsSubmitting(false);
     }
@@ -339,7 +340,7 @@ function ResponsibleDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось сохранить ответственного");
+      toast.error(error instanceof Error ? error.message : "Не удалось сохранить ответственного");
     } finally {
       setIsSubmitting(false);
     }
@@ -451,7 +452,7 @@ function AddRowDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка создания строки");
+      toast.error(error instanceof Error ? error.message : "Ошибка создания строки");
     } finally {
       setIsSubmitting(false);
     }
@@ -577,7 +578,7 @@ function JournalSettingsDialog({
 
   async function handleSave() {
     if (!timeOne && !timeTwo) {
-      window.alert("Нужно указать хотя бы одно время контроля.");
+      toast.error("Нужно указать хотя бы одно время контроля.");
       return;
     }
 
@@ -597,7 +598,7 @@ function JournalSettingsDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения настроек");
     } finally {
       setIsSubmitting(false);
     }
@@ -887,7 +888,7 @@ export function ClimateDocumentClient({
     responsibleTitle: string | null;
   }) {
     if (!isDateWithinDocumentPeriod(params.date, dateFrom, dateTo)) {
-      window.alert("Дата строки должна попадать в период документа.");
+      toast.error("Дата строки должна попадать в период документа.");
       return;
     }
 
@@ -895,7 +896,7 @@ export function ClimateDocumentClient({
       (row) => row.employeeId === params.employeeId && row.date === params.date
     );
     if (duplicate) {
-      window.alert("Для выбранной даты и сотрудника строка уже существует.");
+      toast.error("Для выбранной даты и сотрудника строка уже существует.");
       return;
     }
 
@@ -1039,7 +1040,7 @@ export function ClimateDocumentClient({
       setRows((currentRows) =>
         currentRows.map((item) => (item.id === rowId ? previousRow : item))
       );
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения");
     }
   }
 
@@ -1093,7 +1094,7 @@ export function ClimateDocumentClient({
       setConfig(nextConfig);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось обновить настройки");
+      toast.error(error instanceof Error ? error.message : "Не удалось обновить настройки");
     }
   }
 
@@ -1110,7 +1111,7 @@ export function ClimateDocumentClient({
 
     const result = await response.json().catch(() => null);
     if (!response.ok) {
-      window.alert(result?.error || "Не удалось удалить строки");
+      toast.error(result?.error || "Не удалось удалить строки");
       return;
     }
 
@@ -1143,7 +1144,7 @@ export function ClimateDocumentClient({
       router.refresh();
     } catch (error) {
       setCheckedAutoFill(!value);
-      window.alert(
+      toast.error(
         error instanceof Error ? error.message : "Ошибка обновления автозаполнения"
       );
     } finally {

@@ -28,6 +28,7 @@ import {
   HYGIENE_PERIODICITY_TEXT,
 } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -107,7 +108,7 @@ function AddEmployeeDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка добавления сотрудника");
+      toast.error(error instanceof Error ? error.message : "Ошибка добавления сотрудника");
     } finally {
       setIsSubmitting(false);
     }
@@ -216,7 +217,7 @@ function FillFromStaffDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка заполнения из списка");
+      toast.error(error instanceof Error ? error.message : "Ошибка заполнения из списка");
     } finally {
       setIsSubmitting(false);
     }
@@ -312,7 +313,7 @@ function JournalSettingsDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек журнала");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения настроек журнала");
     } finally {
       setIsSubmitting(false);
     }
@@ -425,7 +426,7 @@ export function StaffJournalToolbar({
       router.refresh();
     } catch (error) {
       setChecked(previous);
-      window.alert(error instanceof Error ? error.message : "Ошибка автозаполнения");
+      toast.error(error instanceof Error ? error.message : "Ошибка автозаполнения");
     } finally {
       setIsSwitching(false);
     }

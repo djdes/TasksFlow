@@ -33,6 +33,7 @@ import {
   BREAKDOWN_HISTORY_DOCUMENT_TITLE,
 } from "@/lib/breakdown-history-document";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -248,7 +249,7 @@ export function BreakdownHistoryDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -268,7 +269,7 @@ export function BreakdownHistoryDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -278,7 +279,7 @@ export function BreakdownHistoryDocumentsClient({
   async function handleDelete(documentId: string) {
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();

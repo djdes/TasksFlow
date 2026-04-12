@@ -43,6 +43,7 @@ import {
 } from "@/lib/ppe-issuance-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type DocumentItem = {
@@ -366,7 +367,7 @@ export function PpeIssuanceDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -400,7 +401,7 @@ export function PpeIssuanceDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -412,7 +413,7 @@ export function PpeIssuanceDocumentsClient({
       method: "DELETE",
     });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();

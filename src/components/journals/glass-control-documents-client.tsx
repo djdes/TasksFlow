@@ -37,6 +37,7 @@ import {
   toIsoDate,
 } from "@/lib/glass-control-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -254,7 +255,7 @@ export function GlassControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       throw new Error("create_failed");
     }
 
@@ -282,7 +283,7 @@ export function GlassControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
       throw new Error("save_failed");
     }
 
@@ -298,7 +299,7 @@ export function GlassControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

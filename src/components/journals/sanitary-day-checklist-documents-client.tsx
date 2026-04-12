@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getSanitaryDayChecklistTitle } from "@/lib/sanitary-day-checklist-document";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -211,7 +212,7 @@ export function SanitaryDayChecklistDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -240,7 +241,7 @@ export function SanitaryDayChecklistDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -251,7 +252,7 @@ export function SanitaryDayChecklistDocumentsClient({
     if (!window.confirm(`Удалить документ "${title}"?`)) return;
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();
@@ -264,7 +265,7 @@ export function SanitaryDayChecklistDocumentsClient({
       body: JSON.stringify({ status: "closed" }),
     });
     if (!response.ok) {
-      window.alert("Не удалось закрыть документ");
+      toast.error("Не удалось закрыть документ");
       return;
     }
     setArchiveTarget(null);
@@ -278,7 +279,7 @@ export function SanitaryDayChecklistDocumentsClient({
       body: JSON.stringify({ status: "active" }),
     });
     if (!response.ok) {
-      window.alert("Не удалось отправить в активные");
+      toast.error("Не удалось отправить в активные");
       return;
     }
     router.refresh();
@@ -305,7 +306,7 @@ export function SanitaryDayChecklistDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось сделать копию");
+      toast.error("Не удалось сделать копию");
       return;
     }
     router.refresh();

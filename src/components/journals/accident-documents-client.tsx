@@ -33,6 +33,7 @@ import {
   ACCIDENT_DOCUMENT_TITLE,
 } from "@/lib/accident-document";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -227,7 +228,7 @@ export function AccidentDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -248,7 +249,7 @@ export function AccidentDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -261,7 +262,7 @@ export function AccidentDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

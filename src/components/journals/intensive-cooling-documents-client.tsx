@@ -35,6 +35,7 @@ import {
   getDefaultIntensiveCoolingConfig,
 } from "@/lib/intensive-cooling-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -244,7 +245,7 @@ export function IntensiveCoolingDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -265,7 +266,7 @@ export function IntensiveCoolingDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -278,7 +279,7 @@ export function IntensiveCoolingDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

@@ -42,6 +42,7 @@ import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -110,7 +111,7 @@ export function StaffTrainingDocumentClient({
       if (!response.ok) throw new Error();
       startTransition(() => router.refresh());
     } catch {
-      window.alert("Не удалось сохранить журнал");
+      toast.error("Не удалось сохранить журнал");
     } finally {
       setIsSaving(false);
     }
@@ -219,7 +220,7 @@ export function StaffTrainingDocumentClient({
       body: JSON.stringify({ status: "closed" }),
     });
     if (!response.ok) {
-      window.alert("Не удалось закончить журнал");
+      toast.error("Не удалось закончить журнал");
       return;
     }
     router.refresh();
@@ -748,7 +749,7 @@ export function StaffTrainingDocumentClient({
                     setSettingsOpen(false);
                     router.refresh();
                   } catch {
-                    window.alert("Не удалось сохранить настройки");
+                    toast.error("Не удалось сохранить настройки");
                   }
                 }}
               >

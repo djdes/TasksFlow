@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BookOpenText, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { toast } from "sonner";
 type JournalDocumentRow = {
   id: string;
   title: string;
@@ -75,7 +76,7 @@ export function ScanJournalDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

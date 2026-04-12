@@ -35,6 +35,7 @@ import {
 } from "@/lib/equipment-calibration-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -114,7 +115,7 @@ export function EquipmentCalibrationDocumentClient({
       if (!response.ok) throw new Error();
       startTransition(() => router.refresh());
     } catch {
-      window.alert("Не удалось сохранить журнал");
+      toast.error("Не удалось сохранить журнал");
     } finally {
       setIsSaving(false);
     }
@@ -239,7 +240,7 @@ export function EquipmentCalibrationDocumentClient({
       setSettingsOpen(false);
       startTransition(() => router.refresh());
     } catch {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
     } finally {
       setIsSaving(false);
     }

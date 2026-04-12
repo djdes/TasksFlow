@@ -32,6 +32,7 @@ import {
   normalizePestControlEntryData,
 } from "@/lib/pest-control-document";
 
+import { toast } from "sonner";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -263,7 +264,7 @@ function TrackedDocumentClientImpl({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить строку");
+      toast.error("Не удалось удалить строку");
       return;
     }
 
@@ -282,7 +283,7 @@ function TrackedDocumentClientImpl({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить строки");
+      toast.error("Не удалось удалить строки");
       return;
     }
 
@@ -332,7 +333,7 @@ function TrackedDocumentClientImpl({
                     className="h-12 rounded-xl px-3 text-[15px] text-[#5464ff]"
                     onSelect={() => {
                       fillForToday().catch((error) =>
-                        window.alert(
+                        toast.error(
                           error instanceof Error ? error.message : "Ошибка автозаполнения"
                         )
                       );
@@ -350,7 +351,7 @@ function TrackedDocumentClientImpl({
                 variant="outline"
                 onClick={() =>
                   removeSelectedEntries().catch((error) =>
-                    window.alert(error instanceof Error ? error.message : "Ошибка удаления строк")
+                    toast.error(error instanceof Error ? error.message : "Ошибка удаления строк")
                   )
                 }
                 className="h-12 rounded-2xl border-[#ffd7d3] px-5 text-[16px] text-[#ff3b30] hover:bg-[#fff3f2]"
@@ -451,7 +452,7 @@ function TrackedDocumentClientImpl({
                           ...entry,
                           date: event.target.value,
                         }).catch((error) =>
-                          window.alert(
+                          toast.error(
                             error instanceof Error ? error.message : "Ошибка сохранения"
                           )
                         )
@@ -470,7 +471,7 @@ function TrackedDocumentClientImpl({
                       value={entry.employeeId}
                       onValueChange={(value) => {
                         saveEntry({ ...entry, employeeId: value }).catch((error) =>
-                          window.alert(
+                          toast.error(
                             error instanceof Error ? error.message : "Ошибка сохранения"
                           )
                         );
@@ -519,7 +520,7 @@ function TrackedDocumentClientImpl({
                                   [field.key]: checked === true,
                                 },
                               }).catch((error) =>
-                                window.alert(
+                                toast.error(
                                   error instanceof Error ? error.message : "Ошибка сохранения"
                                 )
                               );
@@ -537,7 +538,7 @@ function TrackedDocumentClientImpl({
                                 [field.key]: nextValue,
                               },
                             }).catch((error) =>
-                              window.alert(
+                              toast.error(
                                 error instanceof Error ? error.message : "Ошибка сохранения"
                               )
                             );
@@ -573,7 +574,7 @@ function TrackedDocumentClientImpl({
                                 [field.key]: event.target.value,
                               },
                             }).catch((error) =>
-                              window.alert(
+                              toast.error(
                                 error instanceof Error ? error.message : "Ошибка сохранения"
                               )
                             )
@@ -654,7 +655,7 @@ function TrackedDocumentClientImpl({
                 type="button"
                 onClick={() =>
                   createEntry(newEmployeeId, newDate).catch((error) =>
-                    window.alert(
+                    toast.error(
                       error instanceof Error ? error.message : "Ошибка создания строки"
                     )
                   )
@@ -729,7 +730,7 @@ function TrackedDocumentClientImpl({
                 type="button"
                 onClick={() =>
                   saveSettings().catch((error) =>
-                    window.alert(
+                    toast.error(
                       error instanceof Error ? error.message : "Ошибка сохранения настроек"
                     )
                   )

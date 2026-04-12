@@ -25,6 +25,7 @@ import {
   type FinishedProductDocumentRow,
 } from "@/lib/finished-product-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -119,7 +120,7 @@ export function FinishedProductDocumentClient({
       if (!response.ok) throw new Error();
       startTransition(() => router.refresh());
     } catch {
-      window.alert("Не удалось сохранить журнал");
+      toast.error("Не удалось сохранить журнал");
     } finally {
       setIsSaving(false);
     }

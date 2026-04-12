@@ -29,6 +29,7 @@ import {
   type TrainingPlanConfig,
 } from "@/lib/training-plan-document";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type Props = {
@@ -103,7 +104,7 @@ function AddPositionDialog(props: {
 
   async function submit() {
     if (!position.trim()) {
-      window.alert("Выберите должность");
+      toast.error("Выберите должность");
       return;
     }
 
@@ -173,7 +174,7 @@ function AddTopicDialog(props: {
 
   async function submit() {
     if (!topicName.trim()) {
-      window.alert("Введите тему обучения");
+      toast.error("Введите тему обучения");
       return;
     }
 
@@ -411,7 +412,7 @@ export function TrainingPlanDocumentClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить документ");
+      toast.error("Не удалось сохранить документ");
       return;
     }
 

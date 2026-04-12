@@ -34,6 +34,7 @@ import {
   type TraceabilityRow,
 } from "@/lib/traceability-document";
 
+import { toast } from "sonner";
 type PersonItem = { id: string; name: string; role?: string | null };
 type TraceabilitySettingsDraft = { title: string; dateFrom: string; showShockTempField: boolean; showShipmentBlock: boolean };
 type TraceabilityRowDraft = {
@@ -579,8 +580,8 @@ export function TraceabilityDocumentClient(props: Props) {
     if (rows.length > 0) {
       await persistConfig({ ...config, rows: [...config.rows, ...rows], rawMaterialList: mergeUnique(config.rawMaterialList, rows.map((row) => row.incoming.rawMaterialName).filter(Boolean)), productList: mergeUnique(config.productList, rows.map((row) => row.outgoing.productName).filter(Boolean)) });
     }
-    if (errors.length > 0) window.alert(`Импорт выполнен частично.\n\n${formatImportErrors(errors)}`);
-    else window.alert(`Импортировано строк: ${rows.length}`);
+    if (errors.length > 0) toast.error(`Импорт выполнен частично.\n\n${formatImportErrors(errors)}`);
+    else toast.error(`Импортировано строк: ${rows.length}`);
     return { importedCount: rows.length, errors };
   }
 
@@ -609,7 +610,7 @@ export function TraceabilityDocumentClient(props: Props) {
           {!isClosed && <button type="button" onClick={() => setFinishOpen(true)} className="rounded-2xl bg-[#f7f8fd] px-5 py-4 text-[18px] font-medium text-[#5563ff]">Закончить журнал</button>}
         </div>
 
-        {selectedRowIds.length > 0 && !isClosed && <div className="flex items-center gap-3 rounded-[18px] border border-[#e6e9f5] bg-[#fbfbff] px-4 py-3 print:hidden"><button type="button" className="text-[#7c7c93] hover:text-black" onClick={() => setSelectedRowIds([])}><X className="size-5" /></button><span className="text-[15px]">Выбрано: {selectedRowIds.length}</span><Button type="button" variant="outline" className="h-10 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => { deleteSelected().catch((error) => window.alert(error instanceof Error ? error.message : "Не удалось удалить строки")); }}><Trash2 className="size-4" />Удалить</Button></div>}
+        {selectedRowIds.length > 0 && !isClosed && <div className="flex items-center gap-3 rounded-[18px] border border-[#e6e9f5] bg-[#fbfbff] px-4 py-3 print:hidden"><button type="button" className="text-[#7c7c93] hover:text-black" onClick={() => setSelectedRowIds([])}><X className="size-5" /></button><span className="text-[15px]">Выбрано: {selectedRowIds.length}</span><Button type="button" variant="outline" className="h-10 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => { deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось удалить строки")); }}><Trash2 className="size-4" />Удалить</Button></div>}
 
         <div className="max-w-full overflow-x-auto rounded-[18px] border border-[#1f1f1f] bg-white">
           <table className="min-w-[980px] w-full border-collapse text-[14px] sm:min-w-[1480px]">

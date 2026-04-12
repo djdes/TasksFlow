@@ -26,6 +26,7 @@ import {
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type DocumentItem = {
@@ -305,7 +306,7 @@ export function PestControlDocumentsClient(props: Props) {
         }
       } catch (error) {
         if (!cancelled) {
-          window.alert(error instanceof Error ? error.message : "Не удалось подготовить тестовые документы");
+          toast.error(error instanceof Error ? error.message : "Не удалось подготовить тестовые документы");
         }
       } finally {
         if (!cancelled) {
@@ -334,7 +335,7 @@ export function PestControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -357,7 +358,7 @@ export function PestControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
       return;
     }
 
@@ -370,7 +371,7 @@ export function PestControlDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 

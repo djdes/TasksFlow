@@ -21,6 +21,7 @@ import {
   type ComplaintDocumentConfig,
 } from "@/lib/complaint-document";
 
+import { toast } from "sonner";
 type ComplaintListDocument = {
   id: string;
   title: string;
@@ -79,7 +80,7 @@ function CreateDialog({
       onCreated();
       router.push(`/journals/${COMPLAINT_REGISTER_TEMPLATE_CODE}/documents/${result.document.id}`);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка создания документа");
+      toast.error(error instanceof Error ? error.message : "Ошибка создания документа");
     } finally {
       setSubmitting(false);
     }
@@ -177,7 +178,7 @@ function SettingsDialog({
       onOpenChange(false);
       onSaved();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения документа");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения документа");
     } finally {
       setSubmitting(false);
     }
@@ -259,7 +260,7 @@ function DeleteDialog({
       onOpenChange(false);
       onDeleted();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка удаления документа");
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления документа");
     } finally {
       setSubmitting(false);
     }

@@ -37,6 +37,7 @@ import {
   type UvRuntimeDocumentConfig,
 } from "@/lib/uv-lamp-runtime-document";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -119,7 +120,7 @@ function UvRuntimeSettingsDialog(props: {
       props.onOpenChange(false);
       props.onSaved();
     } catch {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
     } finally {
       setSubmitting(false);
     }
@@ -260,7 +261,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
 
@@ -277,7 +278,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось вернуть документ в активные");
+      toast.error("Не удалось вернуть документ в активные");
       return;
     }
 

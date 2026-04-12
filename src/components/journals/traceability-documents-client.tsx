@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+import { toast } from "sonner";
 type TraceabilityDocumentItem = {
   id: string;
   title: string;
@@ -316,7 +317,7 @@ export function TraceabilityDocumentsClient({
       router.push(`/journals/${routeCode}/documents/${data.document.id}`);
       router.refresh();
     } catch {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
     }
   }
 
@@ -327,7 +328,7 @@ export function TraceabilityDocumentsClient({
       setEditingDocument(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
     }
   }
 
@@ -335,7 +336,7 @@ export function TraceabilityDocumentsClient({
     if (!window.confirm(`Удалить документ "${doc.title || DEFAULT_TITLE}"?`)) return;
     const response = await fetch(`/api/journal-documents/${doc.id}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     setDeleteTarget(null);
@@ -349,7 +350,7 @@ export function TraceabilityDocumentsClient({
       body: JSON.stringify({ status: nextStatus }),
     });
     if (!response.ok) {
-      window.alert(nextStatus === "closed" ? "Не удалось закрыть документ" : "Не удалось восстановить документ");
+      toast.error(nextStatus === "closed" ? "Не удалось закрыть документ" : "Не удалось восстановить документ");
       return;
     }
     setArchiveTarget(null);

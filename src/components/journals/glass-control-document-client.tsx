@@ -35,6 +35,7 @@ import {
   type GlassControlEntryData,
 } from "@/lib/glass-control-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -550,7 +551,7 @@ export function GlassControlDocumentClient(props: Props) {
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.entry) {
-      window.alert("Не удалось сохранить строку");
+      toast.error("Не удалось сохранить строку");
       throw new Error("save_row_failed");
     }
 
@@ -596,7 +597,7 @@ export function GlassControlDocumentClient(props: Props) {
       });
 
       if (!response.ok) {
-        window.alert("Не удалось удалить строки");
+        toast.error("Не удалось удалить строки");
         return;
       }
     }
@@ -613,7 +614,7 @@ export function GlassControlDocumentClient(props: Props) {
     });
 
     if (!patchResponse.ok) {
-      window.alert("Не удалось обновить автозаполнение");
+      toast.error("Не удалось обновить автозаполнение");
       return;
     }
 
@@ -634,7 +635,7 @@ export function GlassControlDocumentClient(props: Props) {
         });
 
         if (!response.ok) {
-          window.alert("Не удалось автозаполнить журнал");
+          toast.error("Не удалось автозаполнить журнал");
           return;
         }
       }
@@ -668,7 +669,7 @@ export function GlassControlDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
       throw new Error("save_settings_failed");
     }
 
@@ -683,7 +684,7 @@ export function GlassControlDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось закончить журнал");
+      toast.error("Не удалось закончить журнал");
       return;
     }
 

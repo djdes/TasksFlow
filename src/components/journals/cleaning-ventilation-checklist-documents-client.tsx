@@ -32,6 +32,7 @@ import {
   getDefaultCleaningVentilationConfig,
 } from "@/lib/cleaning-ventilation-checklist-document";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -185,7 +186,7 @@ export function CleaningVentilationChecklistDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
 
@@ -210,7 +211,7 @@ export function CleaningVentilationChecklistDocumentsClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -221,7 +222,7 @@ export function CleaningVentilationChecklistDocumentsClient({
     if (!window.confirm(`Удалить документ "${title}"?`)) return;
     const response = await fetch(`/api/journal-documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
       return;
     }
     router.refresh();
@@ -234,7 +235,7 @@ export function CleaningVentilationChecklistDocumentsClient({
       body: JSON.stringify({ status }),
     });
     if (!response.ok) {
-      window.alert("Не удалось изменить статус документа");
+      toast.error("Не удалось изменить статус документа");
       return;
     }
     router.refresh();

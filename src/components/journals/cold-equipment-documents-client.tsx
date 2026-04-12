@@ -30,6 +30,7 @@ import {
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -109,7 +110,7 @@ function EditDocumentDialog({
       onOpenChange(false);
       onSaved();
     } catch (error) {
-      window.alert(
+      toast.error(
         error instanceof Error ? error.message : "Не удалось сохранить настройки документа"
       );
     } finally {
@@ -216,7 +217,7 @@ export function ColdEquipmentDocumentsClient({
 
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      window.alert(payload?.error || "Не удалось удалить документ");
+      toast.error(payload?.error || "Не удалось удалить документ");
       return;
     }
 
@@ -227,7 +228,7 @@ export function ColdEquipmentDocumentsClient({
     try {
       await openDocumentPdf(documentId);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось открыть PDF");
+      toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF");
     }
   }
 

@@ -21,6 +21,7 @@ import {
   type SanitationMonthKey,
 } from "@/lib/sanitation-day-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -179,7 +180,7 @@ function RoomDialog(props: {
               disabled={submitting}
               onClick={async () => {
                 if (!state.name.trim()) {
-                  window.alert("Введите название помещения");
+                  toast.error("Введите название помещения");
                   return;
                 }
                 setSubmitting(true);
@@ -516,7 +517,7 @@ export function SanitationDayDocumentClient({
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить документ");
+      toast.error("Не удалось сохранить документ");
       return;
     }
 

@@ -23,6 +23,7 @@ import {
   type EquipmentCleaningFieldVariant,
 } from "@/lib/equipment-cleaning-document";
 
+import { toast } from "sonner";
 type EquipmentCleaningListDocument = {
   id: string;
   title: string;
@@ -88,7 +89,7 @@ export function EquipmentCleaningDocumentsClient({
       setEditingDocument(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить настройки документа");
+      toast.error("Не удалось сохранить настройки документа");
     } finally {
       setIsSaving(false);
     }
@@ -107,7 +108,7 @@ export function EquipmentCleaningDocumentsClient({
       setDeletingDocument(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось удалить документ");
+      toast.error("Не удалось удалить документ");
     } finally {
       setIsDeleting(false);
     }

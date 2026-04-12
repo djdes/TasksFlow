@@ -34,6 +34,7 @@ import {
 } from "@/lib/equipment-maintenance-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
+import { toast } from "sonner";
 const POSITION_OPTIONS = USER_ROLE_LABEL_VALUES;
 
 type JournalListDocument = {
@@ -151,7 +152,7 @@ export function EquipmentMaintenanceDocumentsClient({
       setEditingDoc(null);
       router.refresh();
     } catch {
-      window.alert("Не удалось сохранить");
+      toast.error("Не удалось сохранить");
     } finally {
       setIsSaving(false);
     }

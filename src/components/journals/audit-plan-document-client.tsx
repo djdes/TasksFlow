@@ -33,6 +33,7 @@ import {
   type AuditPlanSection,
 } from "@/lib/audit-plan-document";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type Props = {
@@ -574,7 +575,7 @@ export function AuditPlanDocumentClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось сохранить документ");
+      toast.error("Не удалось сохранить документ");
       return;
     }
     router.refresh();

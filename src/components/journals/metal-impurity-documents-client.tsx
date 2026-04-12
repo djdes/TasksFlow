@@ -41,6 +41,7 @@ import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -546,7 +547,7 @@ export function MetalImpurityDocumentsClient({
                         className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
                         onSelect={() =>
                           void openDocumentPdf(document.id).catch((error) =>
-                            window.alert(error instanceof Error ? error.message : "Не удалось открыть PDF")
+                            toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF")
                           )
                         }
                       >

@@ -39,6 +39,7 @@ import {
 } from "@/lib/ppe-issuance-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -526,7 +527,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
               variant="ghost"
               onClick={() =>
                 handleDeleteSelected().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка")
+                  toast.error(error instanceof Error ? error.message : "Ошибка")
                 )
               }
               className="h-9 px-3 text-[13px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]"

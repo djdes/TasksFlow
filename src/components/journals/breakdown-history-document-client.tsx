@@ -29,6 +29,7 @@ import {
   type BreakdownRow,
 } from "@/lib/breakdown-history-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -320,7 +321,7 @@ function FinishDialog(props: {
       props.onFinished();
       props.onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка");
+      toast.error(error instanceof Error ? error.message : "Ошибка");
     } finally {
       setIsSubmitting(false);
     }
@@ -527,7 +528,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
                   className="border-[#ffd7d3] text-[#ff3b30] hover:bg-[#fff0ef]"
                   onClick={() => {
                     handleDeleteSelected().catch((error) =>
-                      window.alert(
+                      toast.error(
                         error instanceof Error ? error.message : "Ошибка удаления"
                       )
                     );

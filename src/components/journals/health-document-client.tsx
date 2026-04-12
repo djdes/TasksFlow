@@ -27,6 +27,7 @@ import {
   type HealthEntryData,
 } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -178,7 +179,7 @@ export function HealthDocumentClient(props: Props) {
       setSelectedEmployeeIds([]);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка удаления строк");
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления строк");
     } finally {
       setIsDeleting(false);
     }
@@ -201,7 +202,7 @@ export function HealthDocumentClient(props: Props) {
       setSettingsOpen(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения настроек");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения настроек");
     } finally {
       setIsSavingSettings(false);
     }

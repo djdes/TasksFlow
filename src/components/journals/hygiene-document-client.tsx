@@ -21,6 +21,7 @@ import {
   type HygieneStatus,
 } from "@/lib/hygiene-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   routeCode?: string;
@@ -222,7 +223,7 @@ export function HygieneDocumentClient({
         }
         return copy;
       });
-      window.alert(error instanceof Error ? error.message : "Ошибка сохранения");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения");
     } finally {
       setSavingCellKey((current) => (current === key ? null : current));
     }
@@ -245,7 +246,7 @@ export function HygieneDocumentClient({
       setSelectedEmployeeIds([]);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка удаления строк");
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления строк");
     } finally {
       setIsDeleting(false);
     }

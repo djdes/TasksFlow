@@ -22,6 +22,7 @@ import {
 } from "@/lib/audit-report-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
+import { toast } from "sonner";
 type DocumentItem = {
   id: string;
   title: string;
@@ -223,7 +224,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
                           <Settings2 className="mr-3 size-5 text-[#6f7282]" />Настройки
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="mb-2 h-14 rounded-2xl px-4 text-[18px]" onSelect={() => void openDocumentPdf(document.id).catch((error) => window.alert(error instanceof Error ? error.message : "Не удалось открыть PDF"))}>
+                      <DropdownMenuItem className="mb-2 h-14 rounded-2xl px-4 text-[18px]" onSelect={() => void openDocumentPdf(document.id).catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF"))}>
                         <Printer className="mr-3 size-5 text-[#6f7282]" />Печать
                       </DropdownMenuItem>
                       {document.status === "active" && (

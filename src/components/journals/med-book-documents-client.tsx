@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { toast } from "sonner";
 type MedBookListDocument = {
   id: string;
   title: string;
@@ -81,7 +82,7 @@ function SettingsDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось сохранить название документа");
+      toast.error(error instanceof Error ? error.message : "Не удалось сохранить название документа");
     } finally {
       setSaving(false);
     }
@@ -175,7 +176,7 @@ export function MedBookDocumentsClient({
 
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось удалить документ");
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить документ");
     } finally {
       setBusyDocumentId(null);
     }
@@ -289,7 +290,7 @@ export function MedBookDocumentsClient({
                         className="mb-1 h-12 rounded-xl px-3 text-[16px]"
                         onSelect={() => {
                           patchDocument(document.id, { status: "closed" }).catch((error) => {
-                            window.alert(error instanceof Error ? error.message : "Не удалось закрыть документ");
+                            toast.error(error instanceof Error ? error.message : "Не удалось закрыть документ");
                           });
                         }}
                       >
@@ -301,7 +302,7 @@ export function MedBookDocumentsClient({
                         className="mb-1 h-12 rounded-xl px-3 text-[16px]"
                         onSelect={() => {
                           patchDocument(document.id, { status: "active" }).catch((error) => {
-                            window.alert(error instanceof Error ? error.message : "Не удалось восстановить документ");
+                            toast.error(error instanceof Error ? error.message : "Не удалось восстановить документ");
                           });
                         }}
                       >

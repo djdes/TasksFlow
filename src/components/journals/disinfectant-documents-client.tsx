@@ -44,6 +44,7 @@ import {
   type DisinfectantDocumentConfig,
 } from "@/lib/disinfectant-document";
 
+import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
 
 type DisinfectantDocumentItem = {
@@ -251,7 +252,7 @@ export function DisinfectantDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось создать документ");
+      toast.error("Не удалось создать документ");
       return;
     }
     const data = (await response.json()) as { document: { id: string } };
@@ -278,7 +279,7 @@ export function DisinfectantDocumentsClient({
       }),
     });
     if (!response.ok) {
-      window.alert("Не удалось сохранить");
+      toast.error("Не удалось сохранить");
       return;
     }
     router.refresh();
@@ -290,7 +291,7 @@ export function DisinfectantDocumentsClient({
       method: "DELETE",
     });
     if (!response.ok) {
-      window.alert("Не удалось удалить");
+      toast.error("Не удалось удалить");
       return;
     }
     router.refresh();
@@ -306,7 +307,7 @@ export function DisinfectantDocumentsClient({
       body: JSON.stringify({ status: newStatus }),
     });
     if (!response.ok) {
-      window.alert("Ошибка");
+      toast.error("Ошибка");
       return;
     }
     router.refresh();

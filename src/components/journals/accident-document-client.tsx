@@ -38,6 +38,7 @@ import {
   type AccidentRow,
 } from "@/lib/accident-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -384,7 +385,7 @@ function FinishDialog(props: {
       props.onFinished();
       props.onOpenChange(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Ошибка");
+      toast.error(error instanceof Error ? error.message : "Ошибка");
     } finally {
       setSubmitting(false);
     }
@@ -511,7 +512,7 @@ export function AccidentDocumentClient(props: Props) {
               className="inline-flex items-center gap-2 rounded-2xl bg-[#fff4f2] px-4 py-3 text-lg text-[#ff3b30]"
               onClick={() => {
                 handleDeleteSelected().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка")
+                  toast.error(error instanceof Error ? error.message : "Ошибка")
                 );
               }}
             >

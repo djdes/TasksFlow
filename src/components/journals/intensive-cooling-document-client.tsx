@@ -43,6 +43,7 @@ import {
   type IntensiveCoolingRow,
 } from "@/lib/intensive-cooling-document";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -542,7 +543,7 @@ export function IntensiveCoolingDocumentClient(props: Props) {
               className="inline-flex items-center gap-2 rounded-2xl bg-[#fff4f2] px-4 py-3 text-lg text-[#ff3b30]"
               onClick={() => {
                 handleDeleteSelected().catch((error) =>
-                  window.alert(error instanceof Error ? error.message : "Ошибка")
+                  toast.error(error instanceof Error ? error.message : "Ошибка")
                 );
               }}
             >
@@ -770,9 +771,9 @@ export function IntensiveCoolingDocumentClient(props: Props) {
         title={title || INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME}
         dateFrom={dateFrom}
         onSave={(payload) =>
-          handleSaveSettings(payload).catch((error) =>
-            window.alert(error instanceof Error ? error.message : "Ошибка")
-          )
+          handleSaveSettings(payload).catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Ошибка");
+          })
         }
       />
 
@@ -786,9 +787,9 @@ export function IntensiveCoolingDocumentClient(props: Props) {
         config={config}
         users={props.users}
         onSave={(row) =>
-          handleSaveRow(row).catch((error) =>
-            window.alert(error instanceof Error ? error.message : "Ошибка")
-          )
+          handleSaveRow(row).catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Ошибка");
+          })
         }
       />
 
@@ -797,9 +798,9 @@ export function IntensiveCoolingDocumentClient(props: Props) {
         onOpenChange={setFinishOpen}
         title={title || INTENSIVE_COOLING_DEFAULT_DOCUMENT_NAME}
         onConfirm={() =>
-          handleFinish().catch((error) =>
-            window.alert(error instanceof Error ? error.message : "Ошибка")
-          )
+          handleFinish().catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Ошибка");
+          })
         }
       />
     </div>

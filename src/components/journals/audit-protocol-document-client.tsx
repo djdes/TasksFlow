@@ -28,6 +28,7 @@ import {
   type AuditProtocolSignature,
 } from "@/lib/audit-protocol-document";
 
+import { toast } from "sonner";
 type Props = {
   documentId: string;
   title: string;
@@ -219,7 +220,7 @@ export function AuditProtocolDocumentClient({
             <button type="button" className="flex items-center gap-1 text-[16px] text-[#5b66ff]" onClick={() => setSelectedRowIds([])}>
               <X className="size-4" /> Выбрано: {selectedRowIds.length}
             </button>
-            <button type="button" className="flex items-center gap-1 text-[16px] text-[#ff3b30]" onClick={() => deleteSelected().catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка удаления"))}>
+            <button type="button" className="flex items-center gap-1 text-[16px] text-[#ff3b30]" onClick={() => deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка удаления"))}>
               <Trash2 className="size-4" /> Удалить
             </button>
           </div>
@@ -310,14 +311,14 @@ export function AuditProtocolDocumentClient({
                             </button>
                           </td>
                           <td className="border border-black/70 px-2 py-2 text-center">
-                            <Checkbox checked={row.result === "yes"} disabled={status !== "active"} onCheckedChange={() => persist(documentTitle, { ...config, rows: config.rows.map((item) => item.id === row.id ? { ...item, result: item.result === "yes" ? "" : "yes" } : item.id === row.id && item.result === "yes" ? item : item.id === row.id ? item : item) }).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} />
+                            <Checkbox checked={row.result === "yes"} disabled={status !== "active"} onCheckedChange={() => persist(documentTitle, { ...config, rows: config.rows.map((item) => item.id === row.id ? { ...item, result: item.result === "yes" ? "" : "yes" } : item.id === row.id && item.result === "yes" ? item : item.id === row.id ? item : item) }).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} />
                           </td>
                           <td className="border border-black/70 px-2 py-2 text-center">
-                            <Checkbox checked={row.result === "no"} disabled={status !== "active"} onCheckedChange={() => persist(documentTitle, { ...config, rows: config.rows.map((item) => item.id === row.id ? { ...item, result: item.result === "no" ? "" : "no" } : item) }).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} />
+                            <Checkbox checked={row.result === "no"} disabled={status !== "active"} onCheckedChange={() => persist(documentTitle, { ...config, rows: config.rows.map((item) => item.id === row.id ? { ...item, result: item.result === "no" ? "" : "no" } : item) }).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} />
                           </td>
                           <td className="border border-black/70 px-2 py-2">
                             {status === "active" ? (
-                              <Textarea value={row.note} onChange={(event) => setConfig((current) => ({ ...current, rows: current.rows.map((item) => item.id === row.id ? { ...item, note: event.target.value } : item) }))} onBlur={() => persist(documentTitle, config).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} className="min-h-[70px] border-0 px-0 py-0 text-[14px] shadow-none focus-visible:ring-0" />
+                              <Textarea value={row.note} onChange={(event) => setConfig((current) => ({ ...current, rows: current.rows.map((item) => item.id === row.id ? { ...item, note: event.target.value } : item) }))} onBlur={() => persist(documentTitle, config).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="min-h-[70px] border-0 px-0 py-0 text-[14px] shadow-none focus-visible:ring-0" />
                             ) : (
                               row.note
                             )}
@@ -335,13 +336,13 @@ export function AuditProtocolDocumentClient({
             <div className="text-[20px] font-semibold">Подписи</div>
             {config.signatures.map((signature, index) => (
               <div key={signature.id} className="grid grid-cols-[220px_1fr_240px] gap-3">
-                <Input value={signature.role} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, role: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
-                <Input value={signature.name} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, name: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
-                <Input type="date" value={signature.signedAt} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, signedAt: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
+                <Input value={signature.role} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, role: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
+                <Input value={signature.name} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, name: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
+                <Input type="date" value={signature.signedAt} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, signedAt: e.target.value } : item) }))} onBlur={() => saveSignature(index, config.signatures[index]).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
               </div>
             ))}
             {status === "active" && (
-              <Button type="button" variant="outline" onClick={() => persist(documentTitle, { ...config, signatures: [...config.signatures, createAuditProtocolSignature()] }).catch((error) => window.alert(error instanceof Error ? error.message : "Ошибка сохранения"))}>
+              <Button type="button" variant="outline" onClick={() => persist(documentTitle, { ...config, signatures: [...config.signatures, createAuditProtocolSignature()] }).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))}>
                 Добавить подпись
               </Button>
             )}

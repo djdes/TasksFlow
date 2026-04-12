@@ -32,6 +32,7 @@ import {
   type SdcItem,
 } from "@/lib/sanitary-day-checklist-document";
 
+import { toast } from "sonner";
 /* ─── Types ─── */
 
 type UserItem = { id: string; name: string; role: string };
@@ -121,7 +122,7 @@ function SettingsDialog(props: {
       props.onOpenChange(false);
       props.onSaved();
     } catch (error) {
-      window.alert(
+      toast.error(
         error instanceof Error ? error.message : "Ошибка сохранения"
       );
     } finally {
@@ -681,7 +682,7 @@ export function SanitaryDayChecklistDocumentClient({
         });
         setConfig(newConfig);
       } catch (error) {
-        window.alert(
+        toast.error(
           error instanceof Error ? error.message : "Ошибка сохранения"
         );
       } finally {
@@ -705,7 +706,7 @@ export function SanitaryDayChecklistDocumentClient({
           }),
         });
       } catch (error) {
-        window.alert(
+        toast.error(
           error instanceof Error ? error.message : "Ошибка сохранения"
         );
       }

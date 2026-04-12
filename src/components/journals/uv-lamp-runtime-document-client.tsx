@@ -45,6 +45,7 @@ import {
 } from "@/lib/uv-lamp-runtime-document";
 import { getUsersForRoleLabel } from "@/lib/user-roles";
 
+import { toast } from "sonner";
 type UserItem = {
   id: string;
   name: string;
@@ -906,7 +907,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось удалить выбранные строки");
+      toast.error("Не удалось удалить выбранные строки");
       return;
     }
 
@@ -930,7 +931,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось закрыть журнал");
+      toast.error("Не удалось закрыть журнал");
       return;
     }
 
@@ -965,7 +966,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     try {
       await saveRow(newRow);
     } catch {
-      window.alert("Не удалось сохранить строку");
+      toast.error("Не удалось сохранить строку");
     }
   }
 
@@ -988,7 +989,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить настройки");
+      toast.error("Не удалось сохранить настройки");
       return;
     }
 
@@ -1005,7 +1006,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     });
 
     if (!response.ok) {
-      window.alert("Не удалось сохранить спецификацию");
+      toast.error("Не удалось сохранить спецификацию");
       return;
     }
 
@@ -1023,7 +1024,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
 
     if (!response.ok) {
       setAutoFill(!value);
-      window.alert("Не удалось сохранить настройку автозаполнения");
+      toast.error("Не удалось сохранить настройку автозаполнения");
       return;
     }
 
@@ -1082,7 +1083,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
               variant="ghost"
               className="h-9 px-3 text-[13px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]"
               onClick={() => {
-                deleteSelectedRows().catch(() => window.alert("Ошибка удаления"));
+                deleteSelectedRows().catch(() => toast.error("Ошибка удаления"));
               }}
             >
               <Trash2 className="mr-1 size-4" />
@@ -1199,7 +1200,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
                           )
                         }
                         onBlur={() => {
-                          saveRow(row).catch(() => window.alert("Не удалось сохранить строку"));
+                          saveRow(row).catch(() => toast.error("Не удалось сохранить строку"));
                         }}
                         className="mx-auto h-9 w-[110px] rounded-md border-[#dfe1ec] text-center text-[13px]"
                       />
@@ -1222,7 +1223,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
                           )
                         }
                         onBlur={() => {
-                          saveRow(row).catch(() => window.alert("Не удалось сохранить строку"));
+                          saveRow(row).catch(() => toast.error("Не удалось сохранить строку"));
                         }}
                         className="mx-auto h-9 w-[110px] rounded-md border-[#dfe1ec] text-center text-[13px]"
                       />
@@ -1243,7 +1244,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
                           );
                           const updated = { ...row, employeeId: value };
                           saveRow(updated, { id: row.id, employeeId: row.employeeId }).catch(() =>
-                            window.alert("Не удалось сохранить строку")
+                            toast.error("Не удалось сохранить строку")
                           );
                           return;
                         }}
@@ -1322,7 +1323,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
           defaultEmployeeId={fallbackEmployeeId}
           defaultResponsibleTitle={props.responsibleTitle || "Управляющий"}
           onAdd={(data) => {
-            handleAddRow(data).catch(() => window.alert("Ошибка добавления строки"));
+            handleAddRow(data).catch(() => toast.error("Ошибка добавления строки"));
           }}
         />
       )}
