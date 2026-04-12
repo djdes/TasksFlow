@@ -69,6 +69,10 @@ import {
   BREAKDOWN_HISTORY_DOCUMENT_TITLE,
 } from "@/lib/breakdown-history-document";
 import {
+  ACCIDENT_DOCUMENT_TEMPLATE_CODE,
+  ACCIDENT_DOCUMENT_TITLE,
+} from "@/lib/accident-document";
+import {
   EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
   EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
 } from "@/lib/equipment-maintenance-document";
@@ -172,6 +176,7 @@ export function isDocumentTemplate(templateCode: string) {
     templateCode === AUDIT_PLAN_TEMPLATE_CODE ||
     templateCode === TRAINING_PLAN_TEMPLATE_CODE ||
     templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE ||
+    templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE ||
     templateCode === PPE_ISSUANCE_TEMPLATE_CODE ||
     templateCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE ||
     templateCode === METAL_IMPURITY_TEMPLATE_CODE ||
@@ -237,6 +242,9 @@ export function getJournalDocumentDefaultTitle(templateCode: string) {
   }
   if (templateCode === BREAKDOWN_HISTORY_TEMPLATE_CODE) {
     return BREAKDOWN_HISTORY_DOCUMENT_TITLE;
+  }
+  if (templateCode === ACCIDENT_DOCUMENT_TEMPLATE_CODE) {
+    return ACCIDENT_DOCUMENT_TITLE;
   }
   if (templateCode === DISINFECTANT_TEMPLATE_CODE) {
     return DISINFECTANT_DOCUMENT_TITLE;
