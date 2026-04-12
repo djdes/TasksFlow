@@ -279,19 +279,19 @@ export function AuditProtocolDocumentsClient({
           {documents.map((document) => {
             const config = normalizeAuditProtocolConfig(document.config);
             return (
-              <div key={document.id} className="grid grid-cols-[minmax(0,1fr)_280px_170px_56px] items-center rounded-[16px] border border-[#eef0f6] bg-white px-7 py-5">
+              <div key={document.id} className="grid grid-cols-1 gap-4 rounded-[16px] border border-[#eef0f6] bg-white px-5 py-5 sm:grid-cols-[minmax(0,1fr)_280px_170px_56px] sm:items-center sm:gap-0 sm:px-7">
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="text-[16px] font-semibold text-black">
                   {document.title || AUDIT_PROTOCOL_DOCUMENT_TITLE}
                 </Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 sm:border-l sm:border-t-0 sm:px-6 sm:pt-0">
                   <div className="text-[11px] text-[#979aab]">Основание проверки</div>
                   <div className="mt-1 text-[12px] font-semibold text-black">{config.basisTitle}</div>
                 </Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6 text-right">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 text-left sm:border-l sm:border-t-0 sm:px-6 sm:pt-0 sm:text-right">
                   <div className="text-[11px] text-[#979aab]">Дата документа</div>
                   <div className="mt-1 text-[12px] font-semibold text-black">{config.documentDate}</div>
                 </Link>
-                <div className="justify-self-end">
+                <div className="justify-self-start sm:justify-self-end">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button type="button" className="flex size-9 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]">

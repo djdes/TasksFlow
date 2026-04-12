@@ -105,7 +105,7 @@ function SettingsDialog(props: {
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-[42px] font-semibold tracking-[-0.03em] text-black">
+            <DialogTitle className="text-3xl font-semibold tracking-[-0.03em] text-black sm:text-[42px]">
               {props.dialogTitle}
             </DialogTitle>
             <button
@@ -124,7 +124,7 @@ function SettingsDialog(props: {
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
-                className="h-20 rounded-3xl border-[#d8dae6] px-7 text-[28px] tracking-[-0.02em]"
+                className="h-14 rounded-3xl border-[#d8dae6] px-5 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:text-[28px]"
               />
             </div>
 
@@ -137,9 +137,9 @@ function SettingsDialog(props: {
                   onChange={(e) =>
                     setState({ ...activeState, dateFrom: toIsoDate(e.target.value) })
                   }
-                  className="h-20 rounded-3xl border-[#d8dae6] px-7 pr-14 text-[28px] tracking-[-0.02em]"
+                  className="h-14 rounded-3xl border-[#d8dae6] px-5 pr-12 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
                 />
-                <CalendarDays className="pointer-events-none absolute right-6 top-1/2 size-8 -translate-y-1/2 text-[#6e7080]" />
+                <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080] sm:right-6 sm:size-8" />
               </div>
             </div>
 
@@ -148,7 +148,7 @@ function SettingsDialog(props: {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[24px] text-white hover:bg-[#4554ff]"
+                className="h-12 rounded-3xl bg-[#5563ff] px-8 text-[18px] text-white hover:bg-[#4554ff] sm:h-14 sm:px-10 sm:text-[24px]"
               >
                 {submitting ? "Сохранение..." : props.submitText}
               </Button>
@@ -185,7 +185,7 @@ function DeleteDialog(props: {
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-[42px] font-semibold tracking-[-0.03em] text-black">
+            <DialogTitle className="text-3xl font-semibold tracking-[-0.03em] text-black sm:text-[42px]">
               Удаление документа &laquo;{props.title}&raquo;
             </DialogTitle>
             <button
@@ -206,7 +206,7 @@ function DeleteDialog(props: {
               type="button"
               onClick={handleDelete}
               disabled={submitting}
-              className="h-14 rounded-3xl bg-[#ff3b30] px-10 text-[24px] text-white hover:bg-[#e0342a]"
+              className="h-12 rounded-3xl bg-[#ff3b30] px-8 text-[18px] text-white hover:bg-[#e0342a] sm:h-14 sm:px-10 sm:text-[24px]"
             >
               {submitting ? "Удаление..." : "Удалить"}
             </Button>
@@ -344,7 +344,7 @@ export function BreakdownHistoryDocumentsClient({
       {/* Document Cards */}
       <div className="space-y-4">
         {documents.length === 0 && (
-          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[28px] text-[#8a8ea4]">
+          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-4 py-5 text-lg text-[#8a8ea4] sm:px-8 sm:py-8 sm:text-[28px]">
             Документов пока нет
           </div>
         )}

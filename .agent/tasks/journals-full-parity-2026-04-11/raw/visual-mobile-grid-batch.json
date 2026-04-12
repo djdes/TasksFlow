@@ -1,0 +1,30 @@
+{
+  "date": "2026-04-12",
+  "defect_class": "mobile-list-card-grids",
+  "classification": "systemic",
+  "changed_files": [
+    "src/components/journals/audit-plan-documents-client.tsx",
+    "src/components/journals/audit-protocol-documents-client.tsx",
+    "src/components/journals/training-plan-documents-client.tsx",
+    "src/components/journals/product-writeoff-documents-client.tsx",
+    "src/components/journals/cleaning-documents-client.tsx",
+    "src/components/journals/staff-training-documents-client.tsx"
+  ],
+  "remediation_pattern": {
+    "row_container": "grid-cols-1 gap-4 ... sm:grid-cols-[...] sm:gap-0",
+    "metadata_columns": "border-t pt-4 ... sm:border-l sm:border-t-0 sm:pt-0",
+    "actions": "justify-start on mobile, restore desktop alignment on sm",
+    "typography": "sm-based title/date scaling in narrow cards"
+  },
+  "checks": [
+    {
+      "command": "npx eslint <touched list-card files>",
+      "result": "PASS_WITH_WARNING",
+      "note": "One pre-existing unused-symbol warning in audit-plan-documents-client.tsx"
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "result": "PASS"
+    }
+  ]
+}

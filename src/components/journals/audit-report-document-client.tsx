@@ -49,7 +49,7 @@ function FindingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[920px] rounded-[32px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[920px] overflow-y-auto rounded-[32px] border-0 p-0">
         <DialogHeader className="border-b px-12 py-10">
           <DialogTitle className="text-[32px] font-medium text-black">
             {finding ? "Редактирование несоответствия" : "Добавить несоответствие"}

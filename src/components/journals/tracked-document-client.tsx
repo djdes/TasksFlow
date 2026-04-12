@@ -615,7 +615,7 @@ function TrackedDocumentClientImpl({
       </div>
 
       <Dialog open={addRowOpen} onOpenChange={setAddRowOpen}>
-        <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[760px] overflow-y-auto rounded-[32px] border-0 p-0">
           <DialogHeader className="border-b px-12 py-10">
             <DialogTitle className="text-[32px] font-medium text-black">
               Добавить строку
@@ -670,7 +670,7 @@ function TrackedDocumentClientImpl({
       </Dialog>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[860px] overflow-y-auto rounded-[32px] border-0 p-0">
           <DialogHeader className="border-b px-14 py-12">
             <DialogTitle className="text-[32px] font-medium text-black">
               Настройки журнала
@@ -773,7 +773,6 @@ export function TrackedDocumentClient(props: Props) {
 
   return <TrackedDocumentClientImpl {...props} />;
 }
-
 
 
 

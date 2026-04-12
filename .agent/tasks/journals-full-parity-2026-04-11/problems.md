@@ -37,10 +37,13 @@ Status: `FAIL`
 
 Why it is not proven:
 - The matrix now distinguishes `CLOSE`, `FIXED`, and `BLOCKED`, which is better than the old fake all-blocked sheet.
+- A shared mobile dialog/control sizing defect class is now fixed across multiple journals, so the remaining visual gap is narrower than before.
+- A shared fixed-grid mobile list-card defect class is now also fixed across six journals, so one more repeatable visual layer is no longer blocking the whole set.
 - But `15` journals still remain visually blocked, so the parity loop is not closed.
 
 Smallest safe fix:
 - Reduce the blocked visual set by recording actual screenshot/live comparisons for the remaining journals.
+- Then continue the next systemic visual batches for wide table defaults and oversized list headings.
 
 ## AC7 UNKNOWN
 

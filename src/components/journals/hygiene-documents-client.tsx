@@ -120,14 +120,14 @@ function EditDocumentDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Введите название документа"
-              className="h-20 rounded-3xl border-[#dfe1ec] px-6 text-[24px]"
+              className="h-14 rounded-3xl border-[#dfe1ec] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]"
             />
           </div>
 
           <div className="space-y-3">
             <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-20 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[24px]">
+              <SelectTrigger className="h-14 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -143,7 +143,7 @@ function EditDocumentDialog({
           {isStaffDocumentTemplate(templateCode) && templateCode !== "health_check" && (
             <div className="space-y-2 rounded-3xl border border-[#dfe1ec] px-6 py-5">
               <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
-              <div className="text-[22px] leading-[1.35] text-black">{HYGIENE_PERIODICITY_TEXT}</div>
+              <div className="text-lg leading-[1.35] text-black sm:text-[22px]">{HYGIENE_PERIODICITY_TEXT}</div>
             </div>
           )}
 

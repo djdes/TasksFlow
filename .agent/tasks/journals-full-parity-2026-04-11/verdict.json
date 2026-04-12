@@ -25,7 +25,7 @@
     {
       "id": "AC5",
       "status": "FAIL",
-      "reason": "Visual outcomes are now explicit as CLOSE/FIXED/BLOCKED, but the blocked visual set is still too large to claim full parity completion."
+      "reason": "Visual outcomes are now explicit as CLOSE/FIXED/BLOCKED, and the mobile dialog/control sizing plus fixed-grid list-card defect classes are fixed across multiple journals, but the blocked visual set is still too large to claim full parity completion."
     },
     {
       "id": "AC6",
@@ -45,7 +45,7 @@
     {
       "id": "AC9",
       "status": "PASS",
-      "reason": "The print/runtime defect class was rechecked across the full 35-journal set."
+      "reason": "The print/runtime defect class was rechecked across the full 35-journal set, and the mobile dialog/control sizing plus fixed-grid list-card defect classes were also fixed systemically instead of per-journal."
     },
     {
       "id": "AC10",
@@ -66,6 +66,8 @@
   "commands_run": [
     "npx tsc --noEmit",
     "npx eslint \"scripts/capture-local-runtime-proof.ts\" \"src/lib/document-pdf.ts\" \"src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx\"",
+    "npx eslint \"src/components/ui/dialog.tsx\" \"src/components/journals/audit-report-document-client.tsx\" \"src/components/journals/cold-equipment-document-client.tsx\" \"src/components/journals/register-document-client.tsx\" \"src/components/journals/tracked-document-client.tsx\" \"src/components/journals/sanitation-day-documents-client.tsx\" \"src/components/journals/breakdown-history-documents-client.tsx\" \"src/components/journals/cleaning-ventilation-checklist-documents-client.tsx\" \"src/components/journals/hygiene-documents-client.tsx\" \"src/components/journals/sanitary-day-checklist-documents-client.tsx\"",
+    "npx eslint \"src/components/journals/audit-plan-documents-client.tsx\" \"src/components/journals/audit-protocol-documents-client.tsx\" \"src/components/journals/training-plan-documents-client.tsx\" \"src/components/journals/product-writeoff-documents-client.tsx\" \"src/components/journals/cleaning-documents-client.tsx\" \"src/components/journals/staff-training-documents-client.tsx\"",
     "npx tsx scripts/capture-local-runtime-proof.ts"
   ],
   "artifacts_used": [
@@ -75,6 +77,8 @@
     ".agent/tasks/journals-full-parity-2026-04-11/inventory.md",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/implementation-matrix.json",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/reviewed-visual-matrix.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-sizing-batch.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-grid-batch.md",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-batch-1-review.md",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-batch-2-review.md",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/local-runtime-sweep.md",

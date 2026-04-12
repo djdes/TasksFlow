@@ -1,0 +1,35 @@
+{
+  "date": "2026-04-12",
+  "defect_class": "mobile-dialog-and-control-sizing",
+  "classification": "systemic",
+  "changed_files": [
+    "src/components/ui/dialog.tsx",
+    "src/components/journals/audit-report-document-client.tsx",
+    "src/components/journals/cold-equipment-document-client.tsx",
+    "src/components/journals/register-document-client.tsx",
+    "src/components/journals/tracked-document-client.tsx",
+    "src/components/journals/sanitation-day-documents-client.tsx",
+    "src/components/journals/breakdown-history-documents-client.tsx",
+    "src/components/journals/cleaning-ventilation-checklist-documents-client.tsx",
+    "src/components/journals/hygiene-documents-client.tsx",
+    "src/components/journals/sanitary-day-checklist-documents-client.tsx"
+  ],
+  "remediation_pattern": {
+    "dialog_title": "text-3xl ... sm:text-[40px/42px]",
+    "control_height": "h-14 ... sm:h-20",
+    "control_text": "text-[16px] ... sm:text-[24px/28px]",
+    "date_icon": "right-4 size-6 ... sm:right-6 sm:size-8",
+    "primary_action": "h-12 px-8 text-[18px] ... sm:h-14 sm:px-10 sm:text-[24px]",
+    "empty_state": "px-4 py-5 text-lg ... sm:px-8 sm:py-8 sm:text-[28px]"
+  },
+  "checks": [
+    {
+      "command": "npx eslint <touched visual files>",
+      "result": "PASS"
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "result": "PASS"
+    }
+  ]
+}

@@ -185,7 +185,7 @@ function EquipmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[36px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[760px] overflow-y-auto rounded-[36px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
         <DialogHeader className="flex flex-row items-center justify-between border-b border-[#d8dcea] px-12 py-10">
           <DialogTitle className="text-[32px] font-medium text-black">
             {initialItem ? "Редактирование оборудования" : "Добавление оборудования"}
@@ -333,7 +333,7 @@ function JournalSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[980px] rounded-[38px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[980px] overflow-y-auto rounded-[38px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
         <DialogHeader className="flex flex-row items-center justify-between border-b border-[#d8dcea] px-16 py-12">
           <DialogTitle className="text-[34px] font-medium text-black">
             Настройки журнала

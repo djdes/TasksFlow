@@ -4,7 +4,7 @@
 
 Task: `journals-full-parity-2026-04-11`
 
-This refresh closes the local runtime proof gap for list/detail/print and replaces the fake all-blocked visual matrix with a canonical 35-row verdict set.
+This refresh keeps the local runtime proof closed and adds a new systemic visual-fix batch for mobile dialog sizing, oversized controls, and empty-state scaling.
 
 ## Code changes in this loop
 
@@ -14,6 +14,10 @@ This refresh closes the local runtime proof gap for list/detail/print and replac
   - auto-creates default documents through `/api/journal-documents` when a list page is empty
   - probes `/api/journal-documents/[id]/pdf` for runtime print proof
 - [page.tsx](/c:/www/Wesetup.ru/src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx) had temporary debug `console.log` calls removed.
+- Visual containment and mobile sizing fixes:
+  - [dialog.tsx](/c:/www/Wesetup.ru/src/components/ui/dialog.tsx) now uses viewport-safe width/height with scroll containment for all dialogs.
+  - [audit-report-document-client.tsx](/c:/www/Wesetup.ru/src/components/journals/audit-report-document-client.tsx), [cold-equipment-document-client.tsx](/c:/www/Wesetup.ru/src/components/journals/cold-equipment-document-client.tsx), [register-document-client.tsx](/c:/www/Wesetup.ru/src/components/journals/register-document-client.tsx), and [tracked-document-client.tsx](/c:/www/Wesetup.ru/src/components/journals/tracked-document-client.tsx) now have local viewport-safe dialog guards for oversized edit/settings modals.
+  - [sanitation-day-documents-client.tsx](/c:/www/Wesetup.ru/src/components/journals/sanitation-day-documents-client.tsx), [breakdown-history-documents-client.tsx](/c:/www/Wesetup.ru/src/components/journals/breakdown-history-documents-client.tsx), [cleaning-ventilation-checklist-documents-client.tsx](/c:/www/Wesetup.ru/src/components/journals/cleaning-ventilation-checklist-documents-client.tsx), [hygiene-documents-client.tsx](/c:/www/Wesetup.ru/src/components/journals/hygiene-documents-client.tsx), and [sanitary-day-checklist-documents-client.tsx](/c:/www/Wesetup.ru/src/components/journals/sanitary-day-checklist-documents-client.tsx) now scale form controls and empty states down on mobile instead of forcing desktop sizes.
 
 ## Fresh checks
 
@@ -35,6 +39,65 @@ Fresh command outputs are stored under `.agent/tasks/journals-full-parity-2026-0
     - print-expected journals: `35/35 PASS`
     - `med_books` remains correctly `no-print-expected`
     - `disinfectant_usage` PDF runtime failure is fixed
+- `npx eslint` on the touched visual files
+  - Result: `PASS`
+  - Artifact:
+    - `raw/eslint-visual-2026-04-12.txt`
+- `npx tsc --noEmit`
+  - Result: `PASS`
+  - Artifact:
+    - `raw/tsc-visual-2026-04-12.txt`
+- `npx eslint` on the touched list-card grid files
+  - Result: `PASS` with one pre-existing warning
+  - Artifact:
+    - `raw/eslint-visual-grid-2026-04-12.txt`
+  - Note:
+    - `audit-plan-documents-client.tsx` still has a pre-existing unused symbol warning outside this visual batch's behavior risk.
+- `npx tsc --noEmit`
+  - Result: `PASS`
+  - Artifact:
+    - `raw/tsc-visual-grid-2026-04-12.txt`
+
+## Visual defect propagation
+
+- New artifact set:
+  - `raw/visual-mobile-sizing-batch.md`
+  - `raw/visual-mobile-sizing-batch.json`
+- Defect class:
+  - mobile dialog/content sizing across list/settings surfaces
+  - oversized dialog titles, `h-20` inputs/selects, large mobile button text, and large empty-state blocks
+- Classification:
+  - systemic, not local-only
+- Rechecked globally:
+  - modal overflow containment
+  - mobile form control sizing
+  - mobile empty-state scaling
+- Remaining likely visual classes after this batch:
+  - rigid fixed-column list grids
+  - wide table min-width defaults
+  - oversized top-level list headings in some journals
+
+## Visual defect propagation: mobile list-card grids
+
+- New artifact set:
+  - `raw/visual-mobile-grid-batch.md`
+  - `raw/visual-mobile-grid-batch.json`
+- Defect class:
+  - fixed desktop-only document row grids in list pages
+  - metadata columns that assumed `border-l` desktop layout only
+  - action menus aligned only for the last desktop column
+- Classification:
+  - systemic, not local-only
+- Rechecked globally:
+  - `audit_plan`
+  - `audit_protocol`
+  - `training_plan`
+  - `product_writeoff`
+  - `cleaning`
+  - `staff_training`
+- Remaining likely visual classes after this batch:
+  - wide table min-width defaults in detail pages
+  - oversized top-level list headings in some journals
 
 ## Visual-proof state
 
@@ -82,7 +145,7 @@ These are not runtime failures anymore. They are proof gaps: live/detail/docprin
   - `15` journals remain explicitly `BLOCKED` because row-by-row visual comparison notes are still missing.
 - `AC5`: `PARTIAL`
   - Visual outcomes are now explicit as `CLOSE`, `FIXED`, or `BLOCKED`.
-  - The blocked set is isolated, but not yet reduced to zero.
+  - The blocked set is isolated, and shared mobile-sizing plus mobile-grid defect classes are now fixed across multiple journals, but it is not yet reduced to zero.
 - `AC6`: `PASS`
   - Local runtime proof now covers list/detail routing for all `35/35` journals.
   - The shared disappearing-document fix remains in place and local DB-backed proof now exists through the real app path.
@@ -105,3 +168,5 @@ These are not runtime failures anymore. They are proof gaps: live/detail/docprin
 
 - `15` journals still lack row-by-row visual comparison notes in the canonical matrix.
 - Full packaged runtime proof for every edit/save/delete/archive interaction is still incomplete, even though list/detail/create/print is now covered across all 35.
+- The next likely systemic visual classes are already narrowed to fixed-column mobile grids, wide table defaults, and oversized list headings.
+- The fixed-column mobile grid class is now addressed for six journals, leaving wide table defaults and oversized list headings as the next likely systemic visual passes.

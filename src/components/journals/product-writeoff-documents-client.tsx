@@ -233,14 +233,14 @@ export function ProductWriteoffDocumentsClient({
           {normalizedDocuments.map((document) => (
             <div
               key={document.id}
-              className="grid grid-cols-[minmax(0,1.8fr)_280px_280px_56px] items-center rounded-[16px] border border-[#eceef5] bg-white px-7 py-4"
+              className="grid grid-cols-1 gap-4 rounded-[16px] border border-[#eceef5] bg-white px-5 py-4 sm:grid-cols-[minmax(0,1.8fr)_280px_280px_56px] sm:items-center sm:gap-0 sm:px-7"
             >
               <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-                <div className="text-[24px] font-semibold tracking-[-0.02em] text-black">{document.listTitle}</div>
+                <div className="text-[18px] font-semibold tracking-[-0.02em] text-black sm:text-[24px]">{document.listTitle}</div>
               </Link>
               <Link
                 href={`/journals/${templateCode}/documents/${document.id}`}
-                className="min-w-0 border-l border-[#eceef5] px-10"
+                className="min-w-0 border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
                 <div className="text-[16px] text-[#85889b]">Комментарий</div>
                 <div className="mt-1 truncate text-[20px] leading-none text-black">
@@ -249,14 +249,14 @@ export function ProductWriteoffDocumentsClient({
               </Link>
               <Link
                 href={`/journals/${templateCode}/documents/${document.id}`}
-                className="border-l border-[#eceef5] px-10"
+                className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
                 <div className="text-[16px] text-[#85889b]">Дата документа</div>
                 <div className="mt-1 text-[20px] font-semibold leading-none text-black">
                   {formatProductWriteoffDate(document.config.documentDate || document.dateFrom)}
                 </div>
               </Link>
-              <div className="flex justify-end">
+              <div className="flex justify-start sm:justify-end">
                 <ProductWriteoffActionsMenu
                   isActive={document.status === "active"}
                   onEdit={() => setEditingDocument(document)}

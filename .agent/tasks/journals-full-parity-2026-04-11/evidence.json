@@ -73,6 +73,16 @@
         },
         {
           "type": "artifact",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-sizing-batch.md",
+          "summary": "A new systemic mobile-sizing defect class is fixed across multiple journal list/settings surfaces."
+        },
+        {
+          "type": "artifact",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-grid-batch.md",
+          "summary": "A new systemic fixed-grid list-card defect class is fixed across six journal list pages."
+        },
+        {
+          "type": "artifact",
           "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-batch-1-review.md",
           "summary": "Reviewed batch 1 still proves concrete close/fixed outcomes."
         },
@@ -161,6 +171,16 @@
         },
         {
           "type": "artifact",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-sizing-batch.md",
+          "summary": "The mobile dialog/control sizing defect class was rechecked and fixed across multiple journals instead of as a one-off patch."
+        },
+        {
+          "type": "artifact",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-grid-batch.md",
+          "summary": "The fixed-column mobile grid defect class was rechecked and fixed across multiple list-page journals instead of as isolated tweaks."
+        },
+        {
+          "type": "artifact",
           "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/local-runtime-sweep.md",
           "summary": "Fresh runtime sweep applies the same proof pass across the full 35-journal set."
         }
@@ -199,6 +219,20 @@
         },
         {
           "type": "command",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/tsc-visual-2026-04-12.txt",
+          "command": "npx tsc --noEmit",
+          "exit_code": 0,
+          "summary": "The visual-fix batch also passed a fresh TypeScript verification on current repo state."
+        },
+        {
+          "type": "command",
+          "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/tsc-visual-grid-2026-04-12.txt",
+          "command": "npx tsc --noEmit",
+          "exit_code": 0,
+          "summary": "The mobile-grid visual batch also passed a fresh TypeScript verification on current repo state."
+        },
+        {
+          "type": "command",
           "path": ".agent/tasks/journals-full-parity-2026-04-11/raw/local-runtime-sweep.md",
           "command": "npx tsx scripts/capture-local-runtime-proof.ts",
           "exit_code": 0,
@@ -233,8 +267,28 @@
     "src/lib/document-pdf.ts",
     "src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx",
     "scripts/capture-local-runtime-proof.ts",
+    "src/components/ui/dialog.tsx",
+    "src/components/journals/audit-report-document-client.tsx",
+    "src/components/journals/cold-equipment-document-client.tsx",
+    "src/components/journals/register-document-client.tsx",
+    "src/components/journals/tracked-document-client.tsx",
+    "src/components/journals/sanitation-day-documents-client.tsx",
+    "src/components/journals/breakdown-history-documents-client.tsx",
+    "src/components/journals/cleaning-ventilation-checklist-documents-client.tsx",
+    "src/components/journals/hygiene-documents-client.tsx",
+    "src/components/journals/sanitary-day-checklist-documents-client.tsx",
+    "src/components/journals/audit-plan-documents-client.tsx",
+    "src/components/journals/audit-protocol-documents-client.tsx",
+    "src/components/journals/training-plan-documents-client.tsx",
+    "src/components/journals/product-writeoff-documents-client.tsx",
+    "src/components/journals/cleaning-documents-client.tsx",
+    "src/components/journals/staff-training-documents-client.tsx",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/reviewed-visual-matrix.md",
     ".agent/tasks/journals-full-parity-2026-04-11/raw/reviewed-visual-matrix.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-sizing-batch.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-sizing-batch.json",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-grid-batch.md",
+    ".agent/tasks/journals-full-parity-2026-04-11/raw/visual-mobile-grid-batch.json",
     ".agent/tasks/journals-full-parity-2026-04-11/evidence.md"
   ],
   "commands_for_fresh_verifier": [
@@ -242,10 +296,13 @@
     "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py status --task-id journals-full-parity-2026-04-11",
     "npx tsc --noEmit",
     "npx eslint \"scripts/capture-local-runtime-proof.ts\" \"src/lib/document-pdf.ts\" \"src/app/(dashboard)/journals/[code]/documents/[docId]/page.tsx\"",
+    "npx eslint \"src/components/ui/dialog.tsx\" \"src/components/journals/audit-report-document-client.tsx\" \"src/components/journals/cold-equipment-document-client.tsx\" \"src/components/journals/register-document-client.tsx\" \"src/components/journals/tracked-document-client.tsx\" \"src/components/journals/sanitation-day-documents-client.tsx\" \"src/components/journals/breakdown-history-documents-client.tsx\" \"src/components/journals/cleaning-ventilation-checklist-documents-client.tsx\" \"src/components/journals/hygiene-documents-client.tsx\" \"src/components/journals/sanitary-day-checklist-documents-client.tsx\"",
+    "npx eslint \"src/components/journals/audit-plan-documents-client.tsx\" \"src/components/journals/audit-protocol-documents-client.tsx\" \"src/components/journals/training-plan-documents-client.tsx\" \"src/components/journals/product-writeoff-documents-client.tsx\" \"src/components/journals/cleaning-documents-client.tsx\" \"src/components/journals/staff-training-documents-client.tsx\"",
     "npx tsx scripts/capture-local-runtime-proof.ts"
   ],
   "known_gaps": [
     "15 journals still lack row-by-row visual comparison notes in the canonical matrix.",
-    "The bundle still does not package edit/save/delete/archive runtime proof journal by journal."
+    "The bundle still does not package edit/save/delete/archive runtime proof journal by journal.",
+    "The next likely systemic visual classes are wide table defaults and oversized list headings."
   ]
 }

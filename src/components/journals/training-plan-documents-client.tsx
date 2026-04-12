@@ -430,30 +430,30 @@ export function TrainingPlanDocumentsClient({
           return (
             <div
               key={document.id}
-              className="grid grid-cols-[1.7fr_200px_430px_270px_64px] items-center rounded-[18px] border border-[#eaedf7] bg-white px-8 py-5"
+              className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[1.7fr_200px_430px_270px_64px] sm:items-center sm:gap-0 sm:px-8"
             >
               <Link href={href} className="text-[18px] font-semibold tracking-[-0.02em] text-black">
                 {document.title || TRAINING_PLAN_DOCUMENT_TITLE}
               </Link>
-              <Link href={href} className="border-l border-[#e8ebf5] px-8">
+              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                 <div className="text-[14px] text-[#7c8094]">Год</div>
                 <div className="mt-2 text-[18px] font-semibold text-black">
                   {getTrainingPlanYearLabel(config.year)}
                 </div>
               </Link>
-              <Link href={href} className="border-l border-[#e8ebf5] px-8">
+              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                 <div className="text-[14px] text-[#7c8094]">Должность &quot;Утверждаю&quot;</div>
                 <div className="mt-2 text-[18px] font-semibold text-black">
                   {getTrainingPlanApproveLabel(config.approveRole, config.approveEmployee)}
                 </div>
               </Link>
-              <Link href={href} className="border-l border-[#e8ebf5] px-8">
+              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                 <div className="text-[14px] text-[#7c8094]">Дата документа</div>
                 <div className="mt-2 text-[18px] font-semibold text-black">
                   {getTrainingPlanDocumentDateLabel(config.documentDate)}
                 </div>
               </Link>
-              <div className="flex justify-center">
+              <div className="flex justify-start sm:justify-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button

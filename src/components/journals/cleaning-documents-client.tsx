@@ -659,12 +659,12 @@ export function CleaningDocumentsClient(props: Props) {
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-[minmax(0,1.5fr)_360px_360px_240px_56px] items-center rounded-[18px] border border-[#eaedf7] bg-white px-7 py-5"
+                className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[minmax(0,1.5fr)_360px_360px_240px_56px] sm:items-center sm:gap-0 sm:px-7"
               >
-                <Link href={href} className="min-w-0 text-[24px] font-semibold text-black">
+                <Link href={href} className="min-w-0 text-[18px] font-semibold text-black sm:text-[24px]">
                   {document.title || CLEANING_DOCUMENT_TITLE}
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
+                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                   <div className="text-[16px] text-[#85889b]">Ответственный за уборку</div>
                   <div className="mt-2 space-y-1 text-[20px] font-semibold leading-[1.3] text-black">
                     {cleaningLines.map((line) => (
@@ -672,19 +672,19 @@ export function CleaningDocumentsClient(props: Props) {
                     ))}
                   </div>
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
+                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                   <div className="text-[16px] text-[#85889b]">Ответственный за контроль</div>
                   <div className="mt-2 text-[20px] font-semibold leading-[1.3] text-black">
                     {controlLine}
                   </div>
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
+                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
                   <div className="text-[16px] text-[#85889b]">Период</div>
                   <div className="mt-2 text-[20px] font-semibold leading-[1.3] text-black">
                     {getCleaningPeriodLabel(document.dateFrom, document.dateTo)}
                   </div>
                 </Link>
-                <div className="flex justify-end">
+                <div className="flex justify-start sm:justify-end">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button

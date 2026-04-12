@@ -1,0 +1,1 @@
+PASS: npx tsc --noEmit after mobile grid batch (2026-04-12)
