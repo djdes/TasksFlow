@@ -39,6 +39,7 @@ import {
   type StaffTrainingRow,
 } from "@/lib/staff-training-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
+import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 type Props = {
@@ -479,7 +480,19 @@ export function StaffTrainingDocumentClient({
             <Select
               value={draftRow.employeePosition}
               onValueChange={(val) =>
-                setDraftRow((prev) => ({ ...prev, employeePosition: val }))
+                setDraftRow((prev) => {
+                  const candidates = getUsersForRoleLabel(users, val);
+                  const stillValid = prev.employeeId
+                    ? candidates.some((u) => u.id === prev.employeeId)
+                    : true;
+                  return {
+                    ...prev,
+                    employeePosition: val,
+                    ...(stillValid
+                      ? {}
+                      : { employeeId: null, employeeName: "" }),
+                  };
+                })
               }
             >
               <SelectTrigger>
@@ -514,7 +527,7 @@ export function StaffTrainingDocumentClient({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__empty__">- Выберите значение -</SelectItem>
-                {users.map((user) => (
+                {(draftRow.employeePosition ? getUsersForRoleLabel(users, draftRow.employeePosition) : users).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {buildStaffOptionLabel(user)}
                   </SelectItem>
