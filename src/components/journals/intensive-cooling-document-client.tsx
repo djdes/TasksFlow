@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   Select,
   SelectContent,
@@ -233,9 +233,18 @@ function RowDialog(props: {
             </Label>
             <Select
               value={row.responsibleTitle || "__empty__"}
-              onValueChange={(value) =>
-                setValue("responsibleTitle", value === "__empty__" ? "" : value)
-              }
+              onValueChange={(value) => {
+                const nextTitle = value === "__empty__" ? "" : value;
+                setRow((current) => {
+                  const candidates = nextTitle ? getUsersForRoleLabel(props.users, nextTitle) : props.users;
+                  const stillValid = !current.responsibleUserId || candidates.some((u) => u.id === current.responsibleUserId);
+                  return {
+                    ...current,
+                    responsibleTitle: nextTitle,
+                    responsibleUserId: stillValid ? current.responsibleUserId : "",
+                  };
+                });
+              }}
             >
               <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
                 <SelectValue placeholder="Лицо, проводившее контроль" />
@@ -274,7 +283,7 @@ function RowDialog(props: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__empty__">- Выберите значение -</SelectItem>
-                {props.users.map((user) => (
+                {(row.responsibleTitle ? getUsersForRoleLabel(props.users, row.responsibleTitle) : props.users).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
                   </SelectItem>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   Dialog,
   DialogContent,
@@ -726,7 +726,7 @@ export function EquipmentMaintenanceDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {users.map((u) => (
+                {(settingsApproveRole ? getUsersForRoleLabel(users, settingsApproveRole) : users).map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {buildStaffOptionLabel(u)}
                   </SelectItem>
@@ -770,7 +770,7 @@ export function EquipmentMaintenanceDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {users.map((u) => (
+                {(settingsResponsibleRole ? getUsersForRoleLabel(users, settingsResponsibleRole) : users).map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {buildStaffOptionLabel(u)}
                   </SelectItem>

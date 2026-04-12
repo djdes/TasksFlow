@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   Dialog,
   DialogContent,
@@ -956,7 +956,14 @@ export function PerishableRejectionDocumentClient({
             <select
               className="rounded-md border px-3 py-2 text-sm"
               value={draftPosition}
-              onChange={(e) => setDraftPosition(e.target.value)}
+              onChange={(e) => {
+                const pos = e.target.value;
+                setDraftPosition(pos);
+                const candidates = getUsersForRoleLabel(users, pos);
+                if (draftUserId && !candidates.some((u) => u.id === draftUserId)) {
+                  setDraftUserId("");
+                }
+              }}
             >
               {RESPONSIBLE_POSITIONS.map((pos) => (
                 <option key={pos} value={pos}>
@@ -973,7 +980,7 @@ export function PerishableRejectionDocumentClient({
               onChange={(e) => setDraftUserId(e.target.value)}
             >
               <option value="">- Выберите значение -</option>
-              {users.map((u) => (
+              {getUsersForRoleLabel(users, draftPosition).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>

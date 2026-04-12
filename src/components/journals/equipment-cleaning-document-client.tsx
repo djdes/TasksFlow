@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   Select,
   SelectContent,
@@ -625,7 +625,17 @@ export function EquipmentCleaningDocumentClient({
               <Label>Мойщик</Label>
               <Select
                 value={draft.data.washerPosition}
-                onValueChange={(value) => updateDraft({ washerPosition: value })}
+                onValueChange={(value) => {
+                  const candidates = getUsersForRoleLabel(users, value);
+                  const currentId = draft.data.washerUserId || "";
+                  const stillValid = candidates.some((u) => u.id === currentId);
+                  updateDraft({
+                    washerPosition: value,
+                    ...(stillValid
+                      ? {}
+                      : { washerUserId: "", washerName: "" }),
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Мойщик" />
@@ -656,7 +666,7 @@ export function EquipmentCleaningDocumentClient({
                   <SelectValue placeholder="Сотрудник" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
+                  {getUsersForRoleLabel(users, draft.data.washerPosition).map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
                     </SelectItem>
@@ -669,7 +679,17 @@ export function EquipmentCleaningDocumentClient({
               <Label>Должность лица, проводившего контроль</Label>
               <Select
                 value={draft.data.controllerPosition}
-                onValueChange={(value) => updateDraft({ controllerPosition: value })}
+                onValueChange={(value) => {
+                  const candidates = getUsersForRoleLabel(users, value);
+                  const currentId = draft.data.controllerUserId || "";
+                  const stillValid = candidates.some((u) => u.id === currentId);
+                  updateDraft({
+                    controllerPosition: value,
+                    ...(stillValid
+                      ? {}
+                      : { controllerUserId: "", controllerName: "" }),
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Должность" />
@@ -700,7 +720,7 @@ export function EquipmentCleaningDocumentClient({
                   <SelectValue placeholder="Сотрудник" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
+                  {getUsersForRoleLabel(users, draft.data.controllerPosition).map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
                     </SelectItem>

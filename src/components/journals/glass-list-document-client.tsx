@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 import {
   GLASS_LIST_PAGE_TITLE,
   createGlassListRow,
@@ -318,9 +318,18 @@ export function GlassListDocumentClient({
               <Label className="text-[18px] text-[#73738a]">Должность</Label>
               <select
                 value={config.responsibleTitle}
-                onChange={(event) =>
-                  setConfig((prev) => ({ ...prev, responsibleTitle: event.target.value }))
-                }
+                onChange={(event) => {
+                  const newTitle = event.target.value;
+                  setConfig((prev) => {
+                    const candidates = getUsersForRoleLabel(users, newTitle);
+                    const stillValid = candidates.some((u) => u.id === prev.responsibleUserId);
+                    return {
+                      ...prev,
+                      responsibleTitle: newTitle,
+                      responsibleUserId: stillValid ? prev.responsibleUserId : "",
+                    };
+                  });
+                }}
                 className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
               >
                 {RESPONSIBLE_TITLES.map((item) => (
@@ -340,7 +349,7 @@ export function GlassListDocumentClient({
                 className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
               >
                 <option value="">- Выберите значение -</option>
-                {users.map((user) => (
+                {getUsersForRoleLabel(users, config.responsibleTitle).map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name}
                   </option>

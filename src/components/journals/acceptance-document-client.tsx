@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES, getUserRoleLabel, getUsersForRoleLabel } from "@/lib/user-roles";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -423,7 +423,12 @@ function RowDialog(props: {
               {/* Должность ответственного */}
               <div className="space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Должность ответственного</Label>
-                <Select value={row.responsibleTitle} onValueChange={(v) => setValue("responsibleTitle", v)}>
+                <Select value={row.responsibleTitle} onValueChange={(v) => {
+                  const candidates = getUsersForRoleLabel(props.users, v);
+                  const stillValid = candidates.some((u) => u.id === row.responsibleUserId);
+                  setValue("responsibleTitle", v);
+                  if (!stillValid) setValue("responsibleUserId", "");
+                }}>
                   <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                   <SelectContent>
                     {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -437,7 +442,7 @@ function RowDialog(props: {
                 <Select value={row.responsibleUserId} onValueChange={(v) => setValue("responsibleUserId", v)}>
                   <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                   <SelectContent>
-                    {props.users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                    {getUsersForRoleLabel(props.users, row.responsibleTitle).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -830,7 +835,12 @@ function SettingsDialog(props: {
           </div>
           <div className="space-y-1">
             <Label className="text-[14px] text-[#6f7282]">Должность ответственного</Label>
-            <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
+            <Select value={responsibleTitle} onValueChange={(v) => {
+              const candidates = getUsersForRoleLabel(props.users, v);
+              const stillValid = candidates.some((u) => u.id === responsibleUserId);
+              setResponsibleTitle(v);
+              if (!stillValid) setResponsibleUserId("");
+            }}>
               <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
               <SelectContent>
                 {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -842,7 +852,7 @@ function SettingsDialog(props: {
             <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
               <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
               <SelectContent>
-                {props.users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                {getUsersForRoleLabel(props.users, responsibleTitle).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
