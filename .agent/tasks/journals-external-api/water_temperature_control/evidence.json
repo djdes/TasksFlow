@@ -1,0 +1,12 @@
+{
+  "code": "water_temperature_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67aco003zz4ts2jrdfdai",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

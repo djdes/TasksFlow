@@ -1,0 +1,282 @@
+{
+  "base": "https://wesetup.ru",
+  "organizationId": "cmnm40ikt00002ktseet6fd5y",
+  "ranAt": "2026-04-12T19:42:49.081Z",
+  "results": [
+    {
+      "code": "accident_journal",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "allergen_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_plan",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_plan_scan",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_protocol",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_protocol_scan",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_report",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "audit_report_scan",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "breakdown_history",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "ccp_monitoring",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "cleaning",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "cleaning_ventilation_checklist",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "climate_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "cold_equipment_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "complaint_register",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "cooking_temp",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "critical_limit_check",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "daily_rejection",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "defrosting_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "dishwashing_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "disinfectant_usage",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "equipment_calibration",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "equipment_cleaning",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "equipment_maintenance",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "finished_product",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "fryer_oil",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "general_cleaning",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "glass_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "glass_items_list",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "hand_hygiene_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "health_check",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "hygiene",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "incoming_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "incoming_raw_materials_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "intensive_cooling",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "inventory_sanitation",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "med_books",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "metal_impurity",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "perishable_rejection",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "pest_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "ppe_issuance",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "product_writeoff",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "raw_storage_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "receiving_temperature_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "sanitary_day_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "shipment",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "staff_training",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "supplier_audit",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "temp_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "traceability_test",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "training_plan",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "uv_lamp_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "uv_lamp_runtime",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "waste_disposal_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    },
+    {
+      "code": "water_temperature_control",
+      "verdict": "PASS",
+      "note": "post=200 entries=1 pdf=401"
+    }
+  ]
+}

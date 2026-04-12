@@ -1,0 +1,11 @@
+# intensive_cooling external API — 2026-04-12T19:42:48.556Z
+- POST status: 200
+- ok: true
+- documentId: cmnw679v1002hz4tsdb0q8veq
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

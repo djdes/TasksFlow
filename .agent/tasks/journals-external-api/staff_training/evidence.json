@@ -1,0 +1,12 @@
+{
+  "code": "staff_training",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnubi17600a40etsirechs6a",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

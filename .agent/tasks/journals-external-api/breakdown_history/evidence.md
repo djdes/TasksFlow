@@ -1,0 +1,11 @@
+# breakdown_history external API — 2026-04-12T19:42:47.780Z
+- POST status: 200
+- ok: true
+- documentId: cmnw679aw000oz4ts8a9ty87d
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

@@ -1,0 +1,11 @@
+# daily_rejection external API — 2026-04-12T19:42:48.037Z
+- POST status: 200
+- ok: true
+- documentId: cmnrqj50n0075j8tst9tg0unz
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

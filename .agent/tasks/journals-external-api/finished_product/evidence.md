@@ -1,0 +1,11 @@
+# finished_product external API — 2026-04-12T19:42:48.212Z
+- POST status: 200
+- ok: true
+- documentId: cmnr5elqk000g3ztsyiisw268
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

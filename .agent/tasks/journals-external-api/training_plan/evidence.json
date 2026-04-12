@@ -1,0 +1,12 @@
+{
+  "code": "training_plan",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a9s003pz4tsb52gnu0u",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

@@ -1,0 +1,11 @@
+# critical_limit_check external API — 2026-04-12T19:42:48.011Z
+- POST status: 200
+- ok: true
+- documentId: cmnw679hj0018z4ts2mu2ef8g
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

@@ -1,0 +1,11 @@
+# sanitary_day_control external API — 2026-04-12T19:42:48.796Z
+- POST status: 200
+- ok: true
+- documentId: cmnw67a470038z4tsam4pb33h
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

@@ -1,0 +1,12 @@
+{
+  "code": "med_books",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679ws002nz4ts7g7meaeq",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

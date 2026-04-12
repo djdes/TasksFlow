@@ -1,0 +1,12 @@
+{
+  "code": "traceability_test",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a8z003mz4tsx0de2aeu",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

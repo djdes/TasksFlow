@@ -1,0 +1,12 @@
+{
+  "code": "complaint_register",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnvqmrvt0050phtsnkm07021",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

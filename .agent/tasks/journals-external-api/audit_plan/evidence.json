@@ -1,0 +1,12 @@
+{
+  "code": "audit_plan",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw6793x0008z4tsd72dai5t",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

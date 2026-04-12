@@ -1,0 +1,11 @@
+# product_writeoff external API — 2026-04-12T19:42:48.725Z
+- POST status: 200
+- ok: true
+- documentId: cmnw67a100030z4tsvliwygpk
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

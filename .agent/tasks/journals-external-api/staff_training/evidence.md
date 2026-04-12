@@ -1,0 +1,11 @@
+# staff_training external API — 2026-04-12T19:42:48.848Z
+- POST status: 200
+- ok: true
+- documentId: cmnubi17600a40etsirechs6a
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

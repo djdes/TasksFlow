@@ -1,0 +1,12 @@
+{
+  "code": "incoming_raw_materials_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679u6002ez4tscnkixn3u",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

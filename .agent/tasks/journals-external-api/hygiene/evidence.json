@@ -1,0 +1,12 @@
+{
+  "code": "hygiene",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw3pv0e0000ozts77jjq0nn",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

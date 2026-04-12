@@ -1,0 +1,12 @@
+{
+  "code": "climate_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnvt87bo003evdtswb3fwacz",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

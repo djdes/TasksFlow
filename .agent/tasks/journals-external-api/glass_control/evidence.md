@@ -1,0 +1,11 @@
+# glass_control external API — 2026-04-12T19:42:48.355Z
+- POST status: 200
+- ok: true
+- documentId: cmnw679pr001yz4tsppj3cvlb
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

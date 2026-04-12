@@ -1,0 +1,12 @@
+{
+  "code": "shipment",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a59003bz4tsw373o9ch",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

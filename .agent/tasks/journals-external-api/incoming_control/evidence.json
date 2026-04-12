@@ -1,0 +1,12 @@
+{
+  "code": "incoming_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679tc002bz4ts3fe5s43b",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

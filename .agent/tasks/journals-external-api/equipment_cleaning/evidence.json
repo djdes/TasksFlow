@@ -1,0 +1,12 @@
+{
+  "code": "equipment_cleaning",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679m4001mz4tsugilc4f3",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

@@ -1,0 +1,12 @@
+{
+  "code": "glass_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679pr001yz4tsppj3cvlb",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

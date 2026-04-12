@@ -1,0 +1,11 @@
+# equipment_maintenance external API — 2026-04-12T19:42:48.186Z
+- POST status: 200
+- ok: true
+- documentId: cmnsikoq200006ktsdnk9oier
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

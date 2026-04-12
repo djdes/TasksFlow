@@ -1,0 +1,12 @@
+{
+  "code": "health_check",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnvere1x0001antskzh77l1l",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

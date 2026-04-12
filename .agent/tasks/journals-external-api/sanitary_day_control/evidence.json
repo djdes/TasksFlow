@@ -1,0 +1,12 @@
+{
+  "code": "sanitary_day_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a470038z4tsam4pb33h",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

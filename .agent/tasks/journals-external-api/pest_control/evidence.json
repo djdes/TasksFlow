@@ -1,0 +1,12 @@
+{
+  "code": "pest_control",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679za002uz4tsw85b0g3x",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

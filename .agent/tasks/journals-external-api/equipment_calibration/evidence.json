@@ -1,0 +1,12 @@
+{
+  "code": "equipment_calibration",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnsvfe930000ovtscsh3um1r",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

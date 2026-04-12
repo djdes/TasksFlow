@@ -1,0 +1,11 @@
+# uv_lamp_runtime external API — 2026-04-12T19:42:49.025Z
+- POST status: 200
+- ok: true
+- documentId: cmnrjw1y0000040tsnw9v4p5j
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

@@ -1,0 +1,11 @@
+# complaint_register external API — 2026-04-12T19:42:47.958Z
+- POST status: 200
+- ok: true
+- documentId: cmnvqmrvt0050phtsnkm07021
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

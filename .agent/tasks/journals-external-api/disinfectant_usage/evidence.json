@@ -1,0 +1,12 @@
+{
+  "code": "disinfectant_usage",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679kq001hz4tssd2dnkiz",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

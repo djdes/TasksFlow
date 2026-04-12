@@ -1,0 +1,11 @@
+# incoming_raw_materials_control external API — 2026-04-12T19:42:48.533Z
+- POST status: 200
+- ok: true
+- documentId: cmnw679u6002ez4tscnkixn3u
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

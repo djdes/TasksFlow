@@ -1,0 +1,12 @@
+{
+  "code": "fryer_oil",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnsknjmq0007gdts3acvmtlk",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

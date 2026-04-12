@@ -1,0 +1,12 @@
+{
+  "code": "supplier_audit",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a75003gz4tsx0yhn5o2",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

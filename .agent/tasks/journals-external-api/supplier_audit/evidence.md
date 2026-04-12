@@ -1,0 +1,11 @@
+# supplier_audit external API — 2026-04-12T19:42:48.876Z
+- POST status: 200
+- ok: true
+- documentId: cmnw67a75003gz4tsx0yhn5o2
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

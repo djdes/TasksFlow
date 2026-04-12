@@ -1,0 +1,12 @@
+{
+  "code": "metal_impurity",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnvipuws0000ycts2bnp0hk5",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

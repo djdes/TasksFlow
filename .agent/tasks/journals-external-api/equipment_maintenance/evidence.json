@@ -1,0 +1,12 @@
+{
+  "code": "equipment_maintenance",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnsikoq200006ktsdnk9oier",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

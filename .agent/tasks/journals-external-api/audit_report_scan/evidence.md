@@ -1,0 +1,11 @@
+# audit_report_scan external API — 2026-04-12T19:42:47.743Z
+- POST status: 200
+- ok: true
+- documentId: cmnw6798w000jz4tsxwv2qven
+- entriesWritten: 1
+- createdDocument: false
+- PDF status: 401
+- PDF content-type: application/json
+- PDF bytes: 39
+- error: -
+- AC-external: PASS

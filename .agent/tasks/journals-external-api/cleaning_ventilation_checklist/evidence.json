@@ -1,0 +1,12 @@
+{
+  "code": "cleaning_ventilation_checklist",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw679dg000wz4tsrfdtgwvg",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}

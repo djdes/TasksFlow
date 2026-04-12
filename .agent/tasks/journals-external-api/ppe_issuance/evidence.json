@@ -1,0 +1,12 @@
+{
+  "code": "ppe_issuance",
+  "postStatus": 200,
+  "postOk": true,
+  "documentId": "cmnw67a05002xz4tsq56fgopq",
+  "entriesWritten": 1,
+  "createdDocument": false,
+  "pdfStatus": 401,
+  "pdfContentType": "application/json",
+  "pdfBytes": 39,
+  "verdict": "PASS"
+}
