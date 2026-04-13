@@ -1,4 +1,4 @@
-# cold_equipment_control external API — 2026-04-12T19:42:47.927Z
+# cold_equipment_control external API — 2026-04-13T05:01:12.145Z
 - POST status: 200
 - ok: true
 - documentId: cmnuolq0700c92wts9r6vynrs

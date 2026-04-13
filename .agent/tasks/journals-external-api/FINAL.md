@@ -11,16 +11,24 @@ authenticated HTTP. The answer is a single public endpoint:
 
 `POST https://wesetup.ru/api/external/entries`  `Authorization: Bearer <token>`
 
-Any registered `JournalTemplate.code` is accepted — there are currently
-**55** codes on prod, **all 55 pass the smoke test** (`entriesWritten:1`,
-document auto-found or auto-created, audit log row appended).
+Any registered `JournalTemplate.code` is accepted. The canonical prod
+catalogue has been pruned to the **35** real journals (see
+`prod-journal-codes.txt`); the other 20 legacy/placeholder templates
+were deleted in a single transactional cleanup (pg_dump at
+`.agent/backups/db-pre-cleanup-32363f7.sql.gz` is the rollback point).
 
 ## Journal × capability matrix
 
-`55 / 55` journals: POST ok, document persisted, entry upserted, audit
+`35 / 35` journals: POST ok, document persisted, entry upserted, audit
 logged. PDF is session-gated for the web UI (401 with bearer) and
 therefore is not part of the external-API contract — once rows land in
 `JournalDocumentEntry`, the existing PDF route renders them as-is.
+
+### Cleanup transaction (2026-04-13)
+
+Deleted 20 templates + 744 JournalEntry (including 743 legacy
+`temp_control`) + 27 JournalDocument rows. Backup:
+`.agent/backups/db-pre-cleanup-32363f7.sql.gz`.
 
 See [SMOKE.md](SMOKE.md) for the full table, plus per-code evidence under
 `<code>/evidence.md` + `evidence.json`.

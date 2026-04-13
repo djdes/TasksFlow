@@ -1,9 +1,9 @@
-# metal_impurity external API — 2026-04-12T19:42:48.631Z
+# metal_impurity external API — 2026-04-13T05:01:12.708Z
 - POST status: 200
 - ok: true
-- documentId: cmnvipuws0000ycts2bnp0hk5
+- documentId: cmnwq60ys001ffntspc9idjkk
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39
