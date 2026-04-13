@@ -20,7 +20,9 @@ import {
 } from "@/lib/cold-equipment-document";
 import {
   CLEANING_DOCUMENT_TEMPLATE_CODE,
+  normalizeCleaningDocumentConfig,
   normalizeCleaningEntryData,
+  setCleaningMatrixValue,
 } from "@/lib/cleaning-document";
 import {
   ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
@@ -169,6 +171,10 @@ function startOfUtcDay(d: Date): Date {
   const out = new Date(d);
   out.setUTCHours(0, 0, 0, 0);
   return out;
+}
+
+function toDateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
 }
 
 function monthRange(d: Date): { from: Date; to: Date } {
@@ -394,6 +400,69 @@ function normalizeCleaningPayload(value: unknown) {
 function normalizeEquipmentCleaningPayload(value: unknown) {
   if (!isRecord(value)) return normalizeEquipmentCleaningRowData(value);
   return normalizeEquipmentCleaningRowData(value);
+}
+
+function normalizeEntryDocumentConfig(templateCode: string, value: unknown, users: EmployeeRecord[]) {
+  switch (templateCode) {
+    case CLIMATE_DOCUMENT_TEMPLATE_CODE:
+      return normalizeClimateDocumentConfig(value);
+    case COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE:
+      return normalizeColdEquipmentDocumentConfig(value);
+    case CLEANING_DOCUMENT_TEMPLATE_CODE:
+      return normalizeCleaningDocumentConfig(value, { users: toStrictRoleUsers(users) });
+    default:
+      return value;
+  }
+}
+
+function shouldPersistEntryConfig(templateCode: string) {
+  return (
+    templateCode === CLIMATE_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE ||
+    templateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+  );
+}
+
+function mergeCleaningEntryIntoConfig(
+  configValue: unknown,
+  entryValue: unknown,
+  entryDate: Date,
+  users: EmployeeRecord[]
+) {
+  const config = normalizeCleaningDocumentConfig(configValue, { users: toStrictRoleUsers(users) });
+  const entry = normalizeCleaningEntryData(entryValue);
+  const dateKey = toDateKey(entryDate);
+  const roomMark = entry.activities[0]?.type === "wetCleaning" ? "T" : "T";
+
+  let next = config;
+  for (const room of next.rooms) {
+    next = setCleaningMatrixValue({
+      config: next,
+      rowId: room.id,
+      dateKey,
+      value: roomMark,
+    });
+  }
+
+  next.cleaningResponsibles.forEach((responsible, index) => {
+    next = setCleaningMatrixValue({
+      config: next,
+      rowId: responsible.id,
+      dateKey,
+      value: responsible.code || `C${index + 1}`,
+    });
+  });
+
+  next.controlResponsibles.forEach((responsible, index) => {
+    next = setCleaningMatrixValue({
+      config: next,
+      rowId: responsible.id,
+      dateKey,
+      value: responsible.code || `C${index + 1}`,
+    });
+  });
+
+  return next;
 }
 
 function normalizeEntryPayload(templateCode: string, value: unknown, documentConfig: unknown) {
@@ -660,19 +729,21 @@ export async function dispatchExternalEntries(params: {
     }
   }
 
-  const { doc, created } = await findOrCreateDocument({
+  const { doc: foundDoc, created } = await findOrCreateDocument({
     organizationId,
     templateId: template.id,
     templateName: template.name,
     date: anchorDate,
     createdById: fallbackEmployeeId,
   });
+  let doc = foundDoc;
   if (!doc) {
     return { ok: false, httpStatus: 500, error: "failed to resolve document" };
   }
+  const initialDoc: JournalDocument = doc;
 
-  const docDateFrom = startOfUtcDay(new Date(doc.dateFrom));
-  const docDateTo = startOfUtcDay(new Date(doc.dateTo));
+  const docDateFrom = startOfUtcDay(new Date(initialDoc.dateFrom));
+  const docDateTo = startOfUtcDay(new Date(initialDoc.dateTo));
   for (const entry of normalized) {
     if (entry.date < docDateFrom || entry.date > docDateTo) {
       return {
@@ -686,21 +757,34 @@ export async function dispatchExternalEntries(params: {
   const context: WriterContext = {
     organizationId,
     template,
-    document: doc,
+    document: initialDoc,
     allUsers,
     employeesById,
   };
 
   let written = 0;
   await db.$transaction(async (tx) => {
+    let currentDoc = initialDoc;
+    let documentConfig: unknown = currentDoc.config;
+    if (shouldPersistEntryConfig(template.code)) {
+      documentConfig = normalizeEntryDocumentConfig(template.code, currentDoc.config, allUsers);
+      const missingConfig = !isRecord(currentDoc.config);
+      if (missingConfig) {
+        currentDoc = await tx.journalDocument.update({
+          where: { id: currentDoc.id },
+          data: { config: toPrismaJsonValue(documentConfig) },
+        });
+      }
+    }
+
     if (usesConfigWriter(template.code)) {
       const configEntries = normalized.map((entry) => ({
         ...entry,
-        data: normalizeEntryPayload(template.code, entry.data, doc.config),
+        data: normalizeEntryPayload(template.code, entry.data, documentConfig),
       }));
       const configResult = await writeConfigEntries({
         tx,
-        document: doc as JournalDocument,
+        document: currentDoc,
         template,
         entries: configEntries,
         allUsers,
@@ -712,31 +796,51 @@ export async function dispatchExternalEntries(params: {
 
     for (const entry of normalized) {
       const employee = context.employeesById.get(entry.employeeId)!;
-      const normalizedData = normalizeEntryPayload(template.code, entry.data, doc.config);
+      const normalizedData = normalizeEntryPayload(template.code, entry.data, documentConfig);
       const reconciled = reconcileEntryStaffFields(normalizedData, employee as StaffBindingUser);
       await tx.journalDocumentEntry.upsert({
         where: {
           documentId_employeeId_date: {
-            documentId: doc.id,
+            documentId: currentDoc.id,
             employeeId: entry.employeeId,
             date: entry.date,
           },
         },
         update: { data: toPrismaJsonValue(reconciled) },
         create: {
-          documentId: doc.id,
+          documentId: currentDoc.id,
           employeeId: entry.employeeId,
           date: entry.date,
           data: toPrismaJsonValue(reconciled),
         },
       });
+
+      if (template.code === CLEANING_DOCUMENT_TEMPLATE_CODE) {
+        documentConfig = mergeCleaningEntryIntoConfig(documentConfig, normalizedData, entry.date, allUsers);
+      }
+
       written += 1;
+    }
+
+    if (template.code === CLEANING_DOCUMENT_TEMPLATE_CODE) {
+      currentDoc = await tx.journalDocument.update({
+        where: { id: currentDoc.id },
+        data: {
+          config: toPrismaJsonValue(documentConfig),
+          autoFill:
+            isRecord(documentConfig) &&
+            isRecord(documentConfig.autoFill) &&
+            typeof documentConfig.autoFill.enabled === "boolean"
+              ? documentConfig.autoFill.enabled
+              : currentDoc.autoFill,
+        },
+      });
     }
   });
 
   return {
     ok: true,
-    documentId: doc.id,
+    documentId: initialDoc.id,
     entriesWritten: written,
     createdDocument: created,
     templateCode: resolvedCode,
