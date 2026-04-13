@@ -1,7 +1,124 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type JournalDocument, type JournalTemplate } from "@prisma/client";
 import { db } from "@/lib/db";
 import { resolveJournalCodeAlias } from "@/lib/source-journal-map";
-import { reconcileEntryStaffFields } from "@/lib/journal-staff-binding";
+import {
+  normalizeJournalStaffBoundConfig,
+  reconcileEntryStaffFields,
+  type StaffBindingUser,
+} from "@/lib/journal-staff-binding";
+import {
+  CLIMATE_DOCUMENT_TEMPLATE_CODE,
+  createEmptyClimateEntryData,
+  normalizeClimateDocumentConfig,
+  normalizeClimateEntryData,
+} from "@/lib/climate-document";
+import {
+  COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
+  createEmptyColdEquipmentEntryData,
+  normalizeColdEquipmentDocumentConfig,
+  normalizeColdEquipmentEntryData,
+} from "@/lib/cold-equipment-document";
+import {
+  CLEANING_DOCUMENT_TEMPLATE_CODE,
+  normalizeCleaningEntryData,
+} from "@/lib/cleaning-document";
+import {
+  ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+  RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE,
+  normalizeAcceptanceDocumentConfig,
+} from "@/lib/acceptance-document";
+import {
+  normalizeRegisterDocumentConfig,
+  parseRegisterFields,
+} from "@/lib/register-document";
+import {
+  PPE_ISSUANCE_TEMPLATE_CODE,
+  normalizePpeIssuanceConfig,
+} from "@/lib/ppe-issuance-document";
+import {
+  TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+  normalizeTraceabilityDocumentConfig,
+} from "@/lib/traceability-document";
+import {
+  AUDIT_PLAN_TEMPLATE_CODE,
+  normalizeAuditPlanConfig,
+} from "@/lib/audit-plan-document";
+import {
+  AUDIT_PROTOCOL_TEMPLATE_CODE,
+  normalizeAuditProtocolConfig,
+} from "@/lib/audit-protocol-document";
+import {
+  AUDIT_REPORT_TEMPLATE_CODE,
+  normalizeAuditReportConfig,
+} from "@/lib/audit-report-document";
+import {
+  TRAINING_PLAN_TEMPLATE_CODE,
+  normalizeTrainingPlanConfig,
+} from "@/lib/training-plan-document";
+import {
+  STAFF_TRAINING_TEMPLATE_CODE,
+  normalizeStaffTrainingConfig,
+} from "@/lib/staff-training-document";
+import {
+  EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
+  normalizeEquipmentCalibrationConfig,
+} from "@/lib/equipment-calibration-document";
+import {
+  EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
+  normalizeEquipmentMaintenanceConfig,
+} from "@/lib/equipment-maintenance-document";
+import {
+  PRODUCT_WRITEOFF_TEMPLATE_CODE,
+  normalizeProductWriteoffConfig,
+} from "@/lib/product-writeoff-document";
+import {
+  FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE,
+  normalizeFinishedProductDocumentConfig,
+} from "@/lib/finished-product-document";
+import {
+  PERISHABLE_REJECTION_TEMPLATE_CODE,
+  normalizePerishableRejectionConfig,
+} from "@/lib/perishable-rejection-document";
+import {
+  GLASS_LIST_TEMPLATE_CODE,
+  normalizeGlassListConfig,
+} from "@/lib/glass-list-document";
+import {
+  DISINFECTANT_TEMPLATE_CODE,
+  normalizeDisinfectantConfig,
+} from "@/lib/disinfectant-document";
+import {
+  METAL_IMPURITY_TEMPLATE_CODE,
+  normalizeMetalImpurityConfig,
+} from "@/lib/metal-impurity-document";
+import {
+  BREAKDOWN_HISTORY_TEMPLATE_CODE,
+  normalizeBreakdownHistoryDocumentConfig,
+} from "@/lib/breakdown-history-document";
+import {
+  ACCIDENT_DOCUMENT_TEMPLATE_CODE,
+  normalizeAccidentDocumentConfig,
+} from "@/lib/accident-document";
+import {
+  INTENSIVE_COOLING_TEMPLATE_CODE,
+  normalizeIntensiveCoolingConfig,
+} from "@/lib/intensive-cooling-document";
+import {
+  SANITATION_DAY_TEMPLATE_CODE,
+  normalizeSanitationDayConfig,
+} from "@/lib/sanitation-day-document";
+import {
+  SANITARY_DAY_CHECKLIST_TEMPLATE_CODE,
+  normalizeSdcConfig,
+} from "@/lib/sanitary-day-checklist-document";
+import {
+  PEST_CONTROL_TEMPLATE_CODE,
+  normalizePestControlEntryData,
+} from "@/lib/pest-control-document";
+import {
+  EQUIPMENT_CLEANING_TEMPLATE_CODE,
+  normalizeEquipmentCleaningRowData,
+} from "@/lib/equipment-cleaning-document";
 
 export type ExternalEntryInput = {
   employeeId?: string | null;
@@ -23,6 +140,31 @@ export type DispatchResult =
       error: string;
     };
 
+type EmployeeRecord = {
+  id: string;
+  name: string;
+  role: string | null;
+  positionTitle: string | null;
+};
+
+type Normalized = { employeeId: string; date: Date; data: unknown };
+type WriterContext = {
+  organizationId: string;
+  template: JournalTemplate;
+  document: JournalDocument;
+  allUsers: EmployeeRecord[];
+  employeesById: Map<string, EmployeeRecord>;
+};
+
+type ConfigNormalizer = (
+  value: unknown,
+  template: JournalTemplate,
+  users: StrictRoleUser[],
+  organizationName: string
+) => unknown;
+
+type StrictRoleUser = EmployeeRecord & { role: string };
+
 function startOfUtcDay(d: Date): Date {
   const out = new Date(d);
   out.setUTCHours(0, 0, 0, 0);
@@ -37,6 +179,31 @@ function monthRange(d: Date): { from: Date; to: Date } {
 
 function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   return value === null || value === undefined ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toStrictRoleUsers(users: EmployeeRecord[]): StrictRoleUser[] {
+  return users.map((user) => ({ ...user, role: user.role ?? "" }));
+}
+
+function uniqueByLowerName<T extends { name: string }>(items: T[]) {
+  return new Map(items.map((item) => [item.name.trim().toLowerCase(), item] as const));
 }
 
 async function pickDefaultEmployeeId(organizationId: string): Promise<string | null> {
@@ -87,6 +254,337 @@ async function findOrCreateDocument(params: {
   return { doc: created, created: true };
 }
 
+function normalizeClimatePayload(value: unknown, documentConfig: unknown) {
+  if (!isRecord(value)) {
+    return normalizeClimateEntryData(value);
+  }
+
+  if ("measurements" in value) {
+    return normalizeClimateEntryData(value);
+  }
+
+  const config = normalizeClimateDocumentConfig(documentConfig);
+  const result = createEmptyClimateEntryData(
+    config,
+    typeof value.responsibleTitle === "string" ? value.responsibleTitle : null
+  );
+  const roomByName = uniqueByLowerName(config.rooms);
+  const firstRoom = config.rooms[0];
+
+  const applyMeasurement = (
+    roomId: string | undefined,
+    time: string | undefined,
+    temperature: unknown,
+    humidity: unknown
+  ) => {
+    if (!roomId || !time) return;
+    if (!result.measurements[roomId]) result.measurements[roomId] = {};
+    result.measurements[roomId][time] = {
+      temperature: normalizeNumber(temperature),
+      humidity: normalizeNumber(humidity),
+    };
+  };
+
+  const readings = Array.isArray(value.readings) ? value.readings : [];
+  for (const reading of readings) {
+    if (!isRecord(reading)) continue;
+    const roomId =
+      normalizeText(reading.roomId) ||
+      roomByName.get(normalizeText(reading.roomName).toLowerCase())?.id ||
+      firstRoom?.id;
+    const time =
+      normalizeText(reading.time) ||
+      config.controlTimes[0];
+    applyMeasurement(roomId, time, reading.temperature ?? reading.temp, reading.humidity);
+  }
+
+  const topLevelTimes = config.controlTimes;
+  const aliasSources = [
+    ["morning", topLevelTimes[0]],
+    ["evening", topLevelTimes[1] || topLevelTimes[0]],
+    ["day", topLevelTimes[0]],
+  ] as const;
+  for (const [key, time] of aliasSources) {
+    const source = value[key];
+    if (!isRecord(source) || !firstRoom) continue;
+    applyMeasurement(firstRoom.id, time, source.temperature ?? source.temp, source.humidity);
+  }
+
+  if (firstRoom && ("temp" in value || "humidity" in value)) {
+    applyMeasurement(firstRoom.id, topLevelTimes[0], value.temp ?? value.temperature, value.humidity);
+  }
+
+  return result;
+}
+
+function normalizeColdEquipmentPayload(value: unknown, documentConfig: unknown) {
+  if (!isRecord(value)) {
+    return normalizeColdEquipmentEntryData(value);
+  }
+
+  if ("temperatures" in value) {
+    return normalizeColdEquipmentEntryData(value);
+  }
+
+  const config = normalizeColdEquipmentDocumentConfig(documentConfig);
+  const result = createEmptyColdEquipmentEntryData(
+    config,
+    typeof value.responsibleTitle === "string" ? value.responsibleTitle : null
+  );
+  const equipmentByName = uniqueByLowerName(config.equipment);
+  const equipmentBySourceId = new Map(
+    config.equipment
+      .filter((item) => item.sourceEquipmentId)
+      .map((item) => [item.sourceEquipmentId as string, item] as const)
+  );
+  const firstEquipment = config.equipment[0];
+
+  const readings = Array.isArray(value.readings) ? value.readings : [];
+  for (const reading of readings) {
+    if (!isRecord(reading)) continue;
+    const equipment =
+      (normalizeText(reading.equipmentId) && config.equipment.find((item) => item.id === normalizeText(reading.equipmentId))) ||
+      equipmentBySourceId.get(normalizeText(reading.sourceEquipmentId)) ||
+      equipmentByName.get(normalizeText(reading.equipmentName).toLowerCase()) ||
+      firstEquipment;
+    if (!equipment) continue;
+    result.temperatures[equipment.id] = normalizeNumber(reading.temp ?? reading.temperature);
+  }
+
+  if (firstEquipment && ("temp" in value || "temperature" in value)) {
+    result.temperatures[firstEquipment.id] = normalizeNumber(value.temp ?? value.temperature);
+  }
+
+  return result;
+}
+
+function normalizeCleaningPayload(value: unknown) {
+  if (!isRecord(value)) {
+    return normalizeCleaningEntryData(value);
+  }
+
+  if ("activities" in value) {
+    return normalizeCleaningEntryData(value);
+  }
+
+  const activityType =
+    value.activityType === "disinfection" ||
+    value.activityType === "ventilation" ||
+    value.activityType === "wetCleaning"
+      ? value.activityType
+      : "wetCleaning";
+
+  const times = Array.isArray(value.times)
+    ? value.times.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+    : normalizeText(value.time)
+      ? [normalizeText(value.time)]
+      : [];
+
+  return normalizeCleaningEntryData({
+    activities: [
+      {
+        type: activityType,
+        times: times.length > 0 ? times : [value.done === true ? "done" : ""].filter(Boolean),
+        responsibleName: normalizeText(value.responsibleName || value.note),
+      },
+    ],
+  });
+}
+
+function normalizeEquipmentCleaningPayload(value: unknown) {
+  if (!isRecord(value)) return normalizeEquipmentCleaningRowData(value);
+  return normalizeEquipmentCleaningRowData(value);
+}
+
+function normalizeEntryPayload(templateCode: string, value: unknown, documentConfig: unknown) {
+  switch (templateCode) {
+    case CLIMATE_DOCUMENT_TEMPLATE_CODE:
+      return normalizeClimatePayload(value, documentConfig);
+    case COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE:
+      return normalizeColdEquipmentPayload(value, documentConfig);
+    case CLEANING_DOCUMENT_TEMPLATE_CODE:
+      return normalizeCleaningPayload(value);
+    case PEST_CONTROL_TEMPLATE_CODE:
+      return normalizePestControlEntryData(value);
+    case EQUIPMENT_CLEANING_TEMPLATE_CODE:
+      return normalizeEquipmentCleaningPayload(value);
+    default:
+      return value;
+  }
+}
+
+function mergeConfigPatch(currentConfig: unknown, patch: unknown) {
+  if (!isRecord(currentConfig) || !isRecord(patch)) {
+    return patch;
+  }
+
+  const next: Record<string, unknown> = { ...currentConfig };
+  for (const [key, value] of Object.entries(patch)) {
+    if (key.startsWith("append") && key.length > 6) {
+      const targetKey = key.charAt(6).toLowerCase() + key.slice(7);
+      if (Array.isArray(value)) {
+        next[targetKey] = [...(Array.isArray(next[targetKey]) ? (next[targetKey] as unknown[]) : []), ...value];
+        continue;
+      }
+      next[targetKey] = [...(Array.isArray(next[targetKey]) ? (next[targetKey] as unknown[]) : []), value];
+      continue;
+    }
+
+    next[key] = value;
+  }
+
+  return next;
+}
+
+const CONFIG_WRITER_NORMALIZERS = new Map<string, ConfigNormalizer>([
+  [
+    ACCEPTANCE_DOCUMENT_TEMPLATE_CODE,
+    (value, _template, users) => normalizeAcceptanceDocumentConfig(value, users),
+  ],
+  [
+    RAW_MATERIAL_ACCEPTANCE_TEMPLATE_CODE,
+    (value, _template, users) => normalizeAcceptanceDocumentConfig(value, users),
+  ],
+  [
+    "complaint_register",
+    (value, template) =>
+      normalizeRegisterDocumentConfig(value, parseRegisterFields(template.fields)),
+  ],
+  [
+    PPE_ISSUANCE_TEMPLATE_CODE,
+    (value, _template, users) => normalizePpeIssuanceConfig(value, users),
+  ],
+  [
+    TRACEABILITY_DOCUMENT_TEMPLATE_CODE,
+    (value) => normalizeTraceabilityDocumentConfig(value),
+  ],
+  [
+    AUDIT_PLAN_TEMPLATE_CODE,
+    (value, _template, users, organizationName) =>
+      normalizeJournalStaffBoundConfig(
+        AUDIT_PLAN_TEMPLATE_CODE,
+        normalizeAuditPlanConfig(value, { users, organizationName }),
+        users
+      ),
+  ],
+  [AUDIT_PROTOCOL_TEMPLATE_CODE, (value) => normalizeAuditProtocolConfig(value)],
+  [AUDIT_REPORT_TEMPLATE_CODE, (value) => normalizeAuditReportConfig(value)],
+  [
+    TRAINING_PLAN_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        TRAINING_PLAN_TEMPLATE_CODE,
+        normalizeTrainingPlanConfig(value),
+        users
+      ),
+  ],
+  [
+    STAFF_TRAINING_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        STAFF_TRAINING_TEMPLATE_CODE,
+        normalizeStaffTrainingConfig(value),
+        users
+      ),
+  ],
+  [
+    EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        EQUIPMENT_CALIBRATION_TEMPLATE_CODE,
+        normalizeEquipmentCalibrationConfig(value),
+        users
+      ),
+  ],
+  [
+    EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
+        normalizeEquipmentMaintenanceConfig(value),
+        users
+      ),
+  ],
+  [
+    PRODUCT_WRITEOFF_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        PRODUCT_WRITEOFF_TEMPLATE_CODE,
+        normalizeProductWriteoffConfig(value),
+        users
+      ),
+  ],
+  [FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE, (value) => normalizeFinishedProductDocumentConfig(value)],
+  [PERISHABLE_REJECTION_TEMPLATE_CODE, (value) => normalizePerishableRejectionConfig(value)],
+  [GLASS_LIST_TEMPLATE_CODE, (value) => normalizeGlassListConfig(value)],
+  [
+    DISINFECTANT_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        DISINFECTANT_TEMPLATE_CODE,
+        normalizeDisinfectantConfig(value),
+        users
+      ),
+  ],
+  [
+    METAL_IMPURITY_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        METAL_IMPURITY_TEMPLATE_CODE,
+        normalizeMetalImpurityConfig(value),
+        users
+      ),
+  ],
+  [BREAKDOWN_HISTORY_TEMPLATE_CODE, (value) => normalizeBreakdownHistoryDocumentConfig(value)],
+  [ACCIDENT_DOCUMENT_TEMPLATE_CODE, (value) => normalizeAccidentDocumentConfig(value)],
+  [INTENSIVE_COOLING_TEMPLATE_CODE, (value) => normalizeIntensiveCoolingConfig(value)],
+  [
+    SANITATION_DAY_TEMPLATE_CODE,
+    (value, _template, users) =>
+      normalizeJournalStaffBoundConfig(
+        SANITATION_DAY_TEMPLATE_CODE,
+        normalizeSanitationDayConfig(value),
+        users
+      ),
+  ],
+  [SANITARY_DAY_CHECKLIST_TEMPLATE_CODE, (value) => normalizeSdcConfig(value)],
+]);
+
+async function writeConfigEntries(params: {
+  tx: Prisma.TransactionClient;
+  document: JournalDocument;
+  template: JournalTemplate;
+  entries: Normalized[];
+  allUsers: EmployeeRecord[];
+  organizationName: string;
+}) {
+  const { tx, document, template, entries, allUsers, organizationName } = params;
+  const normalizer = CONFIG_WRITER_NORMALIZERS.get(template.code);
+  if (!normalizer) {
+    return { written: 0 };
+  }
+
+  let nextConfig: unknown = document.config;
+  for (const entry of entries) {
+    nextConfig = mergeConfigPatch(nextConfig, entry.data);
+  }
+  const normalizedConfig = normalizer(
+    nextConfig,
+    template,
+    toStrictRoleUsers(allUsers),
+    organizationName
+  );
+  await tx.journalDocument.update({
+    where: { id: document.id },
+    data: { config: toPrismaJsonValue(normalizedConfig) },
+  });
+  return { written: entries.length };
+}
+
+function usesConfigWriter(templateCode: string) {
+  return CONFIG_WRITER_NORMALIZERS.has(templateCode);
+}
+
 export async function dispatchExternalEntries(params: {
   organizationId: string;
   journalCode: string;
@@ -98,7 +596,10 @@ export async function dispatchExternalEntries(params: {
     return { ok: false, httpStatus: 400, error: "journalCode required" };
   }
 
-  const organization = await db.organization.findUnique({ where: { id: organizationId } });
+  const organization = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: { id: true, name: true },
+  });
   if (!organization) {
     return { ok: false, httpStatus: 404, error: "organizationId not found" };
   }
@@ -115,9 +616,6 @@ export async function dispatchExternalEntries(params: {
   }
 
   const fallbackEmployeeId = await pickDefaultEmployeeId(organizationId);
-
-  type Normalized = { employeeId: string; date: Date; data: unknown };
-  const normalized: Normalized[] = [];
   const anchorDate = (() => {
     for (const e of entries) {
       if (e?.date) {
@@ -128,6 +626,7 @@ export async function dispatchExternalEntries(params: {
     return new Date();
   })();
 
+  const normalized: Normalized[] = [];
   for (const raw of entries) {
     const employeeId = raw?.employeeId || fallbackEmployeeId;
     if (!employeeId) {
@@ -149,15 +648,15 @@ export async function dispatchExternalEntries(params: {
     });
   }
 
-  const employeeIds = [...new Set(normalized.map((e) => e.employeeId))];
-  const employees = await db.user.findMany({
-    where: { id: { in: employeeIds }, organizationId },
+  const allUsers = await db.user.findMany({
+    where: { organizationId, isActive: true },
     select: { id: true, name: true, role: true, positionTitle: true },
+    orderBy: [{ createdAt: "asc" }],
   });
-  const employeesById = new Map(employees.map((u) => [u.id, u]));
-  for (const id of employeeIds) {
-    if (!employeesById.has(id)) {
-      return { ok: false, httpStatus: 404, error: `employee not found in org: ${id}` };
+  const employeesById = new Map(allUsers.map((u) => [u.id, u]));
+  for (const entry of normalized) {
+    if (!employeesById.has(entry.employeeId)) {
+      return { ok: false, httpStatus: 404, error: `employee not found in org: ${entry.employeeId}` };
     }
   }
 
@@ -174,7 +673,6 @@ export async function dispatchExternalEntries(params: {
 
   const docDateFrom = startOfUtcDay(new Date(doc.dateFrom));
   const docDateTo = startOfUtcDay(new Date(doc.dateTo));
-
   for (const entry of normalized) {
     if (entry.date < docDateFrom || entry.date > docDateTo) {
       return {
@@ -185,11 +683,37 @@ export async function dispatchExternalEntries(params: {
     }
   }
 
+  const context: WriterContext = {
+    organizationId,
+    template,
+    document: doc,
+    allUsers,
+    employeesById,
+  };
+
   let written = 0;
   await db.$transaction(async (tx) => {
+    if (usesConfigWriter(template.code)) {
+      const configEntries = normalized.map((entry) => ({
+        ...entry,
+        data: normalizeEntryPayload(template.code, entry.data, doc.config),
+      }));
+      const configResult = await writeConfigEntries({
+        tx,
+        document: doc as JournalDocument,
+        template,
+        entries: configEntries,
+        allUsers,
+        organizationName: organization.name,
+      });
+      written += configResult.written;
+      return;
+    }
+
     for (const entry of normalized) {
-      const employee = employeesById.get(entry.employeeId)!;
-      const reconciled = reconcileEntryStaffFields(entry.data, employee);
+      const employee = context.employeesById.get(entry.employeeId)!;
+      const normalizedData = normalizeEntryPayload(template.code, entry.data, doc.config);
+      const reconciled = reconcileEntryStaffFields(normalizedData, employee as StaffBindingUser);
       await tx.journalDocumentEntry.upsert({
         where: {
           documentId_employeeId_date: {
