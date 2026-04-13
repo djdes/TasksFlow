@@ -1,0 +1,42 @@
+{
+  "taskId": "journal-demo-reseed-2026-04-13",
+  "verdict": "PASS",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "summary": "Reset script removes old journal examples and demo staff for the admin demo organization while preserving admin@haccp.local."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "summary": "A new active staff roster with varied roles and position titles exists, and legacy demo emails are absent."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "summary": "There is exactly one document per each of the 35 active journal templates, with populated config and/or entries."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "summary": "Fresh verification output is captured and npx tsc --noEmit passes."
+    }
+  ],
+  "artifacts": {
+    "spec": ".agent/tasks/journal-demo-reseed-2026-04-13/spec.md",
+    "evidence": ".agent/tasks/journal-demo-reseed-2026-04-13/evidence.md",
+    "raw": [
+      ".agent/tasks/journal-demo-reseed-2026-04-13/raw/reset.txt",
+      ".agent/tasks/journal-demo-reseed-2026-04-13/raw/verification.json",
+      ".agent/tasks/journal-demo-reseed-2026-04-13/raw/tsc.txt"
+    ]
+  },
+  "result": {
+    "activeUsers": 8,
+    "activeTemplates": 35,
+    "documents": 35,
+    "entries": 268,
+    "legacyUsersRemoved": true
+  }
+}

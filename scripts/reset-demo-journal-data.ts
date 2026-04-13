@@ -208,6 +208,27 @@ const SEED_TEAM: SeedUserSpec[] = [
   { email: "sanitation@haccp.local", name: "Егорова Марина Викторовна", role: "operator", positionTitle: "Санитарный работник" },
 ];
 
+const LEGACY_DEMO_EMAILS = [
+  "quality@haccp.local",
+  "souschef@haccp.local",
+  "hotcook@haccp.local",
+  "coldcook@haccp.local",
+  "pastry@haccp.local",
+  "storekeeper@haccp.local",
+  "sanitation@haccp.local",
+] as const;
+
+const ACTIVE_SEED_TEAM: SeedUserSpec[] = [
+  { email: DEMO_ADMIN_EMAIL, name: "Крылов Денис Сергеевич", role: "owner", positionTitle: "Управляющий" },
+  { email: "qa-chief@haccp.local", name: "Лебедева Марина Олеговна", role: "technologist", positionTitle: "Руководитель качества" },
+  { email: "production-lead@haccp.local", name: "Громов Илья Павлович", role: "manager", positionTitle: "Начальник производства" },
+  { email: "hot-line@haccp.local", name: "Соколова Анна Викторовна", role: "operator", positionTitle: "Старший повар горячего цеха" },
+  { email: "cold-line@haccp.local", name: "Мельников Роман Игоревич", role: "operator", positionTitle: "Повар холодного цеха" },
+  { email: "warehouse@haccp.local", name: "Кузнецов Артем Валерьевич", role: "operator", positionTitle: "Кладовщик" },
+  { email: "sanitation-master@haccp.local", name: "Ермакова Нина Сергеевна", role: "operator", positionTitle: "Специалист по санитарной обработке" },
+  { email: "service-engineer@haccp.local", name: "Титов Максим Андреевич", role: "engineer", positionTitle: "Инженер по оборудованию" },
+];
+
 function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   return value === null || value === undefined ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
 }
@@ -323,7 +344,7 @@ async function resetUsersAndDocuments(prisma: PrismaClient, organizationId: stri
 
 async function upsertSeedUsers(prisma: PrismaClient, organizationId: string): Promise<ActiveUser[]> {
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
-  for (const spec of SEED_TEAM) {
+  for (const spec of ACTIVE_SEED_TEAM) {
     await prisma.user.upsert({
       where: { email: spec.email },
       update: { name: spec.name, role: spec.role, positionTitle: spec.positionTitle, organizationId, passwordHash, isActive: true },
@@ -336,6 +357,24 @@ async function upsertSeedUsers(prisma: PrismaClient, organizationId: string): Pr
     select: { id: true, email: true, name: true, role: true, positionTitle: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
+}
+
+async function assertLegacyUsersRemoved(prisma: PrismaClient, organizationId: string) {
+  const legacyUsers = await prisma.user.findMany({
+    where: {
+      organizationId,
+      email: { in: [...LEGACY_DEMO_EMAILS] },
+    },
+    select: { email: true },
+  });
+
+  if (legacyUsers.length > 0) {
+    throw new Error(
+      `Legacy demo users still exist after reset: ${legacyUsers
+        .map((user) => user.email)
+        .join(", ")}`
+    );
+  }
 }
 
 async function createDocument(
@@ -443,9 +482,13 @@ async function seedActiveJournalExamples(
   const { organizationId, organizationName, createdById, templates, users } = params;
   const manager = users.find((user) => user.role === "owner") ?? users[0]!;
   const technologist = users.find((user) => user.role === "technologist") ?? manager;
-  const hotCook = users.find((user) => user.email === "hotcook@haccp.local") ?? users[2]!;
-  const sanitation = users.find((user) => user.email === "sanitation@haccp.local") ?? hotCook;
-  const storekeeper = users.find((user) => user.email === "storekeeper@haccp.local") ?? hotCook;
+  const productionLead =
+    users.find((user) => user.email === "production-lead@haccp.local") ?? users[2]!;
+  const hotCook = users.find((user) => user.email === "hot-line@haccp.local") ?? productionLead;
+  const sanitation =
+    users.find((user) => user.email === "sanitation-master@haccp.local") ?? hotCook;
+  const storekeeper =
+    users.find((user) => user.email === "warehouse@haccp.local") ?? productionLead;
   const monthStart = startOfMonth(new Date());
   const monthEnd = endOfMonth(new Date());
   const halfMonthEnd = midpointOfMonth(new Date());
@@ -1590,6 +1633,7 @@ async function main() {
     await ensureBaseCatalog(prisma, adminUser.organizationId);
     await resetUsersAndDocuments(prisma, adminUser.organizationId);
     const users = await upsertSeedUsers(prisma, adminUser.organizationId);
+    await assertLegacyUsersRemoved(prisma, adminUser.organizationId);
     await seedActiveJournalExamples(prisma, {
       organizationId: adminUser.organizationId,
       organizationName: adminUser.organization.name,
@@ -1624,6 +1668,7 @@ async function main() {
         {
           organizationId: adminUser.organizationId,
           activeUsers: userCount,
+          activeUserEmails: users.map((user) => user.email),
           activeTemplates: templates.length,
           documents: documentCount,
           entries: entryCount,
