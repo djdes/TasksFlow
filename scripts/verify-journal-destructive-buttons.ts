@@ -331,6 +331,33 @@ async function firstVisible(locator: Locator) {
   return null;
 }
 
+async function isCheckedLike(locator: Locator) {
+  const ariaChecked = await locator.getAttribute("aria-checked").catch(() => null);
+  if (ariaChecked === "true") {
+    return true;
+  }
+  if (ariaChecked === "false") {
+    return false;
+  }
+
+  return await locator.isChecked().catch(() => false);
+}
+
+async function firstVisibleUnchecked(locator: Locator) {
+  const count = await locator.count();
+  for (let index = 0; index < count; index += 1) {
+    const item = locator.nth(index);
+    if (!(await item.isVisible().catch(() => false))) {
+      continue;
+    }
+    if (await isCheckedLike(item)) {
+      continue;
+    }
+    return item;
+  }
+  return null;
+}
+
 async function findMarkerContainer(page: Page, marker: string) {
   const candidates = [
     page.locator("tr", { hasText: marker }),
@@ -411,9 +438,10 @@ async function findUvSeedContainer(page: Page, hints: DeleteHints) {
 }
 
 async function selectCheckboxWithin(container: Locator) {
-  const checkbox = await firstVisible(
-    container.locator("input[type='checkbox']:not([disabled]), [role='checkbox']")
+  const checkboxes = container.locator(
+    "input[type='checkbox']:not([disabled]), [role='checkbox']"
   );
+  const checkbox = (await firstVisibleUnchecked(checkboxes)) ?? (await firstVisible(checkboxes));
   if (!checkbox) return false;
   await checkbox.click({ force: true });
   await container.page().waitForTimeout(600);
@@ -474,7 +502,8 @@ async function tryDeleteWithSelection(page: Page, code: string, hints: DeleteHin
   const bodyCheckboxes = page.locator(
     "main tbody input[type='checkbox']:not([disabled]), main tbody [role='checkbox'], main [role='row'] input[type='checkbox']:not([disabled]), main [role='row'] [role='checkbox']"
   );
-  const fallbackCheckbox = await firstVisible(bodyCheckboxes);
+  const fallbackCheckbox =
+    (await firstVisibleUnchecked(bodyCheckboxes)) ?? (await firstVisible(bodyCheckboxes));
   if (fallbackCheckbox) {
     await fallbackCheckbox.click({ force: true });
     await page.waitForTimeout(600);
@@ -623,13 +652,18 @@ async function performDelete(
       }
     }
 
-    if (bodyHash(after.document || {}) !== beforeHash) {
-      return {
-        status: "PASS" as const,
-        detail: `document changed after delete, dialogs=${dialogMessages.length}`,
-        strategy: `attempt${attemptIndex + 1}`,
-        saveUsed,
-      };
+    for (let poll = 0; poll < 6; poll += 1) {
+      if (bodyHash(after.document || {}) !== beforeHash) {
+        return {
+          status: "PASS" as const,
+          detail: `document changed after delete, dialogs=${dialogMessages.length}, poll=${poll + 1}`,
+          strategy: `attempt${attemptIndex + 1}`,
+          saveUsed,
+        };
+      }
+
+      await page.waitForTimeout(500);
+      after = await fetchDocument(request, documentId);
     }
 
     attemptErrors.push(`attempt${attemptIndex + 1}:state unchanged`);

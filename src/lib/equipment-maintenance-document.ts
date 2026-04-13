@@ -89,10 +89,10 @@ export function getDefaultEquipmentMaintenanceConfig(
     documentDate: `${year}-01-01`,
     approveRole: "Управляющий",
     approveEmployeeId: null,
-    approveEmployee: "Иванов И.И.",
+    approveEmployee: "",
     responsibleRole: "Шеф-повар",
     responsibleEmployeeId: null,
-    responsibleEmployee: "Петров П.П.",
+    responsibleEmployee: "",
     rows: [
       createEquipmentMaintenanceRow({
         equipmentName: "Морозильный ларь 1",

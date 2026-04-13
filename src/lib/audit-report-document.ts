@@ -83,7 +83,7 @@ export function getDefaultAuditReportConfig(): AuditReportConfig {
     auditType: "planned",
     basisTitle: "Годовой план-программа внутренних аудитов",
     auditedObject: "Производственный участок",
-    auditors: ["Иванов И.И.", "Петров П.П."],
+    auditors: [],
     summary:
       "Проверка проведена в соответствии с внутренним планом аудитов. Оценены записи, персонал и выполнение процедур.",
     recommendations:
@@ -95,14 +95,14 @@ export function getDefaultAuditReportConfig(): AuditReportConfig {
         correctionActions: "Проведен разбор нарушений и актуализированы ответственные лица.",
         correctiveActions:
           "Введен дополнительный контроль со стороны руководителя подразделения.",
-        responsibleName: "Иванов И.И.",
+        responsibleName: "",
         responsiblePosition: "Руководитель подразделения",
       }),
     ],
     signatures: [
       createAuditReportSignature({
         role: "Аудитор",
-        name: "Иванов И.И.",
+        name: "",
         position: "Главный аудитор",
         signedAt: documentDate,
       }),

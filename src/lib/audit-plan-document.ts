@@ -80,12 +80,12 @@ function buildDefaultColumns(organizationName: string, users: UserLike[]): Audit
     {
       id: "audit-1",
       title: `Аудит 1 ${organizationName}`,
-      auditorName: auditors[0]?.name || "Иванов И.И.",
+      auditorName: auditors[0]?.name || "",
     },
     {
       id: "audit-2",
       title: `Аудит 2 ${organizationName}`,
-      auditorName: auditors[1]?.name || auditors[0]?.name || "Петров П.П.",
+      auditorName: auditors[1]?.name || auditors[0]?.name || "",
     },
   ];
 }
@@ -291,7 +291,7 @@ export function getAuditPlanDefaultConfig(params?: {
     documentDate,
     approveRole: resolveRoleLabel(approveUser?.role || "owner"),
     approveEmployeeId: (approveUser as { id?: string } | undefined)?.id || null,
-    approveEmployee: approveUser?.name || "Иванов И.И.",
+    approveEmployee: approveUser?.name || "",
     columns,
     sections: buildDefaultSections(),
     rows: buildDefaultRows(columns.map((column) => column.id)),

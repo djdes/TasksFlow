@@ -4831,7 +4831,7 @@ export async function generateJournalDocumentPdf(params: {
       config: glassListConfig,
       responsibleName:
         users.find((user) => user.id === (document.responsibleUserId || glassListConfig.responsibleUserId))
-          ?.name || "Иванов И.И.",
+          ?.name || "",
     });
   } else if (templateCode === GLASS_CONTROL_TEMPLATE_CODE) {
     drawGlassControlPdf(doc, {

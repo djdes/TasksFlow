@@ -19,8 +19,8 @@ import {
   normalizeSanitationDayConfig,
 } from "@/lib/sanitation-day-document";
 import {
+  normalizeJournalDocumentStaffState,
   normalizeJournalStaffBoundConfig,
-  reconcileResponsibleAssignment,
 } from "@/lib/journal-staff-binding";
 
 function isValidDate(value: Date) {
@@ -140,60 +140,69 @@ export async function PATCH(
     );
   }
 
-  if (body.config !== undefined && template?.code) {
-    if (template.code === CLIMATE_DOCUMENT_TEMPLATE_CODE) {
-      data.config = normalizeClimateDocumentConfig(body.config);
-    } else if (template.code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
-      data.config = normalizeColdEquipmentDocumentConfig(body.config);
-    } else if (template.code === TRAINING_PLAN_TEMPLATE_CODE) {
-      data.config = normalizeJournalStaffBoundConfig(
-        template.code,
-        normalizeTrainingPlanConfig(body.config),
-        allUsers
-      );
-    } else if (template.code === SANITATION_DAY_TEMPLATE_CODE) {
-      const normalized = normalizeJournalStaffBoundConfig(
-        template.code,
-        normalizeSanitationDayConfig(body.config),
-        allUsers
-      ) as Record<string, unknown>;
-      data.config = {
-        ...normalized,
-        year:
-          typeof normalized.year === "number"
-            ? normalized.year
-            : nextDateFrom.getUTCFullYear(),
-        documentDate:
-          typeof normalized.documentDate === "string" && normalized.documentDate
-            ? normalized.documentDate
-            : nextDateFrom.toISOString().slice(0, 10),
-      };
-    } else {
-      data.config = normalizeJournalStaffBoundConfig(
-        template.code,
-        body.config,
-        allUsers
-      );
-    }
-  }
-
   if (
-    body.responsibleTitle !== undefined ||
-    body.responsibleUserId !== undefined
+    template?.code &&
+    (body.config !== undefined ||
+      body.responsibleTitle !== undefined ||
+      body.responsibleUserId !== undefined)
   ) {
-    const reconciled = reconcileResponsibleAssignment(allUsers, {
-      responsibleUserId:
-        body.responsibleUserId !== undefined
-          ? body.responsibleUserId
-          : doc.responsibleUserId,
-      responsibleTitle:
-        body.responsibleTitle !== undefined
-          ? body.responsibleTitle
-          : doc.responsibleTitle,
-    });
+    const baseConfig =
+      body.config !== undefined
+        ? template.code === CLIMATE_DOCUMENT_TEMPLATE_CODE
+          ? normalizeClimateDocumentConfig(body.config)
+          : template.code === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE
+          ? normalizeColdEquipmentDocumentConfig(body.config)
+          : template.code === TRAINING_PLAN_TEMPLATE_CODE
+          ? normalizeJournalStaffBoundConfig(
+              template.code,
+              normalizeTrainingPlanConfig(body.config),
+              allUsers
+            )
+          : template.code === SANITATION_DAY_TEMPLATE_CODE
+          ? (() => {
+              const normalized = normalizeJournalStaffBoundConfig(
+                template.code,
+                normalizeSanitationDayConfig(body.config),
+                allUsers
+              ) as Record<string, unknown>;
+              return {
+                ...normalized,
+                year:
+                  typeof normalized.year === "number"
+                    ? normalized.year
+                    : nextDateFrom.getUTCFullYear(),
+                documentDate:
+                  typeof normalized.documentDate === "string" &&
+                  normalized.documentDate
+                    ? normalized.documentDate
+                    : nextDateFrom.toISOString().slice(0, 10),
+              };
+            })()
+          : normalizeJournalStaffBoundConfig(template.code, body.config, allUsers)
+        : doc.config;
 
-    data.responsibleUserId = reconciled.responsibleUserId;
-    data.responsibleTitle = reconciled.responsibleTitle;
+    const normalizedDocumentState = normalizeJournalDocumentStaffState(
+      template.code,
+      {
+        config: baseConfig,
+        responsibleUserId:
+          body.responsibleUserId !== undefined
+            ? body.responsibleUserId
+            : doc.responsibleUserId,
+        responsibleTitle:
+          body.responsibleTitle !== undefined
+            ? body.responsibleTitle
+            : doc.responsibleTitle,
+      },
+      allUsers
+    );
+
+    if (body.config !== undefined) {
+      data.config = normalizedDocumentState.config;
+    }
+
+    data.responsibleUserId = normalizedDocumentState.responsibleUserId;
+    data.responsibleTitle = normalizedDocumentState.responsibleTitle;
   }
 
   if (body.title !== undefined) data.title = body.title;

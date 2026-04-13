@@ -117,10 +117,10 @@ export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayC
     documentDate: toDateKey(d),
     approveRole: "Управляющий",
     approveEmployeeId: null,
-    approveEmployee: "Иванов И.И.",
+    approveEmployee: "",
     responsibleRole: "Управляющий",
     responsibleEmployeeId: null,
-    responsibleEmployee: "Иванов И.И.",
+    responsibleEmployee: "",
     rows: [
       {
         id: "row-1",

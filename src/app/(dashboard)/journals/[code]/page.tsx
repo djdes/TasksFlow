@@ -681,12 +681,14 @@ async function ensureSanitationDaySampleDocuments(params: {
   templateId: string;
   organizationId: string;
   createdById: string;
+  users: { id: string; name: string; role: string; email?: string | null }[];
 }) {
-  const { templateId, organizationId, createdById } = params;
+  const { templateId, organizationId, createdById, users } = params;
   const currentYearDate = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
   const previousYearDate = new Date(
     Date.UTC(new Date().getUTCFullYear() - 1, 0, 1)
   );
+  const responsibleUser = pickPrimaryManager(users) || users[0] || null;
 
   const existing = await db.journalDocument.findMany({
     where: {
@@ -709,6 +711,14 @@ async function ensureSanitationDaySampleDocuments(params: {
   }
 
   for (const doc of docsToCreate) {
+    const config = getSanitationDayDefaultConfig(doc.date);
+    if (responsibleUser) {
+      config.approveEmployeeId = responsibleUser.id;
+      config.approveEmployee = responsibleUser.name;
+      config.responsibleEmployeeId = responsibleUser.id;
+      config.responsibleEmployee = responsibleUser.name;
+    }
+
     await db.journalDocument.create({
       data: {
         templateId,
@@ -718,7 +728,9 @@ async function ensureSanitationDaySampleDocuments(params: {
         dateFrom: doc.date,
         dateTo: doc.date,
         createdById,
-        config: getSanitationDayDefaultConfig(doc.date),
+        responsibleUserId: responsibleUser?.id || null,
+        responsibleTitle: config.responsibleRole,
+        config,
       },
     });
   }
@@ -836,7 +848,8 @@ async function ensureTraceabilitySampleDocuments(params: {
         shockTemp: 3.5,
       },
       responsibleRole: defaultResponsibleRole,
-      responsibleEmployee: "",
+      responsibleEmployeeId: responsibleUser?.id || null,
+      responsibleEmployee: responsibleUser?.name || "",
     }),
     createTraceabilityRow({
       date: "2024-02-12",
@@ -854,7 +867,8 @@ async function ensureTraceabilitySampleDocuments(params: {
         shockTemp: null,
       },
       responsibleRole: defaultResponsibleRole,
-      responsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+      responsibleEmployeeId: responsibleUser?.id || null,
+      responsibleEmployee: responsibleUser?.name || "",
     }),
     createTraceabilityRow({
       date: "2024-02-13",
@@ -872,7 +886,8 @@ async function ensureTraceabilitySampleDocuments(params: {
         shockTemp: 2,
       },
       responsibleRole: defaultResponsibleRole,
-      responsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+      responsibleEmployeeId: responsibleUser?.id || null,
+      responsibleEmployee: responsibleUser?.name || "",
     }),
   ];
 
@@ -886,7 +901,8 @@ async function ensureTraceabilitySampleDocuments(params: {
     productList,
     rows: sampleRows,
     defaultResponsibleRole,
-    defaultResponsibleEmployee: responsibleUser?.name || "Иванов И.И.",
+    defaultResponsibleEmployeeId: responsibleUser?.id || null,
+    defaultResponsibleEmployee: responsibleUser?.name || "",
   });
 
   if (!existingStatuses.has("active")) {
@@ -1914,8 +1930,14 @@ export default async function JournalDocumentsPage({
       const cfg = getDefaultEquipmentMaintenanceConfig(year);
       const manager = pickPrimaryManager(orgUsers);
       const headChef = orgUsers.find((u) => getUserRoleLabel(u.role) === "???-?????") || manager;
-      if (manager) cfg.approveEmployee = manager.name;
-      if (headChef) cfg.responsibleEmployee = headChef.name;
+      if (manager) {
+        cfg.approveEmployeeId = manager.id;
+        cfg.approveEmployee = manager.name;
+      }
+      if (headChef) {
+        cfg.responsibleEmployeeId = headChef.id;
+        cfg.responsibleEmployee = headChef.name;
+      }
 
       await db.journalDocument.create({
         data: {
@@ -1948,8 +1970,14 @@ export default async function JournalDocumentsPage({
       const cfg = getDefaultEquipmentMaintenanceConfig(previousYear);
       const manager = pickPrimaryManager(orgUsers);
       const headChef = orgUsers.find((u) => getUserRoleLabel(u.role) === "???-?????") || manager;
-      if (manager) cfg.approveEmployee = manager.name;
-      if (headChef) cfg.responsibleEmployee = headChef.name;
+      if (manager) {
+        cfg.approveEmployeeId = manager.id;
+        cfg.approveEmployee = manager.name;
+      }
+      if (headChef) {
+        cfg.responsibleEmployeeId = headChef.id;
+        cfg.responsibleEmployee = headChef.name;
+      }
 
       await db.journalDocument.create({
         data: {
@@ -2002,7 +2030,10 @@ export default async function JournalDocumentsPage({
       });
       const cfg = buildEquipmentCalibrationConfigFromEquipment(equipmentSource, { year: previousYear });
       const manager = pickPrimaryManager(orgUsers);
-      if (manager) cfg.approveEmployee = manager.name;
+      if (manager) {
+        cfg.approveEmployeeId = manager.id;
+        cfg.approveEmployee = manager.name;
+      }
 
       await db.journalDocument.create({
         data: {
@@ -2077,7 +2108,10 @@ export default async function JournalDocumentsPage({
       });
       const cfg = buildEquipmentCalibrationConfigFromEquipment(equipmentSource, { year });
       const manager = pickPrimaryManager(orgUsers);
-      if (manager) cfg.approveEmployee = manager.name;
+      if (manager) {
+        cfg.approveEmployeeId = manager.id;
+        cfg.approveEmployee = manager.name;
+      }
 
       await db.journalDocument.create({
         data: {
@@ -2549,6 +2583,7 @@ export default async function JournalDocumentsPage({
         templateId: template.id,
         organizationId: session.user.organizationId,
         createdById: session.user.id,
+        users: orgUsers,
       });
 
       const sanitationDocuments = await db.journalDocument.findMany({
@@ -2590,6 +2625,26 @@ export default async function JournalDocumentsPage({
         select: { status: true },
       });
       const disStatuses = new Set(existingDis.map((d) => d.status));
+      const disinfectantResponsibleUser = pickPrimaryManager(orgUsers) || orgUsers[0] || null;
+      const disinfectantConfig = (() => {
+        const cfg = getDisinfectantDefaultConfig();
+        if (!disinfectantResponsibleUser) return cfg;
+        return {
+          ...cfg,
+          responsibleEmployeeId: disinfectantResponsibleUser.id,
+          responsibleEmployee: disinfectantResponsibleUser.name,
+          receipts: cfg.receipts.map((row) => ({
+            ...row,
+            responsibleEmployeeId: disinfectantResponsibleUser.id,
+            responsibleEmployee: disinfectantResponsibleUser.name,
+          })),
+          consumptions: cfg.consumptions.map((row) => ({
+            ...row,
+            responsibleEmployeeId: disinfectantResponsibleUser.id,
+            responsibleEmployee: disinfectantResponsibleUser.name,
+          })),
+        };
+      })();
       if (!disStatuses.has("active")) {
         const now = new Date();
         await db.journalDocument.create({
@@ -2601,7 +2656,9 @@ export default async function JournalDocumentsPage({
             dateFrom: now,
             dateTo: now,
             createdById: session.user.id,
-            config: getDisinfectantDefaultConfig() as Prisma.InputJsonValue,
+            responsibleUserId: disinfectantResponsibleUser?.id || null,
+            responsibleTitle: disinfectantConfig.responsibleRole,
+            config: disinfectantConfig as Prisma.InputJsonValue,
           },
         });
       }
@@ -2616,7 +2673,9 @@ export default async function JournalDocumentsPage({
             dateFrom: closedFrom,
             dateTo: closedFrom,
             createdById: session.user.id,
-            config: getDisinfectantDefaultConfig() as Prisma.InputJsonValue,
+            responsibleUserId: disinfectantResponsibleUser?.id || null,
+            responsibleTitle: disinfectantConfig.responsibleRole,
+            config: disinfectantConfig as Prisma.InputJsonValue,
           },
         });
       }
@@ -2654,6 +2713,12 @@ export default async function JournalDocumentsPage({
 
       if (existingTP.length === 0) {
         const now = new Date();
+        const approveUser = pickPrimaryManager(orgUsers) || orgUsers[0] || null;
+        const activeConfig = getTrainingPlanDefaultConfig(now);
+        if (approveUser) {
+          activeConfig.approveEmployeeId = approveUser.id;
+          activeConfig.approveEmployee = approveUser.name;
+        }
         await db.journalDocument.create({
           data: {
             templateId: template.id,
@@ -2663,11 +2728,18 @@ export default async function JournalDocumentsPage({
             dateFrom: new Date(Date.UTC(now.getUTCFullYear(), 0, 11)),
             dateTo: new Date(Date.UTC(now.getUTCFullYear(), 0, 11)),
             createdById: session.user.id,
-            config: getTrainingPlanDefaultConfig(now),
+            responsibleUserId: approveUser?.id || null,
+            responsibleTitle: activeConfig.approveRole,
+            config: activeConfig,
           },
         });
 
         const previousYear = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 11));
+        const closedConfig = getTrainingPlanDefaultConfig(previousYear);
+        if (approveUser) {
+          closedConfig.approveEmployeeId = approveUser.id;
+          closedConfig.approveEmployee = approveUser.name;
+        }
         await db.journalDocument.create({
           data: {
             templateId: template.id,
@@ -2677,7 +2749,9 @@ export default async function JournalDocumentsPage({
             dateFrom: previousYear,
             dateTo: previousYear,
             createdById: session.user.id,
-            config: getTrainingPlanDefaultConfig(previousYear),
+            responsibleUserId: approveUser?.id || null,
+            responsibleTitle: closedConfig.approveRole,
+            config: closedConfig,
           },
         });
       }

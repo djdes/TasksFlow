@@ -1,0 +1,37 @@
+# Problems
+
+- hygiene: [Minor] mapped to hygiene; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- health_check: [Minor] mapped to health_check; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- climate_control: [Minor] mapped to climate_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- cold_equipment_control: [Minor] mapped to cold_equipment_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- cleaning_ventilation_checklist: [Minor] mapped to cleaning_ventilation_checklist; source detail captured; local detail captured; missing button: инструкция; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- cleaning: [Minor] mapped to cleaning; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- general_cleaning: [Minor] mapped to general_cleaning; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- uv_lamp_runtime: [Minor] mapped to uv_lamp_runtime; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- finished_product: [Minor] mapped to finished_product; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- perishable_rejection: [Minor] mapped to perishable_rejection; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- incoming_control: [Minor] mapped to incoming_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- fryer_oil: [Minor] mapped to fryer_oil; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- med_books: [Minor] mapped to med_books; source detail captured; local detail captured; missing button: удалить; no obvious DB-binding drift found
+- training_plan: [Minor] mapped to training_plan; source detail captured; local detail captured; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- staff_training: [Minor] mapped to staff_training; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- disinfectant_usage: [Minor] mapped to disinfectant_usage; source detail captured; local detail captured; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- sanitary_day_control: [Minor] mapped to sanitary_day_control; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- equipment_maintenance: [Minor] mapped to equipment_maintenance; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- breakdown_history: [Minor] mapped to breakdown_history; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- equipment_calibration: [Minor] mapped to equipment_calibration; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- incoming_raw_materials_control: [Minor] mapped to incoming_raw_materials_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- ppe_issuance: [Minor] mapped to ppe_issuance; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- accident_journal: [Minor] mapped to accident_journal; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- complaint_register: [Minor] mapped to complaint_register; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- product_writeoff: [Minor] mapped to product_writeoff; source detail captured; local detail captured; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- audit_plan: [Minor] mapped to audit_plan; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- audit_protocol: [Minor] mapped to audit_protocol; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- audit_report: [Minor] mapped to audit_report; source detail captured; local detail captured; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- traceability_test: [Minor] mapped to traceability_test; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- metal_impurity: [Minor] mapped to metal_impurity; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- equipment_cleaning: [Minor] mapped to equipment_cleaning; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- intensive_cooling: [Minor] mapped to intensive_cooling; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- glass_items_list: [Minor] mapped to glass_items_list; source detail captured; local detail captured; missing button: сделать копию; missing button: печать; missing button: отправить в закрытые; missing button: удалить; no obvious DB-binding drift found
+- glass_control: [Minor] mapped to glass_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found
+- pest_control: [Minor] mapped to pest_control; source detail captured; local detail captured; missing button: печать; missing button: удалить; no obvious DB-binding drift found

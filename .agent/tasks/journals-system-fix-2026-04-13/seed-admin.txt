@@ -1,0 +1,17 @@
+  Updated existing admin user: admin@haccp.local
+  Updated organization:       Тестовая организация (админ) (cmnx55fg000005o9maiggrvya)
+  Updated demo user:    admin@haccp.local
+  Updated demo user:    chef@haccp.local
+  Updated demo user:    souschef@haccp.local
+  Updated demo user:    hotcook@haccp.local
+  Updated demo user:    coldcook@haccp.local
+  Updated demo user:    pastry@haccp.local
+  Updated demo user:    waiter@haccp.local
+
+Admin credentials:
+  Email:    admin@haccp.local
+  Password: admin1234
+  Role:     owner
+  Org ID:   cmnx55fg000005o9maiggrvya
+
+Login at /login.

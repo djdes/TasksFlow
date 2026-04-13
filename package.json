@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "backfill:journal-staff": "tsx scripts/backfill-journal-staff-bindings.ts",
+    "audit:source:parity": "tsx scripts/audit-source-local-parity.ts",
     "watch:progress": "powershell -ExecutionPolicy Bypass -File scripts/watch-progress.ps1",
     "capture:source:25-27": "tsx scripts/capture-source-journals.ts --targets tmp-source-journals/targets-25-27.json --out tmp-source-journals/capture-25-27",
     "capture:source:25-27:auto": "tsx scripts/capture-source-journals.ts --no-login-pause --targets tmp-source-journals/targets-25-27.json --out tmp-source-journals/capture-25-27",

@@ -1,0 +1,130 @@
+{
+  "taskId": "journals-system-fix-2026-04-13",
+  "generatedAt": "2026-04-13T13:37:13.494Z",
+  "verification": "PASS",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "summary": "Local bootstrap commands succeed against the current dev DB.",
+      "evidence": [
+        "raw/prisma-db-push.txt",
+        "raw/seed.txt",
+        "raw/seed-admin.txt"
+      ]
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "summary": "Seeded admin authenticates through /api/auth/login.",
+      "evidence": [
+        "raw/login-probe.json"
+      ]
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "summary": "Active journal templates exist locally for the audited journal set.",
+      "evidence": [
+        "raw/seed.txt",
+        "../source-parity-audit-2026-04-13/evidence.json"
+      ]
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "summary": "Fresh source-vs-local audit artifacts exist for the current repo state.",
+      "evidence": [
+        "raw/audit-source-parity.txt",
+        "../source-parity-audit-2026-04-13/evidence.md",
+        "../source-parity-audit-2026-04-13/evidence.json",
+        "../source-parity-audit-2026-04-13/problems.md"
+      ]
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "summary": "Systemic journal defects were fixed and reverified; DB-binding drift is cleared across all audited journals.",
+      "evidence": [
+        "raw/backfill-journal-staff.txt",
+        "../source-parity-audit-2026-04-13/evidence.json"
+      ]
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "summary": "All completion claims are backed by fresh raw logs under this task directory.",
+      "evidence": [
+        "raw/prisma-db-push.txt",
+        "raw/seed.txt",
+        "raw/seed-admin.txt",
+        "raw/login-probe.json",
+        "raw/backfill-journal-staff.txt",
+        "raw/audit-source-parity.txt",
+        "raw/tsc.txt"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "npx prisma db push",
+      "status": "PASS",
+      "artifact": "raw/prisma-db-push.txt"
+    },
+    {
+      "command": "npx tsx prisma/seed.ts",
+      "status": "PASS",
+      "artifact": "raw/seed.txt"
+    },
+    {
+      "command": "npx tsx prisma/seed-admin.ts",
+      "status": "PASS",
+      "artifact": "raw/seed-admin.txt"
+    },
+    {
+      "command": "POST http://127.0.0.1:3000/api/auth/login",
+      "status": "PASS",
+      "artifact": "raw/login-probe.json"
+    },
+    {
+      "command": "npm run backfill:journal-staff",
+      "status": "PASS",
+      "artifact": "raw/backfill-journal-staff.txt"
+    },
+    {
+      "command": "npm run audit:source:parity",
+      "status": "PASS",
+      "artifact": "raw/audit-source-parity.txt"
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "status": "PASS",
+      "artifact": "raw/tsc.txt"
+    }
+  ],
+  "audit": {
+    "taskId": "source-parity-audit-2026-04-13",
+    "generatedAt": "2026-04-13T13:37:13.494Z",
+    "sourceTotal": 35,
+    "localTotal": 35,
+    "ignoredSourceSections": [
+      "articles",
+      "news"
+    ],
+    "unmappedSource": [],
+    "severity": {
+      "Minor": 35
+    },
+    "dbStatus": "PASS",
+    "logicStatus": "PASS",
+    "pdfStatus": "PASS",
+    "coverageStatus": "PASS",
+    "residualUiNotes": [
+      "print",
+      "delete",
+      "copy",
+      "archive-close",
+      "instruction"
+    ]
+  }
+}

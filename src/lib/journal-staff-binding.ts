@@ -47,15 +47,24 @@ export type StaffBindingUser = {
   positionTitle?: string | null;
 };
 
+type StaffBindingMatch = "id" | "name" | "fallback" | "none";
+
 export type StaffBindingResult = {
   userId: string | null;
   userName: string | null;
   title: string | null;
-  matchedBy: "id" | "name" | "none";
+  matchedBy: StaffBindingMatch;
 };
+
+const STAFF_PLACEHOLDER_NAMES = new Set(["иванов и.и.", "петров п.п."]);
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isPlaceholderStaffName(value: unknown) {
+  const name = normalizeText(value).toLowerCase();
+  return name.length === 0 || STAFF_PLACEHOLDER_NAMES.has(name);
 }
 
 export function getDbStaffTitle(
@@ -128,12 +137,14 @@ export function reconcileResponsibleAssignment(
   users: StaffBindingUser[],
   params: {
     responsibleUserId?: unknown;
+    responsibleUserName?: unknown;
     responsibleTitle?: unknown;
     fallbackTitle?: unknown;
   }
 ) {
   const resolved = resolveStaffUser(users, {
     userId: params.responsibleUserId,
+    userName: params.responsibleUserName,
   });
 
   if (resolved.userId) {
@@ -165,6 +176,8 @@ export function reconcileNamedStaffSelection(
     userName?: unknown;
     title?: unknown;
     fallbackTitle?: unknown;
+    allowFallbackUser?: boolean | "placeholder-only";
+    fallbackUser?: StaffBindingUser | null;
   }
 ) {
   const resolved = resolveStaffUser(users, {
@@ -181,6 +194,22 @@ export function reconcileNamedStaffSelection(
     };
   }
 
+  const allowFallbackUser =
+    params.allowFallbackUser === true ||
+    (params.allowFallbackUser === "placeholder-only" &&
+      isPlaceholderStaffName(params.userName));
+  const fallbackUser =
+    allowFallbackUser ? params.fallbackUser || pickFallbackResponsibleUser(users) : null;
+
+  if (fallbackUser) {
+    return {
+      userId: fallbackUser.id,
+      userName: fallbackUser.name,
+      title: getDbStaffTitle(fallbackUser),
+      matchedBy: "fallback" as const,
+    };
+  }
+
   return {
     userId: null,
     userName: normalizeText(params.userName) || null,
@@ -194,6 +223,159 @@ export function reconcileNamedStaffSelection(
 
 export function buildStaffOptionLabel(user: StaffBindingUser) {
   return `${getDbStaffTitle(user)} - ${user.name}`;
+}
+
+export function pickFallbackResponsibleUser(users: StaffBindingUser[]) {
+  return (
+    users.find((user) => normalizeText(user.role) === "owner") ||
+    users.find((user) => normalizeText(user.role) === "technologist") ||
+    users[0] ||
+    null
+  );
+}
+
+function getRecordText(record: Record<string, unknown>, key: string) {
+  return normalizeText(record[key]) || null;
+}
+
+function inferResponsibleSelectionFromConfig(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      userId: null,
+      userName: null,
+      title: null,
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidates = [
+    {
+      userId: getRecordText(record, "responsibleUserId"),
+      userName: getRecordText(record, "responsibleUserName"),
+      title: getRecordText(record, "responsibleTitle"),
+    },
+    {
+      userId: getRecordText(record, "mainResponsibleUserId"),
+      userName: getRecordText(record, "mainResponsibleUserName"),
+      title: getRecordText(record, "mainResponsibleTitle"),
+    },
+    {
+      userId: getRecordText(record, "defaultResponsibleUserId"),
+      userName: getRecordText(record, "defaultResponsibleUserName"),
+      title: getRecordText(record, "defaultResponsibleTitle"),
+    },
+    {
+      userId: getRecordText(record, "defaultResponsibleEmployeeId"),
+      userName: getRecordText(record, "defaultResponsibleEmployee"),
+      title: getRecordText(record, "defaultResponsibleRole"),
+    },
+    {
+      userId: getRecordText(record, "responsibleEmployeeId"),
+      userName:
+        getRecordText(record, "responsibleEmployee") ||
+        getRecordText(record, "responsibleName") ||
+        getRecordText(record, "responsiblePerson"),
+      title:
+        getRecordText(record, "responsibleRole") ||
+        getRecordText(record, "responsiblePosition") ||
+        getRecordText(record, "responsibleTitle"),
+    },
+    {
+      userId: getRecordText(record, "approveEmployeeId"),
+      userName: getRecordText(record, "approveEmployee"),
+      title: getRecordText(record, "approveRole"),
+    },
+  ];
+
+  const matched =
+    candidates.find((candidate) => candidate.userId || candidate.userName || candidate.title) ||
+    null;
+
+  return matched || {
+    userId: null,
+    userName: null,
+    title: null,
+  };
+}
+
+function reconcileRecordSelection(
+  record: Record<string, unknown>,
+  users: StaffBindingUser[],
+  params: {
+    idKey: string;
+    nameKey: string;
+    titleKeys: string[];
+  }
+) {
+  const selection = reconcileNamedStaffSelection(users, {
+    userId: record[params.idKey],
+    userName: record[params.nameKey],
+    title:
+      params.titleKeys
+        .map((key) => record[key])
+        .find((value) => normalizeText(value)) ?? null,
+    fallbackTitle:
+      params.titleKeys
+        .map((key) => record[key])
+        .find((value) => normalizeText(value)) ?? null,
+  });
+
+  if (params.idKey in record) record[params.idKey] = selection.userId;
+  if (params.nameKey in record) record[params.nameKey] = selection.userName ?? normalizeText(record[params.nameKey]);
+
+  for (const key of params.titleKeys) {
+    if (key in record) {
+      record[key] = selection.title ?? normalizeText(record[key]);
+      break;
+    }
+  }
+}
+
+export function normalizeJournalEntryStaffData(
+  value: unknown,
+  users: StaffBindingUser[]
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeJournalEntryStaffData(item, users));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const record = { ...(value as Record<string, unknown>) };
+
+  if ("employeeId" in record || "employeeName" in record) {
+    reconcileRecordSelection(record, users, {
+      idKey: "employeeId",
+      nameKey: "employeeName",
+      titleKeys: ["employeePosition", "positionTitle"],
+    });
+  }
+
+  if ("responsibleEmployeeId" in record || "responsibleEmployee" in record) {
+    reconcileRecordSelection(record, users, {
+      idKey: "responsibleEmployeeId",
+      nameKey: "responsibleEmployee",
+      titleKeys: ["responsibleRole", "responsibleTitle", "responsiblePosition"],
+    });
+  }
+
+  if ("approveEmployeeId" in record || "approveEmployee" in record) {
+    reconcileRecordSelection(record, users, {
+      idKey: "approveEmployeeId",
+      nameKey: "approveEmployee",
+      titleKeys: ["approveRole"],
+    });
+  }
+
+  for (const [key, child] of Object.entries(record)) {
+    if (child && typeof child === "object") {
+      record[key] = normalizeJournalEntryStaffData(child, users);
+    }
+  }
+
+  return record;
 }
 
 export function reconcileEntryStaffFields(
@@ -224,6 +406,7 @@ function reconcileAuditPlanConfigUsers(users: StaffBindingUser[], value: unknown
     userName: config.approveEmployee,
     title: config.approveRole,
     fallbackTitle: config.approveRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -241,6 +424,7 @@ function reconcileTrainingPlanConfigUsers(users: StaffBindingUser[], value: unkn
     userName: config.approveEmployee,
     title: config.approveRole,
     fallbackTitle: config.approveRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -268,12 +452,14 @@ function reconcileSanitationDayConfigUsers(
     userName: config.approveEmployee,
     title: config.approveRole,
     fallbackTitle: config.approveRole,
+    allowFallbackUser: "placeholder-only",
   });
   const responsible = reconcileNamedStaffSelection(users, {
     userId: raw?.responsibleEmployeeId,
     userName: config.responsibleEmployee,
     title: config.responsibleRole,
     fallbackTitle: config.responsibleRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -301,6 +487,7 @@ function reconcileTraceabilityConfigUsers(users: StaffBindingUser[], value: unkn
     userName: config.defaultResponsibleEmployee,
     title: config.defaultResponsibleRole,
     fallbackTitle: config.defaultResponsibleRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -317,6 +504,7 @@ function reconcileTraceabilityConfigUsers(users: StaffBindingUser[], value: unkn
         title: row.responsibleRole,
         fallbackTitle:
           row.responsibleRole || defaultResponsible.title || config.defaultResponsibleRole,
+        allowFallbackUser: "placeholder-only",
       });
 
       return {
@@ -373,12 +561,14 @@ function reconcileEquipmentMaintenanceConfigUsers(
     userName: config.approveEmployee,
     title: config.approveRole,
     fallbackTitle: config.approveRole,
+    allowFallbackUser: "placeholder-only",
   });
   const responsible = reconcileNamedStaffSelection(users, {
     userId: raw?.responsibleEmployeeId,
     userName: config.responsibleEmployee,
     title: config.responsibleRole,
     fallbackTitle: config.responsibleRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -402,6 +592,7 @@ function reconcileEquipmentCalibrationConfigUsers(
     userName: config.approveEmployee,
     title: config.approveRole,
     fallbackTitle: config.approveRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -427,6 +618,7 @@ function reconcileDisinfectantConfigUsers(users: StaffBindingUser[], value: unkn
     userName: config.responsibleEmployee,
     title: config.responsibleRole,
     fallbackTitle: config.responsibleRole,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -440,6 +632,7 @@ function reconcileDisinfectantConfigUsers(users: StaffBindingUser[], value: unkn
         userName: receipt.responsibleEmployee,
         title: receipt.responsibleRole,
         fallbackTitle: receipt.responsibleRole,
+        allowFallbackUser: "placeholder-only",
       });
       return {
         ...receipt,
@@ -454,6 +647,7 @@ function reconcileDisinfectantConfigUsers(users: StaffBindingUser[], value: unkn
         userName: consumption.responsibleEmployee,
         title: consumption.responsibleRole,
         fallbackTitle: consumption.responsibleRole,
+        allowFallbackUser: "placeholder-only",
       });
       return {
         ...consumption,
@@ -508,6 +702,7 @@ function reconcileMetalImpurityConfigUsers(users: StaffBindingUser[], value: unk
     userName: config.responsibleEmployee,
     title: config.responsiblePosition,
     fallbackTitle: config.responsiblePosition,
+    allowFallbackUser: "placeholder-only",
   });
 
   return {
@@ -521,6 +716,7 @@ function reconcileMetalImpurityConfigUsers(users: StaffBindingUser[], value: unk
         userName: row.responsibleName,
         title: row.responsibleRole,
         fallbackTitle: row.responsibleRole || responsible.title || config.responsiblePosition,
+        allowFallbackUser: "placeholder-only",
       });
 
       return {
@@ -563,4 +759,39 @@ export function normalizeJournalStaffBoundConfig(
     default:
       return value;
   }
+}
+
+export function normalizeJournalDocumentStaffState(
+  templateCode: string,
+  params: {
+    config: unknown;
+    responsibleUserId?: unknown;
+    responsibleUserName?: unknown;
+    responsibleTitle?: unknown;
+  },
+  users: StaffBindingUser[]
+) {
+  const normalizedConfig = normalizeJournalEntryStaffData(
+    normalizeJournalStaffBoundConfig(templateCode, params.config, users),
+    users
+  );
+  const inferred = inferResponsibleSelectionFromConfig(normalizedConfig);
+  const fallbackUser = pickFallbackResponsibleUser(users);
+  const fallbackTitle = inferred.title || (fallbackUser ? getDbStaffTitle(fallbackUser) : null);
+
+  const responsible = reconcileResponsibleAssignment(users, {
+    responsibleUserId:
+      params.responsibleUserId ?? inferred.userId ?? fallbackUser?.id ?? null,
+    responsibleUserName:
+      params.responsibleUserName ?? inferred.userName ?? fallbackUser?.name ?? null,
+    responsibleTitle: params.responsibleTitle,
+    fallbackTitle,
+  });
+
+  return {
+    config: normalizedConfig,
+    responsibleUserId: responsible.responsibleUserId,
+    responsibleUserName: responsible.responsibleUserName,
+    responsibleTitle: responsible.responsibleTitle ?? fallbackTitle,
+  };
 }

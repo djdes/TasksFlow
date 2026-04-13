@@ -92,7 +92,7 @@ export function getDefaultAuditProtocolConfig(): AuditProtocolConfig {
     ],
     signatures: [
       createAuditProtocolSignature({
-        name: "Иванов И.И.",
+        name: "",
         role: "Главный аудитор",
         signedAt: documentDate,
       }),

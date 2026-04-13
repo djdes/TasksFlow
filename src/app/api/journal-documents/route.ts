@@ -83,7 +83,7 @@ import {
 import { isManagementRole, pickPrimaryManager } from "@/lib/user-roles";
 import {
   normalizeJournalStaffBoundConfig,
-  reconcileResponsibleAssignment,
+  normalizeJournalDocumentStaffState,
 } from "@/lib/journal-staff-binding";
 
 export async function GET(request: Request) {
@@ -421,12 +421,6 @@ export async function POST(request: Request) {
       ? buildRegisterDocumentConfigFromUsers(allUsers)
       : undefined;
 
-  const normalizedStaffConfig = normalizeJournalStaffBoundConfig(
-    resolvedTemplateCode,
-    config ?? initialConfig ?? undefined,
-    allUsers
-  );
-
   const cleaningControlRole =
     resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
       ? cleaningUsers.find(
@@ -439,67 +433,75 @@ export async function POST(request: Request) {
         )?.role || null
       : null;
 
-  const responsible = reconcileResponsibleAssignment(allUsers, {
-    responsibleUserId,
-    responsibleTitle:
-      responsibleTitle ||
-      (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
-        ? ((initialConfig as { responsibleTitle?: string } | undefined)?.responsibleTitle || null)
-        : null) ||
-      (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-        ? ((initialConfig as { controlResponsibles?: Array<{ title?: string }> } | undefined)
-            ?.controlResponsibles?.[0]?.title ||
-          getHygienePositionLabel(cleaningControlRole || "owner"))
-        : null),
-  });
+  const fallbackResponsibleUserId =
+    (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
+      ? ((initialConfig as { responsibleUserId?: string } | undefined)?.responsibleUserId || null)
+      : null) ||
+    (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? ((initialConfig as { controlResponsibles?: Array<{ userId?: string }> } | undefined)
+          ?.controlResponsibles?.[0]?.userId ||
+        cleaningDefaults?.responsibleControlUserId ||
+        null)
+      : null);
+  const fallbackResponsibleTitle =
+    responsibleTitle ||
+    (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
+      ? ((initialConfig as { responsibleTitle?: string } | undefined)?.responsibleTitle || null)
+      : null) ||
+    (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? ((initialConfig as { controlResponsibles?: Array<{ title?: string }> } | undefined)
+          ?.controlResponsibles?.[0]?.title ||
+        getHygienePositionLabel(cleaningControlRole || "owner"))
+      : null);
+  const configForDocument =
+    resolvedTemplateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE
+      ? equipmentCalibrationConfig
+      : resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
+      ? normalizeCleaningDocumentConfig(rawConfig ?? initialConfig, {
+          users: cleaningUsers,
+          areas: cleaningAreas,
+        })
+      : resolvedTemplateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
+      ? normalizeCleaningVentilationConfig(rawConfig ?? initialConfig, allUsers)
+      : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
+      ? normalizeJournalStaffBoundConfig(
+          resolvedTemplateCode,
+          {
+            ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
+            ...((rawConfig || {}) as Record<string, unknown>),
+          },
+          allUsers
+        )
+      : resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
+      ? {
+          ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
+          ...((rawConfig || {}) as Record<string, unknown>),
+        }
+      : normalizeJournalStaffBoundConfig(
+          resolvedTemplateCode,
+          config ?? initialConfig ?? undefined,
+          allUsers
+        );
+  const normalizedDocumentState = normalizeJournalDocumentStaffState(
+    resolvedTemplateCode,
+    {
+      config: configForDocument,
+      responsibleUserId: responsibleUserId || fallbackResponsibleUserId,
+      responsibleTitle: fallbackResponsibleTitle,
+    },
+    allUsers
+  );
 
   const doc = await db.journalDocument.create({
     data: {
       templateId: template.id,
       organizationId: session.user.organizationId,
       title: title || template.name,
-      config: (
-        resolvedTemplateCode === EQUIPMENT_CALIBRATION_TEMPLATE_CODE
-          ? equipmentCalibrationConfig
-          : resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-          ? normalizeCleaningDocumentConfig(rawConfig ?? initialConfig, {
-              users: cleaningUsers,
-              areas: cleaningAreas,
-            })
-          : resolvedTemplateCode === CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE
-          ? normalizeCleaningVentilationConfig(rawConfig ?? initialConfig, allUsers)
-          : resolvedTemplateCode === SANITATION_DAY_TEMPLATE_CODE
-          ? normalizedStaffConfig
-          : resolvedTemplateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
-          ? normalizeJournalStaffBoundConfig(
-              resolvedTemplateCode,
-              {
-                ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
-                ...((rawConfig || {}) as Record<string, unknown>),
-              },
-              allUsers
-            )
-          : resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
-          ? {
-              ...(((initialConfig as Record<string, unknown>) || {}) as Record<string, unknown>),
-              ...((rawConfig || {}) as Record<string, unknown>),
-            }
-          : normalizedStaffConfig
-      ) as Prisma.InputJsonValue | undefined,
+      config: normalizedDocumentState.config as Prisma.InputJsonValue | undefined,
       dateFrom: new Date(dateFrom),
       dateTo: new Date(dateTo),
-      responsibleUserId:
-        responsible.responsibleUserId ||
-        (resolvedTemplateCode === GLASS_LIST_TEMPLATE_CODE
-          ? ((initialConfig as { responsibleUserId?: string } | undefined)?.responsibleUserId || null)
-          : null) ||
-        (resolvedTemplateCode === CLEANING_DOCUMENT_TEMPLATE_CODE
-          ? ((initialConfig as { controlResponsibles?: Array<{ userId?: string }> } | undefined)
-              ?.controlResponsibles?.[0]?.userId ||
-            cleaningDefaults?.responsibleControlUserId ||
-            null)
-          : null),
-      responsibleTitle: responsible.responsibleTitle,
+      responsibleUserId: normalizedDocumentState.responsibleUserId,
+      responsibleTitle: normalizedDocumentState.responsibleTitle,
       createdById: session.user.id,
     },
   });

@@ -88,7 +88,7 @@ export function getDefaultEquipmentCalibrationConfig(
     documentDate: `${year}-01-12`,
     approveRole: "Управляющий",
     approveEmployeeId: null,
-    approveEmployee: "Иванов И.И.",
+    approveEmployee: "",
     rows: [
       createCalibrationRow({
         equipmentName: "Весы платформенные 012-В",

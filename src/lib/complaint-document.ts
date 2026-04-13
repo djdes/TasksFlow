@@ -39,9 +39,7 @@ export function formatComplaintDate(value: string) {
   return `${day}-${month}-${year}`;
 }
 
-export function normalizeComplaintConfig(
-  value: RegisterDocumentConfig | ComplaintDocumentConfig
-): ComplaintDocumentConfig {
+export function normalizeComplaintConfig(value: unknown): ComplaintDocumentConfig {
   if (!value || typeof value !== "object") {
     return {
       rows: [],

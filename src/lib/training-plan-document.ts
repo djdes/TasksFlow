@@ -160,7 +160,7 @@ export function getTrainingPlanDefaultConfig(date = new Date()): TrainingPlanCon
     documentDate: toDateKey(documentDate),
     approveRole: "Управляющий",
     approveEmployeeId: null,
-    approveEmployee: "Иванов И.И.",
+    approveEmployee: "",
     topics: DEFAULT_TOPICS,
     rows: buildDefaultRows(year),
   };

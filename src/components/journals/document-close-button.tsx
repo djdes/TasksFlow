@@ -13,13 +13,18 @@ type Props = ComponentProps<typeof Button> & {
   onClosed?: () => void;
 };
 
+const CLOSE_LABEL = "\u0417\u0430\u043a\u043e\u043d\u0447\u0438\u0442\u044c \u0436\u0443\u0440\u043d\u0430\u043b";
+const CLOSING_LABEL = "\u0417\u0430\u043a\u0440\u044b\u0442\u0438\u0435...";
+const CLOSED_TOAST = "\u0416\u0443\u0440\u043d\u0430\u043b \u0437\u0430\u043a\u0440\u044b\u0442";
+const CLOSE_ERROR =
+  "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u043a\u0440\u044b\u0442\u044c \u0436\u0443\u0440\u043d\u0430\u043b";
+
 export function DocumentCloseButton({
   documentId,
   title,
   confirmMessage,
-  successMessage = "Журнал закрыт",
+  successMessage = CLOSED_TOAST,
   onClosed,
-  children,
   onClick,
   disabled,
   ...buttonProps
@@ -33,7 +38,8 @@ export function DocumentCloseButton({
       return;
     }
 
-    const message = confirmMessage || `Закончить журнал "${title}"?`;
+    const message =
+      confirmMessage || `${CLOSE_LABEL} "${title}"?`;
     if (!window.confirm(message)) {
       return;
     }
@@ -47,14 +53,14 @@ export function DocumentCloseButton({
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(result?.error || "Не удалось закрыть журнал");
+        throw new Error(result?.error || CLOSE_ERROR);
       }
 
       onClosed?.();
       toast.success(successMessage);
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Не удалось закрыть журнал");
+      toast.error(error instanceof Error ? error.message : CLOSE_ERROR);
     } finally {
       setIsSubmitting(false);
     }
@@ -67,7 +73,7 @@ export function DocumentCloseButton({
       onClick={handleClick}
       {...buttonProps}
     >
-      {isSubmitting ? "Закрытие..." : children || "Закончить журнал"}
+      {isSubmitting ? CLOSING_LABEL : CLOSE_LABEL}
     </Button>
   );
 }

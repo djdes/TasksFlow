@@ -244,7 +244,7 @@ export function getDisinfectantDefaultConfig(): DisinfectantDocumentConfig {
         unit: "l",
         expiryDate: "2026-05-01",
         responsibleRole: "Управляющий",
-        responsibleEmployee: "Иванов И.И.",
+        responsibleEmployee: "",
       },
       {
         id: "rec-2",
@@ -254,7 +254,7 @@ export function getDisinfectantDefaultConfig(): DisinfectantDocumentConfig {
         unit: "l",
         expiryDate: "2025-04-25",
         responsibleRole: "Управляющий",
-        responsibleEmployee: "Иванов И.И.",
+        responsibleEmployee: "",
       },
     ],
     consumptions: [
@@ -270,7 +270,7 @@ export function getDisinfectantDefaultConfig(): DisinfectantDocumentConfig {
         remainder: 11,
         remainderUnit: "kg",
         responsibleRole: "Управляющий",
-        responsibleEmployee: "Иванов И.И.",
+        responsibleEmployee: "",
       },
     ],
   };

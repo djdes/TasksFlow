@@ -1184,6 +1184,7 @@ export function ClimateDocumentClient({
               Печать
             </Button>
             {status === "active" && (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -1193,6 +1194,13 @@ export function ClimateDocumentClient({
                 <Settings2 className="size-6" />
                 Настройки документа
               </Button>
+              <DocumentCloseButton
+                documentId={documentId}
+                title={documentTitle}
+                variant="outline"
+                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              />
+              </>
             )}
           </div>
         </div>
