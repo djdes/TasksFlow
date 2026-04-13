@@ -194,6 +194,18 @@ import {
   normalizeEquipmentCalibrationConfig,
 } from "@/lib/equipment-calibration-document";
 import {
+  EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
+  EQUIPMENT_MAINTENANCE_TEMPLATE_CODE,
+  MONTH_KEYS as EQUIPMENT_MAINTENANCE_MONTH_KEYS,
+  MONTH_LABELS as EQUIPMENT_MAINTENANCE_MONTH_LABELS,
+  normalizeEquipmentMaintenanceConfig,
+} from "@/lib/equipment-maintenance-document";
+import {
+  STAFF_TRAINING_FULL_TITLE,
+  STAFF_TRAINING_TEMPLATE_CODE,
+  normalizeStaffTrainingConfig,
+} from "@/lib/staff-training-document";
+import {
   buildHygieneExampleEmployees,
   buildDateKeys,
   formatMonthLabel,
@@ -1592,6 +1604,146 @@ function drawFinishedProductPdf(doc: jsPDF, params: {
     doc.setFontSize(9);
     doc.text(params.config.footerNote, 10, y + 8);
   }
+}
+
+function drawEquipmentMaintenancePdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeEquipmentMaintenanceConfig>;
+}) {
+  drawTitle(doc, params.title || EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE);
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(10);
+  doc.text(params.organizationName, 14, 24);
+  doc.text(`Начат: ${formatRuDateDash(params.dateFrom)}`, 210, 24, { align: "right" });
+  doc.text(`Окончен: ${formatRuDateDash(params.dateTo)}`, 283, 24, { align: "right" });
+
+  autoTable(doc, {
+    startY: 30,
+    margin: { left: 10, right: 10 },
+    head: [[
+      "№",
+      "Оборудование / вид работ",
+      "Тип",
+      ...EQUIPMENT_MAINTENANCE_MONTH_KEYS.map((key) => EQUIPMENT_MAINTENANCE_MONTH_LABELS[key]),
+    ]],
+    body:
+      params.config.rows.flatMap((row, index) => [
+        [
+          String(index + 1),
+          [row.equipmentName, row.workType].filter(Boolean).join("\n"),
+          row.maintenanceType,
+          ...EQUIPMENT_MAINTENANCE_MONTH_KEYS.map((key) => row.plan[key] || "-"),
+        ],
+        [
+          "",
+          "Факт",
+          "",
+          ...EQUIPMENT_MAINTENANCE_MONTH_KEYS.map((key) => row.fact[key] || ""),
+        ],
+      ]) || [],
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7,
+      cellPadding: 1.1,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      halign: "center",
+      valign: "middle",
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 68 },
+      2: { cellWidth: 12, halign: "center" },
+    },
+  });
+
+  const finalY = (((doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY) || 40) + 8;
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(9);
+  doc.text(
+    `Ответственный: ${[params.config.responsibleRole, params.config.responsibleEmployee].filter(Boolean).join(", ")}`,
+    10,
+    finalY
+  );
+}
+
+function drawStaffTrainingPdf(doc: jsPDF, params: {
+  organizationName: string;
+  title: string;
+  dateFrom: Date | string;
+  dateTo: Date | string;
+  config: ReturnType<typeof normalizeStaffTrainingConfig>;
+}) {
+  drawTitle(doc, params.title || STAFF_TRAINING_FULL_TITLE);
+  doc.setFont("JournalUnicode", "normal");
+  doc.setFontSize(10);
+  doc.text(params.organizationName, 14, 24);
+  doc.text(`Начат: ${formatRuDateDash(params.dateFrom)}`, 210, 24, { align: "right" });
+  doc.text(`Окончен: ${formatRuDateDash(params.dateTo)}`, 283, 24, { align: "right" });
+
+  autoTable(doc, {
+    startY: 30,
+    margin: { left: 10, right: 10 },
+    head: [[
+      "Дата",
+      "Сотрудник",
+      "Должность",
+      "Тема",
+      "Вид",
+      "Причина",
+      "Инструктирующий",
+      "Результат",
+    ]],
+    body: (params.config.rows.length > 0
+      ? params.config.rows
+      : [{ date: "", employeeName: "", employeePosition: "", topic: "", trainingType: "", unscheduledReason: "", instructorName: "", attestationResult: "" }]
+    ).map((row) => [
+      row.date || "",
+      row.employeeName || "",
+      row.employeePosition || "",
+      row.topic || "",
+      row.trainingType || "",
+      row.unscheduledReason || "",
+      row.instructorName || "",
+      row.attestationResult === "passed" ? "удовл." : row.attestationResult === "failed" ? "не удовл." : "",
+    ]),
+    theme: "grid",
+    styles: {
+      font: "JournalUnicode",
+      fontSize: 7.2,
+      cellPadding: 1.2,
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      halign: "center",
+      valign: "middle",
+    },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 38 },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 38 },
+      4: { cellWidth: 24 },
+      5: { cellWidth: 48 },
+      6: { cellWidth: 36 },
+      7: { cellWidth: 22, halign: "center" },
+    },
+  });
 }
 
 type TrackedField = {
@@ -4640,6 +4792,22 @@ export async function generateJournalDocumentPdf(params: {
       dateTo: document.dateTo,
       config: finishedConfig,
     });
+  } else if (templateCode === EQUIPMENT_MAINTENANCE_TEMPLATE_CODE) {
+    drawEquipmentMaintenancePdf(doc, {
+      organizationName,
+      title: document.title || EQUIPMENT_MAINTENANCE_DOCUMENT_TITLE,
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: normalizeEquipmentMaintenanceConfig(reconciledConfig),
+    });
+  } else if (templateCode === STAFF_TRAINING_TEMPLATE_CODE) {
+    drawStaffTrainingPdf(doc, {
+      organizationName,
+      title: document.title || STAFF_TRAINING_FULL_TITLE,
+      dateFrom: document.dateFrom,
+      dateTo: document.dateTo,
+      config: normalizeStaffTrainingConfig(reconciledConfig),
+    });
   } else if (templateCode === PERISHABLE_REJECTION_TEMPLATE_CODE) {
     drawPerishableRejectionPdf(doc, {
       organizationName,
@@ -4920,6 +5088,10 @@ export async function generateJournalDocumentPdf(params: {
               ? getPerishableRejectionFilePrefix()
           : templateCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE
             ? getFinishedProductFilePrefix()
+            : templateCode === EQUIPMENT_MAINTENANCE_TEMPLATE_CODE
+              ? "equipment-maintenance"
+            : templateCode === STAFF_TRAINING_TEMPLATE_CODE
+              ? "staff-training"
             : templateCode === PRODUCT_WRITEOFF_TEMPLATE_CODE
               ? getProductWriteoffFilePrefix()
             : templateCode === PEST_CONTROL_TEMPLATE_CODE

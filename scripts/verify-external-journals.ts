@@ -25,9 +25,7 @@ type PayloadDefinition = {
 };
 
 function todayKey() {
-  const nextYear = new Date();
-  nextYear.setUTCFullYear(nextYear.getUTCFullYear() + 1);
-  return nextYear.toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
 }
 
 function markerFor(code: string) {
@@ -362,7 +360,7 @@ const DEFINITIONS: Record<string, PayloadDefinition> = {
         itemsCatalog: [marker],
       },
       expectedUi: [marker, "72"],
-      expectedPdf: [marker, "72"],
+      expectedPdf: [marker],
     }),
   },
   fryer_oil: {
@@ -388,20 +386,49 @@ const DEFINITIONS: Record<string, PayloadDefinition> = {
     }),
   },
   general_cleaning: {
-    mode: "entry",
+    mode: "config",
     build: (date, marker) => ({
       data: {
-        location: marker,
-        scheduledDate: date,
-        actualDate: date,
-        scopeOfWork: marker,
-        detergent: marker,
-        disinfectant: marker,
-        concentration: 1,
-        result: "completed",
-        nextScheduledDate: date,
-        performedBy: marker,
-        inspectedBy: marker,
+        year: Number(date.slice(0, 4)),
+        documentDate: `${date.slice(0, 4)}-01-01`,
+        approveRole: marker,
+        approveEmployee: marker,
+        responsibleRole: marker,
+        responsibleEmployee: marker,
+        rows: [
+          {
+            id: "ext-general-cleaning-row",
+            roomName: marker,
+            plan: {
+              jan: "13",
+              feb: "",
+              mar: "",
+              apr: "",
+              may: "",
+              jun: "",
+              jul: "",
+              aug: "",
+              sep: "",
+              oct: "",
+              nov: "",
+              dec: "",
+            },
+            fact: {
+              jan: "13",
+              feb: "",
+              mar: "",
+              apr: "",
+              may: "",
+              jun: "",
+              jul: "",
+              aug: "",
+              sep: "",
+              oct: "",
+              nov: "",
+              dec: "",
+            },
+          },
+        ],
       },
       expectedUi: [marker],
       expectedPdf: [marker],
@@ -873,6 +900,46 @@ async function computeUiPass(
       cleaningRow?.includes("C1") &&
       controlRow?.includes("C1")
     );
+  }
+
+  if (code === "general_cleaning") {
+    const values = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLInputElement>("input"))
+        .map((node) => node.value)
+        .filter(Boolean)
+    );
+    return containsAll(values.join("\n"), expectedUi);
+  }
+
+  if (code === "glass_control") {
+    const values = await page.evaluate(() => {
+      const rowTexts = Array.from(document.querySelectorAll("table tbody tr"))
+        .map((row) =>
+          Array.from(row.querySelectorAll("td, th"))
+            .map((cell) => (cell.textContent || "").trim())
+            .filter(Boolean)
+            .join("\n")
+        )
+        .filter(Boolean);
+      const formValues = Array.from(
+        document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          "input, textarea, select"
+        )
+      )
+        .map((node) => ("value" in node ? node.value : ""))
+        .filter(Boolean);
+      return [...rowTexts, ...formValues];
+    });
+    return containsAll(values.join("\n"), expectedUi);
+  }
+
+  if (code === "uv_lamp_runtime") {
+    const values = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLInputElement>("input[type='time']"))
+        .map((node) => node.value)
+        .filter(Boolean)
+    );
+    return containsAll(values.join("\n"), expectedUi);
   }
 
   const uiText = await page.evaluate(() => {

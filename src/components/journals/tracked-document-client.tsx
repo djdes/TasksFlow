@@ -59,6 +59,7 @@ type EntryItem = {
 };
 
 type Props = {
+  templateCode: string;
   documentId: string;
   title: string;
   organizationName: string;
@@ -778,7 +779,7 @@ function TrackedDocumentClientImpl({
 }
 
 export function TrackedDocumentClient(props: Props) {
-  if (isPestControlDocumentFields(props.fields)) {
+  if (props.templateCode === "pest_control" || isPestControlDocumentFields(props.fields)) {
     return (
       <PestControlDocumentClient
         documentId={props.documentId}

@@ -822,6 +822,7 @@ export default async function JournalDocumentPage({
 
     return (
       <TrackedDocumentClient
+        templateCode={document.template.code}
         documentId={document.id}
         title={document.title}
         organizationName={organization?.name || 'ООО "Тест"'}
