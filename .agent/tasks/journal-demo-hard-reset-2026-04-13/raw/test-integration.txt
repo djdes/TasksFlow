@@ -1,0 +1,161 @@
+COMMAND: npx tsx scripts/reset-demo-journal-data.ts
+EXIT_CODE: 0
+{
+  "organizationId": "cmnx55fg000005o9maiggrvya",
+  "activeUsers": 8,
+  "activeUserEmails": [
+    "service-engineer@haccp.local",
+    "production-lead@haccp.local",
+    "sanitation-master@haccp.local",
+    "warehouse@haccp.local",
+    "cold-line@haccp.local",
+    "hot-line@haccp.local",
+    "admin@haccp.local",
+    "qa-chief@haccp.local"
+  ],
+  "activeTemplates": 35,
+  "documents": 35,
+  "entries": 268,
+  "templateCoverage": [
+    {
+      "code": "hygiene",
+      "count": 1
+    },
+    {
+      "code": "health_check",
+      "count": 1
+    },
+    {
+      "code": "climate_control",
+      "count": 1
+    },
+    {
+      "code": "cold_equipment_control",
+      "count": 1
+    },
+    {
+      "code": "cleaning",
+      "count": 1
+    },
+    {
+      "code": "general_cleaning",
+      "count": 1
+    },
+    {
+      "code": "uv_lamp_runtime",
+      "count": 1
+    },
+    {
+      "code": "finished_product",
+      "count": 1
+    },
+    {
+      "code": "perishable_rejection",
+      "count": 1
+    },
+    {
+      "code": "incoming_control",
+      "count": 1
+    },
+    {
+      "code": "fryer_oil",
+      "count": 1
+    },
+    {
+      "code": "med_books",
+      "count": 1
+    },
+    {
+      "code": "training_plan",
+      "count": 1
+    },
+    {
+      "code": "staff_training",
+      "count": 1
+    },
+    {
+      "code": "disinfectant_usage",
+      "count": 1
+    },
+    {
+      "code": "sanitary_day_control",
+      "count": 1
+    },
+    {
+      "code": "equipment_maintenance",
+      "count": 1
+    },
+    {
+      "code": "breakdown_history",
+      "count": 1
+    },
+    {
+      "code": "equipment_calibration",
+      "count": 1
+    },
+    {
+      "code": "ppe_issuance",
+      "count": 1
+    },
+    {
+      "code": "accident_journal",
+      "count": 1
+    },
+    {
+      "code": "complaint_register",
+      "count": 1
+    },
+    {
+      "code": "product_writeoff",
+      "count": 1
+    },
+    {
+      "code": "audit_plan",
+      "count": 1
+    },
+    {
+      "code": "audit_protocol",
+      "count": 1
+    },
+    {
+      "code": "audit_report",
+      "count": 1
+    },
+    {
+      "code": "traceability_test",
+      "count": 1
+    },
+    {
+      "code": "metal_impurity",
+      "count": 1
+    },
+    {
+      "code": "equipment_cleaning",
+      "count": 1
+    },
+    {
+      "code": "intensive_cooling",
+      "count": 1
+    },
+    {
+      "code": "glass_items_list",
+      "count": 1
+    },
+    {
+      "code": "glass_control",
+      "count": 1
+    },
+    {
+      "code": "pest_control",
+      "count": 1
+    },
+    {
+      "code": "incoming_raw_materials_control",
+      "count": 1
+    },
+    {
+      "code": "cleaning_ventilation_checklist",
+      "count": 1
+    }
+  ]
+}

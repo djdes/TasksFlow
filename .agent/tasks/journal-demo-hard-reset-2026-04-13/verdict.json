@@ -1,0 +1,45 @@
+{
+  "task_id": "journal-demo-hard-reset-2026-04-13",
+  "overall_verdict": "PASS",
+  "criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "reason": "The reset script now deletes all users in the demo organization and then recreates the new roster."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "reason": "Fresh DB audit shows only the new seeded roster, no legacy users, and no repeated position titles."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "reason": "Fresh reset output and DB audit both show exactly 35 documents for 35 active templates, with one document per template."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "reason": "Fresh DB audit reports weakDocs as empty, proving every retained journal document has meaningful config and/or entries."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "reason": "Fresh task validation passes and TypeScript check passes."
+    }
+  ],
+  "commands_run": [
+    "npx tsc --noEmit",
+    "npx tsx scripts/reset-demo-journal-data.ts",
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journal-demo-hard-reset-2026-04-13"
+  ],
+  "artifacts_used": [
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/spec.md",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/evidence.md",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/evidence.json",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/build.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/test-integration.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/lint.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/db-audit.json"
+  ]
+}

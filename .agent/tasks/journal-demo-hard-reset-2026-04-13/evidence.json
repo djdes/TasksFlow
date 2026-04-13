@@ -1,0 +1,116 @@
+{
+  "task_id": "journal-demo-hard-reset-2026-04-13",
+  "overall_status": "PASS",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "text": "scripts/reset-demo-journal-data.ts fully resets the demo organization identified by admin@haccp.local: before reseeding it removes all existing JournalDocumentEntry, JournalDocument, JournalEntry, and all demo employees in that organization, then recreates the target demo roster.",
+      "status": "PASS",
+      "proof": [
+        {
+          "type": "file",
+          "path": "scripts/reset-demo-journal-data.ts",
+          "summary": "The reset function now deletes all users in the demo organization and the reseed path recreates the roster."
+        },
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/test-integration.txt",
+          "command": "npx tsx scripts/reset-demo-journal-data.ts",
+          "exit_code": 0,
+          "summary": "Fresh reseed completed successfully."
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC2",
+      "text": "After a fresh run of scripts/reset-demo-journal-data.ts, the demo organization contains only the new intended staff roster, with exactly one active employee per target position, and no legacy demo employees from the old roster remain.",
+      "status": "PASS",
+      "proof": [
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/db-audit.json",
+          "command": "db audit query",
+          "exit_code": 0,
+          "summary": "The audit shows 8 active users, legacyUsers is empty, and repeatedPositions is empty."
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC3",
+      "text": "After a fresh run, the demo organization contains exactly one document for each of the 35 active journal templates, with no template having zero documents or more than one document.",
+      "status": "PASS",
+      "proof": [
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/test-integration.txt",
+          "command": "npx tsx scripts/reset-demo-journal-data.ts",
+          "exit_code": 0,
+          "summary": "The reset summary reports 35 active templates and 35 documents with coverage count 1 for every template."
+        },
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/db-audit.json",
+          "command": "db audit query",
+          "exit_code": 0,
+          "summary": "The audit confirms documentCount 35 and no missing or duplicate template coverage."
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC4",
+      "text": "Each of the 35 retained journal documents is meaningfully populated: document config is present when that journal type requires it, and there is at least one non-empty document entry or tracked payload for that journal.",
+      "status": "PASS",
+      "proof": [
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/db-audit.json",
+          "command": "db audit query",
+          "exit_code": 0,
+          "summary": "weakDocs is empty, showing no journal without config and without entries."
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "AC5",
+      "text": "Fresh verification artifacts are captured under .agent/tasks/journal-demo-hard-reset-2026-04-13/, python ... task_loop.py validate --task-id journal-demo-hard-reset-2026-04-13 remains valid, and npx tsc --noEmit passes.",
+      "status": "PASS",
+      "proof": [
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/build.txt",
+          "command": "npx tsc --noEmit",
+          "exit_code": 0,
+          "summary": "TypeScript check passed."
+        },
+        {
+          "type": "command",
+          "path": ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/lint.txt",
+          "command": "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journal-demo-hard-reset-2026-04-13",
+          "exit_code": 0,
+          "summary": "Task artifact validation passed."
+        }
+      ],
+      "gaps": []
+    }
+  ],
+  "changed_files": [
+    "scripts/reset-demo-journal-data.ts",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/spec.md",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/evidence.md",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/evidence.json",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/build.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/test-integration.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/lint.txt",
+    ".agent/tasks/journal-demo-hard-reset-2026-04-13/raw/db-audit.json"
+  ],
+  "commands_for_fresh_verifier": [
+    "npx tsc --noEmit",
+    "npx tsx scripts/reset-demo-journal-data.ts",
+    "python C:\\Users\\Yaroslav\\.codex\\skills\\repo-task-proof-loop\\scripts\\task_loop.py validate --task-id journal-demo-hard-reset-2026-04-13"
+  ],
+  "known_gaps": []
+}

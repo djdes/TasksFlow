@@ -218,7 +218,7 @@ const LEGACY_DEMO_EMAILS = [
   "sanitation@haccp.local",
 ] as const;
 
-const ACTIVE_SEED_TEAM: SeedUserSpec[] = [
+const SEED_TEAM_V2: SeedUserSpec[] = [
   { email: DEMO_ADMIN_EMAIL, name: "Крылов Денис Сергеевич", role: "owner", positionTitle: "Управляющий" },
   { email: "qa-chief@haccp.local", name: "Лебедева Марина Олеговна", role: "technologist", positionTitle: "Руководитель качества" },
   { email: "production-lead@haccp.local", name: "Громов Илья Павлович", role: "manager", positionTitle: "Начальник производства" },
@@ -339,12 +339,12 @@ async function resetUsersAndDocuments(prisma: PrismaClient, organizationId: stri
   await prisma.journalDocument.deleteMany({ where: { organizationId } });
   await prisma.journalEntry.deleteMany({ where: { organizationId } });
   await prisma.staffCompetency.deleteMany({ where: { organizationId } });
-  await prisma.user.deleteMany({ where: { organizationId, email: { not: DEMO_ADMIN_EMAIL } } });
+  await prisma.user.deleteMany({ where: { organizationId } });
 }
 
 async function upsertSeedUsers(prisma: PrismaClient, organizationId: string): Promise<ActiveUser[]> {
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
-  for (const spec of ACTIVE_SEED_TEAM) {
+  for (const spec of SEED_TEAM_V2) {
     await prisma.user.upsert({
       where: { email: spec.email },
       update: { name: spec.name, role: spec.role, positionTitle: spec.positionTitle, organizationId, passwordHash, isActive: true },
@@ -352,11 +352,31 @@ async function upsertSeedUsers(prisma: PrismaClient, organizationId: string): Pr
     });
   }
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: { organizationId, isActive: true },
     select: { id: true, email: true, name: true, role: true, positionTitle: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
+
+  assertUniquePositionTitles(users);
+  return users;
+}
+
+function assertUniquePositionTitles(users: ActiveUser[]) {
+  const seen = new Map<string, number>();
+  for (const user of users) {
+    const positionTitle = user.positionTitle?.trim();
+    if (!positionTitle) continue;
+    seen.set(positionTitle, (seen.get(positionTitle) || 0) + 1);
+  }
+
+  const duplicates = [...seen.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([positionTitle, count]) => `${positionTitle} (${count})`);
+
+  if (duplicates.length > 0) {
+    throw new Error(`Duplicate seeded position titles found: ${duplicates.join(", ")}`);
+  }
 }
 
 async function assertLegacyUsersRemoved(prisma: PrismaClient, organizationId: string) {
