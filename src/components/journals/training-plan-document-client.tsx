@@ -483,6 +483,23 @@ export function TrainingPlanDocumentClient({
     }
   }
 
+  async function closeDocument() {
+    if (!window.confirm(`Закончить журнал "${title}"?`)) return;
+
+    const response = await fetch(`/api/journal-documents/${documentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "closed" }),
+    });
+
+    if (!response.ok) {
+      toast.error("Не удалось закрыть журнал");
+      return;
+    }
+
+    router.refresh();
+  }
+
   const allSelected = normalized.rows.length > 0 && selectedRowIds.length === normalized.rows.length;
 
   return (
@@ -491,6 +508,18 @@ export function TrainingPlanDocumentClient({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div />
         <div className="flex items-center gap-3 self-start lg:self-auto">
+          {!readOnly && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff] hover:bg-[#f6f7ff]"
+              onClick={() => {
+                closeDocument().catch(() => toast.error("Не удалось закрыть журнал"));
+              }}
+            >
+              Закончить журнал
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
