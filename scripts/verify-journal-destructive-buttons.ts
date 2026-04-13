@@ -52,6 +52,19 @@ const GENERIC_ENTRY_CODES = new Set([
   "hygiene",
   "med_books",
 ]);
+const CLOSE_BUTTON_PATTERNS = [
+  /^\u0417\u0430\u043a\u043e\u043d\u0447\u0438\u0442\u044c \u0436\u0443\u0440\u043d\u0430\u043b$/i,
+  /^\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0436\u0443\u0440\u043d\u0430\u043b$/i,
+  /^\u0417\u0430\u043a\u043e\u043d\u0447\u0438\u0442\u044c$/i,
+  /^\u0417\u0430\u043a\u0440\u044b\u0442\u044c$/i,
+];
+const CLOSE_CONFIRM_PATTERN =
+  /^\u0417\u0430\u043a\u043e\u043d\u0447\u0438\u0442\u044c|^\u0417\u0430\u043a\u0440\u044b\u0442\u044c|^\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0432 \u0437\u0430\u043a\u0440\u044b\u0442\u044b\u0435/i;
+const CLOSE_LIST_KEYWORDS = [
+  "\u0437\u0430\u043a\u0440\u044b\u0442",
+  "\u0430\u0440\u0445\u0438\u0432",
+  "\u0437\u0430\u043a\u043e\u043d\u0447",
+];
 
 type CreateResult = {
   id: string;
@@ -538,12 +551,10 @@ async function tryDeleteInline(page: Page, marker: string) {
 }
 
 async function tryDeleteMedBook(page: Page, marker: string) {
-  const container = (await findMarkerContainer(page, marker)) ?? (await firstVisible(page.locator("tbody tr")));
-  if (!container) {
-    return null;
-  }
-
-  const editTrigger = await firstVisible(container.locator("button"));
+  const markerContainer = await findMarkerContainer(page, marker);
+  const editTrigger =
+    (markerContainer ? await firstVisible(markerContainer.locator("button")) : null) ??
+    (await firstVisible(page.locator("tbody button")));
   if (!editTrigger) {
     return null;
   }
@@ -556,7 +567,11 @@ async function tryDeleteMedBook(page: Page, marker: string) {
     return null;
   }
 
-  const deleteButton = await firstVisible(dialog.getByRole("button", { name: /Удалить/i }));
+  const deleteButton = await firstVisible(
+    dialog.getByRole("button", {
+      name: /^\u0423\u0434\u0430\u043b\u0438\u0442\u044c$/i,
+    })
+  );
   if (!deleteButton) {
     return null;
   }
@@ -575,26 +590,70 @@ async function tryDeleteSanitaryDayChecklist(page: Page) {
       continue;
     }
 
-    const text = ((await row.innerText().catch(() => "")) || "").trim();
-    if (!text) {
+    const text = ((await row.textContent().catch(() => "")) || "").replace(/\s+/g, " ").trim();
+    if (!text || !/\d+\.\d+/.test(text)) {
       continue;
     }
 
     await row.hover().catch(() => undefined);
-    const buttons = row.locator("button");
-    const buttonCount = await buttons.count();
-    for (let buttonIndex = buttonCount - 1; buttonIndex >= 0; buttonIndex -= 1) {
-      const button = buttons.nth(buttonIndex);
-      if (!(await button.isVisible().catch(() => false)) || (await button.isDisabled().catch(() => false))) {
-        continue;
-      }
+    await page.waitForTimeout(150);
 
-      await button.click({ force: true });
-      return "sanitary-day-inline";
+    const buttons = row.locator("button");
+    if ((await buttons.count()) < 3) {
+      continue;
     }
+
+    const deleteButton = buttons.nth(2);
+    if (!(await deleteButton.isVisible().catch(() => false))) {
+      continue;
+    }
+
+    await deleteButton.click({ force: true });
+    return "sanitary-day-inline";
   }
 
   return null;
+}
+
+async function tryDeleteColdEquipment(page: Page) {
+  const equipmentLabel = await firstVisible(
+    page.getByText(/\u0422\u0435\u043c\u043f\. \(T\)/)
+  );
+  if (!equipmentLabel) {
+    return null;
+  }
+
+  const container =
+    (await firstVisible(equipmentLabel.locator("xpath=ancestor::div[contains(@class,'grid')][1]"))) ??
+    (await firstVisible(equipmentLabel.locator("xpath=ancestor::div[1]")));
+  if (!container) {
+    return null;
+  }
+
+  const editButton = await firstVisible(container.locator("button"));
+  if (!editButton) {
+    return null;
+  }
+
+  await editButton.click({ force: true });
+  await page.waitForTimeout(500);
+
+  const dialog = page.locator("[role='dialog']").last();
+  if (!(await dialog.isVisible().catch(() => false))) {
+    return null;
+  }
+
+  const deleteButton = await firstVisible(
+    dialog.getByRole("button", {
+      name: /^\u0423\u0434\u0430\u043b\u0438\u0442\u044c( \u0441\u0442\u0440\u043e\u043a\u0443)?$/i,
+    })
+  );
+  if (!deleteButton) {
+    return null;
+  }
+
+  await deleteButton.click({ force: true });
+  return "cold-equipment-dialog";
 }
 
 async function performDelete(
@@ -614,6 +673,9 @@ async function performDelete(
       }
       if (code === "sanitary_day_control") {
         return tryDeleteSanitaryDayChecklist(page);
+      }
+      if (code === "cold_equipment_control") {
+        return tryDeleteColdEquipment(page);
       }
       return Promise.resolve<string | null>(null);
     },
@@ -742,7 +804,7 @@ async function performClose(page: Page, request: APIRequestContext, code: string
   await page.goto(`${BASE}/journals/${code}/documents/${documentId}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
 
-  const closeButton = await firstVisible(page.getByRole("button", { name: /^Закончить журнал$/i }));
+  const closeButton = await firstVisible(page.getByRole("button", { name: CLOSE_BUTTON_PATTERNS[0] }));
   if (!closeButton) {
     return {
       status: "FAIL" as const,
@@ -753,7 +815,7 @@ async function performClose(page: Page, request: APIRequestContext, code: string
   const messages = await acceptAnyConfirmDialogs(page, async () => {
     await closeButton.click({ force: true });
   });
-  await confirmOpenModal(page, /^Закончить( журнал)?$/i).catch(() => false);
+  await confirmOpenModal(page, CLOSE_CONFIRM_PATTERN).catch(() => false);
   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(700);
 
@@ -785,12 +847,7 @@ async function performCloseEnhanced(
   await page.goto(`${BASE}/journals/${code}/documents/${documentId}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
 
-  const detailCloseNames = [
-    /^Закончить журнал$/i,
-    /^Закрыть журнал$/i,
-    /^Закончить$/i,
-    /^Закрыть$/i,
-  ];
+  const detailCloseNames = CLOSE_BUTTON_PATTERNS;
   let messages: string[] = [];
   let triggered = false;
 
@@ -803,7 +860,7 @@ async function performCloseEnhanced(
     messages = await acceptAnyConfirmDialogs(page, async () => {
       await closeButton.click({ force: true });
     });
-    await confirmOpenModal(page, /^Закончить|^Закрыть|^Отправить в закрытые/i).catch(() => false);
+    await confirmOpenModal(page, CLOSE_CONFIRM_PATTERN).catch(() => false);
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     await page.waitForTimeout(700);
     triggered = true;
@@ -887,7 +944,7 @@ async function performCloseFromListV2(
         continue;
       }
       const text = ((await item.textContent().catch(() => "")) || "").toLowerCase();
-      if (!text.includes("закрыт") && !text.includes("архив")) {
+      if (!CLOSE_LIST_KEYWORDS.some((keyword) => text.includes(keyword))) {
         continue;
       }
       await item.click({ force: true });
@@ -909,7 +966,7 @@ async function performCloseFromListV2(
         continue;
       }
       const text = ((await button.textContent().catch(() => "")) || "").toLowerCase();
-      if (!text.includes("закрыт") && !text.includes("архив") && !text.includes("законч")) {
+      if (!CLOSE_LIST_KEYWORDS.some((keyword) => text.includes(keyword))) {
         continue;
       }
       await button.click({ force: true });

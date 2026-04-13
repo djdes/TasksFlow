@@ -1,0 +1,673 @@
+{
+  "generatedAt": "2026-04-13T14:34:01.010Z",
+  "total": 35,
+  "pass": 35,
+  "fail": 0,
+  "results": [
+    {
+      "code": "accident_journal",
+      "documentId": "cmnxafpq200ad38tsbzog56ss",
+      "title": "DELETE/CLOSE VERIFY accident_journal DEL-CLOSE accident-journal MNXAFQ48",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "audit_plan",
+      "documentId": "cmnxafvce00ae38ts403u827m",
+      "title": "DELETE/CLOSE VERIFY audit_plan DEL-CLOSE audit-plan MNXAFVQ6",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "audit_protocol",
+      "documentId": "cmnxag2fr00af38tsv9r8ooyx",
+      "title": "DELETE/CLOSE VERIFY audit_protocol DEL-CLOSE audit-protocol MNXAG2U0",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "audit_report",
+      "documentId": "cmnxag7er00ag38tsqf76jaiz",
+      "title": "DELETE/CLOSE VERIFY audit_report DEL-CLOSE audit-report MNXAG7SX",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt3",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "breakdown_history",
+      "documentId": "cmnxagch000ah38ts37e1otfz",
+      "title": "DELETE/CLOSE VERIFY breakdown_history DEL-CLOSE breakdown-history MNXAGCV7",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "cleaning",
+      "documentId": "cmnxaghfu00ai38ts07ca0d1l",
+      "title": "DELETE/CLOSE VERIFY cleaning DEL-CLOSE cleaning MNXAGHTZ",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "cleaning_ventilation_checklist",
+      "documentId": "cmnxagmsg00ak38tsekpwl1lk",
+      "title": "DELETE/CLOSE VERIFY cleaning_ventilation_checklist DEL-CLOSE cleaning-ventilation-checklist MNXAGN6L",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "climate_control",
+      "documentId": "cmnxahmro00dy38ts4309o4d1",
+      "title": "DELETE/CLOSE VERIFY climate_control DEL-CLOSE climate-control MNXAHN5X",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "cold_equipment_control",
+      "documentId": "cmnxahrv500e038tsdek9orpc",
+      "title": "DELETE/CLOSE VERIFY cold_equipment_control DEL-CLOSE cold-equipment-control MNXAHS9E",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt1",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "complaint_register",
+      "documentId": "cmnxaijk500e238tsxunftl89",
+      "title": "DELETE/CLOSE VERIFY complaint_register DEL-CLOSE complaint-register MNXAIJXV",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "disinfectant_usage",
+      "documentId": "cmnxaiomf00e338tss7m505a7",
+      "title": "DELETE/CLOSE VERIFY disinfectant_usage DEL-CLOSE disinfectant-usage MNXAIP0D",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "equipment_calibration",
+      "documentId": "cmnxaiv7r00e438tsijhwvo9t",
+      "title": "DELETE/CLOSE VERIFY equipment_calibration DEL-CLOSE equipment-calibration MNXAIVLG",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "equipment_cleaning",
+      "documentId": "cmnxaj1ud00e538ts2coy8hkg",
+      "title": "DELETE/CLOSE VERIFY equipment_cleaning DEL-CLOSE equipment-cleaning MNXAJ28K",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "equipment_maintenance",
+      "documentId": "cmnxaj70a00e738tstjw759ca",
+      "title": "DELETE/CLOSE VERIFY equipment_maintenance DEL-CLOSE equipment-maintenance MNXAJ7ED",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "finished_product",
+      "documentId": "cmnxajbvk00e838ts93zu8q99",
+      "title": "DELETE/CLOSE VERIFY finished_product DEL-CLOSE finished-product MNXAJC9K",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": true
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "fryer_oil",
+      "documentId": "cmnxajh8v00e938tsjff7u33d",
+      "title": "DELETE/CLOSE VERIFY fryer_oil DEL-CLOSE fryer-oil MNXAJHN0",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "general_cleaning",
+      "documentId": "cmnxajm0v00eb38tshl9hwph6",
+      "title": "DELETE/CLOSE VERIFY general_cleaning DEL-CLOSE general-cleaning MNXAJMEY",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "glass_control",
+      "documentId": "cmnxajsxc00ed38ts61w4y80y",
+      "title": "DELETE/CLOSE VERIFY glass_control DEL-CLOSE glass-control MNXAJTBK",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "glass_items_list",
+      "documentId": "cmnxak4tc00ef38tsouk9s4b6",
+      "title": "DELETE/CLOSE VERIFY glass_items_list DEL-CLOSE glass-items-list MNXAK57K",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "health_check",
+      "documentId": "cmnxak96000eg38tsxellt15c",
+      "title": "DELETE/CLOSE VERIFY health_check DEL-CLOSE health-check MNXAK9KC",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "hygiene",
+      "documentId": "cmnxakdtr00ei38ts856xmpcv",
+      "title": "DELETE/CLOSE VERIFY hygiene DEL-CLOSE hygiene MNXAKE83",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "incoming_control",
+      "documentId": "cmnxakihm00ek38tsohe0cd78",
+      "title": "DELETE/CLOSE VERIFY incoming_control DEL-CLOSE incoming-control MNXAKIW0",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "incoming_raw_materials_control",
+      "documentId": "cmnxaknqy00el38tsp71ajck8",
+      "title": "DELETE/CLOSE VERIFY incoming_raw_materials_control DEL-CLOSE incoming-raw-materials-control MNXAKO5D",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "intensive_cooling",
+      "documentId": "cmnxakt1r00em38tsosyyyud1",
+      "title": "DELETE/CLOSE VERIFY intensive_cooling DEL-CLOSE intensive-cooling MNXAKTFC",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "med_books",
+      "documentId": "cmnxakxzf00en38ts0wohfvr4",
+      "title": "DELETE/CLOSE VERIFY med_books DEL-CLOSE med-books MNXAKYDT",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt1",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "metal_impurity",
+      "documentId": "cmnxal2c700eq38tssiswsal5",
+      "title": "DELETE/CLOSE VERIFY metal_impurity DEL-CLOSE metal-impurity MNXAL2Q9",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "perishable_rejection",
+      "documentId": "cmnxal7or00er38tszal7l3a7",
+      "title": "DELETE/CLOSE VERIFY perishable_rejection DEL-CLOSE perishable-rejection MNXAL832",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": true
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "pest_control",
+      "documentId": "cmnxalcta00es38tstlvwmikc",
+      "title": "DELETE/CLOSE VERIFY pest_control DEL-CLOSE pest-control MNXALD7O",
+      "createStatus": 201,
+      "seedStatus": 201,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "ppe_issuance",
+      "documentId": "cmnxalhox00eu38tsnugiqayj",
+      "title": "DELETE/CLOSE VERIFY ppe_issuance DEL-CLOSE ppe-issuance MNXALI3B",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "product_writeoff",
+      "documentId": "cmnxalml300ev38ts2b8ct07z",
+      "title": "DELETE/CLOSE VERIFY product_writeoff DEL-CLOSE product-writeoff MNXALMZC",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "sanitary_day_control",
+      "documentId": "cmnxalr3300ew38ts0qs10bmt",
+      "title": "DELETE/CLOSE VERIFY sanitary_day_control DEL-CLOSE sanitary-day-control MNXALRHH",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt1",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "staff_training",
+      "documentId": "cmnxalx1j00ex38tsaex8rivh",
+      "title": "DELETE/CLOSE VERIFY staff_training DEL-CLOSE staff-training MNXALXFX",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=0, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "traceability_test",
+      "documentId": "cmnxam21300ey38ts6tc0tj5k",
+      "title": "DELETE/CLOSE VERIFY traceability_test DEL-CLOSE traceability-test MNXAM2FH",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=0, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "training_plan",
+      "documentId": "cmnxam7kc00ez38tsrs9vm21s",
+      "title": "DELETE/CLOSE VERIFY training_plan DEL-CLOSE training-plan MNXAM7YL",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "code": "uv_lamp_runtime",
+      "documentId": "cmnxamd2c00f038tsghv0e540",
+      "title": "DELETE/CLOSE VERIFY uv_lamp_runtime DEL-CLOSE uv-lamp-runtime MNXAMDGO",
+      "createStatus": 201,
+      "seedStatus": 200,
+      "seedDocumentMatched": true,
+      "deleteResult": {
+        "status": "PASS",
+        "detail": "document changed after delete, dialogs=1, poll=1",
+        "strategy": "attempt2",
+        "saveUsed": false
+      },
+      "closeResult": {
+        "status": "PASS",
+        "detail": "status=closed, dialogs=1, poll=1"
+      },
+      "verdict": "PASS"
+    }
+  ]
+}
