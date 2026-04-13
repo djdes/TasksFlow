@@ -34,6 +34,7 @@ import {
 import { buildDateKeys, isWeekend } from "@/lib/hygiene-document";
 import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 type UserItem = { id: string; name: string; role: string };
 type EntryItem = { id: string; employeeId: string; date: string; data: unknown };
@@ -239,6 +240,18 @@ export function CleaningDocumentClient(props: Props) {
         {!printMode ? (
           <>
             <DocumentBackLink href="/journals/cleaning" />
+            {props.status === "active" ? (
+              <div className="flex justify-end">
+                <DocumentCloseButton
+                  documentId={props.documentId}
+                  title={config.documentTitle || CLEANING_PAGE_TITLE}
+                  variant="outline"
+                  className="h-12 rounded-[16px] border-[#eef0fb] px-6 text-[18px] text-[#5863f8] hover:bg-[#f7f8ff]"
+                >
+                  Закончить журнал
+                </DocumentCloseButton>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <div />
               <Button type="button" variant="outline" className="h-12 rounded-[16px] border-[#eef0fb] px-6 text-[18px] text-[#5863f8] hover:bg-[#f7f8ff]" onClick={() => setSettingsOpen(true)}>Настройки журнала</Button>

@@ -40,6 +40,7 @@ import { getHygienePositionLabel } from "@/lib/hygiene-document";
 
 import { toast } from "sonner";
 import { StickyActionBar } from "@/components/journals/sticky-action-bar";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -538,6 +539,7 @@ export function RegisterDocumentClient({
               Печать
             </Button>
             {status === "active" && (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -547,6 +549,15 @@ export function RegisterDocumentClient({
                 <Settings2 className="size-6" />
                 Настройки журнала
               </Button>
+              <DocumentCloseButton
+                documentId={documentId}
+                title={documentTitle}
+                variant="outline"
+                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              >
+                Закончить журнал
+              </DocumentCloseButton>
+              </>
             )}
           </div>
         </div>

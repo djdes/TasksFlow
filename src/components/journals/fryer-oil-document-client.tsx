@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 import {
   formatDateRu,
   formatTime,
@@ -268,6 +269,19 @@ export function FryerOilDocumentClient(props: Props) {
             <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => setSettingsOpen(true)}><Settings2 className="size-5" />Настройки журнала</Button>
           </div>
         </div>
+
+        {isActive ? (
+          <div className="flex justify-end print:hidden">
+            <DocumentCloseButton
+              documentId={props.documentId}
+              title={title}
+              variant="outline"
+              className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]"
+            >
+              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            </DocumentCloseButton>
+          </div>
+        ) : null}
 
         <div className="overflow-x-auto">
           <div className="min-w-[1400px]">

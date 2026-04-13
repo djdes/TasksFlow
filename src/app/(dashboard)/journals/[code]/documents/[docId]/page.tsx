@@ -170,6 +170,8 @@ import {
   normalizeEquipmentCleaningConfig,
   normalizeEquipmentCleaningRowData,
 } from "@/lib/equipment-cleaning-document";
+import { ComplaintDocumentClient } from "@/components/journals/complaint-document-client";
+import { COMPLAINT_REGISTER_TEMPLATE_CODE, normalizeComplaintConfig } from "@/lib/complaint-document";
 
 export const dynamic = "force-dynamic";
 
@@ -500,6 +502,20 @@ export default async function JournalDocumentPage({
         dateFrom={toDateKey(document.dateFrom)}
         status={document.status}
         initialConfig={normalizeTraceabilityDocumentConfig(document.config)}
+        users={enrichedEmployees}
+      />
+    );
+  }
+
+  if (document.template.code === COMPLAINT_REGISTER_TEMPLATE_CODE) {
+    return (
+      <ComplaintDocumentClient
+        documentId={document.id}
+        title={document.title}
+        organizationName={organization?.name || 'РћРћРћ "РўРµСЃС‚"'}
+        dateFrom={toDateKey(document.dateFrom)}
+        status={document.status}
+        initialConfig={normalizeComplaintConfig(document.config)}
         users={enrichedEmployees}
       />
     );

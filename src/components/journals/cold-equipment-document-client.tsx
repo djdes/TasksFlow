@@ -49,6 +49,7 @@ import {
   isWeekend,
 } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 type EmployeeItem = {
@@ -725,6 +726,7 @@ export function ColdEquipmentDocumentClient({
             </Button>
 
             {status === "active" ? (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -734,6 +736,15 @@ export function ColdEquipmentDocumentClient({
                 <Settings2 className="size-6" />
                 Настройки журнала
               </Button>
+              <DocumentCloseButton
+                documentId={documentId}
+                title={documentTitle}
+                variant="outline"
+                className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+              >
+                Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+              </DocumentCloseButton>
+              </>
             ) : null}
           </div>
         </div>

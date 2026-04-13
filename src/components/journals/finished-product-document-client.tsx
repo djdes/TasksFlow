@@ -24,6 +24,7 @@ import {
   type FinishedProductDocumentConfig,
   type FinishedProductDocumentRow,
 } from "@/lib/finished-product-document";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 type Props = {
@@ -158,6 +159,19 @@ export function FinishedProductDocumentClient({
           </div>
         </div>
       </div>
+
+      {!readOnly ? (
+        <div className="flex justify-end">
+          <DocumentCloseButton
+            documentId={documentId}
+            title={title}
+            variant="outline"
+            className="h-14 rounded-2xl border-[#e9ecf5] px-5 text-[18px]"
+          >
+            Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+          </DocumentCloseButton>
+        </div>
+      ) : null}
 
       <div className="space-y-5 rounded-[20px] border bg-white p-6">
         <table className="w-full border-collapse">

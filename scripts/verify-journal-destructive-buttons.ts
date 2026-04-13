@@ -15,6 +15,43 @@ const REQUESTED_CODES = (process.env.EXTERNAL_VERIFY_CODES || "")
   .map((item) => item.trim())
   .filter(Boolean);
 const RUN_YEAR_BASE = new Date().getUTCFullYear() - 2 - (Math.floor(Date.now() / 60000) % 3);
+const CONFIG_CODES = new Set([
+  "accident_journal",
+  "audit_plan",
+  "audit_protocol",
+  "audit_report",
+  "breakdown_history",
+  "complaint_register",
+  "disinfectant_usage",
+  "equipment_calibration",
+  "equipment_maintenance",
+  "finished_product",
+  "glass_items_list",
+  "incoming_control",
+  "incoming_raw_materials_control",
+  "intensive_cooling",
+  "metal_impurity",
+  "perishable_rejection",
+  "ppe_issuance",
+  "product_writeoff",
+  "sanitary_day_control",
+  "staff_training",
+  "traceability_test",
+  "training_plan",
+]);
+const GENERIC_ENTRY_CODES = new Set([
+  "cleaning",
+  "cleaning_ventilation_checklist",
+  "climate_control",
+  "cold_equipment_control",
+  "equipment_cleaning",
+  "fryer_oil",
+  "general_cleaning",
+  "glass_control",
+  "health_check",
+  "hygiene",
+  "med_books",
+]);
 
 type CreateResult = {
   id: string;
@@ -211,6 +248,21 @@ async function postPestControlEntry(
   };
 }
 
+async function patchDocumentConfig(
+  request: APIRequestContext,
+  documentId: string,
+  config: Record<string, unknown>
+) {
+  const response = await request.patch(`${BASE}/api/journal-documents/${documentId}`, {
+    data: { config },
+  });
+
+  return {
+    status: response.status(),
+    body: (await response.json().catch(() => null)) as Record<string, unknown> | null,
+  };
+}
+
 async function fetchDocument(request: APIRequestContext, documentId: string) {
   const response = await request.get(`${BASE}/api/journal-documents/${documentId}`);
   const body = (await response.json().catch(() => null)) as
@@ -293,6 +345,31 @@ async function findMarkerContainer(page: Page, marker: string) {
   return null;
 }
 
+async function findListContainerByTitle(page: Page, title: string) {
+  const titleNode = await firstVisible(page.getByText(title, { exact: true }));
+  if (!titleNode) {
+    return null;
+  }
+
+  const candidates = [
+    titleNode.locator("xpath=ancestor::div[1]"),
+    titleNode.locator("xpath=ancestor::div[2]"),
+    titleNode.locator("xpath=ancestor::div[3]"),
+    titleNode.locator("xpath=ancestor::article[1]"),
+    titleNode.locator("xpath=ancestor::li[1]"),
+    titleNode.locator("xpath=ancestor::tr[1]"),
+  ];
+
+  for (const locator of candidates) {
+    const visible = await firstVisible(locator);
+    if (visible) {
+      return visible;
+    }
+  }
+
+  return null;
+}
+
 function formatRuDate(seedDate: string) {
   const [year, month, day] = seedDate.split("-");
   if (!year || !month || !day) return seedDate;
@@ -351,7 +428,14 @@ async function clickButtonByNames(scope: Locator | Page, names: RegExp[]) {
       return regex.source;
     }
   }
-  const allButtons = scope.locator("button");
+  for (const regex of names) {
+    const menuItem = await firstVisible(scope.getByRole("menuitem", { name: regex }));
+    if (menuItem && !(await menuItem.isDisabled().catch(() => false))) {
+      await menuItem.click({ force: true });
+      return `menu:${regex.source}`;
+    }
+  }
+  const allButtons = scope.locator("button, [role='menuitem']");
   const count = await allButtons.count();
   for (let index = 0; index < count; index += 1) {
     const button = allButtons.nth(index);
@@ -379,6 +463,7 @@ async function tryDeleteWithSelection(page: Page, code: string, hints: DeleteHin
     const clicked = await clickButtonByNames(page, [
       /^Удалить выбранные/i,
       /^Удалить \(\d+\)$/i,
+      /Удалить/i,
       /^Удалить$/i,
     ]);
     if (clicked) {
@@ -396,6 +481,7 @@ async function tryDeleteWithSelection(page: Page, code: string, hints: DeleteHin
     const clicked = await clickButtonByNames(page, [
       /^Удалить выбранные/i,
       /^Удалить \(\d+\)$/i,
+      /Удалить/i,
       /^Удалить$/i,
     ]);
     if (clicked) {
@@ -409,16 +495,76 @@ async function tryDeleteWithSelection(page: Page, code: string, hints: DeleteHin
 async function tryDeleteInline(page: Page, marker: string) {
   const container = await findMarkerContainer(page, marker);
   if (container) {
-    const clicked = await clickButtonByNames(container, [/^Удалить( строку)?$/i, /^Удалить$/i]);
+    const clicked = await clickButtonByNames(container, [/^Удалить( строку)?$/i, /^Удалить$/i, /Удалить/i]);
     if (clicked) {
       return `marker-inline:${clicked}`;
     }
   }
 
-  const clicked = await clickButtonByNames(page, [/^Удалить( строку)?$/i, /^Удалить$/i]);
+  const clicked = await clickButtonByNames(page, [/^Удалить( строку)?$/i, /^Удалить$/i, /Удалить/i]);
   if (clicked) {
     return `global-inline:${clicked}`;
   }
+  return null;
+}
+
+async function tryDeleteMedBook(page: Page, marker: string) {
+  const container = (await findMarkerContainer(page, marker)) ?? (await firstVisible(page.locator("tbody tr")));
+  if (!container) {
+    return null;
+  }
+
+  const editTrigger = await firstVisible(container.locator("button"));
+  if (!editTrigger) {
+    return null;
+  }
+
+  await editTrigger.click({ force: true });
+  await page.waitForTimeout(500);
+
+  const dialog = page.locator("[role='dialog']").last();
+  if (!(await dialog.isVisible().catch(() => false))) {
+    return null;
+  }
+
+  const deleteButton = await firstVisible(dialog.getByRole("button", { name: /Удалить/i }));
+  if (!deleteButton) {
+    return null;
+  }
+
+  await deleteButton.click({ force: true });
+  return "med-book-dialog";
+}
+
+async function tryDeleteSanitaryDayChecklist(page: Page) {
+  const rows = page.locator("main table tbody tr");
+  const rowCount = await rows.count();
+
+  for (let index = 0; index < rowCount; index += 1) {
+    const row = rows.nth(index);
+    if (!(await row.isVisible().catch(() => false))) {
+      continue;
+    }
+
+    const text = ((await row.innerText().catch(() => "")) || "").trim();
+    if (!text) {
+      continue;
+    }
+
+    await row.hover().catch(() => undefined);
+    const buttons = row.locator("button");
+    const buttonCount = await buttons.count();
+    for (let buttonIndex = buttonCount - 1; buttonIndex >= 0; buttonIndex -= 1) {
+      const button = buttons.nth(buttonIndex);
+      if (!(await button.isVisible().catch(() => false)) || (await button.isDisabled().catch(() => false))) {
+        continue;
+      }
+
+      await button.click({ force: true });
+      return "sanitary-day-inline";
+    }
+  }
+
   return null;
 }
 
@@ -433,10 +579,19 @@ async function performDelete(
   const beforeHash = bodyHash(before.document || {});
 
   const attempts = [
+    () => {
+      if (code === "med_books") {
+        return tryDeleteMedBook(page, hints.marker);
+      }
+      if (code === "sanitary_day_control") {
+        return tryDeleteSanitaryDayChecklist(page);
+      }
+      return Promise.resolve<string | null>(null);
+    },
     () => tryDeleteWithSelection(page, code, hints),
     () => tryDeleteInline(page, hints.marker),
   ];
-  const confirmRegex = /^Удалить( все)?$/i;
+  const confirmRegex = /Удалить/i;
   const attemptErrors: string[] = [];
   for (const [attemptIndex, attempt] of attempts.entries()) {
     await page.goto(`${BASE}/journals/${code}/documents/${documentId}`, { waitUntil: "domcontentloaded" });
@@ -488,6 +643,67 @@ async function performDelete(
   };
 }
 
+async function performCloseFromList(
+  page: Page,
+  request: APIRequestContext,
+  code: string,
+  documentId: string,
+  title: string
+) {
+  await page.goto(`${BASE}/journals/${code}`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+
+  const closeMenuNames = [
+    /^РћС‚РїСЂР°РІРёС‚СЊ РІ Р·Р°РєСЂС‹С‚С‹Рµ$/i,
+    /^РџРµСЂРµРЅРµСЃС‚Рё РґРѕРєСѓРјРµРЅС‚ РІ Р·Р°РєСЂС‹С‚С‹Рµ$/i,
+    /^Р—Р°РєСЂС‹С‚СЊ$/i,
+    /^Р—Р°РєРѕРЅС‡РёС‚СЊ$/i,
+  ];
+
+  const before = await fetchDocument(request, documentId);
+  const beforeStatus = typeof before.document?.status === "string" ? before.document.status : "";
+  if (beforeStatus === "closed") {
+    return { messages: [] as string[] };
+  }
+
+  const container = await findListContainerByTitle(page, title);
+  if (!container) {
+    return null;
+  }
+
+  const visibleButtons = container.locator("button");
+  const count = await visibleButtons.count();
+  for (let index = 0; index < count; index += 1) {
+    const button = visibleButtons.nth(index);
+    if (!(await button.isVisible().catch(() => false)) || (await button.isDisabled().catch(() => false))) {
+      continue;
+    }
+
+    let messages: string[] = [];
+    try {
+      messages = await acceptAnyConfirmDialogs(page, async () => {
+        await button.click({ force: true });
+      });
+    } catch {
+      continue;
+    }
+    await page.waitForTimeout(700);
+
+    const menuAction = await clickButtonByNames(page, closeMenuNames);
+    if (!menuAction) {
+      await page.keyboard.press("Escape").catch(() => {});
+      continue;
+    }
+
+    await confirmOpenModal(page, /^РћС‚РїСЂР°РІРёС‚СЊ РІ Р·Р°РєСЂС‹С‚С‹Рµ|^Р—Р°РєРѕРЅС‡РёС‚СЊ|^Р—Р°РєСЂС‹С‚СЊ|^РџРµСЂРµРЅРµСЃС‚Рё/i).catch(() => false);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    return { messages };
+  }
+
+  return null;
+}
+
 async function performClose(page: Page, request: APIRequestContext, code: string, documentId: string) {
   await page.goto(`${BASE}/journals/${code}/documents/${documentId}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
@@ -523,6 +739,155 @@ async function performClose(page: Page, request: APIRequestContext, code: string
     status: "FAIL" as const,
     detail: "status did not become closed",
   };
+}
+
+async function performCloseEnhanced(
+  page: Page,
+  request: APIRequestContext,
+  code: string,
+  documentId: string,
+  title: string
+) {
+  await page.goto(`${BASE}/journals/${code}/documents/${documentId}`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+
+  const detailCloseNames = [
+    /^Закончить журнал$/i,
+    /^Закрыть журнал$/i,
+    /^Закончить$/i,
+    /^Закрыть$/i,
+  ];
+  let messages: string[] = [];
+  let triggered = false;
+
+  for (const regex of detailCloseNames) {
+    const closeButton = await firstVisible(page.getByRole("button", { name: regex }));
+    if (!closeButton) {
+      continue;
+    }
+
+    messages = await acceptAnyConfirmDialogs(page, async () => {
+      await closeButton.click({ force: true });
+    });
+    await confirmOpenModal(page, /^Закончить|^Закрыть|^Отправить в закрытые/i).catch(() => false);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    triggered = true;
+    break;
+  }
+
+  if (!triggered) {
+    const fallback = await performCloseFromListV2(page, request, code, documentId, title);
+    if (!fallback) {
+      return {
+        status: "FAIL" as const,
+        detail: "close button not found",
+      };
+    }
+    messages = fallback.messages;
+  }
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const after = await fetchDocument(request, documentId);
+    const status = typeof after.document?.status === "string" ? after.document.status : "";
+    if (status === "closed") {
+      return {
+        status: "PASS" as const,
+        detail: `status=closed, dialogs=${messages.length}, poll=${attempt + 1}`,
+      };
+    }
+    await page.waitForTimeout(500);
+  }
+
+  return {
+    status: "FAIL" as const,
+    detail: "status did not become closed",
+  };
+}
+
+async function performCloseFromListV2(
+  page: Page,
+  request: APIRequestContext,
+  code: string,
+  documentId: string,
+  title: string
+) {
+  await page.goto(`${BASE}/journals/${code}`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+
+  const before = await fetchDocument(request, documentId);
+  const beforeStatus = typeof before.document?.status === "string" ? before.document.status : "";
+  if (beforeStatus === "closed") {
+    return { messages: [] as string[] };
+  }
+
+  const container = await findListContainerByTitle(page, title);
+  if (!container) {
+    return null;
+  }
+
+  const triggers = container.locator("button");
+  const triggerCount = await triggers.count();
+  for (let index = 0; index < triggerCount; index += 1) {
+    const trigger = triggers.nth(index);
+    if (!(await trigger.isVisible().catch(() => false)) || (await trigger.isDisabled().catch(() => false))) {
+      continue;
+    }
+
+    let messages: string[] = [];
+    try {
+      messages = await acceptAnyConfirmDialogs(page, async () => {
+        await trigger.click({ force: true });
+      });
+    } catch {
+      continue;
+    }
+
+    await page.waitForTimeout(500);
+    const menuItems = page.locator("[role='menuitem']");
+    const menuCount = await menuItems.count();
+    let clicked = false;
+    for (let menuIndex = 0; menuIndex < menuCount; menuIndex += 1) {
+      const item = menuItems.nth(menuIndex);
+      if (!(await item.isVisible().catch(() => false))) {
+        continue;
+      }
+      const text = ((await item.textContent().catch(() => "")) || "").toLowerCase();
+      if (!text.includes("закрыт") && !text.includes("архив")) {
+        continue;
+      }
+      await item.click({ force: true });
+      clicked = true;
+      break;
+    }
+
+    if (!clicked) {
+      await page.keyboard.press("Escape").catch(() => {});
+      continue;
+    }
+
+    await page.waitForTimeout(300);
+    const confirmButtons = page.locator("[role='dialog'] button, button");
+    const confirmCount = await confirmButtons.count();
+    for (let confirmIndex = 0; confirmIndex < confirmCount; confirmIndex += 1) {
+      const button = confirmButtons.nth(confirmIndex);
+      if (!(await button.isVisible().catch(() => false)) || (await button.isDisabled().catch(() => false))) {
+        continue;
+      }
+      const text = ((await button.textContent().catch(() => "")) || "").toLowerCase();
+      if (!text.includes("закрыт") && !text.includes("архив") && !text.includes("законч")) {
+        continue;
+      }
+      await button.click({ force: true });
+      break;
+    }
+
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    return { messages };
+  }
+
+  return null;
 }
 
 const BUILDERS: Record<string, (date: string, marker: string) => Record<string, unknown>> = {
@@ -1066,9 +1431,13 @@ async function verifyOne(params: {
       ? await putDocumentEntry(context.request, created.meta.id, createdById, created.meta.seedDate, seedData)
       : code === "pest_control"
         ? await postPestControlEntry(context.request, created.meta.id, createdById, seedData)
-        : await postExternal(token, code, created.meta.seedDate, seedData);
+        : CONFIG_CODES.has(code)
+          ? await patchDocumentConfig(context.request, created.meta.id, seedData)
+          : GENERIC_ENTRY_CODES.has(code)
+            ? await putDocumentEntry(context.request, created.meta.id, createdById, created.meta.seedDate, seedData)
+            : await postExternal(token, code, created.meta.seedDate, seedData);
   const seedDocumentId =
-    code === "uv_lamp_runtime" || code === "pest_control"
+    code === "uv_lamp_runtime" || code === "pest_control" || CONFIG_CODES.has(code) || GENERIC_ENTRY_CODES.has(code)
       ? created.meta.id
       : typeof seed.body?.documentId === "string"
         ? seed.body.documentId
@@ -1083,7 +1452,7 @@ async function verifyOne(params: {
     path: path.join(OUT_DIR, "raw", `${code}-after-delete.png`),
     fullPage: true,
   });
-  const closeResult = await performClose(page, context.request, code, created.meta.id);
+  const closeResult = await performCloseEnhanced(page, context.request, code, created.meta.id, created.meta.title);
   await page.screenshot({
     path: path.join(OUT_DIR, "raw", `${code}-after-close.png`),
     fullPage: true,

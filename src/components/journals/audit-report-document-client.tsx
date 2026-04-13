@@ -24,6 +24,7 @@ import {
   type AuditReportFinding,
 } from "@/lib/audit-report-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 type Props = {
@@ -128,6 +129,17 @@ export function AuditReportDocumentClient({
     setEditingFinding(null);
   }
 
+  async function deleteFinding(findingId: string) {
+    await persist(documentTitle, {
+      ...config,
+      findings: config.findings.filter((item) => item.id !== findingId),
+    });
+    if (editingFinding?.id === findingId) {
+      setEditingFinding(null);
+      setFindingOpen(false);
+    }
+  }
+
   return (
     <>
       <div className="space-y-8">
@@ -135,10 +147,20 @@ export function AuditReportDocumentClient({
         <div className="flex items-center justify-between print:hidden">
           <div />
           {status === "active" && (
+            <>
             <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]" onClick={() => setSettingsOpen(true)}>
               <Settings2 className="size-4" />
               Настройки журнала
             </Button>
+            <DocumentCloseButton
+              documentId={documentId}
+              title={documentTitle}
+              variant="outline"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+            >
+              Закончить журнал
+            </DocumentCloseButton>
+            </>
           )}
         </div>
 
@@ -186,6 +208,22 @@ export function AuditReportDocumentClient({
                 <div className="border-b border-black/70 px-5 py-4 text-[20px] font-semibold">
                   Несоответствие #{index + 1}
                 </div>
+                {status === "active" ? (
+                  <div className="border-b border-black/70 px-5 py-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 rounded-xl border-[#ffd7d3] px-4 text-[14px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                      onClick={() =>
+                        deleteFinding(finding.id).catch((error) =>
+                          toast.error(error instanceof Error ? error.message : "РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ")
+                        )
+                      }
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="grid gap-0 text-[16px]">
                   {[
                     ["Описание несоответствия", finding.nonConformity],

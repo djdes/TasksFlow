@@ -42,6 +42,7 @@ import {
 } from "@/lib/climate-document";
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 import { StickyActionBar } from "@/components/journals/sticky-action-bar";
@@ -269,7 +270,8 @@ function RoomDialog({
           <div className="flex items-center justify-between gap-3 pt-2">
             <div>
               {initialRoom && canDelete && (
-                <Button
+                <>
+                  <Button
                   type="button"
                   variant="outline"
                   onClick={handleDelete}
@@ -278,6 +280,7 @@ function RoomDialog({
                 >
                   Удалить помещение
                 </Button>
+                </>
               )}
             </div>
             <Button

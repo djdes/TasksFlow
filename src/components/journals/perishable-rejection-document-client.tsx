@@ -29,6 +29,7 @@ import {
   type PerishableRejectionConfig,
   type PerishableRejectionRow,
 } from "@/lib/perishable-rejection-document";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 type Props = {
   documentId: string;
@@ -337,6 +338,18 @@ export function PerishableRejectionDocumentClient({
           Печать журнала
         </Button>
       </div>
+
+      {!readOnly ? (
+        <div className="flex justify-end">
+          <DocumentCloseButton
+            documentId={documentId}
+            title={title}
+            variant="outline"
+          >
+            Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+          </DocumentCloseButton>
+        </div>
+      ) : null}
 
       <div className="space-y-4 rounded-[20px] border bg-white p-6">
         {/* HACCP header table */}

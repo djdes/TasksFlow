@@ -17,6 +17,7 @@ import {
   type GlassListConfig,
   type GlassListRow,
 } from "@/lib/glass-list-document";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 type UserItem = {
@@ -171,6 +172,19 @@ export function GlassListDocumentClient({
             Настройки журнала
           </Button>
         </div>
+
+        {!isClosed ? (
+          <div className="mb-6 flex justify-end">
+            <DocumentCloseButton
+              documentId={documentId}
+              title={title}
+              variant="outline"
+              className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[18px] text-[#5464ff]"
+            >
+              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            </DocumentCloseButton>
+          </div>
+        ) : null}
 
         <h1 className="mb-10 text-[58px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
 

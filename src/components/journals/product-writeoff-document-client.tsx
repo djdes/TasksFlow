@@ -21,6 +21,7 @@ import {
   type ProductWriteoffConfig,
   type ProductWriteoffRow,
 } from "@/lib/product-writeoff-document";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 type UserItem = { id: string; name: string; role: string };
 
@@ -251,6 +252,19 @@ export function ProductWriteoffDocumentClient({
             Настройки журнала
           </Button>
         </div>
+
+        {!isClosed ? (
+          <div className="mb-6 flex justify-end print:hidden">
+            <DocumentCloseButton
+              documentId={documentId}
+              title={title}
+              variant="outline"
+              className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[18px] text-[#5464ff]"
+            >
+              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            </DocumentCloseButton>
+          </div>
+        ) : null}
 
         <div className="mx-auto mt-8 max-w-[1120px] space-y-8 print:mt-0">
           <table className="w-full border-collapse text-[16px]">

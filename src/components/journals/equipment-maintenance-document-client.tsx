@@ -36,6 +36,7 @@ import {
 } from "@/lib/equipment-maintenance-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
 type Props = {
@@ -282,6 +283,15 @@ export function EquipmentMaintenanceDocumentClient({
             <Settings className="size-4" />
             Настройки журнала
           </Button>
+          {!isClosed ? (
+            <DocumentCloseButton
+              documentId={documentId}
+              title={title}
+              variant="outline"
+            >
+              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            </DocumentCloseButton>
+          ) : null}
         </div>
       </div>
 

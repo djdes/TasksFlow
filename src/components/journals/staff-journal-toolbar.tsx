@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { DocumentCloseButton } from "@/components/journals/document-close-button";
 import {
   getHygienePositionLabel,
   getStaffJournalResponsibleTitleOptions,
@@ -463,6 +464,7 @@ export function StaffJournalToolbar({
                 </Button>
               )}
               {status === "active" && (
+                <>
                 <Button
                   type="button"
                   variant="outline"
@@ -477,6 +479,15 @@ export function StaffJournalToolbar({
                 >
                   Настройки журнала
                 </Button>
+                <DocumentCloseButton
+                  documentId={documentId}
+                  title={title}
+                  variant="outline"
+                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                >
+                  Закончить журнал
+                </DocumentCloseButton>
+                </>
               )}
             </div>
           </div>
@@ -489,6 +500,7 @@ export function StaffJournalToolbar({
             <div />
           )}
           {!showHeaderActions && status === "active" && (
+            <>
             <Button
               type="button"
               variant="outline"
@@ -497,6 +509,15 @@ export function StaffJournalToolbar({
             >
               Настройки журнала
             </Button>
+            <DocumentCloseButton
+              documentId={documentId}
+              title={title}
+              variant="outline"
+              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            >
+              Закончить журнал
+            </DocumentCloseButton>
+            </>
           )}
         </div>
 
