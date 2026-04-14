@@ -157,6 +157,57 @@ export const HYGIENE_DEMO_TEAM = [
   },
 ] as const;
 
+export const HYGIENE_DEMO_TEAM_V2 = [
+  {
+    email: "admin@haccp.local",
+    name: "Крылов Денис Сергеевич",
+    role: "owner",
+    positionTitle: "Управляющий",
+  },
+  {
+    email: "quality@haccp.local",
+    name: "Белова Елена Андреевна",
+    role: "technologist",
+    positionTitle: "Технолог по качеству",
+  },
+  {
+    email: "souschef@haccp.local",
+    name: "Никитин Павел Игоревич",
+    role: "operator",
+    positionTitle: "Су-шеф",
+  },
+  {
+    email: "hotcook@haccp.local",
+    name: "Волкова Анна Дмитриевна",
+    role: "operator",
+    positionTitle: "Повар горячего цеха",
+  },
+  {
+    email: "coldcook@haccp.local",
+    name: "Орлов Илья Максимович",
+    role: "operator",
+    positionTitle: "Повар холодного цеха",
+  },
+  {
+    email: "pastry@haccp.local",
+    name: "Мельникова Софья Романовна",
+    role: "operator",
+    positionTitle: "Кондитер",
+  },
+  {
+    email: "storekeeper@haccp.local",
+    name: "Кузьмин Артем Сергеевич",
+    role: "operator",
+    positionTitle: "Кладовщик",
+  },
+  {
+    email: "sanitation@haccp.local",
+    name: "Егорова Марина Викторовна",
+    role: "operator",
+    positionTitle: "Санитарный работник",
+  },
+] as const;
+
 export const HYGIENE_SAMPLE_DOCUMENTS: HygieneSampleDocument[] = [
   {
     id: "sample-active-1",
@@ -201,12 +252,12 @@ export function getHygienePositionLabel(role: string): string {
 }
 
 export function getHygieneUserPositionLabel(employee: HygieneRosterUser): string {
-  const byEmail = HYGIENE_DEMO_TEAM.find(
+  const byEmail = HYGIENE_DEMO_TEAM_V2.find(
     (member) => employee.email && member.email === employee.email
   );
   if (byEmail) return byEmail.positionTitle;
 
-  const byName = HYGIENE_DEMO_TEAM.find((member) => member.name === employee.name);
+  const byName = HYGIENE_DEMO_TEAM_V2.find((member) => member.name === employee.name);
   if (byName) return byName.positionTitle;
 
   if (employee.positionTitle) return employee.positionTitle;
@@ -219,7 +270,7 @@ export function getHygieneDemoTeamUsers(
 ): HygieneRosterUser[] {
   const demoUsers: HygieneRosterUser[] = [];
 
-  HYGIENE_DEMO_TEAM.forEach((member) => {
+  HYGIENE_DEMO_TEAM_V2.forEach((member) => {
     const user =
       employees.find((employee) => employee.email === member.email) ||
       employees.find((employee) => employee.name === member.name);

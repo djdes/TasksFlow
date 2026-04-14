@@ -38,6 +38,59 @@ const DEMO_TEAM = [
   { email: "waiter@haccp.local", name: "\u0421\u043c\u0438\u0440\u043d\u043e\u0432\u0430 \u041c.\u041c.", role: "operator" },
 ] as const;
 
+const DEFAULT_LOGIN_NAME = "Крылов Денис Сергеевич";
+
+const DEMO_TEAM_V2 = [
+  {
+    email: "admin@haccp.local",
+    name: "Крылов Денис Сергеевич",
+    role: "owner",
+    positionTitle: "Управляющий",
+  },
+  {
+    email: "quality@haccp.local",
+    name: "Белова Елена Андреевна",
+    role: "technologist",
+    positionTitle: "Технолог по качеству",
+  },
+  {
+    email: "souschef@haccp.local",
+    name: "Никитин Павел Игоревич",
+    role: "operator",
+    positionTitle: "Су-шеф",
+  },
+  {
+    email: "hotcook@haccp.local",
+    name: "Волкова Анна Дмитриевна",
+    role: "operator",
+    positionTitle: "Повар горячего цеха",
+  },
+  {
+    email: "coldcook@haccp.local",
+    name: "Орлов Илья Максимович",
+    role: "operator",
+    positionTitle: "Повар холодного цеха",
+  },
+  {
+    email: "pastry@haccp.local",
+    name: "Мельникова Софья Романовна",
+    role: "operator",
+    positionTitle: "Кондитер",
+  },
+  {
+    email: "storekeeper@haccp.local",
+    name: "Кузьмин Артем Сергеевич",
+    role: "operator",
+    positionTitle: "Кладовщик",
+  },
+  {
+    email: "sanitation@haccp.local",
+    name: "Егорова Марина Викторовна",
+    role: "operator",
+    positionTitle: "Санитарный работник",
+  },
+] as const;
+
 async function main() {
   const connectionString =
     process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL;
@@ -53,7 +106,7 @@ async function main() {
   const email = (process.env.ADMIN_EMAIL || DEFAULT_EMAIL).trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD || DEFAULT_PASSWORD;
   const orgName = process.env.ADMIN_ORG_NAME || DEFAULT_ORG_NAME;
-  const name = process.env.ADMIN_NAME || DEFAULT_NAME;
+  const name = process.env.ADMIN_NAME || DEFAULT_LOGIN_NAME;
 
   if (password.length < 6) {
     console.error("ADMIN_PASSWORD must be at least 6 characters");
@@ -88,6 +141,7 @@ async function main() {
           name,
           passwordHash,
           role: "owner",
+          positionTitle: "Управляющий",
           isActive: true,
         },
       });
@@ -118,6 +172,7 @@ async function main() {
             name,
             passwordHash,
             role: "owner",
+            positionTitle: "Управляющий",
             organizationId: org.id,
             isActive: true,
           },
@@ -129,7 +184,7 @@ async function main() {
       console.log(`  Created admin user:   ${result.user.email}`);
     }
 
-    for (const member of DEMO_TEAM) {
+    for (const member of DEMO_TEAM_V2) {
       const memberEmail = member.email.trim().toLowerCase();
       const memberPasswordHash =
         memberEmail === email ? passwordHash : await bcrypt.hash(DEFAULT_PASSWORD, 12);
@@ -145,6 +200,7 @@ async function main() {
           data: {
             name: member.name,
             role: member.role,
+            positionTitle: member.positionTitle,
             passwordHash: memberPasswordHash,
             organizationId: orgId,
             isActive: true,
@@ -157,6 +213,7 @@ async function main() {
             email: memberEmail,
             name: member.name,
             role: member.role,
+            positionTitle: member.positionTitle,
             passwordHash: memberPasswordHash,
             organizationId: orgId,
             isActive: true,
