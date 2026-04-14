@@ -14,6 +14,7 @@ const OUT_DIR = process.env.EXTERNAL_VERIFY_OUT_DIR || ".agent/tasks/journals-ex
 const EMAIL = process.env.EXTERNAL_VERIFY_EMAIL || "admin@haccp.local";
 const PASSWORD = process.env.EXTERNAL_VERIFY_PASSWORD || "admin1234";
 const CODES = (process.env.EXTERNAL_VERIFY_CODES || "").split(",").map((item) => item.trim()).filter(Boolean);
+const SOURCE = process.env.EXTERNAL_VERIFY_SOURCE || "manual";
 
 type PayloadDefinition = {
   mode: "entry" | "config";
@@ -835,7 +836,7 @@ async function postExternal(token: string, code: string, date: string, data: Rec
       organizationId: ORG_ID,
       journalCode: code,
       date,
-      source: "external_part2_verify",
+      source: SOURCE,
       data,
     }),
   });
