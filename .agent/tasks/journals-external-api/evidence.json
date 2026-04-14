@@ -1,0 +1,45 @@
+{
+  "task_id": "journals-external-api",
+  "head": "5c66634",
+  "backup": ".agent/backups/db-5c66634.sql.gz",
+  "rollbackTag": "snap-start-ts",
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "status": "PASS"
+    },
+    {
+      "command": "npm run seed:haccp-demo",
+      "status": "PASS",
+      "summary": {
+        "activeUsers": 30,
+        "areas": 11,
+        "equipment": 22
+      }
+    },
+    {
+      "command": "npx tsx scripts/test-external-fill.ts",
+      "status": "PASS",
+      "summary": {
+        "pass": 35,
+        "fail": 0
+      }
+    },
+    {
+      "command": "npx tsx scripts/mock-sensor-feed.ts --ticks=3 --interval=1",
+      "status": "PASS",
+      "summary": {
+        "ticks": 3
+      }
+    }
+  ],
+  "delta": {
+    "rowsAliasAdded": true,
+    "legacyDataStillAccepted": true,
+    "realisticSeedScriptAdded": true
+  },
+  "openItems": [
+    "Deploy rows support and reverify production after push.",
+    "Refresh 3-journal visual proof for position-title consistency."
+  ]
+}

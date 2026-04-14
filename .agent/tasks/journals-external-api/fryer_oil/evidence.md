@@ -1,7 +1,7 @@
-# fryer_oil external API — 2026-04-13T05:01:12.413Z
+# fryer_oil external API — 2026-04-14T14:11:11.398Z
 - POST status: 200
 - ok: true
-- documentId: cmnsknjmq0007gdts3acvmtlk
+- documentId: cmnyodrmx007nootso6dbqpof
 - entriesWritten: 1
 - createdDocument: false
 - PDF status: 401

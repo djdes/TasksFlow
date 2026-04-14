@@ -1,9 +1,9 @@
-# product_writeoff external API — 2026-04-13T05:01:12.834Z
+# product_writeoff external API — 2026-04-14T14:11:12.086Z
 - POST status: 200
 - ok: true
-- documentId: cmnw67a100030z4tsvliwygpk
+- documentId: cmnyp95o5005e08ts5dk4ckta
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

@@ -1,9 +1,9 @@
-# glass_items_list external API — 2026-04-13T05:01:12.496Z
+# glass_items_list external API — 2026-04-14T14:11:11.534Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679qg0021z4tsxjhz8si0
+- documentId: cmnyp958v004t08tsn1jgqsid
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

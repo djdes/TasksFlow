@@ -1,9 +1,9 @@
-# incoming_raw_materials_control external API — 2026-04-13T05:01:12.611Z
+# incoming_raw_materials_control external API — 2026-04-14T14:11:11.687Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679u6002ez4tscnkixn3u
+- documentId: cmnyp95d6005108tssm00ul2t
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

@@ -1,7 +1,7 @@
-# equipment_cleaning external API — 2026-04-13T05:01:12.316Z
+# equipment_cleaning external API — 2026-04-14T14:11:11.258Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679m4001mz4tsugilc4f3
+- documentId: cmnyodrot008footsewlruur0
 - entriesWritten: 1
 - createdDocument: false
 - PDF status: 401

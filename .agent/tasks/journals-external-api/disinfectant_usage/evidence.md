@@ -1,9 +1,9 @@
-# disinfectant_usage external API — 2026-04-13T05:01:12.248Z
+# disinfectant_usage external API — 2026-04-14T14:11:11.174Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679kq001hz4tssd2dnkiz
+- documentId: cmnyp94yo004g08tspxoi4695
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

@@ -12,6 +12,7 @@
     "lint": "eslint",
     "backfill:journal-staff": "tsx scripts/backfill-journal-staff-bindings.ts",
     "audit:source:parity": "tsx scripts/audit-source-local-parity.ts",
+    "seed:haccp-demo": "tsx prisma/seed-haccp-demo.ts",
     "reset:demo:journals": "tsx scripts/reset-demo-journal-data.ts",
     "watch:progress": "powershell -ExecutionPolicy Bypass -File scripts/watch-progress.ps1",
     "capture:source:25-27": "tsx scripts/capture-source-journals.ts --targets tmp-source-journals/targets-25-27.json --out tmp-source-journals/capture-25-27",

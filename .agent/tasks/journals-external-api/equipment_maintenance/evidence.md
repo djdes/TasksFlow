@@ -1,7 +1,7 @@
-# equipment_maintenance external API — 2026-04-13T05:01:12.348Z
+# equipment_maintenance external API — 2026-04-14T14:11:11.305Z
 - POST status: 200
 - ok: true
-- documentId: cmnsikoq200006ktsdnk9oier
+- documentId: cmnyodrnk0083oots27zzxlrl
 - entriesWritten: 1
 - createdDocument: false
 - PDF status: 401

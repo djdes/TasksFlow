@@ -1,9 +1,9 @@
-# general_cleaning external API — 2026-04-13T05:01:12.442Z
+# general_cleaning external API — 2026-04-14T14:11:11.449Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679p3001vz4tsaizo35s6
+- documentId: cmnyp956b004p08tswlanw4gh
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

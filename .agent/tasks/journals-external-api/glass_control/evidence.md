@@ -1,7 +1,7 @@
-# glass_control external API — 2026-04-13T05:01:12.470Z
+# glass_control external API — 2026-04-14T14:11:11.494Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679pr001yz4tsppj3cvlb
+- documentId: cmnyodrp0008jootso4d26bvc
 - entriesWritten: 1
 - createdDocument: false
 - PDF status: 401

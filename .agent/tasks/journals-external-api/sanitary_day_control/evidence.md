@@ -1,9 +1,9 @@
-# sanitary_day_control external API — 2026-04-13T05:01:12.862Z
+# sanitary_day_control external API — 2026-04-14T14:11:12.138Z
 - POST status: 200
 - ok: true
-- documentId: cmnw67a470038z4tsam4pb33h
+- documentId: cmnyp95pf005g08ts91ywlypt
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

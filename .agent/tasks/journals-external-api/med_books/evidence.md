@@ -1,9 +1,9 @@
-# med_books external API — 2026-04-13T05:01:12.675Z
+# med_books external API — 2026-04-14T14:11:11.779Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679ws002nz4ts7g7meaeq
+- documentId: cmnyp95ff005508tswjcps525
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

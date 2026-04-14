@@ -82,7 +82,7 @@ async function postEntry(code: string): Promise<Result> {
     journalCode: code,
     date: today,
     source: "external_smoke",
-    data: demoDataForCode(code),
+    rows: demoDataForCode(code),
   };
   try {
     const res = await fetch(`${BASE}/api/external/entries`, {

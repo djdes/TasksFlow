@@ -4,44 +4,44 @@
   "ticks": [
     {
       "tick": 1,
-      "when": "2026-04-12T19:52:28.021Z",
+      "when": "2026-04-14T14:11:25.641Z",
       "climate": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnvt87bo003evdtswb3fwacz"
+        "documentId": "cmnyodrlm0071ootsydcj5kn8"
       },
       "fridge": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnuolq0700c92wts9r6vynrs"
+        "documentId": "cmnyodrls0075ootsr9y7prhz"
       }
     },
     {
       "tick": 2,
-      "when": "2026-04-12T19:52:38.217Z",
+      "when": "2026-04-14T14:11:26.897Z",
       "climate": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnvt87bo003evdtswb3fwacz"
+        "documentId": "cmnyodrlm0071ootsydcj5kn8"
       },
       "fridge": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnuolq0700c92wts9r6vynrs"
+        "documentId": "cmnyodrls0075ootsr9y7prhz"
       }
     },
     {
       "tick": 3,
-      "when": "2026-04-12T19:52:48.306Z",
+      "when": "2026-04-14T14:11:27.944Z",
       "climate": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnvt87bo003evdtswb3fwacz"
+        "documentId": "cmnyodrlm0071ootsydcj5kn8"
       },
       "fridge": {
         "status": 200,
         "ok": true,
-        "documentId": "cmnuolq0700c92wts9r6vynrs"
+        "documentId": "cmnyodrls0075ootsr9y7prhz"
       }
     }
   ]

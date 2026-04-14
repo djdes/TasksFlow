@@ -1,9 +1,9 @@
-# breakdown_history external API — 2026-04-13T05:01:11.892Z
+# breakdown_history external API — 2026-04-14T14:11:10.864Z
 - POST status: 200
 - ok: true
-- documentId: cmnw679aw000oz4ts8a9ty87d
+- documentId: cmnyp94q6004408ts4p69yswq
 - entriesWritten: 1
-- createdDocument: false
+- createdDocument: true
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39
