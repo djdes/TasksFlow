@@ -42,7 +42,7 @@ export type SanitationDayConfig = {
   rows: SanitationRoomRow[];
 };
 
-function createMonthValues(fill = ""): SanitationMonthValues {
+function createMonthValues(fill = "-"): SanitationMonthValues {
   return {
     jan: fill,
     feb: fill,
@@ -68,24 +68,33 @@ function safeText(value: unknown) {
 }
 
 function safeYear(value: unknown, fallback: number) {
-  return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.trunc(value)
+    : fallback;
+}
+
+function normalizeMonthCell(value: unknown) {
+  return safeText(value).trim() || "-";
 }
 
 function normalizeMonthValues(value: unknown) {
-  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const source =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
   return {
-    jan: safeText(source.jan),
-    feb: safeText(source.feb),
-    mar: safeText(source.mar),
-    apr: safeText(source.apr),
-    may: safeText(source.may),
-    jun: safeText(source.jun),
-    jul: safeText(source.jul),
-    aug: safeText(source.aug),
-    sep: safeText(source.sep),
-    oct: safeText(source.oct),
-    nov: safeText(source.nov),
-    dec: safeText(source.dec),
+    jan: normalizeMonthCell(source.jan),
+    feb: normalizeMonthCell(source.feb),
+    mar: normalizeMonthCell(source.mar),
+    apr: normalizeMonthCell(source.apr),
+    may: normalizeMonthCell(source.may),
+    jun: normalizeMonthCell(source.jun),
+    jul: normalizeMonthCell(source.jul),
+    aug: normalizeMonthCell(source.aug),
+    sep: normalizeMonthCell(source.sep),
+    oct: normalizeMonthCell(source.oct),
+    nov: normalizeMonthCell(source.nov),
+    dec: normalizeMonthCell(source.dec),
   };
 }
 
@@ -108,7 +117,9 @@ function normalizeRows(value: unknown): SanitationRoomRow[] {
     .filter((item): item is SanitationRoomRow => item !== null);
 }
 
-export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayConfig {
+export function getSanitationDayDefaultConfig(
+  date = new Date(),
+): SanitationDayConfig {
   const year = date.getUTCFullYear();
   const d = new Date(Date.UTC(year, 0, 1));
 
@@ -134,7 +145,7 @@ export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayC
           ...createMonthValues("10"),
           feb: "01",
           apr: "01",
-          jun: "",
+          jun: "-",
         },
       },
       {
@@ -145,7 +156,7 @@ export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayC
           apr: "14",
         },
         fact: {
-          ...createMonthValues(""),
+          ...createMonthValues("-"),
           apr: "14",
         },
       },
@@ -153,20 +164,28 @@ export function getSanitationDayDefaultConfig(date = new Date()): SanitationDayC
   };
 }
 
-export function normalizeSanitationDayConfig(config: unknown): SanitationDayConfig {
+export function normalizeSanitationDayConfig(
+  config: unknown,
+): SanitationDayConfig {
   const fallback = getSanitationDayDefaultConfig();
-  if (!config || typeof config !== "object" || Array.isArray(config)) return fallback;
+  if (!config || typeof config !== "object" || Array.isArray(config))
+    return fallback;
   const source = config as Record<string, unknown>;
 
   return {
     year: safeYear(source.year, fallback.year),
     documentDate: safeText(source.documentDate) || fallback.documentDate,
     approveRole: safeText(source.approveRole) || fallback.approveRole,
-    approveEmployeeId: safeText(source.approveEmployeeId) || fallback.approveEmployeeId || null,
-    approveEmployee: safeText(source.approveEmployee) || fallback.approveEmployee,
-    responsibleRole: safeText(source.responsibleRole) || fallback.responsibleRole,
+    approveEmployeeId:
+      safeText(source.approveEmployeeId) || fallback.approveEmployeeId || null,
+    approveEmployee:
+      safeText(source.approveEmployee) || fallback.approveEmployee,
+    responsibleRole:
+      safeText(source.responsibleRole) || fallback.responsibleRole,
     responsibleEmployeeId:
-      safeText(source.responsibleEmployeeId) || fallback.responsibleEmployeeId || null,
+      safeText(source.responsibleEmployeeId) ||
+      fallback.responsibleEmployeeId ||
+      null,
     responsibleEmployee:
       safeText(source.responsibleEmployee) || fallback.responsibleEmployee,
     rows: normalizeRows(source.rows),
@@ -193,7 +212,7 @@ export function createEmptySanitationRow(name = ""): SanitationRoomRow {
   return {
     id: `row-${Math.random().toString(36).slice(2, 9)}`,
     roomName: name,
-    plan: createMonthValues(""),
-    fact: createMonthValues(""),
+    plan: createMonthValues("-"),
+    fact: createMonthValues("-"),
   };
 }

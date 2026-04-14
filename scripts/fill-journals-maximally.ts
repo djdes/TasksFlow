@@ -118,7 +118,7 @@ function monthFactMap(activeMonth: number, value: string) {
   const keys = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
   const out: Record<string, string> = {};
   keys.forEach((key, index) => {
-    out[key] = index === activeMonth ? value : "";
+    out[key] = index === activeMonth ? value : "-";
   });
   return out;
 }
