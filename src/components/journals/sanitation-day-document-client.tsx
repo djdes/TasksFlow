@@ -650,48 +650,39 @@ export function SanitationDayDocumentClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <DocumentBackLink href={journalHref} />
-      <div className="rounded-[24px] border border-[#e8ebf5] bg-white px-5 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-[18px] text-[#555a6e]">
-          <div>
-            <p className="text-[14px] uppercase tracking-[0.18em] text-[#8b90a7]">
-              HACCP Journal
-            </p>
-            <h1 className="text-[44px] font-semibold tracking-[-0.04em] text-black">
-              {title}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
+      <div className="flex items-center justify-between gap-4 print:hidden">
+        <div />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="rounded-2xl border border-[#e9ecf6] px-4 py-3 text-[#5b66ff]"
+            onClick={() =>
+              window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")
+            }
+          >
+            <Printer className="size-5" />
+          </button>
+          {!readOnly && (
+            <Button
               type="button"
-              className="rounded-2xl border border-[#e9ecf6] px-4 py-3 text-[#5b66ff]"
-              onClick={() =>
-                window.open(
-                  `/api/journal-documents/${documentId}/pdf`,
-                  "_blank",
-                )
-              }
+              variant="outline"
+              onClick={() => setSettingsOpen(true)}
+              className="rounded-2xl border-[#eef0fb] px-7 py-6 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
             >
-              <Printer className="size-5" />
-            </button>
-            {!readOnly && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSettingsOpen(true)}
-                className="rounded-2xl border-[#eef0fb] px-7 py-6 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
-              >
-                <Settings2 className="size-5" />
-                Настройки журнала
-              </Button>
-            )}
-          </div>
+              <Settings2 className="size-5" />
+              Настройки журнала
+            </Button>
+          )}
         </div>
       </div>
 
-      <section className="space-y-6 rounded-[20px] border bg-white p-6">
+      <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black print:hidden">
+        {title}
+      </h1>
+
+      <section className="space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
         <table className="w-full border-collapse">
           <tbody>
             <tr>
@@ -829,7 +820,7 @@ export function SanitationDayDocumentClient({
                   rowSpan={2}
                   className="w-[160px] border border-black px-3 py-2"
                 >
-                  Type
+                  Вид
                 </th>
                 <th colSpan={12} className="border border-black px-3 py-2">
                   График
@@ -953,7 +944,7 @@ export function SanitationDayDocumentClient({
                   colSpan={12}
                   className="border border-black px-3 py-2 text-center text-[#4b5565]"
                 >
-                  Monthly marks are recorded in the matrix above.
+                  Отметки по месяцам указаны в таблице выше.
                 </td>
               </tr>
             </tbody>
