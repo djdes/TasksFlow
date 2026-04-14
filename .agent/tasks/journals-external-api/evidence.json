@@ -1,8 +1,9 @@
 {
   "task_id": "journals-external-api",
-  "head": "5c66634",
+  "head": "f7eec99",
   "backup": ".agent/backups/db-5c66634.sql.gz",
   "rollbackTag": "snap-start-ts",
+  "deployedBuildSha": "f7eec99e069be2b8bba9f9fcfead89ead23c67c7",
   "checks": [
     {
       "command": "npx tsc --noEmit",
@@ -15,6 +16,15 @@
         "activeUsers": 30,
         "areas": 11,
         "equipment": 22
+      }
+    },
+    {
+      "command": "remote npm run seed:haccp-demo",
+      "status": "PASS",
+      "summary": {
+        "activeUsers": 30,
+        "areas": 11,
+        "equipment": 24
       }
     },
     {
@@ -39,7 +49,6 @@
     "realisticSeedScriptAdded": true
   },
   "openItems": [
-    "Deploy rows support and reverify production after push.",
     "Refresh 3-journal visual proof for position-title consistency."
   ]
 }

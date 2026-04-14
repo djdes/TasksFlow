@@ -1,9 +1,9 @@
-# pest_control external API — 2026-04-14T14:11:11.952Z
+# pest_control external API — 2026-04-14T14:25:25.597Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp95kg005a08ts78esrwis
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

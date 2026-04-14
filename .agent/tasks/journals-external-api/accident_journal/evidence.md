@@ -1,9 +1,9 @@
-# accident_journal external API — 2026-04-14T14:11:10.646Z
+# accident_journal external API — 2026-04-14T14:25:24.341Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp94j2003w08ts6pjlptf0
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

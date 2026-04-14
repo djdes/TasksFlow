@@ -81,7 +81,7 @@ async function postEntry(code: string): Promise<Result> {
     organizationId: ORG_ID,
     journalCode: code,
     date: today,
-    source: "external_smoke",
+    source: "manual",
     rows: demoDataForCode(code),
   };
   try {

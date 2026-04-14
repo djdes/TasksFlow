@@ -1,9 +1,9 @@
-# audit_report external API — 2026-04-14T14:11:10.810Z
+# audit_report external API — 2026-04-14T14:25:24.511Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp94oa004208tsxq9zndq0
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

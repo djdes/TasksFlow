@@ -1,9 +1,9 @@
-# training_plan external API — 2026-04-14T14:11:12.283Z
+# training_plan external API — 2026-04-14T14:25:25.857Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp95tk005l08tsbe69z9o9
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

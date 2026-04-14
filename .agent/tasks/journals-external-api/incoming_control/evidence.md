@@ -1,9 +1,9 @@
-# incoming_control external API — 2026-04-14T14:11:11.650Z
+# incoming_control external API — 2026-04-14T14:25:25.385Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp95c2004z08tsl13qn8oc
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39

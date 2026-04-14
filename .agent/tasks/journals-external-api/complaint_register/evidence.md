@@ -1,9 +1,9 @@
-# complaint_register external API — 2026-04-14T14:11:11.126Z
+# complaint_register external API — 2026-04-14T14:25:24.925Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp94xi004e08tsa8bnu76e
 - entriesWritten: 1
-- createdDocument: true
+- createdDocument: false
 - PDF status: 401
 - PDF content-type: application/json
 - PDF bytes: 39
