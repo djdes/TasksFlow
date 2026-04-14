@@ -64,3 +64,11 @@
 - [ ] Verify deployed build SHA, PM2 status, and production HTTP/API behavior.
 - [ ] Write `evidence.json`, `FINAL.md`, and any `problems.md` for unresolved gaps.
 - [ ] Push final tag `release-external-api-ts` only if acceptance criteria are actually satisfied.
+
+## Phase 6: Maximal Fill Saturation
+
+- [ ] Build a dedicated fill script that reuses realistic journal payloads and expands them into multi-row, multi-date fills.
+- [ ] Use existing external API and authenticated journal document APIs to create or update additional monthly documents only where broader coverage is useful.
+- [ ] Populate entry-based journals with several dates and multiple employees per period.
+- [ ] Populate config-based journals with richer tables, schedules, registries, and reference lists.
+- [ ] Re-check selected journals in UI/PDF to confirm they look filled, not just technically touched.

@@ -9,6 +9,17 @@
 
 Make every non-reference journal writable for a specific day through HTTP without runtime errors, with deployable production verification, rollback safety, audit logging, and evidence per journal.
 
+## Scope Addendum 2026-04-14
+
+After baseline API verification, the task expanded to operational data saturation:
+
+- Fill journals as densely as is safely reasonable, not merely prove a single successful POST.
+- Prefer realistic multi-row and multi-period fills over synthetic one-cell placeholders.
+- It is acceptable to create additional monthly documents via the existing API when a journal format benefits from broader coverage.
+- For entry-based journals, populate multiple dates and employees within a document period.
+- For config-based journals, populate tables, registries, schedules, and reference lists with several realistic rows instead of a single sample row.
+- Preserve existing orgs/users and avoid destructive cleanup of user data.
+
 ## Constraints
 
 - Do not touch `src/components/journals/hygiene-document-client.tsx`.
@@ -37,6 +48,7 @@ Make every non-reference journal writable for a specific day through HTTP withou
 - AC8: Sensor-style ingestion for climate and cold equipment is implemented or verified, with evidence showing repeated writes over time.
 - AC9: Autofill behavior for `climate_control`, `cold_equipment_control`, and `cleaning` is verified and hardened if needed.
 - AC10: Final proof artifacts (`evidence.md`, `evidence.json`, raw outputs, `FINAL.md`) reflect current code and current verification results; no criterion is reported `PASS` without fresh evidence.
+- AC11: Active journal documents are no longer merely non-empty; they contain dense, realistic data across multiple rows or dates wherever the journal format allows it.
 
 ## Verification Targets
 
