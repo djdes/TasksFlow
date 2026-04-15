@@ -248,8 +248,7 @@ export function ProductWriteoffDocumentClient({
       )}
 
       <div className="rounded-[28px] bg-white p-8 shadow-sm print:rounded-none print:p-0 print:shadow-none">
-        <div className="flex items-center justify-between gap-4 print:hidden">
-          <div className="text-sm text-[#7a7f93]">{organizationName} / {getProductWriteoffDocumentListTitle(config)}</div>
+        <div className="flex items-center justify-end gap-3 print:hidden">
           <Button type="button" variant="outline" className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[18px] text-[#5464ff]" onClick={() => setSettingsOpen(true)} disabled={isClosed}>
             Настройки журнала
           </Button>
