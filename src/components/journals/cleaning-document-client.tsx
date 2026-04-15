@@ -240,21 +240,25 @@ export function CleaningDocumentClient(props: Props) {
         {!printMode ? (
           <>
             <DocumentBackLink href="/journals/cleaning" documentId={props.documentId} />
-            {props.status === "active" ? (
-              <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                onClick={() => setSettingsOpen(true)}
+              >
+                Настройки журнала
+              </Button>
+              {props.status === "active" ? (
                 <DocumentCloseButton
                   documentId={props.documentId}
                   title={config.documentTitle || CLEANING_PAGE_TITLE}
                   variant="outline"
-                  className="h-12 rounded-[16px] border-[#eef0fb] px-6 text-[18px] text-[#5863f8] hover:bg-[#f7f8ff]"
+                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
                 >
                   Закончить журнал
                 </DocumentCloseButton>
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between">
-              <div />
-              <Button type="button" variant="outline" className="h-12 rounded-[16px] border-[#eef0fb] px-6 text-[18px] text-[#5863f8] hover:bg-[#f7f8ff]" onClick={() => setSettingsOpen(true)}>Настройки журнала</Button>
+              ) : null}
             </div>
           </>
         ) : null}
