@@ -692,19 +692,6 @@ export function ColdEquipmentDocumentClient({
   return (
     <div className="bg-white text-black">
       <div className="mx-auto max-w-[1880px] px-6 py-8">
-        <div className="mb-6">
-          <Button
-            asChild
-            variant="ghost"
-            className="h-11 rounded-[14px] px-3 text-[15px] text-[#5566f6] hover:bg-[#eef1ff]"
-          >
-            <Link href="/journals/cold_equipment_control">
-              <ArrowLeft className="size-5" />
-              Журналы
-            </Link>
-          </Button>
-        </div>
-
         <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-[1260px]">
             <h1 className="text-[48px] font-semibold leading-[1.08] tracking-[-0.05em] text-black">
