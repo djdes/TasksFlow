@@ -21,6 +21,7 @@ import {
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
+import { JournalsTodayWidget } from "@/components/dashboard/journals-today-widget";
 import {
   Card,
   CardContent,
@@ -223,6 +224,9 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Today's journal fill-rate */}
+      <JournalsTodayWidget organizationId={organizationId} />
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
