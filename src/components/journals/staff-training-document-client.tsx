@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Plus, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
+import { USER_ROLE_LABEL_VALUES } from "@/lib/user-roles";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,6 @@ import {
   TRAINING_TYPES,
   TRAINING_TOPICS,
   ATTESTATION_RESULTS,
-  STAFF_TRAINING_FULL_TITLE,
   type StaffTrainingConfig,
   type StaffTrainingRow,
 } from "@/lib/staff-training-document";
@@ -70,8 +69,8 @@ export function StaffTrainingDocumentClient({
   users,
 }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isSaving, setIsSaving] = useState(false);
+  const [, startTransition] = useTransition();
+  const [, setIsSaving] = useState(false);
   const [config, setConfig] = useState(() =>
     normalizeStaffTrainingConfig(initialConfig)
   );
@@ -124,15 +123,6 @@ export function StaffTrainingDocumentClient({
   }
 
   /* ---------- row helpers ---------- */
-
-  function updateRow(id: string, patch: Partial<StaffTrainingRow>) {
-    setConfig((prev) => ({
-      ...prev,
-      rows: prev.rows.map((row) =>
-        row.id === id ? { ...row, ...patch } : row
-      ),
-    }));
-  }
 
   function toggleRow(id: string, checked: boolean) {
     setSelectedRows((prev) =>
