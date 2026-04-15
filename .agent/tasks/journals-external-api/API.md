@@ -165,3 +165,63 @@ curl -X POST https://wesetup.ru/api/external/entries \
 - Reposting the same `(journalCode, employeeId, date)` overwrites the same cell payload.
 - Staff-facing fields inside payload data are reconciled from the `User` record, so the client should not hardcode `positionTitle` or similar display labels.
 - `/api/journal-documents/<id>/pdf` is session-gated for the web UI and is not part of the bearer-token external contract.
+
+---
+
+## Per-code payload shapes
+
+The dispatcher accepts any JSON in `data`/`rows`, but each journal has an
+expected shape — anything else gets dropped silently by that journal's
+normaliser.
+
+### Entry-writer journals (15 codes)
+
+Each POST upserts exactly one cell keyed by `(documentId, employeeId, date)`.
+
+| Code | Minimum shape |
+|---|---|
+| `hygiene` | `{ status: "healthy"\|"day_off"\|"sick_leave"\|"suspended"\|"vacation", temperatureAbove37: boolean }` |
+| `health_check` | `{ signed: boolean, measures?: string }` |
+| `climate_control` | `{ measurements: [{ time: "10:00", temperature: 22.4, humidity: 55 }] }` |
+| `cold_equipment_control` | `{ temperatures: { "<equipment_uuid>": 3.5, … }, responsibleTitle?: string }` |
+| `cleaning` | `{ activities: [{ type: "wetCleaning"\|"disinfection"\|"ventilation", times: ["done", …], responsibleName?: string }] }` |
+| `cleaning_ventilation_checklist` | `{ procedures: { "<procedureId>": ["HH:MM", …] }, responsibleUserId?: string }` |
+| `equipment_cleaning` | `{ washDate, washTime, equipmentName, detergentName, detergentConcentration, disinfectantName, disinfectantConcentration, rinseTemperature?, washerName?, controllerName? }` |
+| `fryer_oil` | `{ startDate, startHour, startMinute, endHour, endMinute, fatType, equipmentType, productType, qualityStart: 1-5, qualityEnd: 1-5, carryoverKg, disposedKg, controllerName? }` |
+| `general_cleaning` | `{ done: boolean, performer?: string, note?: string }` |
+| `glass_control` | `{ area, result, checkedItems?, damaged?, note? }` |
+| `incoming_control` | `{ supplier, productName, quantity, unit, temperature, packageOk: boolean, docsOk: boolean, result: "pass"\|"reject", note? }` |
+| `med_books` | `{ medBookNumber, lastExam, nextExam, vaccinations: [{ name, status: "done"\|"refusal"\|"exemption", date }] }` |
+| `pest_control` | `{ area, treatmentType, agent, result, performer }` |
+| `sanitary_day_control` | `{ zoneResults: { "<zoneId>": { "<itemId>": boolean } } }` |
+| `uv_lamp_runtime` | `{ startTime: "HH:MM", endTime: "HH:MM", totalMinutes?, note? }` |
+
+### Config-writer journals (20 codes)
+
+These merge into `JournalDocument.config` instead of creating a per-day cell.
+Send `{rows: [{...}]}` matching the journal's row shape — unknown keys are dropped.
+
+| Code | Expected `rows` item shape |
+|---|---|
+| `accident_journal` | `{ id, accidentDate, accidentHour, accidentMinute, locationName, accidentDescription, affectedProducts, resolvedDate, resolvedHour, resolvedMinute, responsiblePeople, correctiveActions }` |
+| `audit_plan` | `{ id, name, mandatory: boolean, scheduledDate, responsibleName }` |
+| `audit_protocol` | `{ id, section, requirement, status: "Да"\|"Нет", note? }` |
+| `audit_report` | `{ id, nonconformity, immediateCorrection, preventiveAction, responsible, planDate, factDate? }` |
+| `breakdown_history` | `{ id, startDate, equipmentName, breakdownDescription, repairDescription, replacedParts, endDate, downtimeHours, responsibleName }` |
+| `complaint_register` | `{ id, receivedAt, complainantName, channel, contact, complaintText, resolvedAt, resolution }` |
+| `disinfectant_usage` | `{ subdivisions: [{name, area, treatmentType, timesPerMonth, productName, concentration, consumptionPerTreatment}], receipts: [{receivedAt, productName, quantity, shelfLife, responsibleEmployee}], consumptions: [{periodFrom, periodTo, productName, received, used, balance, responsibleEmployee}] }` |
+| `equipment_calibration` | `{ year, rows: [{id, equipmentDescription, purpose, range, interval, lastDate, nextDate, note?}] }` |
+| `equipment_maintenance` | `{ year, rows: [{id, equipmentName, workType, planDates:{jan…dec}, factDates:{jan…dec}}] }` |
+| `finished_product` | `{ rows: [{id, preparationDateTime, brakerageTime, productName, organolepticScore, productTempC, correctiveActions, permissionTime, courierHandoffTime, responsibleEmployee, brakerageEmployeeName}] }` |
+| `glass_items_list` | `{ rows: [{id, areaName, itemName, count}] }` |
+| `intensive_cooling` | `{ rows: [{id, preparationDateTime, productName, tempAtStart, tempAfterOneHour, correctiveActions, note?, responsiblePosition, responsibleName}] }` |
+| `metal_impurity` | `{ rows: [{id, date, supplier, material, quantityKg, impurityGrams, perTon, characteristics, responsibleName, responsibleRole}] }` |
+| `perishable_rejection` | `{ rows: [{id, receivedAt, productName, productionDate, maker, packaging, documents, organolepticScore, storageConditions, realizationDeadline, responsibleName, note?}] }` |
+| `ppe_issuance` | `{ rows: [{id, issueDate, masksCount, glovesCount, shoesCount, recipientTitle, recipientName, giverName?}] }` |
+| `product_writeoff` | `{ actNumber, actDate, commissionMembers: [{employeeName, role}], rows: [{id, productName, batchCode, batchDate, quantity, unit, reason, action}] }` |
+| `staff_training` | `{ rows: [{id, date, employeeName, employeePosition, topic: "safety"\|"duties"\|"kkt"\|"sanitation"\|"fire", trainingType: "primary"\|"repeated"\|"unscheduled", unscheduledReason?, instructorName, attestationResult: "passed"\|"failed"}] }` |
+| `traceability_test` | `{ rows: [{id, date, sourceItemName, batchCode, batchDate, quantityIn, outputItemName, outputBatchCode, responsibleEmployee, responsibleRole, result}] }` |
+| `training_plan` | `{ year, rows: [{id, position, trainings:{kkt?, sanitation?, duties?, safety?, fire?}}] }` |
+
+Row shape authorities live in `src/lib/<code>-document.ts` — use those
+`normalizeXxxConfig` functions as the source of truth.
