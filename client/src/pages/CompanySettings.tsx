@@ -284,6 +284,23 @@ export default function CompanySettings() {
                 )}
               </Button>
             </div>
+
+            <div className="bg-card rounded-lg border p-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">API ключи</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Для интеграций со сторонними сервисами
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/admin/api-keys")}
+                >
+                  Управлять
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
