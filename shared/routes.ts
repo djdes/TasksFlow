@@ -173,6 +173,11 @@ export const api = {
       },
     },
   },
+  apiKeys: {
+    list: { method: 'GET' as const, path: '/api/api-keys' },
+    create: { method: 'POST' as const, path: '/api/api-keys' },
+    revoke: (id: number) => ({ method: 'DELETE' as const, path: `/api/api-keys/${id}` }),
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
