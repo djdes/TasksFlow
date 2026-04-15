@@ -581,13 +581,13 @@ export function TrainingPlanDocumentClient({
         {!readOnly && (
           <div className="grid gap-4 md:grid-cols-2">
             <Button
-              className="h-14 w-full rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
+              className="h-11 w-full rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               onClick={() => setAddPositionOpen(true)}
             >
               <Plus className="size-5" /> Добавить должность
             </Button>
             <Button
-              className="h-14 w-full rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]"
+              className="h-11 w-full rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               onClick={() => setAddTopicOpen(true)}
             >
               <Plus className="size-5" /> Добавить тему обучения
