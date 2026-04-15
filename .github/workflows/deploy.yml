@@ -26,16 +26,11 @@ jobs:
             npm install
             # ВАЖНО: db:push убран из автодеплоя - он может удалять данные!
             # Миграции БД выполнять ВРУЧНУЮ: npm run add-companies, npm run update-tasks
-            # Идемпотентные миграции (CREATE IF NOT EXISTS) — безопасно гонять каждый деплой:
-            npm run create-api-keys-table || echo "create-api-keys-table failed (non-fatal)"
+            # Идемпотентная миграция api_keys (CREATE IF NOT EXISTS) — безопасна:
+            npm run create-api-keys-table || echo "api_keys migration failed (non-fatal)"
             npm run build
-            ls -la dist/index.cjs
+            ls -la dist/
             grep -c "api-keys" dist/index.cjs || echo "api-keys not found in build"
-            # Полный рестарт — delete+start вместо restart,
-            # т.к. restart может закешировать старый код в RAM:
-            pm2 delete tasksflow 2>/dev/null || true
-            NODE_ENV=production pm2 start dist/index.cjs --name tasksflow --cwd "${{ secrets.DEPLOY_PATH }}" --update-env
-            pm2 save
-            sleep 3
+            pm2 restart tasksflow
             pm2 status
             pm2 logs tasksflow --lines 30 --nostream || true
