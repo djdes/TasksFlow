@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -257,7 +258,10 @@ function GlassControlSettingsDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {props.users.map((user) => (
+                {(responsibleTitle
+                  ? getUsersForRoleLabel(props.users, responsibleTitle)
+                  : props.users
+                ).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
                   </SelectItem>
@@ -417,7 +421,10 @@ function RowDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {props.users.map((user) => (
+                {(props.responsibleTitle
+                  ? getUsersForRoleLabel(props.users, props.responsibleTitle)
+                  : props.users
+                ).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
                   </SelectItem>
