@@ -174,7 +174,7 @@ export function FinishedProductDocumentClient({
             documentId={documentId}
             title={title}
             variant="outline"
-            className="h-14 rounded-2xl border-[#e9ecf5] px-5 text-[18px]"
+            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
           >
             Закончить журнал
           </DocumentCloseButton>
