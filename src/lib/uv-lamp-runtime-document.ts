@@ -135,6 +135,27 @@ export function getUvResponsibleOptions(users: { id: string; name: string; role:
   return { management, staff };
 }
 
+/**
+ * Distinct management titles for the "Должность ответственного" Select.
+ * Radix Select concatenates trigger-text when multiple <SelectItem>s share
+ * the same `value`, so iterating users here is wrong. Return one title per
+ * unique role label.
+ */
+export function getUvResponsibleTitleOptions(
+  users: { id: string; name: string; role: string }[]
+): { management: string[]; staff: string[] } {
+  const management = new Set<string>();
+  const staff = new Set<string>();
+  for (const user of users) {
+    if (user.role === "owner") management.add("Руководитель");
+    else if (user.role === "technologist" || user.role === "manager") management.add("Управляющий");
+    else if (user.role === "head_chef") staff.add("Шеф-повар");
+    else if (user.role === "cook") staff.add("Повар");
+    else if (user.role === "waiter") staff.add("Официант");
+  }
+  return { management: [...management], staff: [...staff] };
+}
+
 export function calculateDurationMinutes(startTime: string, endTime: string): number | null {
   if (!startTime || !endTime) return null;
   const [sh, sm] = startTime.split(":").map(Number);

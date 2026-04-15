@@ -35,7 +35,7 @@ import {
   getDisinfectionConditionLabel,
   getDisinfectionObjectLabel,
   getRadiationModeLabel,
-  getUvResponsibleOptions,
+  getUvResponsibleTitleOptions,
   normalizeUvRuntimeDocumentConfig,
   normalizeUvRuntimeEntryData,
   toIsoDate,
@@ -354,7 +354,7 @@ function UvRuntimeSettingsDialog(props: {
   const [responsibleTitle, setResponsibleTitle] = useState(props.initialResponsibleTitle);
   const [responsibleUserId, setResponsibleUserId] = useState(props.initialResponsibleUserId);
 
-  const options = useMemo(() => getUvResponsibleOptions(props.users), [props.users]);
+  const options = useMemo(() => getUvResponsibleTitleOptions(props.users), [props.users]);
 
   useEffect(() => {
     if (!props.open) return;
@@ -430,9 +430,9 @@ function UvRuntimeSettingsDialog(props: {
                 {options.management.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[14px] font-semibold italic text-black">Руководство</SelectLabel>
-                    {options.management.map((user) => (
-                      <SelectItem key={`title:${user.id}`} value={user.role === "technologist" ? "Управляющий" : "Руководитель"}>
-                        {user.role === "technologist" ? "Управляющий" : "Руководитель"}
+                    {options.management.map((title) => (
+                      <SelectItem key={`mgmt:${title}`} value={title}>
+                        {title}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -440,9 +440,11 @@ function UvRuntimeSettingsDialog(props: {
                 {options.staff.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[14px] font-semibold italic text-black">Сотрудники</SelectLabel>
-                    <SelectItem value="Шеф-повар">Шеф-повар</SelectItem>
-                    <SelectItem value="Повар">Повар</SelectItem>
-                    <SelectItem value="Официант">Официант</SelectItem>
+                    {options.staff.map((title) => (
+                      <SelectItem key={`staff:${title}`} value={title}>
+                        {title}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 )}
               </SelectContent>
@@ -521,7 +523,7 @@ function AddRowDialog(props: {
   const [responsibleTitle, setResponsibleTitle] = useState(props.defaultResponsibleTitle);
   const [employeeId, setEmployeeId] = useState(props.defaultEmployeeId);
 
-  const options = useMemo(() => getUvResponsibleOptions(props.users), [props.users]);
+  const options = useMemo(() => getUvResponsibleTitleOptions(props.users), [props.users]);
 
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
   const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
@@ -633,9 +635,19 @@ function AddRowDialog(props: {
                 {options.management.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[14px] font-semibold italic text-black">Руководство</SelectLabel>
-                    {options.management.map((user) => (
-                      <SelectItem key={`title:${user.id}`} value={user.role === "technologist" ? "Управляющий" : "Руководитель"}>
-                        {user.role === "technologist" ? "Управляющий" : "Руководитель"}
+                    {options.management.map((title) => (
+                      <SelectItem key={`mgmt:${title}`} value={title}>
+                        {title}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {options.staff.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-[14px] font-semibold italic text-black">Сотрудники</SelectLabel>
+                    {options.staff.map((title) => (
+                      <SelectItem key={`staff:${title}`} value={title}>
+                        {title}
                       </SelectItem>
                     ))}
                   </SelectGroup>

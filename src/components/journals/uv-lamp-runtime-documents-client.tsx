@@ -32,7 +32,7 @@ import {
 import {
   buildUvRuntimeDocumentTitle,
   formatRuDateDash,
-  getUvResponsibleOptions,
+  getUvResponsibleTitleOptions,
   normalizeUvRuntimeDocumentConfig,
   type UvRuntimeDocumentConfig,
 } from "@/lib/uv-lamp-runtime-document";
@@ -80,7 +80,7 @@ function UvRuntimeSettingsDialog(props: {
   const [responsibleTitle, setResponsibleTitle] = useState("");
   const [responsibleUserId, setResponsibleUserId] = useState("");
 
-  const options = useMemo(() => getUvResponsibleOptions(props.users), [props.users]);
+  const options = useMemo(() => getUvResponsibleTitleOptions(props.users), [props.users]);
 
   useEffect(() => {
     if (!props.editing) return;
@@ -194,12 +194,9 @@ function UvRuntimeSettingsDialog(props: {
                 {options.management.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[14px] font-semibold italic text-black">Руководство</SelectLabel>
-                    {options.management.map((user) => (
-                      <SelectItem
-                        key={`title:${user.id}`}
-                        value={user.role === "technologist" ? "Управляющий" : "Руководитель"}
-                      >
-                        {user.role === "technologist" ? "Управляющий" : "Руководитель"}
+                    {options.management.map((title) => (
+                      <SelectItem key={`mgmt:${title}`} value={title}>
+                        {title}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -207,9 +204,11 @@ function UvRuntimeSettingsDialog(props: {
                 {options.staff.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[14px] font-semibold italic text-black">Сотрудники</SelectLabel>
-                    <SelectItem value="Шеф-повар">Шеф-повар</SelectItem>
-                    <SelectItem value="Повар">Повар</SelectItem>
-                    <SelectItem value="Официант">Официант</SelectItem>
+                    {options.staff.map((title) => (
+                      <SelectItem key={`staff:${title}`} value={title}>
+                        {title}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 )}
               </SelectContent>
