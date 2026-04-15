@@ -19,11 +19,23 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            set -e
             export PATH="$HOME/.nvm/versions/node/v24.12.0/bin:$PATH"
             DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
-            cd "$DEPLOY_PATH"
+            # Диагностика что реально в secret (без раскрытия содержимого):
+            echo "DEPLOY_PATH length: ${#DEPLOY_PATH}"
+            echo "DEPLOY_PATH hex dump (первые/последние байты):"
+            echo -n "$DEPLOY_PATH" | head -c 10 | od -c | head -1
+            echo -n "$DEPLOY_PATH" | tail -c 10 | od -c | head -1
+            # Пробуем fallback-пути если DEPLOY_PATH с ошибкой:
+            for p in "$DEPLOY_PATH" /var/www/tasksflow/data/www/tasksflow.ru; do
+              if [ -d "$p" ] && [ -f "$p/package.json" ]; then
+                echo "Using working dir: $p"
+                cd "$p"
+                break
+              fi
+            done
             pwd
+            [ -f package.json ] || { echo "FATAL: package.json не найден в $(pwd)"; exit 1; }
             git pull origin main
             git log --oneline -1
             npm install
