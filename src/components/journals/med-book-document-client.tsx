@@ -359,29 +359,29 @@ export function MedBookDocumentClient({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
-            variant="ghost"
-            className="h-16 rounded-2xl border border-[#edf0ff] bg-[#fafbff] px-7 text-[18px] text-[#5863f8]"
+            variant="outline"
+            className="h-11 rounded-2xl border-[#eef0fb] bg-[#fafbff] px-4 text-[15px] text-[#5863f8] shadow-none hover:bg-[#f8f9ff]"
             onClick={() => setSettingsOpen(true)}
           >
-            <Settings2 className="size-5" />
+            <Settings2 className="size-4" />
             Настройки журнала
           </Button>
           {isClosed ? (
             <Button
               type="button"
-              className="h-16 rounded-2xl bg-[#5863f8] px-7 text-[18px] text-white"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] text-white"
               onClick={() => patchStatus("active")}
             >
-              <RotateCcw className="size-5" />
+              <RotateCcw className="size-4" />
               Вернуть в активные
             </Button>
           ) : (
             <Button
               type="button"
-              className="h-16 rounded-2xl bg-[#5863f8] px-7 text-[18px] text-white"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] text-white"
               onClick={() => patchStatus("closed")}
             >
-              <Archive className="size-5" />
+              <Archive className="size-4" />
               Закрыть журнал
             </Button>
           )}
@@ -392,7 +392,7 @@ export function MedBookDocumentClient({
         <div className="flex flex-wrap gap-3">
           <Button
             type="button"
-            className="h-16 rounded-2xl bg-[#5863f8] px-8 text-[18px] text-white"
+            className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] text-white"
             onClick={() => {
               setDraft(emptyDraft());
               setAddOpen(true);
@@ -403,7 +403,7 @@ export function MedBookDocumentClient({
           </Button>
           <Button
             type="button"
-            className="h-16 rounded-2xl bg-[#5863f8] px-8 text-[18px] text-white"
+            className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] text-white"
             onClick={() => {
               const name = window.prompt("Введите название исследования");
               if (name?.trim() && !examColumns.includes(name.trim()))
