@@ -209,7 +209,7 @@ export function FinishedProductDocumentClient({
               <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px]" onSelect={() => { const text = window.prompt("Вставьте названия изделий, каждое с новой строки:"); if (!text) return; const items = text.split("\n").map((item) => item.trim()).filter(Boolean); setConfig((prev) => ({ ...prev, rows: [...prev.rows, ...items.map((item) => createDraft(users, item))] })); }}>Добавить из файла</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button type="button" variant="outline" className="h-14 rounded-2xl border-0 bg-[#f5f6ff] px-6 text-[18px] text-[#5464ff] hover:bg-[#eceeff]" onClick={() => setCatalogOpen(true)}>Редактировать список изделий</Button>
+          <Button type="button" variant="outline" className="h-11 rounded-2xl border-0 bg-[#f5f6ff] px-4 text-[15px] text-[#5464ff] hover:bg-[#eceeff]" onClick={() => setCatalogOpen(true)}>Редактировать список изделий</Button>
           <Button type="button" variant="outline" onClick={removeSelectedRows} disabled={selectedRows.length === 0}><Trash2 className="size-4" />Удалить выбранные</Button>
           <Button type="button" onClick={() => saveConfig()} disabled={isSaving || isPending}><Save className="size-4" />{isSaving ? "Сохранение..." : "Сохранить"}</Button>
         </div>}
