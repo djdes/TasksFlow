@@ -127,7 +127,7 @@ export function getDefaultMetalImpurityConfig(params?: {
   const materialNames =
     params?.materials?.filter(Boolean) || ["Мука", "Мука пшеничная в/с"];
   const supplierNames =
-    params?.suppliers?.filter(Boolean) || ['РРџ "Р РѕРјР°С€РєР°"', 'РћРћРћ "РђРіСЂРѕ-Р®Рі"'];
+    params?.suppliers?.filter(Boolean) || ['ИП "Ромашка"', 'ООО "Агро-Юг"'];
   const materials = materialNames.map((name, index) => ({
     id: `mat-${index + 1}`,
     name,

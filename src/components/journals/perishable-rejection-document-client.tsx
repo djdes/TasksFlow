@@ -340,7 +340,7 @@ export function PerishableRejectionDocumentClient({
             title={title}
             variant="outline"
           >
-            Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            Закончить журнал
           </DocumentCloseButton>
         </div>
       ) : null}

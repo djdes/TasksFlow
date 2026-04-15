@@ -731,7 +731,7 @@ export function ColdEquipmentDocumentClient({
                 variant="outline"
                 className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
               >
-                Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+                Закончить журнал
               </DocumentCloseButton>
               </>
             ) : null}

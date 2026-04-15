@@ -262,7 +262,7 @@ export function ProductWriteoffDocumentClient({
               variant="outline"
               className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[18px] text-[#5464ff]"
             >
-              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+              Закончить журнал
             </DocumentCloseButton>
           </div>
         ) : null}

@@ -176,7 +176,7 @@ export function FinishedProductDocumentClient({
             variant="outline"
             className="h-14 rounded-2xl border-[#e9ecf5] px-5 text-[18px]"
           >
-            Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+            Закончить журнал
           </DocumentCloseButton>
         </div>
       ) : null}

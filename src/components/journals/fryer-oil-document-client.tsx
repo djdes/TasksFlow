@@ -277,7 +277,7 @@ export function FryerOilDocumentClient(props: Props) {
               variant="outline"
               className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]"
             >
-              Р—Р°РєРѕРЅС‡РёС‚СЊ Р¶СѓСЂРЅР°Р»
+              Закончить журнал
             </DocumentCloseButton>
           </div>
         ) : null}
