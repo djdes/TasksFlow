@@ -1180,7 +1180,7 @@ export function ClimateDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки документа
@@ -1189,7 +1189,7 @@ export function ClimateDocumentClient({
                 documentId={documentId}
                 title={documentTitle}
                 variant="outline"
-                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               />
               </>
             )}
