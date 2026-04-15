@@ -138,3 +138,20 @@ export type Task = Omit<typeof tasks.$inferSelect, 'weekDays' | 'photoUrls'> & {
   photoUrls: string[];
 };
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+// API Keys — для server-to-server интеграций (managermagday и других).
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 100 }).notNull(),
+  keyHash: varchar("key_hash", { length: 64 }).notNull().unique(),
+  keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  companyId: int("company_id").notNull(),
+  createdByUserId: int("created_by_user_id").notNull(),
+  createdAt: int("created_at").notNull().default(0),
+  lastUsedAt: int("last_used_at").default(0),
+  revokedAt: int("revoked_at").default(0),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+
