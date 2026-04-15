@@ -538,24 +538,15 @@ export function AccidentDocumentClient(props: Props) {
           <h1 className="text-[56px] font-semibold tracking-[-0.04em]">
             {title || ACCIDENT_DOCUMENT_HEADING}
           </h1>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex size-11 items-center justify-center rounded-2xl text-[#5563ff] hover:bg-[#f5f6ff]"
-              onClick={() => window.open(`/api/journal-documents/${props.documentId}/pdf`, "_blank")}
-            >
-              <Printer className="size-6" />
-            </button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 rounded-2xl border-[#edf0fb] bg-[#fafbff] px-6 text-lg text-[#5b66ff]"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings2 className="size-5" />
-              Настройки журнала
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings2 className="size-4" />
+            Настройки журнала
+          </Button>
         </div>
 
         <div className="overflow-x-auto">

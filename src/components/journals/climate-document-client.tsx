@@ -1174,15 +1174,6 @@ export function ClimateDocumentClient({
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
-              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
-            >
-              <Printer className="size-6" />
-              Печать
-            </Button>
             {status === "active" && (
               <>
               <Button

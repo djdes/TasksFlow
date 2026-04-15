@@ -520,14 +520,6 @@ export function TrainingPlanDocumentClient({
               Закончить журнал
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 rounded-xl border-[#e8ebf7] px-4 text-[#5b66ff] hover:bg-[#f6f7ff]"
-            onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank", "noopener,noreferrer")}
-          >
-            <Printer className="size-5" />
-          </Button>
           {!readOnly && (
             <Button
               variant="outline"

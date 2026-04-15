@@ -310,17 +310,6 @@ export function EquipmentCleaningDocumentClient({
       ) : null}
 
       <DocumentBackLink href={`/journals/${journalRouteCode}`} documentId={documentId} />
-      <div className="flex items-center justify-between gap-4 text-[18px] text-[#555a6e]">
-        <div />
-        <button
-          type="button"
-          className="rounded-2xl border border-[#e9ecf6] px-4 py-3 text-[#5b66ff]"
-          onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
-        >
-          <Printer className="size-5" />
-        </button>
-      </div>
-
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">
           {title}

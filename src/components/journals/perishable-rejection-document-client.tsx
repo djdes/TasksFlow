@@ -331,13 +331,6 @@ export function PerishableRejectionDocumentClient({
             {title}
           </h1>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
-        >
-          Печать журнала
-        </Button>
       </div>
 
       {!readOnly ? (

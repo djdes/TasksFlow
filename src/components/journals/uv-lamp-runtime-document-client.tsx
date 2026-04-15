@@ -1283,15 +1283,6 @@ export function UvLampRuntimeDocumentClient(props: Props) {
             Настройки документа
           </Button>
         )}
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9 rounded-md border-[#eceef5] px-3 text-[13px]"
-          onClick={() => window.open(`/api/journal-documents/${props.documentId}/pdf`, "_blank")}
-        >
-          <Printer className="mr-1 size-4" />
-          Печать
-        </Button>
       </div>
 
       {/* Dialogs */}

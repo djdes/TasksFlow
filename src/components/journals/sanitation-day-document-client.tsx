@@ -655,15 +655,6 @@ export function SanitationDayDocumentClient({
       <div className="flex items-center justify-between gap-4 print:hidden">
         <div />
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="rounded-2xl border border-[#e9ecf6] px-4 py-3 text-[#5b66ff]"
-            onClick={() =>
-              window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")
-            }
-          >
-            <Printer className="size-5" />
-          </button>
           {!readOnly && (
             <Button
               type="button"

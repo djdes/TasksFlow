@@ -616,15 +616,6 @@ export function CleaningVentilationChecklistDocumentClient({
                 Настройки журнала
               </Button>
             ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
-              className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[17px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
-            >
-              <Printer className="mr-2 size-5" />
-              Печать
-            </Button>
           </div>
         </div>
 
