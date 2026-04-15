@@ -267,7 +267,7 @@ export function HygieneDocumentsClient({
     <>
       <div className="space-y-14">
         <div className="flex items-center justify-between">
-          <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
             {getJournalDocumentHeading(templateCode, activeTab === "closed")}
           </h1>
           <div className="flex items-center gap-4">
