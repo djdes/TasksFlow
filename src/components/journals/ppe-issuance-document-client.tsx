@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ChevronDown, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
+import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { DocumentPageHeader } from "@/components/journals/document-page-header";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -324,7 +325,10 @@ function RowDialog(props: {
               }}>
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
-                  {props.users.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                  {(state.recipientTitle
+                    ? getUsersForRoleLabel(props.users, state.recipientTitle)
+                    : props.users
+                  ).map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -345,7 +349,10 @@ function RowDialog(props: {
               }}>
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
-                  {props.users.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                  {(state.issuerTitle
+                    ? getUsersForRoleLabel(props.users, state.issuerTitle)
+                    : props.users
+                  ).map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
