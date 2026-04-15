@@ -195,7 +195,7 @@ export function AuditReportDocumentClient({
 
           {status === "active" && (
             <div className="print:hidden">
-              <Button type="button" onClick={() => { setEditingFinding(null); setFindingOpen(true); }} className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]">
+              <Button type="button" onClick={() => { setEditingFinding(null); setFindingOpen(true); }} className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
                 <Plus className="size-5" />
                 Добавить несоответствие
               </Button>
