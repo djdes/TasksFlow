@@ -1,24 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import crypto from "crypto";
 import { storage } from "./storage";
+import { generateApiKey, hashApiKey, extractBearerKey } from "./api-key-crypto";
 
-/** Генерирует новый API ключ: префикс «tfk_» + 32 случайных байта в base64url. */
-export function generateApiKey(): string {
-	const raw = crypto.randomBytes(32).toString("base64url");
-	return `tfk_${raw}`;
-}
-
-/** SHA-256 hex (64 символа). */
-export function hashApiKey(plaintext: string): string {
-	return crypto.createHash("sha256").update(plaintext).digest("hex");
-}
-
-/** Извлекает plaintext из заголовка Authorization, или null. */
-export function extractBearerKey(req: Request): string | null {
-	const h = (req.headers.authorization || "") as string;
-	const m = /^Bearer\s+(tfk_[A-Za-z0-9_-]+)$/.exec(h);
-	return m ? m[1] : null;
-}
+export { generateApiKey, hashApiKey, extractBearerKey };
 
 export interface ApiKeyContext {
 	id: number;
@@ -55,7 +39,6 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
 		return;
 	}
 	req.apiKey = { id: record.id, companyId: record.companyId, createdByUserId: record.createdByUserId };
-	// fire-and-forget last_used update
 	const now = Math.floor(Date.now() / 1000);
 	storage.updateApiKeyLastUsed(record.id, now).catch(err => {
 		console.error("[api-key] last_used update failed", err);
