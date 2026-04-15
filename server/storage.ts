@@ -7,9 +7,9 @@
  * но возвращаются как массивы (парсинг при чтении, сериализация при записи)
  */
 
-import { workers, tasks, users, companies, type Worker, type InsertWorker, type Task, type InsertTask, type User, type InsertUser, type UpdateUser, type Company, type InsertCompany } from "@shared/schema";
+import { workers, tasks, users, companies, apiKeys, type Worker, type InsertWorker, type Task, type InsertTask, type User, type InsertUser, type UpdateUser, type Company, type InsertCompany, type ApiKey, type InsertApiKey } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 /** Интерфейс хранилища данных */
 export interface IStorage {
@@ -41,6 +41,15 @@ export interface IStorage {
   createTask(task: InsertTask & { companyId?: number }): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<void>;
+
+  // API Keys
+  createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  getApiKeyById(id: number): Promise<ApiKey | undefined>;
+  listApiKeysByCompany(companyId: number): Promise<ApiKey[]>;
+  revokeApiKey(id: number): Promise<void>;
+  updateApiKeyLastUsed(id: number, ts: number): Promise<void>;
+  countActiveApiKeysByCompany(companyId: number): Promise<number>;
 }
 
 /** Реализация хранилища с MySQL через Drizzle ORM */
@@ -379,6 +388,49 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: number): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  // ===================== API KEYS =====================
+
+  async createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey> {
+    const now = Math.floor(Date.now() / 1000);
+    const insert = { ...data, createdAt: now } as InsertApiKey;
+    const [result] = await db.insert(apiKeys).values(insert);
+    const id = (result as any).insertId as number;
+    const row = await this.getApiKeyById(id);
+    if (!row) throw new Error('api_key not found after insert');
+    return row;
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.keyHash, keyHash)).limit(1);
+    return rows[0];
+  }
+
+  async getApiKeyById(id: number): Promise<ApiKey | undefined> {
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id)).limit(1);
+    return rows[0];
+  }
+
+  async listApiKeysByCompany(companyId: number): Promise<ApiKey[]> {
+    return db.select().from(apiKeys)
+      .where(eq(apiKeys.companyId, companyId))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async revokeApiKey(id: number): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await db.update(apiKeys).set({ revokedAt: now }).where(eq(apiKeys.id, id));
+  }
+
+  async updateApiKeyLastUsed(id: number, ts: number): Promise<void> {
+    await db.update(apiKeys).set({ lastUsedAt: ts }).where(eq(apiKeys.id, id));
+  }
+
+  async countActiveApiKeysByCompany(companyId: number): Promise<number> {
+    const rows = await db.select().from(apiKeys)
+      .where(and(eq(apiKeys.companyId, companyId), eq(apiKeys.revokedAt, 0)));
+    return rows.length;
   }
 }
 
