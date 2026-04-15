@@ -333,11 +333,11 @@ export async function registerRoutes(
   });
 
   // Workers
-  app.get(api.workers.list.path, requireAuth, async (req, res) => {
+  app.get(api.workers.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании текущего пользователя
-      const user = await storage.getUserById(req.session.userId!);
-      const workers = await storage.getWorkers(user?.companyId ?? undefined);
+      // Фильтруем по компании (session-user или api key)
+      const companyId = await getCompanyIdFromReq(req);
+      const workers = await storage.getWorkers(companyId ?? undefined);
       res.json(workers);
     } catch (err: any) {
       console.error('Error fetching workers:', err);
@@ -411,11 +411,11 @@ export async function registerRoutes(
   });
 
   // Tasks
-  app.get(api.tasks.list.path, requireAuth, async (req, res) => {
+  app.get(api.tasks.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании текущего пользователя
-      const user = await storage.getUserById(req.session.userId!);
-      const tasks = await storage.getTasks(user?.companyId ?? undefined);
+      // Фильтруем по компании (session-user или api key)
+      const companyId = await getCompanyIdFromReq(req);
+      const tasks = await storage.getTasks(companyId ?? undefined);
       console.log("GET /api/tasks - tasks count:", tasks.length);
       tasks.forEach((task, index) => {
         console.log(`Task ${index + 1}: id=${task.id}, title=${task.title}, photoUrl=${task.photoUrl}, isCompleted=${task.isCompleted}`);
@@ -427,7 +427,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.tasks.get.path, requireAuth, async (req, res) => {
+  app.get(api.tasks.get.path, requireAuthOrApiKey, async (req, res) => {
     try {
       const task = await storage.getTask(Number(req.params.id));
       if (!task) {
@@ -441,16 +441,19 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.tasks.create.path, requireAuth, requireAdmin, async (req, res) => {
+  app.post(api.tasks.create.path, requireAdminOrApiKey, async (req, res) => {
     try {
       console.log("POST /api/tasks - req.body:", req.body);
       const input = api.tasks.create.input.parse(req.body);
       console.log("POST /api/tasks - parsed input:", input);
-      // Добавляем companyId текущего пользователя
-      const user = await storage.getUserById(req.session.userId!);
+      // companyId — из session-user или api key
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
       const task = await storage.createTask({
         ...input,
-        companyId: user?.companyId ?? undefined,
+        companyId,
       });
       console.log("POST /api/tasks - created task:", task);
       res.status(201).json(task);
@@ -466,7 +469,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.tasks.update.path, requireAuth, requireAdmin, async (req, res) => {
+  app.put(api.tasks.update.path, requireAdminOrApiKey, async (req, res) => {
     try {
       const input = api.tasks.update.input.parse(req.body);
       const task = await storage.updateTask(Number(req.params.id), input);
@@ -486,7 +489,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.tasks.delete.path, requireAuth, requireAdmin, async (req, res) => {
+  app.delete(api.tasks.delete.path, requireAdminOrApiKey, async (req, res) => {
     try {
       await storage.deleteTask(Number(req.params.id));
       res.status(204).send();
@@ -733,7 +736,7 @@ export async function registerRoutes(
   });
 
   // Отметить задачу выполненной
-  app.post(api.tasks.complete.path, requireAuth, async (req, res) => {
+  app.post(api.tasks.complete.path, requireAuthOrApiKey, async (req, res) => {
     try {
       const taskId = Number(req.params.id);
       const { comment } = req.body || {};
@@ -742,12 +745,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
-      // Проверка прав: исполнитель или админ
+      // Проверка прав: API key имеет админские права, иначе исполнитель или session-админ.
       let isAllowed = false;
-      if (req.session.userId === task.workerId) {
+      if (req.apiKey) {
         isAllowed = true;
-      } else {
-        const currentUser = await storage.getUserById(req.session.userId!);
+      } else if (req.session.userId === task.workerId) {
+        isAllowed = true;
+      } else if (req.session?.userId) {
+        const currentUser = await storage.getUserById(req.session.userId);
         if (currentUser?.isAdmin) {
           isAllowed = true;
         }
@@ -778,9 +783,9 @@ export async function registerRoutes(
       // Отправляем email на email компании с прикрепленными фото (если есть)
       const worker = task.workerId ? await storage.getUserById(task.workerId) : null;
       const workerName = worker?.name || worker?.phone || "Неизвестный";
-      // Получаем email компании для уведомления
-      const currentUser = await storage.getUserById(req.session.userId!);
-      const company = currentUser?.companyId ? await storage.getCompanyById(currentUser.companyId) : null;
+      // Получаем email компании для уведомления (из api-key или session-юзера).
+      const companyId = await getCompanyIdFromReq(req);
+      const company = companyId ? await storage.getCompanyById(companyId) : null;
       sendTaskCompletedEmail(
         task.title,
         workerName,
@@ -797,7 +802,7 @@ export async function registerRoutes(
   });
 
   // Отменить завершение задачи (любой авторизованный пользователь)
-  app.post("/api/tasks/:id/uncomplete", requireAuth, async (req, res) => {
+  app.post("/api/tasks/:id/uncomplete", requireAuthOrApiKey, async (req, res) => {
     try {
       const taskId = Number(req.params.id);
       const task = await storage.getTask(taskId);
