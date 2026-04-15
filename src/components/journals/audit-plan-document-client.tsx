@@ -711,11 +711,11 @@ export function AuditPlanDocumentClient({
         </div>
 
         {!readOnly && (
-          <div className="flex gap-4 print:hidden">
-            <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => setAddRowOpen(true)}>
+          <div className="flex gap-3 print:hidden">
+            <Button className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={() => setAddRowOpen(true)}>
               <Plus className="size-5" /> Добавить
             </Button>
-            <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => setAddColumnOpen(true)}>
+            <Button className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={() => setAddColumnOpen(true)}>
               <Plus className="size-5" /> Добавить подразделение
             </Button>
           </div>
