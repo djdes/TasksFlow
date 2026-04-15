@@ -255,10 +255,11 @@ export function EquipmentCalibrationDocumentClient({
       <DocumentBackLink href="/journals/equipment_calibration" documentId={documentId} />
 
       {/* screen header */}
-      <div className="flex items-center justify-between print:hidden">
-        <h1 className="text-[48px] font-semibold tracking-[-0.03em]">{title}</h1>
-        <button
+      <div className="flex items-start justify-between gap-4 print:hidden">
+        <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{title}</h1>
+        <Button
           type="button"
+          variant="outline"
           onClick={() => {
             setSettingsTitle(title);
             setSettingsDate(config.documentDate);
@@ -268,10 +269,10 @@ export function EquipmentCalibrationDocumentClient({
             setSettingsApproveEmployee(config.approveEmployee);
             setSettingsOpen(true);
           }}
-          className="text-[14px] text-[#5b66ff] hover:underline"
+          className="h-11 shrink-0 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
         >
           Настройки журнала
-        </button>
+        </Button>
       </div>
 
       {/* Selection bar */}
