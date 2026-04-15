@@ -220,7 +220,10 @@ function SettingsDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {props.users.map((user) => (
+                {(state.defaultIssuerTitle
+                  ? getUsersForRoleLabel(props.users, state.defaultIssuerTitle)
+                  : props.users
+                ).map((user) => (
                   <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                 ))}
               </SelectContent>
