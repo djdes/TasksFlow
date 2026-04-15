@@ -5041,6 +5041,17 @@ export async function generateJournalDocumentPdf(params: {
       })),
     });
   } else if (templateCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
+    // Mirror the UI rule from uv-lamp-runtime-document-client: for an active
+    // document, cap the visible period at today so the PDF doesn't print
+    // empty rows for dates that haven't happened yet.
+    const uvEffectiveTo =
+      document.status === "closed"
+        ? document.dateTo
+        : (() => {
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            return today < document.dateTo ? today : document.dateTo;
+          })();
     const uvVisibleEntries = buildVisibleUvRuntimeEntries(
       document.entries.map((entry) => ({
         employeeId: entry.employeeId,
@@ -5048,14 +5059,14 @@ export async function generateJournalDocumentPdf(params: {
         data: (entry.data as Record<string, unknown>) || {},
       })),
       document.dateFrom,
-      document.dateTo
+      uvEffectiveTo
     );
 
     drawUvRuntimePdf(doc, {
       organizationName,
       title: document.title || getTrackedDocumentTitle(templateCode),
       dateFrom: document.dateFrom,
-      dateTo: document.dateTo,
+      dateTo: uvEffectiveTo,
       config: uvRuntimeConfig,
       entries: uvVisibleEntries,
       users,
