@@ -268,11 +268,11 @@ export function AuditProtocolDocumentClient({
           </div>
 
           {status === "active" && (
-            <div className="flex gap-4 print:hidden">
-              <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => { setEditingRow(null); setRowOpen(true); }}>
+            <div className="flex gap-3 print:hidden">
+              <Button className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={() => { setEditingRow(null); setRowOpen(true); }}>
                 <Plus className="size-5" /> Добавить строку
               </Button>
-              <Button className="h-14 rounded-2xl bg-[#5563ff] px-8 text-[16px] text-white hover:bg-[#4554ff]" onClick={() => setSectionOpen(true)}>
+              <Button className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={() => setSectionOpen(true)}>
                 <Plus className="size-5" /> Добавить новый раздел
               </Button>
             </div>
