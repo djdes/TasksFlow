@@ -825,14 +825,14 @@ export function SanitaryDayChecklistDocumentClient({
         <div className="screen-only mb-10 space-y-8">
           <div className="flex items-start justify-between gap-6">
             <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
-              Чек-лист
+              {title || getSanitaryDayChecklistTitle(routeCode)}
             </h1>
             {isActive && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 shrink-0 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               >
                 Настройки журнала
               </Button>
