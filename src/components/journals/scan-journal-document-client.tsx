@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DocumentBackLink } from "@/components/journals/document-back-link";
 
 type Props = {
   templateCode: string;
@@ -26,6 +27,7 @@ export function ScanJournalDocumentClient({
 
   return (
     <div className="space-y-6">
+      <DocumentBackLink href={`/journals/${templateCode}`} documentId={documentId} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
@@ -35,12 +37,6 @@ export function ScanJournalDocumentClient({
             Страница {currentPage} из {totalPages}
           </div>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/journals/${templateCode}`}>
-            <FileText className="size-4" />
-            Назад к журналу
-          </Link>
-        </Button>
       </div>
 
       <div className="overflow-hidden rounded-[16px] border border-[#dbe0f1] bg-white p-2">
