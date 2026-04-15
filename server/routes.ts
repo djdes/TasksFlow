@@ -828,11 +828,11 @@ export async function registerRoutes(
   });
 
   // Users
-  app.get(api.users.list.path, requireAuth, async (req, res) => {
+  app.get(api.users.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании текущего пользователя
-      const currentUser = await storage.getUserById(req.session.userId!);
-      const users = await storage.getAllUsers(currentUser?.companyId ?? undefined);
+      // Фильтруем по компании (session или API key)
+      const companyId = await getCompanyIdFromReq(req);
+      const users = await storage.getAllUsers(companyId ?? undefined);
       res.json(users);
     } catch (err: any) {
       console.error('Error fetching users:', err);
