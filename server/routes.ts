@@ -8,6 +8,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
+import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 
 // Настройка загрузки файлов
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -63,6 +64,32 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(403).json({ message: "Требуются права администратора" });
   }
   next();
+}
+
+// Аутентификация: либо session admin, либо API key.
+async function requireAdminOrApiKey(req: Request, res: Response, next: NextFunction) {
+  if (extractBearerKey(req)) {
+    return requireApiKey(req, res, next);
+  }
+  return requireAdmin(req, res, next);
+}
+
+// Аутентификация: либо session (любой user), либо API key.
+async function requireAuthOrApiKey(req: Request, res: Response, next: NextFunction) {
+  if (extractBearerKey(req)) {
+    return requireApiKey(req, res, next);
+  }
+  return requireAuth(req, res, next);
+}
+
+/** Хелпер: получить companyId из req либо от API key, либо от session. */
+async function getCompanyIdFromReq(req: Request): Promise<number | null> {
+  if (req.apiKey) return req.apiKey.companyId;
+  if (req.session?.userId) {
+    const user = await storage.getUserById(req.session.userId);
+    return user?.companyId ?? null;
+  }
+  return null;
 }
 
 export async function registerRoutes(
