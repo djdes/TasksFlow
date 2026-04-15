@@ -269,14 +269,13 @@ export async function registerRoutes(
   });
 
   // Получить компанию текущего пользователя
-  app.get("/api/companies/me", requireAuth, async (req, res) => {
+  app.get("/api/companies/me", requireAuthOrApiKey, async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session.userId!);
-      if (!user || !user.companyId) {
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
         return res.json(null);
       }
-
-      const company = await storage.getCompanyById(user.companyId);
+      const company = await storage.getCompanyById(companyId);
       res.json(company || null);
     } catch (err: any) {
       console.error('Error fetching company:', err);
