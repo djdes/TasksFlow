@@ -34,6 +34,8 @@ jobs:
             # Полный рестарт — delete+start вместо restart,
             # т.к. restart может закешировать старый код в RAM:
             pm2 delete tasksflow 2>/dev/null || true
-            pm2 start dist/index.cjs --name tasksflow
+            NODE_ENV=production pm2 start dist/index.cjs --name tasksflow --cwd "${{ secrets.DEPLOY_PATH }}" --update-env
             pm2 save
+            sleep 3
             pm2 status
+            pm2 logs tasksflow --lines 30 --nostream || true
