@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Wrench, Users, Bell, Package, CreditCard, ScrollText, BookOpen } from "lucide-react";
+import { Building2, Wrench, Users, Bell, Package, CreditCard, ScrollText, BookOpen, KeyRound } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import {
   Card,
@@ -56,6 +56,12 @@ const settingsCards = [
     description: "Нормативы температуры, сроков, гигиены",
     href: "/sanpin",
     icon: BookOpen,
+  },
+  {
+    title: "API интеграций",
+    description: "Ключ для внешнего приложения и сенсоров",
+    href: "/settings/api",
+    icon: KeyRound,
   },
 ];
 
