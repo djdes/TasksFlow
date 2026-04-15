@@ -594,7 +594,7 @@ export function PestControlDocumentClient(props: Props) {
         {!readOnly ? (
           <Button
             type="button"
-            className="h-14 rounded-2xl bg-[#5863f8] px-8 text-[16px] text-white hover:bg-[#4b57f3]"
+            className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] text-white hover:bg-[#4b57f3]"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-5" />
@@ -606,7 +606,7 @@ export function PestControlDocumentClient(props: Props) {
           <Button
             type="button"
             variant="outline"
-            className="h-14 rounded-2xl border-[#eef0fb] px-8 text-[16px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
             onClick={() => setCloseOpen(true)}
           >
             Закончить журнал
