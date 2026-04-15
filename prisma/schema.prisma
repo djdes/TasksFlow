@@ -321,6 +321,20 @@ model JournalDocumentEntry {
   @@index([documentId, date])
 }
 
+// Stores responses keyed by Idempotency-Key header so retried POSTs to
+// /api/external/entries return the same result without double-writing.
+// TTL is enforced by a nightly job; do not rely on this table forever.
+model JournalExternalIdempotency {
+  key            String   @id
+  organizationId String?
+  journalCode    String?
+  httpStatus     Int
+  response       Json
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // Audit log for every request hitting the external integration API.
 // Keeps raw payload + outcome so we can debug upstream apps (employee app, sensor feed)
 // without touching production logs.

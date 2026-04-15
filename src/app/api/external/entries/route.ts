@@ -118,6 +118,29 @@ export async function POST(request: Request) {
   const auth = await authenticateExternalRequest(request);
   if (!auth.ok) return auth.response;
 
+  // Idempotency-Key support: if the caller repeats a request with the same
+  // key, we replay the cached response instead of re-running the dispatcher.
+  // Matches the semantics Stripe/GitHub document — key scope is one token.
+  const idempotencyKey = request.headers
+    .get("idempotency-key")
+    ?.trim()
+    .slice(0, 120);
+  if (idempotencyKey) {
+    try {
+      const cached = await db.journalExternalIdempotency.findUnique({
+        where: { key: `${tokenHint(auth.token)}:${idempotencyKey}` },
+      });
+      if (cached) {
+        return NextResponse.json(cached.response as Record<string, unknown>, {
+          status: cached.httpStatus,
+          headers: { "idempotent-replayed": "true" },
+        });
+      }
+    } catch (error) {
+      console.error("[external] idempotency lookup failed", error);
+    }
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -212,13 +235,33 @@ export async function POST(request: Request) {
     payload,
   });
 
-  return NextResponse.json({
-    ok: true,
+  const successBody = {
+    ok: true as const,
     documentId: result.documentId,
     entriesWritten: result.entriesWritten,
     createdDocument: result.createdDocument,
     templateCode: result.templateCode,
-  });
+  };
+
+  if (idempotencyKey) {
+    try {
+      await db.journalExternalIdempotency.create({
+        data: {
+          key: `${tokenHint(auth.token)}:${idempotencyKey}`,
+          organizationId,
+          journalCode: payload.journalCode,
+          httpStatus: 200,
+          response: successBody,
+        },
+      });
+    } catch (error) {
+      // Duplicate key == concurrent request already stored the same response,
+      // which is fine for idempotency semantics.
+      console.warn("[external] idempotency store failed", error);
+    }
+  }
+
+  return NextResponse.json(successBody);
 }
 
 export async function GET() {
