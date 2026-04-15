@@ -26,6 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentBackLink } from "@/components/journals/document-back-link";
 import { PestControlDocumentClient } from "@/components/journals/pest-control-document-client";
 import {
   isPestControlDocumentFields,
@@ -100,9 +101,9 @@ function sortedEntries(entries: EntryItem[]) {
 }
 
 function TrackedDocumentClientImpl({
+  templateCode,
   documentId,
   title,
-  organizationName,
   dateFrom,
   dateTo,
   responsibleTitle,
@@ -324,11 +325,11 @@ function TrackedDocumentClientImpl({
         </div>
       ) : null}
 
+      <DocumentBackLink href={`/journals/${templateCode}`} documentId={documentId} />
       <div className="rounded-[32px] border border-[#eceef5] bg-white px-8 py-7 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <div className="text-[16px] text-[#84849a]">{organizationName}</div>
-            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.03em] text-black">
+            <h1 className="text-[48px] font-semibold tracking-[-0.03em] text-black">
               {title}
             </h1>
             <div className="mt-2 text-[16px] text-[#84849a]">
