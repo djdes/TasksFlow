@@ -226,7 +226,7 @@ export function GlassListDocumentClient({
             <div className="flex items-center gap-4">
               <Button
                 type="button"
-                className="h-16 rounded-[18px] bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
                 onClick={() =>
                   setRowDialog({
                     open: true,
@@ -235,7 +235,7 @@ export function GlassListDocumentClient({
                   })
                 }
               >
-                <Plus className="size-6" />
+                <Plus className="size-5" />
                 Добавить
               </Button>
             </div>
