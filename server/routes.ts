@@ -961,5 +961,91 @@ export async function registerRoutes(
     }
   });
 
+  // ===================== API KEYS =====================
+
+  app.get("/api/api-keys", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
+      const rows = await storage.listApiKeysByCompany(companyId);
+      const sanitized = rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        keyPrefix: r.keyPrefix,
+        createdAt: r.createdAt,
+        lastUsedAt: r.lastUsedAt ?? 0,
+        revokedAt: r.revokedAt ?? 0,
+      }));
+      res.json(sanitized);
+    } catch (err) {
+      console.error("[api-keys] list failed", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
+  app.post("/api/api-keys", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({ name: z.string().trim().min(1).max(100) });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Название обязательно (1-100 символов)" });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId || !req.session?.userId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
+      const activeCount = await storage.countActiveApiKeysByCompany(companyId);
+      if (activeCount >= 50) {
+        return res.status(400).json({ message: "Достигнут лимит активных ключей (50)" });
+      }
+      const plaintext = generateApiKey();
+      const keyHash = hashApiKey(plaintext);
+      const keyPrefix = plaintext.slice(0, 12);
+      const created = await storage.createApiKey({
+        name: parsed.data.name,
+        keyHash,
+        keyPrefix,
+        companyId,
+        createdByUserId: req.session.userId,
+      });
+      console.log(`[api-key] created id=${created.id} name="${created.name}" by_user=${req.session.userId} company=${companyId}`);
+      res.json({
+        id: created.id,
+        name: created.name,
+        keyPrefix: created.keyPrefix,
+        createdAt: created.createdAt,
+        secret: plaintext,
+      });
+    } catch (err) {
+      console.error("[api-keys] create failed", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
+  app.delete("/api/api-keys/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return res.status(400).json({ message: "Неверный id" });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      const record = await storage.getApiKeyById(id);
+      if (!record || record.companyId !== companyId) {
+        return res.status(404).json({ message: "Ключ не найден" });
+      }
+      if (record.revokedAt && record.revokedAt > 0) {
+        return res.json({ ok: true, already: true });
+      }
+      await storage.revokeApiKey(id);
+      console.log(`[api-key] revoked id=${id} by_user=${req.session?.userId} company=${companyId}`);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[api-keys] revoke failed", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
   return httpServer;
 }
