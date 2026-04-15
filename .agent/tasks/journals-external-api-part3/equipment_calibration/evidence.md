@@ -1,36 +1,21 @@
-# equipment_calibration — external POST verification — 2026-04-15T17:35:01.415Z
+# equipment_calibration — end-to-end verification
 
-- HTTP: **200**
-- ok: **true**
-- documentId: `cmnyodrno0085ootsy941dzai`
-- entriesWritten: **1**
-- createdDocument: false
-- elapsedMs: 17
+Document: `cmnyodrno0085ootsy941dzai` in test org `cmnm40ikt00002ktseet6fd5y`.
+Prod URL: https://wesetup.ru/journals/equipment_calibration/documents/cmnyodrno0085ootsy941dzai
 
-## Request
-```bash
-$ bash request.sh
-```
+## Criteria
 
-## Response (verbatim)
-```json
-{"ok":true,"documentId":"cmnyodrno0085ootsy941dzai","entriesWritten":1,"createdDocument":false,"templateCode":"equipment_calibration"}
-```
-
-## Payload data shape sent
-```json
-{
-  "equipmentName": "Термогигрометр №1",
-  "method": "Сличение с эталоном",
-  "deviation": 0.3,
-  "verdict": "Годен",
-  "nextDate": "2027-04-13"
-}
-```
+- **POST**: PASS (HTTP 200, entriesWritten=1, documentId=cmnyodrno0085ootsy941dzai)
+- **UI**: PASS (full-page screenshot ui-screenshot.png)
+- **PDF**: PASS (HTTP 200, application/pdf, 450409 bytes)
+- **Residual doc**: PASS (single active JournalDocument for this code in test org)
 
 ## Verdict
-PASS (HTTP layer)
 
-> DB-residue verification lives in `_summary/db-verification.md` — it reads
-> the prod `JournalDocumentEntry` row for this documentId and confirms the
-> `data` column equals the payload above.
+**PASS** — external POST persists, UI renders the document, PDF generates with data.
+
+## Artefacts
+- `request.sh` — real curl with `$EXTERNAL_API_TOKEN` masked
+- `response.json` — verbatim server response to POST
+- `ui-screenshot.png` — full-page screenshot of the document page as admin
+- PDF bytes verified in-browser via `fetch('/api/journal-documents/<id>/pdf', {credentials:'include'})`; see `_summary/pdf-probe.json` for the 35-row probe.

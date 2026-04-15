@@ -1,33 +1,21 @@
-# hygiene — external POST verification — 2026-04-15T17:35:01.750Z
+# hygiene — end-to-end verification
 
-- HTTP: **200**
-- ok: **true**
-- documentId: `cmnyodrin000bootsej9rzpjo`
-- entriesWritten: **1**
-- createdDocument: false
-- elapsedMs: 22
+Document: `cmnyodrin000bootsej9rzpjo` in test org `cmnm40ikt00002ktseet6fd5y`.
+Prod URL: https://wesetup.ru/journals/hygiene/documents/cmnyodrin000bootsej9rzpjo
 
-## Request
-```bash
-$ bash request.sh
-```
+## Criteria
 
-## Response (verbatim)
-```json
-{"ok":true,"documentId":"cmnyodrin000bootsej9rzpjo","entriesWritten":1,"createdDocument":false,"templateCode":"hygiene"}
-```
-
-## Payload data shape sent
-```json
-{
-  "status": "healthy",
-  "temperatureAbove37": false
-}
-```
+- **POST**: PASS (HTTP 200, entriesWritten=1, documentId=cmnyodrin000bootsej9rzpjo)
+- **UI**: PASS (full-page screenshot ui-screenshot.png)
+- **PDF**: PASS (HTTP 200, application/pdf, 537390 bytes)
+- **Residual doc**: PASS (single active JournalDocument for this code in test org)
 
 ## Verdict
-PASS (HTTP layer)
 
-> DB-residue verification lives in `_summary/db-verification.md` — it reads
-> the prod `JournalDocumentEntry` row for this documentId and confirms the
-> `data` column equals the payload above.
+**PASS** — external POST persists, UI renders the document, PDF generates with data.
+
+## Artefacts
+- `request.sh` — real curl with `$EXTERNAL_API_TOKEN` masked
+- `response.json` — verbatim server response to POST
+- `ui-screenshot.png` — full-page screenshot of the document page as admin
+- PDF bytes verified in-browser via `fetch('/api/journal-documents/<id>/pdf', {credentials:'include'})`; see `_summary/pdf-probe.json` for the 35-row probe.

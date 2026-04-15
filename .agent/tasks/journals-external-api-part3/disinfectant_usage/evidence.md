@@ -1,37 +1,21 @@
-# disinfectant_usage — external POST verification — 2026-04-15T17:35:01.390Z
+# disinfectant_usage — end-to-end verification
 
-- HTTP: **200**
-- ok: **true**
-- documentId: `cmnyp94yo004g08tspxoi4695`
-- entriesWritten: **1**
-- createdDocument: false
-- elapsedMs: 20
+Document: `cmnyp94yo004g08tspxoi4695` in test org `cmnm40ikt00002ktseet6fd5y`.
+Prod URL: https://wesetup.ru/journals/disinfectant_usage/documents/cmnyp94yo004g08tspxoi4695
 
-## Request
-```bash
-$ bash request.sh
-```
+## Criteria
 
-## Response (verbatim)
-```json
-{"ok":true,"documentId":"cmnyp94yo004g08tspxoi4695","entriesWritten":1,"createdDocument":false,"templateCode":"disinfectant_usage"}
-```
-
-## Payload data shape sent
-```json
-{
-  "productName": "Септабик",
-  "concentration": "0.1%",
-  "volumeLiters": 5,
-  "area": "Горячий цех",
-  "purpose": "Дезинфекция поверхностей",
-  "note": "Применено по инструкции"
-}
-```
+- **POST**: PASS (HTTP 200, entriesWritten=1, documentId=cmnyp94yo004g08tspxoi4695)
+- **UI**: PASS (full-page screenshot ui-screenshot.png)
+- **PDF**: PASS (HTTP 200, application/pdf, 453429 bytes)
+- **Residual doc**: PASS (single active JournalDocument for this code in test org)
 
 ## Verdict
-PASS (HTTP layer)
 
-> DB-residue verification lives in `_summary/db-verification.md` — it reads
-> the prod `JournalDocumentEntry` row for this documentId and confirms the
-> `data` column equals the payload above.
+**PASS** — external POST persists, UI renders the document, PDF generates with data.
+
+## Artefacts
+- `request.sh` — real curl with `$EXTERNAL_API_TOKEN` masked
+- `response.json` — verbatim server response to POST
+- `ui-screenshot.png` — full-page screenshot of the document page as admin
+- PDF bytes verified in-browser via `fetch('/api/journal-documents/<id>/pdf', {credentials:'include'})`; see `_summary/pdf-probe.json` for the 35-row probe.

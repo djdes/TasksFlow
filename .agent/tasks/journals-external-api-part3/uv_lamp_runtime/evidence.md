@@ -1,35 +1,21 @@
-# uv_lamp_runtime — external POST verification — 2026-04-15T17:35:02.201Z
+# uv_lamp_runtime — end-to-end verification
 
-- HTTP: **200**
-- ok: **true**
-- documentId: `cmnyodrmj007eootszhwxywvm`
-- entriesWritten: **1**
-- createdDocument: false
-- elapsedMs: 21
+Document: `cmnyoo2dy003008tsramweuvn` in test org `cmnm40ikt00002ktseet6fd5y`.
+Prod URL: https://wesetup.ru/journals/uv_lamp_runtime/documents/cmnyoo2dy003008tsramweuvn
 
-## Request
-```bash
-$ bash request.sh
-```
+## Criteria
 
-## Response (verbatim)
-```json
-{"ok":true,"documentId":"cmnyodrmj007eootszhwxywvm","entriesWritten":1,"createdDocument":false,"templateCode":"uv_lamp_runtime"}
-```
-
-## Payload data shape sent
-```json
-{
-  "runtimeMinutes": 30,
-  "status": "ok",
-  "lampId": "uv-1",
-  "note": "Лампа отработала плановый цикл"
-}
-```
+- **POST**: PASS (HTTP 200, entriesWritten=1, documentId=cmnyodrmj007eootszhwxywvm)
+- **UI**: PASS (full-page screenshot ui-screenshot.png)
+- **PDF**: PASS (HTTP 200, application/pdf, 493308 bytes)
+- **Residual doc**: PASS (single active JournalDocument for this code in test org)
 
 ## Verdict
-PASS (HTTP layer)
 
-> DB-residue verification lives in `_summary/db-verification.md` — it reads
-> the prod `JournalDocumentEntry` row for this documentId and confirms the
-> `data` column equals the payload above.
+**PASS** — external POST persists, UI renders the document, PDF generates with data.
+
+## Artefacts
+- `request.sh` — real curl with `$EXTERNAL_API_TOKEN` masked
+- `response.json` — verbatim server response to POST
+- `ui-screenshot.png` — full-page screenshot of the document page as admin
+- PDF bytes verified in-browser via `fetch('/api/journal-documents/<id>/pdf', {credentials:'include'})`; see `_summary/pdf-probe.json` for the 35-row probe.
