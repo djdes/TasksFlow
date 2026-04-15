@@ -543,7 +543,7 @@ export function PestControlDocumentClient(props: Props) {
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[52px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
           {props.title || PEST_CONTROL_DOCUMENT_TITLE}
         </h1>
         {!readOnly && (

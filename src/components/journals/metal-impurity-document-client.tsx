@@ -1069,7 +1069,7 @@ export function MetalImpurityDocumentClient({
         <DocumentBackLink href={`/journals/${METAL_IMPURITY_TEMPLATE_CODE}`} documentId={documentId} />
         <div className="flex items-start justify-between gap-6 print:hidden">
           <div>
-            <h1 className="mt-4 text-[58px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="mt-4 text-[48px] font-semibold tracking-[-0.04em] text-black">
               {documentTitle}
             </h1>
           </div>

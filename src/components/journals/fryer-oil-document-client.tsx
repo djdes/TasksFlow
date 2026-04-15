@@ -262,7 +262,7 @@ export function FryerOilDocumentClient(props: Props) {
         <div className="flex flex-wrap items-start justify-between gap-6 print:hidden">
           <div className="space-y-3">
             <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
-            <h1 className="text-[54px] font-semibold tracking-[-0.04em]">{title}</h1>
+            <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{title}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => { void openDocumentPdf(props.documentId).catch((e) => toast.error(e instanceof Error ? e.message : "Не удалось открыть PDF")); }}><Printer className="size-5" />Печать</Button>

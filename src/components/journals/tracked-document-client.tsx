@@ -328,7 +328,7 @@ function TrackedDocumentClientImpl({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <div className="text-[16px] text-[#84849a]">{organizationName}</div>
-            <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.03em] text-black">
+            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.03em] text-black">
               {title}
             </h1>
             <div className="mt-2 text-[16px] text-[#84849a]">

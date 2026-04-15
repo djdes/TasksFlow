@@ -535,7 +535,7 @@ export function AccidentDocumentClient(props: Props) {
 
 
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[56px] font-semibold tracking-[-0.04em]">
+          <h1 className="text-[48px] font-semibold tracking-[-0.04em]">
             {title || ACCIDENT_DOCUMENT_HEADING}
           </h1>
           <Button

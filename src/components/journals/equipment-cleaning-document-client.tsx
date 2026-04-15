@@ -311,7 +311,7 @@ export function EquipmentCleaningDocumentClient({
 
       <DocumentBackLink href={`/journals/${journalRouteCode}`} documentId={documentId} />
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
           {title}
         </h1>
         <Button

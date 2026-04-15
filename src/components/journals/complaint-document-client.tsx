@@ -443,7 +443,7 @@ export function ComplaintDocumentClient({
         )}
 
         <div>
-          <h1 className="text-[58px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
             {documentTitle}
           </h1>
         </div>

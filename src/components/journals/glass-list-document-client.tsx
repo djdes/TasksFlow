@@ -188,7 +188,7 @@ export function GlassListDocumentClient({
           </div>
         ) : null}
 
-        <h1 className="mb-10 text-[58px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+        <h1 className="mb-10 text-[48px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
 
         <div className="mx-auto max-w-[1300px] space-y-8">
           <table className="w-full border-collapse text-[16px]">

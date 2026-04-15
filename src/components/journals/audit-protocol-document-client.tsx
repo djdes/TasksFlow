@@ -249,7 +249,7 @@ export function AuditProtocolDocumentClient({
           )}
         </div>
 
-        <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black print:hidden">{documentTitle}</h1>
+        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">{documentTitle}</h1>
 
         <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
           <div className="grid grid-cols-[220px_1fr_120px] border border-black/70">

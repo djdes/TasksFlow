@@ -1236,7 +1236,7 @@ export function DisinfectantDocumentClient({
         }
       />
 
-      <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black">
+      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
         {title}
       </h1>
 

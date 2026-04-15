@@ -376,7 +376,7 @@ export function MedBookDocumentClient({
             >
               <ChevronLeft className="size-5" />
             </Link>
-            <h1 className="text-[34px] font-semibold tracking-[-0.03em] text-black md:text-[56px]">
+            <h1 className="text-[48px] font-semibold tracking-[-0.03em] text-black md:text-[56px]">
               {docTitle}
             </h1>
           </div>

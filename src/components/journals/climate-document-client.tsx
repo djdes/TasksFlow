@@ -1168,7 +1168,7 @@ export function ClimateDocumentClient({
         <DocumentBackLink href="/journals/climate_control" documentId={documentId} />
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
-            <h1 className="mt-2 text-[56px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.04em] text-black">
               {documentTitle}
             </h1>
           </div>

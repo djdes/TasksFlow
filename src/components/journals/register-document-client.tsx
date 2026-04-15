@@ -520,7 +520,7 @@ export function RegisterDocumentClient({
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
             <div className="text-[16px] text-[#7b7d8d]">{organizationName}</div>
-            <h1 className="mt-2 text-[54px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.04em] text-black">
               {documentTitle}
             </h1>
             <div className="mt-3 text-[18px] text-[#63667a]">

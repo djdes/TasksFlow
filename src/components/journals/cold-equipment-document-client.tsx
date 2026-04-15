@@ -707,7 +707,7 @@ export function ColdEquipmentDocumentClient({
 
         <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-[1260px]">
-            <h1 className="text-[64px] font-semibold leading-[1.08] tracking-[-0.05em] text-black">
+            <h1 className="text-[48px] font-semibold leading-[1.08] tracking-[-0.05em] text-black">
               {documentTitle}
             </h1>
           </div>

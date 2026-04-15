@@ -674,7 +674,7 @@ export function AuditPlanDocumentClient({
         )}
       </div>
 
-      <h1 className="text-[56px] font-semibold tracking-[-0.04em] text-black print:hidden">
+      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">
         {title}
       </h1>
 
