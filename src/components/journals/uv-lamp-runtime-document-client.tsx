@@ -1140,13 +1140,14 @@ export function UvLampRuntimeDocumentClient(props: Props) {
             <Plus className="mr-1 size-4" />
             Добавить
           </Button>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handleCloseJournal}
-            className="text-[14px] text-[#5b66ff] hover:underline"
+            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
           >
             Закончить журнал
-          </button>
+          </Button>
         </div>
       )}
 
