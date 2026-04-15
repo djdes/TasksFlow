@@ -448,25 +448,26 @@ export function BreakdownHistoryDocumentClient(props: Props) {
           <h1 className="text-[48px] font-semibold tracking-[-0.04em]">
             {title || BREAKDOWN_HISTORY_HEADING}
           </h1>
-          <div className="flex items-center gap-3">
-            {isActive && (
-              <button
-                type="button"
-                className="text-[18px] text-[#5563ff] hover:underline"
-                onClick={() => setFinishOpen(true)}
-              >
-                Закончить журнал
-              </button>
-            )}
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               variant="outline"
-              className="gap-2"
               onClick={() => setSettingsOpen(true)}
+              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
             >
               <Settings2 className="size-4" />
-              Настройки
+              Настройки журнала
             </Button>
+            {isActive && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFinishOpen(true)}
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              >
+                Закончить журнал
+              </Button>
+            )}
           </div>
         </div>
 
