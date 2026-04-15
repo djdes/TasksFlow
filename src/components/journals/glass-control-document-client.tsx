@@ -735,11 +735,11 @@ export function GlassControlDocumentClient(props: Props) {
           <Button
             type="button"
             variant="outline"
-            className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[18px] text-[#5464ff]"
+            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
             onClick={() => setSettingsOpen(true)}
             disabled={isClosed}
           >
-            <Settings2 className="size-5" />
+            <Settings2 className="size-4" />
             Настройки журнала
           </Button>
         </div>
@@ -802,7 +802,7 @@ export function GlassControlDocumentClient(props: Props) {
             {!isClosed && (
               <Button
                 type="button"
-                className="h-14 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4957fb]"
+                className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4957fb]"
                 onClick={() =>
                   setRowDialog({
                     open: true,
@@ -811,7 +811,7 @@ export function GlassControlDocumentClient(props: Props) {
                   })
                 }
               >
-                <Plus className="size-6" />
+                <Plus className="size-5" />
                 Добавить
               </Button>
             )}
@@ -820,7 +820,7 @@ export function GlassControlDocumentClient(props: Props) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[18px] text-[#5464ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
                 onClick={() => setCloseOpen(true)}
               >
                 Закончить журнал
