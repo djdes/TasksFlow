@@ -34,11 +34,11 @@ npm run reset-tasks      # Reset recurring tasks (daily cron job)
 
 ## Architecture Overview
 
-**Task-Delegate** is a full-stack recurring task management system with React frontend and Express backend, both in TypeScript.
+**TasksFlow** is a full-stack recurring task management system with React frontend and Express backend, both in TypeScript.
 
 ### Project Structure
 ```
-Task-Delegate/
+TasksFlow/
 ├── client/src/
 │   ├── components/           # React components
 │   │   ├── ui/               # Shadcn/ui базовые компоненты (16 файлов)
@@ -287,21 +287,21 @@ Session stored via express-session with memorystore. Auth middleware (`requireAu
 
 ## Deployment
 
-Production uses PM2. See `DEPLOY.md` for nginx/apache proxy setup. Server listens on PORT (default 5000).
+Production uses PM2. See `DEPLOY.md` for nginx/apache proxy setup. Server listens on PORT (5001 on prod).
 
 File uploads via Multer to `uploads/` directory (images only, 10MB max).
 
 ### Production Server
 
-- **URL**: https://tasks.magday.ru
-- **Path**: `/var/www/tasks/data/www/tasks.magday.ru`
-- **Node.js**: `/var/www/tasks/data/.nvm/versions/node/v24.12.0/bin`
+- **URL**: https://tasksflow.ru
+- **Path**: `/var/www/tasksflow/data/www/tasksflow.ru`
+- **Node.js**: `/var/www/tasksflow/data/.nvm/versions/node/v24.12.0/bin`
 - **Process Manager**: PM2
 - **Auto-deploy**: GitHub webhook triggers deploy script on push to main
 
 **Deploy commands (on server):**
 ```bash
-cd /var/www/tasks/data/www/tasks.magday.ru
+cd /var/www/tasksflow/data/www/tasksflow.ru
 git pull origin main
 npm install
 npm run db:push
@@ -311,7 +311,7 @@ pm2 restart all
 
 **Cron (reset tasks daily at 6:00):**
 ```bash
-0 6 * * * cd /var/www/tasks/data/www/tasks.magday.ru && npm run reset-tasks >> /var/log/reset-tasks.log 2>&1
+0 6 * * * cd /var/www/tasksflow/data/www/tasksflow.ru && npm run reset-tasks >> /var/log/reset-tasks.log 2>&1
 ```
 
 ## Known Issues & Workarounds

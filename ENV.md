@@ -1,6 +1,6 @@
 # Environment Variables
 
-Create a `.env` file in the project root (`Task-Delegate/.env`) with the
+Create a `.env` file in the project root (`TasksFlow/.env`) with the
 following variables:
 
 ```

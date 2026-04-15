@@ -2,14 +2,14 @@
 
 ## Проблема: 404 ошибки для API запросов
 
-Если вы получаете ошибки типа `GET https://tasks.magday.ru/api/users 404 (Not Found)`, это означает, что веб-сервер (nginx/apache) не настроен для проксирования запросов к Node.js серверу.
+Если вы получаете ошибки типа `GET https://tasksflow.ru/api/users 404 (Not Found)`, это означает, что веб-сервер (nginx/apache) не настроен для проксирования запросов к Node.js серверу.
 
 ## Решение
 
 ### Вариант 1: Nginx
 
 1. Подключитесь по SSH к серверу
-2. Найдите конфигурационный файл nginx для вашего домена (обычно в `/etc/nginx/sites-available/tasks.magday.ru` или `/etc/nginx/conf.d/tasks.magday.ru.conf`)
+2. Найдите конфигурационный файл nginx для вашего домена (обычно в `/etc/nginx/sites-available/tasksflow.ru` или `/etc/nginx/conf.d/tasksflow.ru.conf`)
 3. Добавьте или обновите конфигурацию (см. `nginx.conf.example`)
 4. Перезагрузите nginx: `sudo nginx -t && sudo systemctl reload nginx`
 
@@ -24,7 +24,7 @@
 
 1. Установите PM2: `npm install -g pm2`
 2. Соберите проект: `npm run build`
-3. Запустите сервер через PM2: `pm2 start dist/index.cjs --name task-delegate`
+3. Запустите сервер через PM2: `pm2 start dist/index.cjs --name tasksflow`
 4. Сохраните конфигурацию: `pm2 save`
 5. Настройте автозапуск: `pm2 startup`
 
@@ -32,7 +32,7 @@
 
 1. Убедитесь, что Node.js сервер запущен на порту 5000 (или PORT из .env)
 2. Проверьте, что переменные окружения в `.env` настроены правильно
-3. Проверьте логи: `pm2 logs task-delegate` или `journalctl -u your-service`
+3. Проверьте логи: `pm2 logs tasksflow` или `journalctl -u your-service`
 
 ## Cron для сброса задач
 
@@ -42,7 +42,7 @@
 
 ```bash
 # Создайте папку для логов
-mkdir -p /var/www/tasks/data/www/tasks.magday.ru/logs
+mkdir -p /var/www/tasksflow/data/www/tasksflow.ru/logs
 
 # Добавьте задачу в crontab
 crontab -e
@@ -50,14 +50,14 @@ crontab -e
 
 Добавьте строку (замените пути на свои):
 ```
-0 0 * * * cd /var/www/tasks/data/www/tasks.magday.ru && /var/www/tasks/data/.nvm/versions/node/v24.12.0/bin/npm run reset-tasks >> ./logs/reset-tasks.log 2>&1
+0 0 * * * cd /var/www/tasksflow/data/www/tasksflow.ru && /var/www/tasksflow/data/.nvm/versions/node/v24.12.0/bin/npm run reset-tasks >> ./logs/reset-tasks.log 2>&1
 ```
 
 ### Проверка
 
 ```bash
 # Запустить вручную
-cd /var/www/tasks/data/www/tasks.magday.ru && npm run reset-tasks
+cd /var/www/tasksflow/data/www/tasksflow.ru && npm run reset-tasks
 
 # Проверить логи
 cat ./logs/reset-tasks.log

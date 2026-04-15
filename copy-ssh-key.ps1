@@ -2,7 +2,7 @@
 # Потребуется один раз ввести пароль
 
 $SERVER_USER = "tasks"
-$SERVER_HOST = "tasks.magday.ru"
+$SERVER_HOST = "tasksflow.ru"
 $SERVER_PORT = "50222"
 $PUB_KEY_PATH = "$env:USERPROFILE\.ssh\id_ed25519.pub"
 

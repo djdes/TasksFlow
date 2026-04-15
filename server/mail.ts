@@ -32,7 +32,7 @@ export async function sendTaskCompletedEmail(
     }
 
     const mailOptions: nodemailer.SendMailOptions = {
-      from: '"Task-Delegate" <admin@yesbeat.ru>',
+      from: '"TasksFlow" <admin@yesbeat.ru>',
       to: toEmail,
       subject: `${taskTitle} - ${workerName}`,
       text: emailText,

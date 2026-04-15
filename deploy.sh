@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # ===========================================
-# Скрипт деплоя Task-Delegate на VPS
+# Скрипт деплоя TasksFlow на VPS
 # Запускается локально, выполняет команды на сервере
 # ===========================================
 
 # Настройки сервера
-SERVER_USER="tasks"
-SERVER_HOST="tasks.magday.ru"
+SERVER_USER="tasksflow"
+SERVER_HOST="tasksflow.ru"
 SERVER_PORT="50222"
-REMOTE_PATH="/var/www/tasks/data/www/tasks.magday.ru"
+REMOTE_PATH="/var/www/tasksflow/data/www/tasksflow.ru"
 
 # Цвета для вывода
 GREEN='\033[0;32m'
@@ -17,7 +17,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}=== Task-Delegate Deploy ===${NC}"
+echo -e "${YELLOW}=== TasksFlow Deploy ===${NC}"
 echo -e "Сервер: ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT}"
 echo -e "Путь: ${REMOTE_PATH}"
 echo ""
@@ -25,7 +25,7 @@ echo ""
 # Выполняем команды на сервере
 echo -e "${GREEN}Подключение к серверу...${NC}"
 ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << 'EOF'
-    cd /var/www/tasks/data/www/tasks.magday.ru
+    cd /var/www/tasksflow/data/www/tasksflow.ru
 
     echo ">>> git pull"
     git pull

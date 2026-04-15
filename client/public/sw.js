@@ -3,7 +3,7 @@
  * Обеспечивает оффлайн работу и кеширование
  */
 
-const CACHE_NAME = "task-delegate-v1";
+const CACHE_NAME = "tasksflow-v1";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",

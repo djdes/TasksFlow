@@ -1,11 +1,11 @@
-# Task-Delegate Deploy Script (PowerShell)
+# TasksFlow Deploy Script (PowerShell)
 
 $SERVER_USER = "tasks"
-$SERVER_HOST = "tasks.magday.ru"
+$SERVER_HOST = "tasksflow.ru"
 $SERVER_PORT = "50222"
-$REMOTE_PATH = "/var/www/tasks/data/www/tasks.magday.ru"
+$REMOTE_PATH = "/var/www/tasksflow/data/www/tasksflow.ru"
 
-Write-Host "=== Task-Delegate Deploy ===" -ForegroundColor Yellow
+Write-Host "=== TasksFlow Deploy ===" -ForegroundColor Yellow
 Write-Host "Server: ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT}"
 Write-Host "Path: ${REMOTE_PATH}"
 Write-Host ""

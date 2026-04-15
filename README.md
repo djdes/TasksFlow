@@ -1,4 +1,4 @@
-# Task-Delegate
+# TasksFlow
 
 Система управления ежедневными задачами с оплатой за выполнение. React + Express + MySQL.
 
@@ -108,7 +108,7 @@ npm run reset-tasks  # Сброс выполненных задач (для cron
 npm run build
 
 # Запуск через PM2
-pm2 start npm --name "task-delegate" -- start
+pm2 start npm --name "tasksflow" -- start
 
 # Cron для сброса задач (каждый день в 00:00)
 0 0 * * * cd /path/to/project && npm run reset-tasks
