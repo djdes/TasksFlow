@@ -625,13 +625,13 @@ export function IntensiveCoolingDocumentClient(props: Props) {
           {isActive ? (
             <Button
               type="button"
-              className="h-16 rounded-2xl bg-[#5563ff] px-8 text-[18px] text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4452ee]"
               onClick={() => {
                 setEditingRow(null);
                 setRowDialogOpen(true);
               }}
             >
-              <Plus className="size-6" />
+              <Plus className="size-5" />
               Добавить
             </Button>
           ) : (
@@ -641,7 +641,7 @@ export function IntensiveCoolingDocumentClient(props: Props) {
             <Button
               type="button"
               variant="outline"
-              className="h-14 rounded-2xl border-[#edf0fb] bg-[#fafbff] px-8 text-[18px] text-[#5b66ff]"
+              className="h-11 rounded-2xl border-[#edf0fb] bg-[#fafbff] px-4 text-[15px] text-[#5b66ff]"
               onClick={() => setFinishOpen(true)}
             >
               Закончить журнал
