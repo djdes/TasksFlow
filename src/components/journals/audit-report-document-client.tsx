@@ -216,7 +216,7 @@ export function AuditReportDocumentClient({
                       className="h-10 rounded-xl border-[#ffd7d3] px-4 text-[14px] text-[#ff3b30] hover:bg-[#fff3f2]"
                       onClick={() =>
                         deleteFinding(finding.id).catch((error) =>
-                          toast.error(error instanceof Error ? error.message : "РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ")
+                          toast.error(error instanceof Error ? error.message : "Ошибка удаления")
                         )
                       }
                     >
