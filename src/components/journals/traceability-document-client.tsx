@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { DocumentPageHeader } from "@/components/journals/document-page-header";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
