@@ -352,34 +352,9 @@ export function MedBookDocumentClient({
       <DocumentBackLink href="/journals/med_books" documentId={documentId} />
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3 text-[15px] text-[#6f7487]">
-            <Link
-              href={`/journals/${templateCode}`}
-              className="hover:text-black hover:underline"
-            >
-              {organizationName}
-            </Link>
-            <span>{">"}</span>
-            <Link
-              href={`/journals/${templateCode}`}
-              className="hover:text-black hover:underline"
-            >
-              Медицинские книжки
-            </Link>
-            <span>{">"}</span>
-            <span>{docTitle}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/journals/${templateCode}`}
-              className="inline-flex size-11 items-center justify-center rounded-xl border border-[#e3e6f2] bg-white text-[#6f7487] hover:text-black"
-            >
-              <ChevronLeft className="size-5" />
-            </Link>
-            <h1 className="text-[48px] font-semibold tracking-[-0.03em] text-black md:text-[56px]">
-              {docTitle}
-            </h1>
-          </div>
+          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+            {docTitle}
+          </h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button
