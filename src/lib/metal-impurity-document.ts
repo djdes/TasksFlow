@@ -150,7 +150,7 @@ export function getDefaultMetalImpurityConfig(params?: {
   const responsibleEmployee =
     params?.responsibleName ||
     responsibleUser?.name ||
-    "РРІР°РЅРѕРІ Р.Р.";
+    "Иванов И.И.";
   const responsibleEmployeeId = responsibleUser?.id || params?.responsibleEmployeeId || null;
   const secondRowDate = new Date(`${startDate}T00:00:00`);
   secondRowDate.setDate(secondRowDate.getDate() + 16);
