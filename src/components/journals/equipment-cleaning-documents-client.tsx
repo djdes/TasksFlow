@@ -134,7 +134,7 @@ export function EquipmentCleaningDocumentsClient({
             className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-              <div className="text-[36px] leading-none tracking-tight text-black">
+              <div className="text-[17px] font-semibold leading-none tracking-tight text-black">
                 {document.title}
               </div>
             </Link>
@@ -143,7 +143,7 @@ export function EquipmentCleaningDocumentsClient({
               className="justify-self-end pr-2"
             >
               <div className="text-[14px] text-[#85889b]">Дата начала</div>
-              <div className="text-[30px] leading-none text-black">
+              <div className="text-[15px] leading-none text-black">
                 {document.startedAtLabel}
               </div>
             </Link>

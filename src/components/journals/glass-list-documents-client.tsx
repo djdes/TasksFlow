@@ -446,7 +446,7 @@ export function GlassListDocumentsClient(props: Props) {
                 key={document.id}
                 className="grid grid-cols-[minmax(0,1.4fr)_270px_270px_220px_56px] items-center rounded-[16px] border border-[#eef0f6] bg-white px-7 py-5"
               >
-                <Link href={href} className="min-w-0 text-[24px] font-semibold text-black">
+                <Link href={href} className="min-w-0 text-[17px] font-semibold text-black">
                   {config.documentName || document.title || props.templateName}
                 </Link>
                 <Link href={href} className="border-l border-[#eceef5] px-8">

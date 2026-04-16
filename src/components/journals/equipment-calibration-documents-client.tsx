@@ -170,11 +170,11 @@ export function EquipmentCalibrationDocumentsClient({
               className="grid grid-cols-[1fr_80px_240px_160px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
             >
               <Link href={`/journals/${templateCode}/documents/${doc.id}`} className="min-w-0">
-                <div className="text-[24px] font-semibold text-black">{doc.title}</div>
+                <div className="text-[17px] font-semibold text-black">{doc.title}</div>
               </Link>
               <div className="text-center">
                 <div className="text-[12px] text-[#85889b]">Год</div>
-                <div className="text-[18px] font-semibold">{cfg.year}</div>
+                <div className="text-[15px] font-semibold">{cfg.year}</div>
               </div>
               <div className="px-3">
                 <div className="text-[12px] text-[#85889b]">Должность &quot;Утверждаю&quot;</div>

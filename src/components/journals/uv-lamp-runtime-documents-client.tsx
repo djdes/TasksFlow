@@ -364,7 +364,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
               key={document.id}
               className="grid grid-cols-[minmax(0,1.9fr)_320px_220px_56px] items-stretch rounded-[18px] border border-[#e8ebf3] bg-white px-6 py-6 shadow-[0_2px_10px_rgba(46,55,89,0.04)]"
             >
-              <Link href={href} className="flex items-center pr-6 text-[28px] font-semibold leading-[1.25] tracking-[-0.03em] text-black">
+              <Link href={href} className="flex items-center pr-6 text-[17px] font-semibold leading-[1.25] tracking-[-0.03em] text-black">
                 {resolvedTitle}
               </Link>
 

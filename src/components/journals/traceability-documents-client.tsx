@@ -411,13 +411,13 @@ export function TraceabilityDocumentsClient({
               className="grid grid-cols-[minmax(0,1fr)_220px_48px] items-center rounded-[18px] border border-[#eceef5] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.02)]"
             >
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="min-w-0">
-                <div className="truncate text-[24px] font-semibold tracking-[-0.03em] text-black">
+                <div className="truncate text-[17px] font-semibold tracking-[-0.03em] text-black">
                   {document.title || DEFAULT_TITLE}
                 </div>
               </Link>
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="justify-self-end pr-2">
                 <div className="text-[14px] text-[#85889b]">Дата начала</div>
-                <div className="text-[28px] font-medium leading-none tracking-[-0.03em] text-black">
+                <div className="text-[15px] font-medium leading-none tracking-[-0.03em] text-black">
                   {formatDateLabel(document.dateFrom)}
                 </div>
               </Link>
