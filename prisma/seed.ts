@@ -1,6 +1,7 @@
 ﻿import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import pg from "pg";
 import { ACTIVE_JOURNAL_TEMPLATES as SHARED_ACTIVE_JOURNAL_TEMPLATES } from "../src/lib/journal-catalog";
 
@@ -626,7 +627,79 @@ const activeJournalTemplateMetaByCode = new Map(
   SHARED_ACTIVE_JOURNAL_TEMPLATES.map((item) => [item.code, item])
 );
 
+const PLATFORM_ORG_ID = process.env.PLATFORM_ORG_ID || "platform";
+
+/**
+ * Ensure the synthetic "platform" organisation exists plus a first ROOT user,
+ * both idempotent. Called at the top of every seed run so a fresh DB or a
+ * rolled-back prod recovers automatically. Does nothing if ROOT_EMAIL is unset,
+ * which is the case on developer laptops that just want a blank DB.
+ */
+async function seedPlatformOrgAndRoot() {
+  const rootEmail = process.env.ROOT_EMAIL;
+  if (!rootEmail) {
+    console.log("ROOT_EMAIL not set — skipping platform/root seed");
+    return;
+  }
+
+  const rootPasswordHash = process.env.ROOT_PASSWORD_HASH;
+  const rootPasswordPlain = process.env.ROOT_PASSWORD;
+  if (!rootPasswordHash && !rootPasswordPlain) {
+    console.warn(
+      "ROOT_EMAIL set but neither ROOT_PASSWORD_HASH nor ROOT_PASSWORD is present — skipping root user"
+    );
+    return;
+  }
+
+  console.log("Seeding platform organisation + root user...");
+
+  await prisma.organization.upsert({
+    where: { id: PLATFORM_ORG_ID },
+    update: {
+      name: "HACCP-Online",
+      type: "platform",
+      subscriptionPlan: "platform",
+    },
+    create: {
+      id: PLATFORM_ORG_ID,
+      name: "HACCP-Online",
+      type: "platform",
+      subscriptionPlan: "platform",
+    },
+  });
+
+  const passwordHash = rootPasswordHash
+    ? rootPasswordHash
+    : await bcrypt.hash(rootPasswordPlain as string, 10);
+
+  await prisma.user.upsert({
+    where: { email: rootEmail },
+    update: {
+      isRoot: true,
+      isActive: true,
+      organizationId: PLATFORM_ORG_ID,
+      role: "manager",
+      passwordHash,
+      name: "Platform Root",
+    },
+    create: {
+      email: rootEmail,
+      name: "Platform Root",
+      role: "manager",
+      organizationId: PLATFORM_ORG_ID,
+      isRoot: true,
+      isActive: true,
+      journalAccessMigrated: true,
+      passwordHash,
+    },
+  });
+
+  console.log(`  Root user ready: ${rootEmail}`);
+}
+
 async function main() {
+  await seedPlatformOrgAndRoot();
+
   console.log("Seeding journal templates...");
   const allTemplates = [
     ...journalTemplates,
