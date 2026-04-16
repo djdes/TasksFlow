@@ -299,7 +299,7 @@ export function AccidentDocumentsClient({
       </div>
 
       <div className="border-b border-[#d9dce8]">
-        <div className="flex gap-12 text-[18px]">
+        <div className="flex gap-12 text-[16px]">
           <Link
             href={`/journals/${routeCode}`}
             className={`relative pb-6 ${

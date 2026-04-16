@@ -108,7 +108,7 @@ function EditDocumentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[32px] border-0 p-0">
         <DialogHeader className="border-b px-10 py-8">
-          <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
+          <DialogTitle className="text-[22px] font-medium text-black">Настройки документа</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-8 px-10 py-8">
@@ -121,14 +121,14 @@ function EditDocumentDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Введите название документа"
-              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
 
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -295,7 +295,7 @@ export function HygieneDocumentsClient({
         </div>
 
         <div className="border-b border-[#d9d9e4]">
-          <div className="flex gap-12 text-[18px]">
+          <div className="flex gap-12 text-[16px]">
             <Link
               href={`/journals/${templateCode}`}
               className={`relative pb-5 ${

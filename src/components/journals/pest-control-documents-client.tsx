@@ -84,7 +84,7 @@ function SettingsDialog(props: {
     >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[24px] font-medium text-black">
+          <DialogTitle className="text-[22px] font-medium text-black">
             {props.title}
           </DialogTitle>
           <button
@@ -153,7 +153,7 @@ function ConfirmDialog(props: {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[24px] font-medium text-black">
+          <DialogTitle className="text-[22px] font-medium text-black">
             {props.title}
           </DialogTitle>
           <button

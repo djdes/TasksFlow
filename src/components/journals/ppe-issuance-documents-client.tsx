@@ -304,7 +304,7 @@ function DeleteDialog(props: {
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[660px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-8 py-6">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-[24px] font-semibold text-black">
+            <DialogTitle className="text-[22px] font-semibold text-black">
               Удаление документа &quot;{props.title}&quot;
             </DialogTitle>
             <button
@@ -447,7 +447,7 @@ export function PpeIssuanceDocumentsClient({
       </div>
 
       <div className="border-b border-[#d9dce8]">
-        <div className="flex gap-12 text-[18px]">
+        <div className="flex gap-12 text-[16px]">
           <Link
             href={`/journals/${routeCode}`}
             className={`relative pb-6 ${

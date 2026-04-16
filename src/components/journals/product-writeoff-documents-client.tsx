@@ -200,7 +200,7 @@ export function ProductWriteoffDocumentsClient({
         </div>
 
         <div className="border-b border-[#d9d9e4]">
-          <div className="flex gap-12 text-[18px]">
+          <div className="flex gap-12 text-[16px]">
             <Link
               href={`/journals/${templateCode}`}
               className={`relative pb-5 ${
@@ -274,7 +274,7 @@ export function ProductWriteoffDocumentsClient({
       <Dialog open={!!editingDocument} onOpenChange={(open) => !open && setEditingDocument(null)}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-[720px] rounded-[28px] border-0 p-0">
           <DialogHeader className="border-b px-8 py-6">
-            <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
+            <DialogTitle className="text-[22px] font-medium text-black">Настройки документа</DialogTitle>
           </DialogHeader>
           {settings && (
             <div className="space-y-5 px-8 py-6">

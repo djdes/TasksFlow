@@ -142,7 +142,7 @@ function UvRuntimeSettingsDialog(props: {
     >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[24px] font-semibold tracking-[-0.03em] text-black">
+          <DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">
             Настройки документа
           </DialogTitle>
           <button

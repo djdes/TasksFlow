@@ -111,7 +111,7 @@ function SettingsDialog(props: {
               <Input
                 value={activeState.title}
                 onChange={(event) => setState({ ...activeState, title: event.target.value })}
-                className="h-11 rounded-2xl border-[#d8dae6] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-2">
@@ -121,7 +121,7 @@ function SettingsDialog(props: {
                   type="date"
                   value={activeState.dateFrom}
                   onChange={(event) => setState({ ...activeState, dateFrom: event.target.value })}
-                  className="h-11 rounded-2xl border-[#d8dae6] px-5 pr-12 text-[16px] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-5 pr-12 text-[16px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080] sm:right-6 sm:size-8" />
               </div>
@@ -140,7 +140,7 @@ function SettingsDialog(props: {
                   }
                 }}
                 disabled={submitting}
-                className="h-12 rounded-3xl bg-[#5563ff] px-8 text-[18px] text-white hover:bg-[#4554ff] sm:h-14 sm:px-10 sm:text-[24px]"
+                className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               >
                 {submitting ? "Сохранение..." : props.submitText}
               </Button>
@@ -260,7 +260,7 @@ export function CleaningVentilationChecklistDocumentsClient({
       </div>
 
       <div className="border-b border-[#d9dce8]">
-        <div className="flex gap-12 text-[18px]">
+        <div className="flex gap-12 text-[16px]">
           <Link
             href={`/journals/${routeCode}`}
             className={`relative pb-6 ${

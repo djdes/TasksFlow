@@ -91,7 +91,7 @@ function EditDocumentDialog(props: {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
         <DialogHeader className="border-b px-6 py-5">
-          <DialogTitle className="text-[24px] font-medium text-black">
+          <DialogTitle className="text-[22px] font-medium text-black">
             Настройки документа
           </DialogTitle>
         </DialogHeader>
@@ -261,7 +261,7 @@ export function HealthDocumentsClient(props: Props) {
         </div>
 
         <div className="border-b border-[#d9d9e4]">
-          <div className="flex gap-12 text-[18px]">
+          <div className="flex gap-12 text-[16px]">
             <Link
               href={`/journals/${props.templateCode}`}
               className={`relative pb-5 ${

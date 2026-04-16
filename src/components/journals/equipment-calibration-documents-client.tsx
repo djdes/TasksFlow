@@ -229,7 +229,7 @@ export function EquipmentCalibrationDocumentsClient({
       <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
           <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-            <DialogTitle className="text-[24px] font-semibold text-black">Настройки документа</DialogTitle>
+            <DialogTitle className="text-[22px] font-semibold text-black">Настройки документа</DialogTitle>
             <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={() => setEditingDoc(null)}>
               <X className="size-6" />
             </button>

@@ -127,7 +127,7 @@ function ConfirmDialog(props: {
       <DialogContent className="max-w-[760px] rounded-[28px] border-0 p-0">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-start justify-between gap-6">
-            <DialogTitle className="text-[24px] font-semibold leading-[1.2] text-black">
+            <DialogTitle className="text-[22px] font-semibold leading-[1.2] text-black">
               {props.title}
             </DialogTitle>
             <button
