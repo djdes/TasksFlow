@@ -66,7 +66,7 @@ export function JournalTabs(props: {
   const compact = props.compact ?? true;
   return (
     <div className={compact ? "border-b border-[#d9dce8]" : "border-b border-[#d9d9e4]"}>
-      <div className="flex gap-12 text-[18px]">
+      <div className="flex gap-12 text-[16px]">
         <Link
           href={`/journals/${props.templateCode}`}
           className={`relative pb-5 ${
@@ -132,7 +132,7 @@ export function DocumentActionsMenu(props: {
             className={
               md
                 ? "mb-3 h-11 rounded-2xl px-4 text-[15px]"
-                : "mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                : "mb-2 h-11 rounded-2xl px-4 text-[15px]"
             }
             onSelect={props.onEdit}
           >
@@ -144,7 +144,7 @@ export function DocumentActionsMenu(props: {
           className={
             md
               ? `${hasDelete ? "mb-3 " : ""}h-11 rounded-2xl px-4 text-[15px]`
-              : `${hasDelete ? "mb-2 " : ""}h-11 rounded-2xl px-4 text-[18px]`
+              : `${hasDelete ? "mb-2 " : ""}h-11 rounded-2xl px-4 text-[15px]`
           }
           onSelect={props.onPrint}
         >
@@ -156,7 +156,7 @@ export function DocumentActionsMenu(props: {
             className={
               md
                 ? "h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
-                : "h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                : "h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
             }
             onSelect={props.onDelete}
           >
