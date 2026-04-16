@@ -193,11 +193,11 @@ function SettingsDialog(props: {
         <div className="space-y-6 px-10 py-8">
           <div className="space-y-2">
             <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
-            <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
+            <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
           </div>
           <div className="space-y-2">
             <Label className="text-[14px] text-[#7a7c8e]">Дата начала</Label>
-            <Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
+            <Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
           </div>
           <fieldset className="space-y-4 rounded-[28px] border border-[#d8dae6] px-6 py-5">
             <legend className="px-2 text-[20px] font-semibold text-black">Добавить поля</legend>
@@ -216,7 +216,7 @@ function SettingsDialog(props: {
                 defaultIssuerTitle: state.defaultIssuerTitle || (user ? getHygienePositionLabel(user.role) : null),
               });
             }}>
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -232,7 +232,7 @@ function SettingsDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
             <Select value={state.defaultIssuerTitle || ""} onValueChange={(value) => setState({ ...state, defaultIssuerTitle: value })}>
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -243,7 +243,7 @@ function SettingsDialog(props: {
             </Select>
           </div>
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={handleSave} disabled={submitting} className="h-16 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]">
+            <Button type="button" onClick={handleSave} disabled={submitting} className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]">
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
@@ -305,16 +305,16 @@ function RowDialog(props: {
         </DialogHeader>
         {state && (
           <div className="space-y-5 px-10 py-8">
-            <Input type="date" value={state.issueDate} onChange={(e) => setState({ ...state, issueDate: e.target.value })} className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
-            <Input value={state.maskCount} onChange={(e) => setState({ ...state, maskCount: e.target.value })} placeholder="Введите количество масок" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
-            {props.config.showGloves && <Input value={state.gloveCount} onChange={(e) => setState({ ...state, gloveCount: e.target.value })} placeholder="Введите количество перчаток" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
-            {props.config.showShoes && <Input value={state.shoePairsCount} onChange={(e) => setState({ ...state, shoePairsCount: e.target.value })} placeholder="Введите количество пар обуви" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
-            {props.config.showClothing && <Input value={state.clothingSetsCount} onChange={(e) => setState({ ...state, clothingSetsCount: e.target.value })} placeholder="Введите количество комплектов одежды" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
-            {props.config.showCaps && <Input value={state.capCount} onChange={(e) => setState({ ...state, capCount: e.target.value })} placeholder="Введите количество шапочек" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
+            <Input type="date" value={state.issueDate} onChange={(e) => setState({ ...state, issueDate: e.target.value })} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
+            <Input value={state.maskCount} onChange={(e) => setState({ ...state, maskCount: e.target.value })} placeholder="Введите количество масок" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
+            {props.config.showGloves && <Input value={state.gloveCount} onChange={(e) => setState({ ...state, gloveCount: e.target.value })} placeholder="Введите количество перчаток" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />}
+            {props.config.showShoes && <Input value={state.shoePairsCount} onChange={(e) => setState({ ...state, shoePairsCount: e.target.value })} placeholder="Введите количество пар обуви" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />}
+            {props.config.showClothing && <Input value={state.clothingSetsCount} onChange={(e) => setState({ ...state, clothingSetsCount: e.target.value })} placeholder="Введите количество комплектов одежды" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />}
+            {props.config.showCaps && <Input value={state.capCount} onChange={(e) => setState({ ...state, capCount: e.target.value })} placeholder="Введите количество шапочек" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />}
             <div className="space-y-2">
               <Label className="text-[14px] text-[#7a7c8e]">Должность лица, получившего СИЗ</Label>
               <Select value={state.recipientTitle} onValueChange={(value) => setState({ ...state, recipientTitle: value })}>
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {titles.map((title) => <SelectItem key={title} value={title}>{title}</SelectItem>)}
                 </SelectContent>
@@ -326,7 +326,7 @@ function RowDialog(props: {
                 const user = props.users.find((item) => item.id === value);
                 setState({ ...state, recipientUserId: value, recipientTitle: state.recipientTitle || (user ? getHygienePositionLabel(user.role) : "") });
               }}>
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {(state.recipientTitle
                     ? getUsersForRoleLabel(props.users, state.recipientTitle)
@@ -338,7 +338,7 @@ function RowDialog(props: {
             <div className="space-y-2">
               <Label className="text-[14px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
               <Select value={state.issuerTitle} onValueChange={(value) => setState({ ...state, issuerTitle: value })}>
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {titles.map((title) => <SelectItem key={title} value={title}>{title}</SelectItem>)}
                 </SelectContent>
@@ -350,7 +350,7 @@ function RowDialog(props: {
                 const user = props.users.find((item) => item.id === value);
                 setState({ ...state, issuerUserId: value, issuerTitle: state.issuerTitle || (user ? getHygienePositionLabel(user.role) : "") });
               }}>
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {(state.issuerTitle
                     ? getUsersForRoleLabel(props.users, state.issuerTitle)
@@ -360,7 +360,7 @@ function RowDialog(props: {
               </Select>
             </div>
             <div className="flex justify-end pt-2">
-              <Button type="button" onClick={handleSave} disabled={submitting} className="h-16 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]">
+              <Button type="button" onClick={handleSave} disabled={submitting} className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]">
                 {submitting ? "Сохранение..." : props.initialRow ? "Сохранить" : "Добавить"}
               </Button>
             </div>

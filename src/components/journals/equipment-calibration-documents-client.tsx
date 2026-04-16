@@ -283,7 +283,7 @@ export function EquipmentCalibrationDocumentsClient({
               </Select>
             </div>
             <div className="flex justify-end pt-1">
-              <Button onClick={saveSettings} disabled={isSaving} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">
+              <Button onClick={saveSettings} disabled={isSaving} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">
                 {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
@@ -305,7 +305,7 @@ export function EquipmentCalibrationDocumentsClient({
           <div className="flex justify-end px-7 py-6">
             <Button
               onClick={() => deleteDoc && handleDelete(deleteDoc.id)}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Удалить
             </Button>
@@ -327,7 +327,7 @@ export function EquipmentCalibrationDocumentsClient({
           <div className="flex justify-end px-7 py-6">
             <Button
               onClick={() => archiveDoc && handleStatusChange(archiveDoc.id, "closed")}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               В архив
             </Button>

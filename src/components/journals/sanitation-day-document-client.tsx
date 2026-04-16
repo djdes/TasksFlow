@@ -175,7 +175,7 @@ function RoomDialog(props: {
                 }))
               }
               placeholder="Введите название помещения"
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
 
@@ -198,7 +198,7 @@ function RoomDialog(props: {
                       }))
                     }
                   >
-                    <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+                    <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                       <SelectValue placeholder="--" />
                     </SelectTrigger>
                     <SelectContent>
@@ -289,7 +289,7 @@ function DocumentSettingsDialog(props: {
               setState((current) => ({ ...current, title: event.target.value }))
             }
             placeholder="Название документа"
-            className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+            className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
           />
 
           <div className="relative">
@@ -313,7 +313,7 @@ function DocumentSettingsDialog(props: {
               setState((current) => ({ ...current, year: value }))
             }
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -340,7 +340,7 @@ function DocumentSettingsDialog(props: {
               }));
             }}
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
               <SelectValue placeholder='Должность "Утверждаю"' />
             </SelectTrigger>
             <SelectContent>
@@ -374,7 +374,7 @@ function DocumentSettingsDialog(props: {
               }));
             }}
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
               <SelectValue placeholder="Сотрудник" />
             </SelectTrigger>
             <SelectContent>
@@ -399,7 +399,7 @@ function DocumentSettingsDialog(props: {
               }));
             }}
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
               <SelectValue placeholder="Должность ответственного" />
             </SelectTrigger>
             <SelectContent>
@@ -433,7 +433,7 @@ function DocumentSettingsDialog(props: {
               }));
             }}
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
               <SelectValue placeholder="Сотрудник" />
             </SelectTrigger>
             <SelectContent>

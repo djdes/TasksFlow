@@ -364,7 +364,7 @@ function ResponsibleDialog({
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
@@ -380,7 +380,7 @@ function ResponsibleDialog({
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
@@ -398,7 +398,7 @@ function ResponsibleDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !employeeId}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -482,14 +482,14 @@ function AddRowDialog({
               type="date"
               value={date}
               onChange={(event) => setDate(event.target.value)}
-              className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
@@ -505,7 +505,7 @@ function AddRowDialog({
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
@@ -523,7 +523,7 @@ function AddRowDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !date || !employeeId}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Создание..." : "Создать"}
             </Button>
@@ -635,7 +635,7 @@ function JournalSettingsDialog({
             <div className="space-y-3">
               <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
               <Select value={position} onValueChange={setPosition}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Выберите должность" />
                 </SelectTrigger>
                 <SelectContent>
@@ -651,7 +651,7 @@ function JournalSettingsDialog({
             <div className="space-y-3">
               <Label className="text-[14px] text-[#73738a]">Сотрудник по умолчанию</Label>
               <Select value={userId} onValueChange={setUserId}>
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Выберите сотрудника" />
                 </SelectTrigger>
                 <SelectContent>
@@ -675,7 +675,7 @@ function JournalSettingsDialog({
                 type="time"
                 value={timeOne}
                 onChange={(event) => setTimeOne(event.target.value)}
-                className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -687,7 +687,7 @@ function JournalSettingsDialog({
                 type="time"
                 value={timeTwo}
                 onChange={(event) => setTimeTwo(event.target.value)}
-                className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
           </div>
@@ -709,7 +709,7 @@ function JournalSettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || name.trim() === ""}
-              className="h-18 rounded-3xl bg-[#5b66ff] px-10 text-[20px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -1335,7 +1335,7 @@ export function ClimateDocumentClient({
             <Button
               type="button"
               onClick={() => setRowDialogOpen(true)}
-              className="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-7" />
               Добавить строку
@@ -1346,7 +1346,7 @@ export function ClimateDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={handleDeleteSelected}
-                className="h-16 rounded-2xl border-[#ffd7d3] px-8 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
               >
                 <Trash2 className="size-6" />
                 Удалить выбранные

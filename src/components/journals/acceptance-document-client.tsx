@@ -456,7 +456,7 @@ function RowDialog(props: {
           </>
 
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">
+            <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">
               {isSubmitting ? "Сохранение..." : isEdit ? "Сохранить" : "Добавить"}
             </Button>
           </div>
@@ -553,7 +553,7 @@ function EditListsDialog(props: {
           </div>
 
           <div className="flex justify-end">
-            <Button type="button" onClick={handleClose} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">Закрыть</Button>
+            <Button type="button" onClick={handleClose} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">Закрыть</Button>
           </div>
         </div>
       </DialogContent>
@@ -759,7 +759,7 @@ function IncomingControlEditListsDialog(props: {
             onChange={setSuppliers}
           />
           <div className="flex justify-end">
-            <Button type="button" onClick={handleClose} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">
+            <Button type="button" onClick={handleClose} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">
               Закрыть
             </Button>
           </div>
@@ -870,7 +870,7 @@ function SettingsDialog(props: {
             </Select>
           </div>
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]">
+            <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
@@ -921,7 +921,7 @@ function ConfirmDialog(props: {
                 setSubmitting(false);
               }
             }}
-            className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+            className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
           >
             {submitting ? "Сохранение..." : props.actionLabel}
           </Button>
@@ -1064,7 +1064,7 @@ function ImportRowsDialog(props: {
               type="button"
               disabled={submitting}
               onClick={() => inputRef.current?.click()}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Добавление..." : "Добавить"}
             </Button>
@@ -1148,7 +1148,7 @@ function AddMultipleRowsDialog(props: {
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Добавление..." : "Добавить"}
             </Button>

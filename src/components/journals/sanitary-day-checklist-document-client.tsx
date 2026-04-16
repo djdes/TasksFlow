@@ -154,7 +154,7 @@ function SettingsDialog(props: {
             <Input
               value={docTitle}
               onChange={(e) => setDocTitle(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-1">
@@ -163,7 +163,7 @@ function SettingsDialog(props: {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end pt-1">
@@ -171,7 +171,7 @@ function SettingsDialog(props: {
               type="button"
               disabled={submitting}
               onClick={handleSave}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -212,7 +212,7 @@ function AddItemDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Зона</Label>
             <Select value={zoneId} onValueChange={setZoneId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите зону -" />
               </SelectTrigger>
               <SelectContent>
@@ -242,7 +242,7 @@ function AddItemDialog(props: {
                 props.onAdd(zoneId, text.trim());
                 props.onOpenChange(false);
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Добавить
             </Button>
@@ -286,7 +286,7 @@ function EditItemDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Зона</Label>
             <Select value={zoneId} onValueChange={setZoneId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите зону -" />
               </SelectTrigger>
               <SelectContent>
@@ -315,7 +315,7 @@ function EditItemDialog(props: {
                 props.onSave(props.item!.id, zoneId, text.trim());
                 props.onOpenChange(false);
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Сохранить
             </Button>
@@ -497,7 +497,7 @@ function EditZonesDialog(props: {
                 props.onSave(zones);
                 props.onOpenChange(false);
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Закрыть
             </Button>

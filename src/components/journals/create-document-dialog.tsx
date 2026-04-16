@@ -405,7 +405,7 @@ export function CreateDocumentDialog({
                       id="uv-lamp-number"
                       value={trackedLampNumber}
                       onChange={(e) => setTrackedLampNumber(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -418,7 +418,7 @@ export function CreateDocumentDialog({
                       value={trackedAreaName}
                       onChange={(e) => setTrackedAreaName(e.target.value)}
                       placeholder="Введите наименование цеха/участка применения"
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     />
                   </div>
                 </>
@@ -432,7 +432,7 @@ export function CreateDocumentDialog({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Введите название документа"
-                    className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                    className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     required
                   />
                 </div>
@@ -464,7 +464,7 @@ export function CreateDocumentDialog({
                         setDateFrom(e.target.value);
                         setDateTo(e.target.value);
                       }}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -497,7 +497,7 @@ export function CreateDocumentDialog({
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                    className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     required
                   />
                 </div>
@@ -513,7 +513,7 @@ export function CreateDocumentDialog({
                       id="product-writeoff-act-number"
                       value={productWriteoffActNumber}
                       onChange={(e) => setProductWriteoffActNumber(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -526,7 +526,7 @@ export function CreateDocumentDialog({
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -555,7 +555,7 @@ export function CreateDocumentDialog({
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -579,7 +579,7 @@ export function CreateDocumentDialog({
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     />
                   </div>
                   <div className="space-y-3">
@@ -608,7 +608,7 @@ export function CreateDocumentDialog({
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                       required
                     />
                   </div>
@@ -629,7 +629,7 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
                     <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                         <SelectValue placeholder="- Выберите значение -" />
                       </SelectTrigger>
                       <SelectContent>
@@ -648,7 +648,7 @@ export function CreateDocumentDialog({
               <div className="space-y-3">
                 <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
                 <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue placeholder="- Выберите значение -" />
                   </SelectTrigger>
                   <SelectContent>
@@ -683,7 +683,7 @@ export function CreateDocumentDialog({
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                    className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     required
                   />
                 </div>
@@ -704,7 +704,7 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
                     <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
-                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                         <SelectValue placeholder="- Выберите значение -" />
                       </SelectTrigger>
                       <SelectContent>

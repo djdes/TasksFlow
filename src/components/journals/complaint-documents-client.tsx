@@ -104,7 +104,7 @@ function CreateDialog({
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Введите название документа"
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -116,7 +116,7 @@ function CreateDialog({
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end">
@@ -124,7 +124,7 @@ function CreateDialog({
               type="button"
               onClick={handleCreate}
               disabled={submitting}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Создание..." : "Создать"}
             </Button>
@@ -201,7 +201,7 @@ function SettingsDialog({
               id="complaint-settings-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -213,7 +213,7 @@ function SettingsDialog({
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end">
@@ -221,7 +221,7 @@ function SettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -279,7 +279,7 @@ function DeleteDialog({
             type="button"
             onClick={handleDelete}
             disabled={submitting}
-            className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Удаление..." : "Удалить"}
           </Button>

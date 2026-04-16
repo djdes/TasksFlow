@@ -201,7 +201,7 @@ export function FinishedProductDocumentClient({
         {!readOnly && <div className="flex flex-wrap gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" className="h-14 rounded-2xl bg-[#5b66ff] px-6 text-[18px] hover:bg-[#4d58f5]"><Plus className="size-5" />Добавить<ChevronDown className="ml-1 size-5" /></Button>
+              <Button type="button" className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] hover:bg-[#4d58f5]"><Plus className="size-5" />Добавить<ChevronDown className="ml-1 size-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-[300px] rounded-[24px] border-0 p-3 shadow-xl">
               <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px]" onSelect={() => setAddModalOpen(true)}>Добавить изделие</DropdownMenuItem>

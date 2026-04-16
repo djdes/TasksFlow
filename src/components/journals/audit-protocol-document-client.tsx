@@ -56,7 +56,7 @@ function SectionDialog({
           <DialogTitle className="text-[22px] font-semibold text-black">Добавить новый раздел</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 px-8 py-6">
-          <Input value={value} onChange={(e) => setValue(e.target.value)} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+          <Input value={value} onChange={(e) => setValue(e.target.value)} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
           <div className="flex justify-end">
             <Button type="button" onClick={async () => { if (!value.trim()) return; await onCreate(value.trim()); onOpenChange(false); setValue(""); }} className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]">
               Добавить
@@ -100,7 +100,7 @@ function RowDialog({
           <div className="space-y-2">
             <Label className="text-[14px] text-[#73738a]">Раздел</Label>
             <Select value={draft.sectionId} onValueChange={(value) => setDraft({ ...draft, sectionId: value })}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="Выберите раздел" />
               </SelectTrigger>
               <SelectContent>
@@ -369,19 +369,19 @@ export function AuditProtocolDocumentClient({
           <div className="space-y-4 px-8 py-6">
             <div className="space-y-2">
               <Label className="text-[14px] text-[#73738a]">Название документа</Label>
-              <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+              <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
             </div>
             <div className="space-y-2">
               <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
-              <Input type="date" value={config.documentDate} onChange={(e) => setConfig({ ...config, documentDate: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+              <Input type="date" value={config.documentDate} onChange={(e) => setConfig({ ...config, documentDate: e.target.value })} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
             </div>
             <div className="space-y-2">
               <Label className="text-[14px] text-[#73738a]">Основание проверки</Label>
-              <Input value={config.basisTitle} onChange={(e) => setConfig({ ...config, basisTitle: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+              <Input value={config.basisTitle} onChange={(e) => setConfig({ ...config, basisTitle: e.target.value })} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
             </div>
             <div className="space-y-2">
               <Label className="text-[14px] text-[#73738a]">Проверяемый объект</Label>
-              <Input value={config.auditedObject} onChange={(e) => setConfig({ ...config, auditedObject: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
+              <Input value={config.auditedObject} onChange={(e) => setConfig({ ...config, auditedObject: e.target.value })} className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]" />
             </div>
             <div className="flex justify-end">
               <Button type="button" onClick={async () => { await saveSettings(documentTitle.trim() || AUDIT_PROTOCOL_DOCUMENT_TITLE, config); setSettingsOpen(false); }} className="h-12 rounded-2xl bg-[#5563ff] px-6 text-[18px] text-white hover:bg-[#4554ff]">

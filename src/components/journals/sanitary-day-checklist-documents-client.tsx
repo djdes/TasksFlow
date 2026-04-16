@@ -507,7 +507,7 @@ export function SanitaryDayChecklistDocumentsClient({
                   Отмена
                 </Button>
                 <Button
-                  className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]"
+                  className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
                   onClick={() => moveToClosed(archiveTarget.id)}
                 >
                   В архив

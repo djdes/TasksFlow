@@ -217,7 +217,7 @@ function RowDialog({
                   field.type === "employee" ||
                   field.type === "equipment" ? (
                     <Select value={value} onValueChange={(nextValue) => updateValue(field.key, nextValue)}>
-                      <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                         <SelectValue placeholder="Выберите значение" />
                       </SelectTrigger>
                       <SelectContent>
@@ -233,14 +233,14 @@ function RowDialog({
                       type="date"
                       value={value}
                       onChange={(event) => updateValue(field.key, event.target.value)}
-                      className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     />
                   ) : field.type === "number" ? (
                     <Input
                       type="number"
                       value={value}
                       onChange={(event) => updateValue(field.key, event.target.value)}
-                      className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     />
                   ) : field.type === "text" && field.label.length > 28 ? (
                     <Textarea
@@ -252,7 +252,7 @@ function RowDialog({
                     <Input
                       value={value}
                       onChange={(event) => updateValue(field.key, event.target.value)}
-                      className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                      className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                     />
                   )}
                 </div>
@@ -268,7 +268,7 @@ function RowDialog({
                   variant="outline"
                   onClick={handleDelete}
                   disabled={isSubmitting}
-                  className="h-14 rounded-2xl border-[#ffd7d3] px-6 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                  className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
                 >
                   Удалить строку
                 </Button>
@@ -279,7 +279,7 @@ function RowDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : initialRow ? "Сохранить" : "Создать"}
             </Button>
@@ -371,7 +371,7 @@ function SettingsDialog({
                   }
                 }}
               >
-                <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Выберите сотрудника" />
                 </SelectTrigger>
                 <SelectContent>
@@ -389,7 +389,7 @@ function SettingsDialog({
               <Input
                 value={responsibleTitle}
                 onChange={(event) => setResponsibleTitle(event.target.value)}
-                className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
           </div>
@@ -399,7 +399,7 @@ function SettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -612,7 +612,7 @@ export function RegisterDocumentClient({
                 setEditingRow(null);
                 setRowDialogOpen(true);
               }}
-              className="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-7" />
               Добавить строку
@@ -624,7 +624,7 @@ export function RegisterDocumentClient({
                 variant="outline"
                 onClick={handleDeleteSelected}
                 disabled={isPending}
-                className="h-16 rounded-2xl border-[#ffd7d3] px-8 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
               >
                 <Trash2 className="size-6" />
                 Удалить выбранные

@@ -126,7 +126,7 @@ function GlassListFormDialog(props: {
                 setState((prev) => ({ ...prev, documentName: event.target.value }))
               }
               placeholder="Введите название документа"
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -137,7 +137,7 @@ function GlassListFormDialog(props: {
                 setState((prev) => ({ ...prev, location: event.target.value }))
               }
               placeholder="Введите место расположения (участок)"
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -148,7 +148,7 @@ function GlassListFormDialog(props: {
               onChange={(event) =>
                 setState((prev) => ({ ...prev, documentDate: event.target.value }))
               }
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -198,7 +198,7 @@ function GlassListFormDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : props.submitLabel}
             </Button>
@@ -246,7 +246,7 @@ function ConfirmDialog(props: {
                 setSubmitting(false);
               }
             }}
-            className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Сохранение..." : props.submitLabel}
           </Button>

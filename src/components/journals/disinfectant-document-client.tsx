@@ -142,7 +142,7 @@ function AddSubdivisionDialog(props: {
               }
               disabled={row.byCapacity}
               placeholder="Введите площадь объекта (кв.м)"
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -197,7 +197,7 @@ function AddSubdivisionDialog(props: {
                 })
               }
               placeholder="Введите кратность обработок в месяц"
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end pt-2">
@@ -286,7 +286,7 @@ function EditSubdivisionDialog(props: {
                   })
                 }
                 disabled={active.byCapacity}
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -346,7 +346,7 @@ function EditSubdivisionDialog(props: {
                     frequencyPerMonth: Number(e.target.value) || 0,
                   })
                 }
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <h3 className="pt-2 text-[18px] font-semibold">
@@ -361,7 +361,7 @@ function EditSubdivisionDialog(props: {
                 onChange={(e) =>
                   setRow({ ...active, disinfectantName: e.target.value })
                 }
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -378,7 +378,7 @@ function EditSubdivisionDialog(props: {
                     concentration: Number(e.target.value) || 0,
                   })
                 }
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -395,7 +395,7 @@ function EditSubdivisionDialog(props: {
                     solutionConsumptionPerSqm: Number(e.target.value) || 0,
                   })
                 }
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -412,7 +412,7 @@ function EditSubdivisionDialog(props: {
                     solutionPerTreatment: Number(e.target.value) || 0,
                   })
                 }
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <h3 className="pt-2 text-[18px] font-semibold">
@@ -535,7 +535,7 @@ function ReceiptDialog(props: {
                   setRow({ ...active, disinfectantName: e.target.value })
                 }
                 placeholder="Введите наименование дез. средства"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -552,7 +552,7 @@ function ReceiptDialog(props: {
                   })
                 }
                 placeholder="Введите количество"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
               <div className="flex gap-6 pt-1">
                 {(["kg", "l", "bottle"] as MeasureUnit[]).map((u) => (
@@ -607,7 +607,7 @@ function ReceiptDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -632,7 +632,7 @@ function ReceiptDialog(props: {
                   setRow({ ...active, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -722,7 +722,7 @@ function ConsumptionDialog(props: {
                   setRow({ ...active, disinfectantName: e.target.value })
                 }
                 placeholder="Введите наименование дез. средства"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -739,7 +739,7 @@ function ConsumptionDialog(props: {
                   })
                 }
                 placeholder="Количество"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
               <div className="flex gap-6 pt-1">
                 {(["kg", "l", "bottle"] as MeasureUnit[]).map((u) => (
@@ -774,7 +774,7 @@ function ConsumptionDialog(props: {
                   })
                 }
                 placeholder="Количество"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
               <div className="flex gap-6 pt-1">
                 {(["kg", "l", "bottle"] as MeasureUnit[]).map((u) => (
@@ -809,7 +809,7 @@ function ConsumptionDialog(props: {
                   })
                 }
                 placeholder="Количество"
-                className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
               <div className="flex gap-6 pt-1">
                 {(["kg", "l", "bottle"] as MeasureUnit[]).map((u) => (
@@ -847,7 +847,7 @@ function ConsumptionDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -872,7 +872,7 @@ function ConsumptionDialog(props: {
                   setRow({ ...active, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -968,7 +968,7 @@ function DocumentSettingsDialog(props: {
               onChange={(e) =>
                 setState({ ...state, title: e.target.value })
               }
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -988,7 +988,7 @@ function DocumentSettingsDialog(props: {
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1013,7 +1013,7 @@ function DocumentSettingsDialog(props: {
                 setState({ ...state, responsibleEmployeeId: v, responsibleEmployee: user?.name || "" });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

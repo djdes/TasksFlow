@@ -81,7 +81,7 @@ function DocumentDialog({
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -90,7 +90,7 @@ function DocumentDialog({
               type="date"
               value={state.documentDate}
               onChange={(event) => setState({ ...state, documentDate: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -98,7 +98,7 @@ function DocumentDialog({
             <Input
               value={state.basisTitle}
               onChange={(event) => setState({ ...state, basisTitle: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -106,7 +106,7 @@ function DocumentDialog({
             <Input
               value={state.auditedObject}
               onChange={(event) => setState({ ...state, auditedObject: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end">
@@ -122,7 +122,7 @@ function DocumentDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : submitLabel}
             </Button>

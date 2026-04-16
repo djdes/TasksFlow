@@ -285,7 +285,7 @@ export function ProductWriteoffDocumentsClient({
                   onChange={(event) =>
                     setSettings((prev) => (prev ? { ...prev, documentName: event.target.value } : prev))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
               </div>
               <div className="space-y-2">
@@ -295,7 +295,7 @@ export function ProductWriteoffDocumentsClient({
                   onChange={(event) =>
                     setSettings((prev) => (prev ? { ...prev, actNumber: event.target.value } : prev))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
               </div>
               <div className="space-y-2">
@@ -306,7 +306,7 @@ export function ProductWriteoffDocumentsClient({
                   onChange={(event) =>
                     setSettings((prev) => (prev ? { ...prev, documentDate: event.target.value } : prev))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
               </div>
               <div className="space-y-2">
@@ -324,7 +324,7 @@ export function ProductWriteoffDocumentsClient({
                   type="button"
                   onClick={saveSettings}
                   disabled={isSaving}
-                  className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4c58ff]"
+                  className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4c58ff]"
                 >
                   {isSaving ? "Сохранение..." : "Сохранить"}
                 </Button>

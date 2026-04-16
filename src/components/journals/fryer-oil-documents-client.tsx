@@ -147,7 +147,7 @@ function FryerOilSettingsDialog(props: {
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>

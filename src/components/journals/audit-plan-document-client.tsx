@@ -106,7 +106,7 @@ function DocumentSettingsDialog(props: {
             <Input
               value={state.title}
               onChange={(e) => setState({ ...state, title: e.target.value })}
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -115,13 +115,13 @@ function DocumentSettingsDialog(props: {
               type="date"
               value={state.documentDate}
               onChange={(e) => setState({ ...state, documentDate: toIsoDate(e.target.value) })}
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
             <Label className="text-[14px] text-[#73738a]">Год</Label>
             <Select value={state.year} onValueChange={(value) => setState({ ...state, year: value })}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -150,7 +150,7 @@ function DocumentSettingsDialog(props: {
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -177,7 +177,7 @@ function DocumentSettingsDialog(props: {
                 approveRole: user ? getUserRoleLabel(user.role) : state.approveRole,
               });
             }}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -332,7 +332,7 @@ function AddSectionDialog(props: {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={props.placeholder}
-            className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+            className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
           />
           <div className="flex justify-end">
             <Button
@@ -395,7 +395,7 @@ function AddRowDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#73738a]">Раздел</Label>
             <Select value={sectionId} onValueChange={setSectionId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -480,7 +480,7 @@ function CellValueDialog(props: {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Например: 29-05-2023 или X"
-            className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+            className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
           />
           <div className="flex justify-end gap-3">
             <Button

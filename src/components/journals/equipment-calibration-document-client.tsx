@@ -554,7 +554,7 @@ export function EquipmentCalibrationDocumentClient({
               <Button
                 onClick={saveDraftRow}
                 disabled={!draftName.trim()}
-                className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+                className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
               >
                 Добавить
               </Button>
@@ -648,7 +648,7 @@ export function EquipmentCalibrationDocumentClient({
             <div className="flex justify-end pt-1">
               <Button
                 onClick={saveEditRow}
-                className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+                className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
               >
                 Сохранить
               </Button>
@@ -752,7 +752,7 @@ export function EquipmentCalibrationDocumentClient({
               <Button
                 onClick={handleSaveSettings}
                 disabled={isSaving}
-                className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+                className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
               >
                 {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>

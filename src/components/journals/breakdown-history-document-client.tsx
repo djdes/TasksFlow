@@ -516,7 +516,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
           <StickyActionBar>
             <Button
               type="button"
-              className="h-14 rounded-2xl bg-[#5563ff] px-6 text-[18px] hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] hover:bg-[#4452ee]"
               onClick={() => {
                 setEditingRow(null);
                 setRowDialogOpen(true);

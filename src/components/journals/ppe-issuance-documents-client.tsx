@@ -197,7 +197,7 @@ function SettingsDialog(props: {
                 value={active.title}
                 placeholder="Введите название документа"
                 onChange={(e) => setState({ ...active, title: e.target.value })}
-                className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -234,7 +234,7 @@ function SettingsDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -252,7 +252,7 @@ function SettingsDialog(props: {
                 value={active.defaultIssuerTitle}
                 onValueChange={(value) => setState({ ...active, defaultIssuerTitle: value })}
               >
-                <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,7 +269,7 @@ function SettingsDialog(props: {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="h-16 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]"
+                className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               >
                 {submitting ? "Сохранение..." : props.submitText}
               </Button>

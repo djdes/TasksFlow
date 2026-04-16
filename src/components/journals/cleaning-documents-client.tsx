@@ -152,7 +152,7 @@ function ConfirmDialog(props: {
                 setSubmitting(false);
               }
             }}
-            className="h-14 rounded-[18px] bg-[#5563ff] px-8 text-[18px] text-white hover:bg-[#4554ff]"
+            className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
           >
             {submitting ? "Сохранение..." : props.submitLabel}
           </Button>
@@ -201,7 +201,7 @@ function CreateDialog(props: {
               value={state.title}
               onChange={(event) => setState((current) => ({ ...current, title: event.target.value }))}
               placeholder="Введите название документа"
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -210,7 +210,7 @@ function CreateDialog(props: {
               value={state.cleaningRole}
               onValueChange={(value) => setState((current) => ({ ...current, cleaningRole: value }))}
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -228,7 +228,7 @@ function CreateDialog(props: {
               value={state.controlRole}
               onValueChange={(value) => setState((current) => ({ ...current, controlRole: value }))}
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -253,7 +253,7 @@ function CreateDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-[18px] bg-[#5563ff] px-9 text-[18px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
             >
               {submitting ? "Создание..." : "Создать"}
             </Button>
@@ -308,7 +308,7 @@ function SettingsDialog(props: {
             <Input
               value={state.title}
               onChange={(event) => setState((current) => current ? { ...current, title: event.target.value } : current)}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -327,7 +327,7 @@ function SettingsDialog(props: {
                 )
               }
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -347,7 +347,7 @@ function SettingsDialog(props: {
                 setState((current) => (current ? { ...current, cleaningUserId: value } : current))
               }
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -375,7 +375,7 @@ function SettingsDialog(props: {
                 )
               }
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -395,7 +395,7 @@ function SettingsDialog(props: {
                 setState((current) => (current ? { ...current, controlUserId: value } : current))
               }
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f1f2f8] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -420,7 +420,7 @@ function SettingsDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-[18px] bg-[#5563ff] px-9 text-[18px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>

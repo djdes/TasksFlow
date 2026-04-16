@@ -764,7 +764,7 @@ export function MedBookDocumentClient({
             <Input
               value={settingsTitle}
               onChange={(event) => setSettingsTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <label className="flex items-center gap-3 text-[16px] text-black">
               <input
@@ -836,7 +836,7 @@ export function MedBookDocumentClient({
                   positionTitle: event.target.value,
                 }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               placeholder="Должность"
             />
             <Select
@@ -854,7 +854,7 @@ export function MedBookDocumentClient({
                 }));
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]">
                 <SelectValue placeholder="Сотрудник" />
               </SelectTrigger>
               <SelectContent>
@@ -874,7 +874,7 @@ export function MedBookDocumentClient({
                   birthDate: event.target.value,
                 }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <div className="flex gap-8 text-[18px]">
               <label className="flex items-center gap-3">
@@ -909,7 +909,7 @@ export function MedBookDocumentClient({
                   hireDate: event.target.value,
                 }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <Input
               value={draft.medBookNumber}
@@ -920,7 +920,7 @@ export function MedBookDocumentClient({
                 }))
               }
               placeholder="Введите номер мед. книжки"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <Input
               value={draft.note}
@@ -931,7 +931,7 @@ export function MedBookDocumentClient({
                 }))
               }
               placeholder="Примечание"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#d7dbe7] bg-white px-6 py-10 text-center">
               {draft.photoUrl ? (
@@ -988,7 +988,7 @@ export function MedBookDocumentClient({
                 onBlur={(event) =>
                   updateRow(editRow.id, { positionTitle: event.target.value })
                 }
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 placeholder="Должность"
               />
               <Input
@@ -999,7 +999,7 @@ export function MedBookDocumentClient({
                     birthDate: event.target.value || null,
                   })
                 }
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
               <Input
                 type="date"
@@ -1009,7 +1009,7 @@ export function MedBookDocumentClient({
                     hireDate: event.target.value || null,
                   })
                 }
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
               <Input
                 defaultValue={editRow.data.medBookNumber || ""}
@@ -1018,7 +1018,7 @@ export function MedBookDocumentClient({
                     medBookNumber: event.target.value || null,
                   })
                 }
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 placeholder="Введите номер мед. книжки"
               />
               <Input
@@ -1026,7 +1026,7 @@ export function MedBookDocumentClient({
                 onBlur={(event) =>
                   updateRow(editRow.id, { note: event.target.value || null })
                 }
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 placeholder="Примечание"
               />
               <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#d7dbe7] bg-white px-6 py-10 text-center">

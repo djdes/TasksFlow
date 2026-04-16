@@ -186,7 +186,7 @@ function DocumentDialog({
               value={state.title}
               placeholder="Введите название документа"
               onChange={(event) => setState({ ...state, title: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -195,7 +195,7 @@ function DocumentDialog({
               type="date"
               value={state.startDate}
               onChange={(event) => setState({ ...state, startDate: event.target.value })}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -214,7 +214,7 @@ function DocumentDialog({
                 })
               }
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -244,7 +244,7 @@ function DocumentDialog({
                   });
                 }}
               >
-                <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,7 +271,7 @@ function DocumentDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : submitLabel}
             </Button>
@@ -316,7 +316,7 @@ function DeleteDialog({
                 setSubmitting(false);
               }
             }}
-            className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Удаление..." : "Удалить"}
           </Button>

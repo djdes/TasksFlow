@@ -105,7 +105,7 @@ function SettingsDialog({
               id="settings-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end">
@@ -208,7 +208,7 @@ export function MedBookDocumentsClient({
             users={users}
             triggerLabel="Создать документ"
             triggerIcon={<Plus className="size-5" />}
-            triggerClassName="h-16 rounded-2xl bg-[#5863f8] px-8 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+            triggerClassName="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
           />
         </div>
       </div>

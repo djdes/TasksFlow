@@ -78,22 +78,22 @@ function SettingsDialog({
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Название документа</Label>
-            <Input value={state.title} onChange={(e) => setState({ ...state, title: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
+            <Input value={state.title} onChange={(e) => setState({ ...state, title: e.target.value })} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
           </div>
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Дата аудита</Label>
-            <Input type="date" value={state.documentDate} onChange={(e) => setState({ ...state, documentDate: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
+            <Input type="date" value={state.documentDate} onChange={(e) => setState({ ...state, documentDate: e.target.value })} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
           </div>
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Основание проверки</Label>
-            <Input value={state.basisTitle} onChange={(e) => setState({ ...state, basisTitle: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
+            <Input value={state.basisTitle} onChange={(e) => setState({ ...state, basisTitle: e.target.value })} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
           </div>
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Подразделение / объект аудита</Label>
-            <Input value={state.auditedObject} onChange={(e) => setState({ ...state, auditedObject: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
+            <Input value={state.auditedObject} onChange={(e) => setState({ ...state, auditedObject: e.target.value })} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
           </div>
           <div className="flex justify-end">
-            <Button type="button" disabled={submitting} onClick={async () => { setSubmitting(true); try { await onSubmit(state); onOpenChange(false); } finally { setSubmitting(false); } }} className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]">
+            <Button type="button" disabled={submitting} onClick={async () => { setSubmitting(true); try { await onSubmit(state); onOpenChange(false); } finally { setSubmitting(false); } }} className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
               {submitting ? "Сохранение..." : submitLabel}
             </Button>
           </div>

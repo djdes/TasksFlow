@@ -136,7 +136,7 @@ function AddPositionDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#73738a]">Должность</Label>
             <Select value={position || "__empty__"} onValueChange={(value) => setPosition(value === "__empty__" ? "" : value)}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -207,7 +207,7 @@ function AddTopicDialog(props: {
             value={topicName}
             onChange={(event) => setTopicName(event.target.value)}
             placeholder="Тема обучения"
-            className="h-14 rounded-2xl border-[#5b66ff] px-4 text-[20px]"
+            className="h-11 rounded-2xl border-[#5b66ff] px-4 text-[15px]"
           />
           <div className="flex justify-end pt-2">
             <Button
@@ -261,7 +261,7 @@ function DocumentSettingsDialog(props: {
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -279,7 +279,7 @@ function DocumentSettingsDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#73738a]">Год</Label>
             <Select value={state.year} onValueChange={(value) => setState({ ...state, year: value })}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -308,7 +308,7 @@ function DocumentSettingsDialog(props: {
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -338,7 +338,7 @@ function DocumentSettingsDialog(props: {
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>

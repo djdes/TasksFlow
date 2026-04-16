@@ -104,7 +104,7 @@ function EditDocumentDialog(props: {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Введите название документа"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -239,7 +239,7 @@ export function HealthDocumentsClient(props: Props) {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -252,7 +252,7 @@ export function HealthDocumentsClient(props: Props) {
                 templateCode={props.templateCode}
                 templateName={props.templateName}
                 users={props.users}
-                triggerClassName="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
                 triggerLabel="Создать документ"
                 triggerIcon={<Plus className="size-7" />}
               />

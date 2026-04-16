@@ -662,14 +662,14 @@ function TrackedDocumentClientImpl({
                 type="date"
                 value={newDate}
                 onChange={(event) => setNewDate(event.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
 
             <div className="space-y-3">
               <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <Select value={newEmployeeId} onValueChange={setNewEmployeeId}>
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Выберите сотрудника" />
                 </SelectTrigger>
                 <SelectContent>
@@ -693,7 +693,7 @@ function TrackedDocumentClientImpl({
                   )
                 }
                 disabled={isCreating || !newDate || !newEmployeeId}
-                className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {isCreating ? "Создание..." : "Создать"}
               </Button>
@@ -719,7 +719,7 @@ function TrackedDocumentClientImpl({
                 id="journal-title"
                 value={titleInput}
                 onChange={(event) => setTitleInput(event.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
 
@@ -730,7 +730,7 @@ function TrackedDocumentClientImpl({
                   value={responsibleUserIdInput}
                   onValueChange={(value) => setResponsibleUserIdInput(value)}
                 >
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue placeholder="Выберите сотрудника" />
                   </SelectTrigger>
                   <SelectContent>
@@ -751,7 +751,7 @@ function TrackedDocumentClientImpl({
                   id="journal-responsible-title"
                   value={responsibleTitleInput}
                   onChange={(event) => setResponsibleTitleInput(event.target.value)}
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                   placeholder="Например: Технолог"
                 />
               </div>
@@ -767,7 +767,7 @@ function TrackedDocumentClientImpl({
                     )
                   )
                 }
-                className="h-14 rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 Сохранить
               </Button>

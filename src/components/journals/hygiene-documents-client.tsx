@@ -153,7 +153,7 @@ function EditDocumentDialog({
               type="button"
               disabled={isSubmitting}
               onClick={handleSave}
-              className="h-16 rounded-3xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -273,7 +273,7 @@ export function HygieneDocumentsClient({
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className="h-16 rounded-2xl border-[#eef0fb] px-7 text-[18px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -286,7 +286,7 @@ export function HygieneDocumentsClient({
                 templateCode={templateCode}
                 templateName={templateName}
                 users={users}
-                triggerClassName="h-16 rounded-2xl bg-[#5b66ff] px-8 text-[18px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
                 triggerLabel="Создать документ"
                 triggerIcon={<Plus className="size-7" />}
               />

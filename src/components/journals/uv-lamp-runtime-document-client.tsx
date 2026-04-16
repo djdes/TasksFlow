@@ -318,7 +318,7 @@ function UvSpecEditDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -400,7 +400,7 @@ function UvRuntimeSettingsDialog(props: {
             <Input
               value={areaName}
               onChange={(event) => setAreaName(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-1">
@@ -409,7 +409,7 @@ function UvRuntimeSettingsDialog(props: {
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-1">
@@ -421,7 +421,7 @@ function UvRuntimeSettingsDialog(props: {
               }
               setResponsibleTitle(value);
             }}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -452,7 +452,7 @@ function UvRuntimeSettingsDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Сотрудник</Label>
             <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -487,7 +487,7 @@ function UvRuntimeSettingsDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -550,7 +550,7 @@ function AddRowDialog(props: {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -560,7 +560,7 @@ function AddRowDialog(props: {
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Часы</Label>
                 <Select value={startHour} onValueChange={setStartHour}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -573,7 +573,7 @@ function AddRowDialog(props: {
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
                 <Select value={startMin} onValueChange={setStartMin}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -592,7 +592,7 @@ function AddRowDialog(props: {
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Часы</Label>
                 <Select value={endHour} onValueChange={setEndHour}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -605,7 +605,7 @@ function AddRowDialog(props: {
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
                 <Select value={endMin} onValueChange={setEndMin}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -627,7 +627,7 @@ function AddRowDialog(props: {
               }
               setResponsibleTitle(value);
             }}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -658,7 +658,7 @@ function AddRowDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Сотрудник</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -684,7 +684,7 @@ function AddRowDialog(props: {
                 });
                 props.onOpenChange(false);
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[20px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Добавить
             </Button>

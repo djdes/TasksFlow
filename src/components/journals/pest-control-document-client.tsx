@@ -138,13 +138,13 @@ function DocumentSettingsDialog(props: {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Введите название документа"
-            className="h-16 rounded-2xl border-[#dfe1ec] px-5 text-[20px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Input
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="h-16 rounded-2xl border-[#dfe1ec] px-5 text-[20px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <div className="flex justify-end">
             <Button
@@ -280,7 +280,7 @@ function EntryDialog(props: {
               onChange={(event) =>
                 setEntry((current) => ({ ...current, performedDate: event.target.value }))
               }
-              className="mb-3 h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="mb-3 h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
             <div className="grid grid-cols-2 gap-3">
               <Select
@@ -293,7 +293,7 @@ function EntryDialog(props: {
                   }))
                 }
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Часы" />
                 </SelectTrigger>
                 <SelectContent>
@@ -315,7 +315,7 @@ function EntryDialog(props: {
                   }))
                 }
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                   <SelectValue placeholder="Минуты" />
                 </SelectTrigger>
                 <SelectContent>
@@ -336,7 +336,7 @@ function EntryDialog(props: {
               setEntry((current) => ({ ...current, event: event.target.value }))
             }
             placeholder="Введите мероприятие (вид, место)"
-            className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Input
             value={entry.areaOrVolume}
@@ -344,7 +344,7 @@ function EntryDialog(props: {
               setEntry((current) => ({ ...current, areaOrVolume: event.target.value }))
             }
             placeholder="Введите площадь и (или) объем"
-            className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Input
             value={entry.treatmentProduct}
@@ -352,7 +352,7 @@ function EntryDialog(props: {
               setEntry((current) => ({ ...current, treatmentProduct: event.target.value }))
             }
             placeholder="Введите средство обработки"
-            className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Textarea
             value={entry.note}
@@ -368,10 +368,10 @@ function EntryDialog(props: {
               setEntry((current) => ({ ...current, performedBy: event.target.value }))
             }
             placeholder="Введите кем проведено"
-            className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Select value={entry.acceptedRole} onValueChange={updateAcceptedRole}>
-            <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
               <SelectValue placeholder="Должность принявшего работы" />
             </SelectTrigger>
             <SelectContent>
@@ -388,7 +388,7 @@ function EntryDialog(props: {
               setEntry((current) => ({ ...current, acceptedEmployeeId: value }))
             }
           >
-            <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+            <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
               <SelectValue placeholder="Сотрудник" />
             </SelectTrigger>
             <SelectContent>

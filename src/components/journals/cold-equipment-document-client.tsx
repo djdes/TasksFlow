@@ -213,7 +213,7 @@ function EquipmentDialog({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Например: Холодильная камера"
-              className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -227,7 +227,7 @@ function EquipmentDialog({
                 type="number"
                 value={min}
                 onChange={(event) => setMin(event.target.value)}
-                className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -239,7 +239,7 @@ function EquipmentDialog({
                 type="number"
                 value={max}
                 onChange={(event) => setMax(event.target.value)}
-                className="h-18 rounded-3xl border-[#dfe1ec] px-6 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
           </div>
@@ -252,7 +252,7 @@ function EquipmentDialog({
                   variant="outline"
                   onClick={handleDelete}
                   disabled={isSubmitting}
-                  className="h-14 rounded-2xl border-[#ffd7d3] px-6 text-[18px] text-[#ff3b30] hover:bg-[#fff3f2]"
+                  className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2]"
                 >
                   Удалить строку
                 </Button>
@@ -263,7 +263,7 @@ function EquipmentDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || name.trim() === ""}
-              className="h-14 rounded-2xl bg-[#5566f6] px-8 text-[18px] text-white hover:bg-[#4858eb]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4858eb]"
             >
               {isSubmitting ? "Сохранение..." : initialItem ? "Сохранить" : "Добавить"}
             </Button>
@@ -720,7 +720,7 @@ export function ColdEquipmentDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки журнала
@@ -729,7 +729,7 @@ export function ColdEquipmentDocumentClient({
                 documentId={documentId}
                 title={documentTitle}
                 variant="outline"
-                className="h-18 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
               >
                 Закончить журнал
               </DocumentCloseButton>
@@ -825,7 +825,7 @@ export function ColdEquipmentDocumentClient({
                 setEditingEquipment(null);
                 setEquipmentDialogOpen(true);
               }}
-              className="h-18 rounded-[22px] bg-[#5566f6] px-8 text-[20px] text-white hover:bg-[#4858eb]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4858eb]"
             >
               <Plus className="size-6" />
               Добавить ХО
@@ -837,7 +837,7 @@ export function ColdEquipmentDocumentClient({
                 variant="outline"
                 onClick={handleDeleteSelectedEquipment}
                 disabled={isDeleting}
-                className="h-18 rounded-[22px] border-[#ffd7d3] px-8 text-[20px] text-[#ff3b30] hover:bg-[#fff3f2] disabled:opacity-60"
+                className="h-11 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff3f2] disabled:opacity-60"
               >
                 <Trash2 className="size-6" />
                 {isDeleting ? "Удаление..." : `Удалить выбранные (${selectedEquipmentIds.length})`}

@@ -114,7 +114,7 @@ function ComplaintRowDialog({
               type="date"
               value={draft.values.receiptDate || ""}
               onChange={(event) => setValue("receiptDate", event.target.value)}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -123,7 +123,7 @@ function ComplaintRowDialog({
               value={draft.values.applicantName || ""}
               onChange={(event) => setValue("applicantName", event.target.value)}
               placeholder="Введите ФИО заявителя"
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -132,7 +132,7 @@ function ComplaintRowDialog({
               value={draft.values.complaintReceiptForm || ""}
               onValueChange={(value) => setValue("complaintReceiptForm", value)}
             >
-              <SelectTrigger className="h-16 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -166,7 +166,7 @@ function ComplaintRowDialog({
               type="date"
               value={draft.values.decisionDate || ""}
               onChange={(event) => setValue("decisionDate", event.target.value)}
-              className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -182,7 +182,7 @@ function ComplaintRowDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : row ? "Сохранить" : "Добавить"}
             </Button>
@@ -242,7 +242,7 @@ function SettingsDialog({
             <Input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-3">
@@ -251,7 +251,7 @@ function SettingsDialog({
               type="date"
               value={draftDate}
               onChange={(event) => setDraftDate(event.target.value)}
-              className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
           <div className="flex justify-end">
@@ -259,7 +259,7 @@ function SettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -308,7 +308,7 @@ function FinishDialog({
             type="button"
             onClick={handleFinish}
             disabled={submitting}
-            className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Завершение..." : "Закончить"}
           </Button>

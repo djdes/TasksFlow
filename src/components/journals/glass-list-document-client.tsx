@@ -304,7 +304,7 @@ export function GlassListDocumentClient({
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, documentName: event.target.value }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -314,7 +314,7 @@ export function GlassListDocumentClient({
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, location: event.target.value }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -325,7 +325,7 @@ export function GlassListDocumentClient({
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, documentDate: event.target.value }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -384,7 +384,7 @@ export function GlassListDocumentClient({
                 type="button"
                 disabled={saving}
                 onClick={() => saveSettings().catch(() => undefined)}
-                className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {saving ? "Сохранение..." : "Сохранить"}
               </Button>
@@ -421,7 +421,7 @@ export function GlassListDocumentClient({
                     row: { ...prev.row, location: event.target.value },
                   }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -434,7 +434,7 @@ export function GlassListDocumentClient({
                     row: { ...prev.row, itemName: event.target.value },
                   }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-3">
@@ -447,7 +447,7 @@ export function GlassListDocumentClient({
                     row: { ...prev.row, quantity: event.target.value },
                   }))
                 }
-                className="h-18 rounded-[22px] border-[#dfe1ec] px-7 text-[20px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
             <div className="flex justify-end">
@@ -455,7 +455,7 @@ export function GlassListDocumentClient({
                 type="button"
                 disabled={saving}
                 onClick={() => saveRow().catch(() => undefined)}
-                className="h-16 rounded-[18px] bg-[#5b66ff] px-10 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {saving ? "Сохранение..." : rowDialog.rowIndex === null ? "Добавить" : "Сохранить"}
               </Button>

@@ -147,7 +147,7 @@ function TraceabilitySettingsDialog(props: {
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
                 placeholder="Введите название документа"
-                className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px] tracking-[-0.02em]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px] tracking-[-0.02em]"
               />
             </div>
 
@@ -197,7 +197,7 @@ function TraceabilitySettingsDialog(props: {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]"
+                className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               >
                 {submitting ? "Сохранение..." : props.submitLabel}
               </Button>
@@ -391,7 +391,7 @@ export function TraceabilityDocumentsClient({
           <Button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="h-14 rounded-2xl bg-[#5563ff] px-7 text-[18px] font-medium text-white shadow-md shadow-[#5563ff]/20 hover:bg-[#4957fb]"
+            className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] font-medium text-white shadow-md shadow-[#5563ff]/20 hover:bg-[#4957fb]"
           >
             <Plus className="size-6" />
             Создать документ
@@ -479,7 +479,7 @@ export function TraceabilityDocumentsClient({
                   archiveTarget.status === "active" ? "closed" : "active"
                 )
               }
-              className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
             >
               {archiveTarget?.status === "active" ? "Закрыть" : "Восстановить"}
             </Button>
@@ -507,7 +507,7 @@ export function TraceabilityDocumentsClient({
             <Button
               type="button"
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
-              className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[20px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
             >
               Удалить
             </Button>

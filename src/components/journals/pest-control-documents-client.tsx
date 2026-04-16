@@ -103,7 +103,7 @@ function SettingsDialog(props: {
               setForm((current) => ({ ...current, title: event.target.value }))
             }
             placeholder="Введите название документа"
-            className="h-16 rounded-2xl border-[#dfe1ec] px-5 text-[20px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <Input
             type="date"
@@ -111,7 +111,7 @@ function SettingsDialog(props: {
             onChange={(event) =>
               setForm((current) => ({ ...current, dateFrom: event.target.value }))
             }
-            className="h-16 rounded-2xl border-[#dfe1ec] px-5 text-[20px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
           />
           <div className="flex justify-end">
             <Button

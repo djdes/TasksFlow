@@ -170,7 +170,7 @@ function EditTrackedDocumentDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Введите название документа"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -184,7 +184,7 @@ function EditTrackedDocumentDialog({
                 value={areaName}
                 onChange={(e) => setAreaName(e.target.value)}
                 placeholder="Введите наименование цеха/участка применения"
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
           )}
@@ -192,7 +192,7 @@ function EditTrackedDocumentDialog({
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -220,7 +220,7 @@ function EditTrackedDocumentDialog({
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[18px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
               />
             </div>
           )}
@@ -239,7 +239,7 @@ function EditTrackedDocumentDialog({
               <div className="space-y-3">
                 <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
                 <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                     <SelectValue placeholder="- Выберите значение -" />
                   </SelectTrigger>
                   <SelectContent>

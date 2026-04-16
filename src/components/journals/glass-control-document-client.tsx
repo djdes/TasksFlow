@@ -212,7 +212,7 @@ function GlassControlSettingsDialog(props: {
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -222,7 +222,7 @@ function GlassControlSettingsDialog(props: {
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -231,14 +231,14 @@ function GlassControlSettingsDialog(props: {
             <Input
               value={controlFrequency}
               onChange={(event) => setControlFrequency(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -254,7 +254,7 @@ function GlassControlSettingsDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Сотрудник</Label>
             <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -289,7 +289,7 @@ function GlassControlSettingsDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -347,7 +347,7 @@ function RowDialog(props: {
               onChange={(event) =>
                 setDraft((prev) => ({ ...prev, date: event.target.value }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -396,7 +396,7 @@ function RowDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Должность ответственного</Label>
             <Select value={props.responsibleTitle} disabled>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -417,7 +417,7 @@ function RowDialog(props: {
                 setDraft((prev) => ({ ...prev, employeeId: value }))
               }
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -446,7 +446,7 @@ function RowDialog(props: {
                       data: { ...prev.data, itemName: event.target.value },
                     }))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
                 <datalist id="glass-control-item-suggestions">
                   {props.itemSuggestions.map((item) => (
@@ -465,7 +465,7 @@ function RowDialog(props: {
                       data: { ...prev.data, quantity: event.target.value },
                     }))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
               </div>
 
@@ -481,7 +481,7 @@ function RowDialog(props: {
                       data: { ...prev.data, damageInfo: event.target.value },
                     }))
                   }
-                  className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+                  className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
               </div>
             </>
@@ -500,7 +500,7 @@ function RowDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -956,7 +956,7 @@ export function GlassControlDocumentClient(props: Props) {
             <Button
               type="button"
               onClick={() => void closeJournal()}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               Закончить
             </Button>

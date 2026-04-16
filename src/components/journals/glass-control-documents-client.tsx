@@ -129,7 +129,7 @@ function GlassControlFormDialog(props: {
               onChange={(event) =>
                 setState((prev) => ({ ...prev, title: event.target.value }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -141,7 +141,7 @@ function GlassControlFormDialog(props: {
               onChange={(event) =>
                 setState((prev) => ({ ...prev, dateFrom: event.target.value }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -155,7 +155,7 @@ function GlassControlFormDialog(props: {
                   controlFrequency: event.target.value,
                 }))
               }
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[18px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
@@ -167,7 +167,7 @@ function GlassControlFormDialog(props: {
                 setState((prev) => ({ ...prev, responsibleTitle: value }))
               }
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -188,7 +188,7 @@ function GlassControlFormDialog(props: {
                 setState((prev) => ({ ...prev, responsibleUserId: value }))
               }
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[18px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -214,7 +214,7 @@ function GlassControlFormDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-xl bg-[#5863f8] px-7 text-[18px] font-medium text-white hover:bg-[#4b57f3]"
+              className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]"
             >
               {submitting ? "Сохранение..." : props.submitLabel}
             </Button>

@@ -208,7 +208,7 @@ function DocumentSettingsDialog(props: {
             <Input
               value={state.title}
               onChange={(event) => setState((current) => ({ ...current, title: event.target.value }))}
-              className="h-16 rounded-3xl border-[#d8dae6] px-6 text-[22px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[15px]"
             />
           </div>
           <div className="space-y-2">
@@ -249,7 +249,7 @@ function DocumentSettingsDialog(props: {
                 setState((current) => ({ ...current, mainResponsibleTitle: value }))
               }
             >
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f4f5fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -269,7 +269,7 @@ function DocumentSettingsDialog(props: {
                 setState((current) => ({ ...current, mainResponsibleUserId: value }))
               }
             >
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f4f5fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -285,7 +285,7 @@ function DocumentSettingsDialog(props: {
             <Button
               type="button"
               disabled={submitting}
-              className="h-14 rounded-3xl bg-[#5563ff] px-8 text-[20px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               onClick={async () => {
                 setSubmitting(true);
                 try {
@@ -344,7 +344,7 @@ function AddResponsibleDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#7a7c8e]">Должность ответственного</Label>
             <Select value={title} onValueChange={setTitle}>
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f4f5fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -359,7 +359,7 @@ function AddResponsibleDialog(props: {
           <div className="space-y-2">
             <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
             <Select value={userId} onValueChange={setUserId}>
-              <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f4f5fb] px-4 text-[15px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -374,7 +374,7 @@ function AddResponsibleDialog(props: {
           <div className="flex justify-end pt-2">
             <Button
               type="button"
-              className="h-14 rounded-3xl bg-[#5563ff] px-8 text-[20px] text-white hover:bg-[#4554ff]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]"
               disabled={!title || !userId}
               onClick={async () => {
                 await props.onAdd({ id: createId(), title, userId });
