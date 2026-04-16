@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { Agent, setGlobalDispatcher } from "undici";
+import { Agent, fetch as undiciFetch, setGlobalDispatcher } from "undici";
 import crypto from "node:crypto";
 import { escapeHtml } from "@/lib/html-escape";
 import { getDbRoleValuesWithLegacy, MANAGEMENT_ROLES } from "@/lib/user-roles";
@@ -49,8 +49,24 @@ if (forceIp) {
   );
 }
 
+// Grammy's shim.node.js pins `node-fetch` hard, which ignores undici's
+// global dispatcher. Pass undici's native `fetch` through BotConfig.client.fetch
+// so our setGlobalDispatcher above actually takes effect for grammy calls too.
+// Grammy's shim.node.js pins `node-fetch` hard, which ignores undici's
+// global dispatcher. Pass undici's native `fetch` through BotConfig.client.fetch
+// so our setGlobalDispatcher above actually takes effect for grammy calls too.
+// Types clash between node-fetch's Request and undici's Request — cast via
+// unknown because at runtime both are callable with the same (url, init).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tgFetch = forceIp ? (undiciFetch as unknown as any) : undefined;
+
 const bot = token
-  ? new Bot(token, apiRoot ? { client: { apiRoot } } : undefined)
+  ? new Bot(token, {
+      client: {
+        ...(apiRoot ? { apiRoot } : {}),
+        ...(tgFetch ? { fetch: tgFetch } : {}),
+      },
+    })
   : null;
 
 /**
