@@ -6,7 +6,10 @@ on:
 
 env:
   APP_DIR: /var/www/wesetupru/data/www/wesetup.ru/app
-  NODE_VERSION: "20"
+  # Must be >= 22 — undici@8 requires Node 20.18+, and the prod server
+  # runs Node 22. Keep the CI and prod runtimes aligned to avoid
+  # "engines" mismatches during npm ci.
+  NODE_VERSION: "22"
 
 jobs:
   deploy:
