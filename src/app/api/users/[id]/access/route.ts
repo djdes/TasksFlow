@@ -6,6 +6,7 @@ import { getActiveOrgId } from "@/lib/auth-helpers";
 import { invalidateJournalAcl } from "@/lib/journal-acl";
 import { isManagementRole } from "@/lib/user-roles";
 import { ACTIVE_JOURNAL_CATALOG } from "@/lib/journal-catalog";
+import { sendTelegramMessage, escapeTelegramHtml } from "@/lib/telegram";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,6 +118,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
     .filter((item) => VALID_CODES.has(item.templateCode))
     .filter((item) => item.canRead || item.canWrite || item.canFinalize);
 
+  // Capture the previous grants before we wipe them so we know which codes
+  // are *newly* granted — only those produce a Telegram ping.
+  const previous = await db.userJournalAccess.findMany({
+    where: { userId: id },
+    select: { templateCode: true, canRead: true },
+  });
+  const previouslyReadable = new Set(
+    previous.filter((row) => row.canRead).map((row) => row.templateCode)
+  );
+
   await db.$transaction([
     db.userJournalAccess.deleteMany({ where: { userId: id } }),
     ...sanitised.map(
@@ -143,6 +154,34 @@ export async function PUT(request: Request, { params }: RouteParams) {
   ]);
 
   invalidateJournalAcl(id);
+
+  // Fire-and-forget Telegram notification for newly granted read access.
+  // Filters out cases where canRead was already granted to avoid spamming.
+  const newlyGranted = sanitised.filter(
+    (row) => row.canRead && !previouslyReadable.has(row.templateCode)
+  );
+  if (newlyGranted.length > 0) {
+    const target = await db.user.findUnique({
+      where: { id },
+      select: { telegramChatId: true, notificationPrefs: true },
+    });
+    const prefs = (target?.notificationPrefs as
+      | Record<string, boolean>
+      | null) ?? {};
+    if (target?.telegramChatId && prefs.assignments !== false) {
+      const codeToName = new Map<string, string>(
+        ACTIVE_JOURNAL_CATALOG.map((item) => [item.code, item.name])
+      );
+      const names = newlyGranted
+        .map((row) => codeToName.get(row.templateCode) ?? row.templateCode)
+        .map((name) => `• ${escapeTelegramHtml(name)}`)
+        .join("\n");
+      const body = `<b>Вам назначены журналы:</b>\n${names}`;
+      sendTelegramMessage(target.telegramChatId, body, { userId: id }).catch(
+        (err) => console.error("TG assignment notify failed", err)
+      );
+    }
+  }
 
   return NextResponse.json({ ok: true, count: sanitised.length });
 }
