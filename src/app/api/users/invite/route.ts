@@ -1,51 +1,55 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendInviteEmail } from "@/lib/email";
+import { sendInviteTokenEmail } from "@/lib/email";
+import {
+  buildInviteUrl,
+  generateInviteToken,
+  hashInviteToken,
+  inviteExpiresAt,
+} from "@/lib/invite-tokens";
 import {
   isManagerRole,
   toCanonicalUserRole,
   USER_ROLE_VALUES,
 } from "@/lib/user-roles";
+import { getActiveOrgId } from "@/lib/auth-helpers";
 
 const inviteUserSchema = z.object({
   name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
   email: z.string().email("Введите корректный email"),
-  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-  role: z.enum(USER_ROLE_VALUES, {
-    message: "Выберите роль",
-  }),
+  role: z.enum(USER_ROLE_VALUES, { message: "Выберите роль" }),
   phone: z.string().optional(),
 });
 
+/**
+ * POST /api/users/invite
+ *
+ * Creates a placeholder User (isActive=false, empty passwordHash) plus a
+ * one-shot InviteToken. Emails a /invite/<raw> URL to the new employee —
+ * no raw password is ever persisted or transmitted. The employee clicks
+ * the link, sets their password via POST /api/invite/[token]/accept, and
+ * the user is activated.
+ *
+ * Breaking change vs the old flow: the `password` field is no longer
+ * accepted. Callers must migrate to the invite-link flow.
+ */
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session) {
-      return NextResponse.json(
-        { error: "Не авторизован" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
-
-    if (!isManagerRole(session.user.role)) {
-      return NextResponse.json(
-        { error: "Недостаточно прав" },
-        { status: 403 }
-      );
+    if (!isManagerRole(session.user.role) && !session.user.isRoot) {
+      return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
     }
 
     const body = await request.json();
-    const validatedData = inviteUserSchema.parse(body);
+    const data = inviteUserSchema.parse(body);
 
-    const existingUser = await db.user.findUnique({
-      where: { email: validatedData.email },
-    });
-
+    const existingUser = await db.user.findUnique({ where: { email: data.email } });
     if (existingUser) {
       return NextResponse.json(
         { error: "Пользователь с таким email уже существует" },
@@ -53,25 +57,40 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordHash = await bcrypt.hash(validatedData.password, 12);
+    const raw = generateInviteToken();
+    const tokenHash = hashInviteToken(raw);
+    const expiresAt = inviteExpiresAt();
+    const organizationId = getActiveOrgId(session);
 
-    const user = await db.user.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        passwordHash,
-        role: toCanonicalUserRole(validatedData.role),
-        phone: validatedData.phone || null,
-        organizationId: session.user.organizationId,
-      },
+    const { user } = await db.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          passwordHash: "",
+          role: toCanonicalUserRole(data.role),
+          phone: data.phone || null,
+          organizationId,
+          isActive: false,
+        },
+      });
+      await tx.inviteToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      });
+      return { user };
     });
 
-    sendInviteEmail({
+    const inviteUrl = buildInviteUrl(raw);
+    sendInviteTokenEmail({
       to: user.email,
       name: user.name,
-      password: validatedData.password,
       organizationName: session.user.organizationName,
-    });
+      inviteUrl,
+    }).catch((err) => console.error("sendInviteTokenEmail failed", err));
 
     return NextResponse.json(
       {
@@ -91,7 +110,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
     console.error("User invite error:", error);
     return NextResponse.json(
       { error: "Внутренняя ошибка сервера" },
