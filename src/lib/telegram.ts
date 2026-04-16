@@ -17,17 +17,102 @@ const bot = token ? new Bot(token) : null;
  */
 export const escapeTelegramHtml = escapeHtml;
 
-// Send a message to a specific chat
+const MAX_RETRIES = 3;
+const RETRY_HARD_CAP_SECONDS = 30;
+
+type GrammyRetryError = {
+  error_code?: number;
+  parameters?: { retry_after?: number };
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractRetryAfterSeconds(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null;
+  const candidate = error as GrammyRetryError;
+  if (candidate.error_code !== 429) return null;
+  const ra = candidate.parameters?.retry_after;
+  if (typeof ra !== "number" || !Number.isFinite(ra) || ra <= 0) return null;
+  return Math.min(ra, RETRY_HARD_CAP_SECONDS);
+}
+
+/**
+ * Send a Telegram message and log every attempt to TelegramLog.
+ *
+ * Retry policy: on HTTP 429 we honour Telegram's `retry_after` (capped at
+ * 30s) up to 3 attempts. Other errors are logged as `failed` immediately.
+ * Persistent 429s end as `rate_limited`. Caller context (userId) is
+ * optional — cron jobs that fan out to many users pass it so the log is
+ * per-user.
+ */
 export async function sendTelegramMessage(
   chatId: string,
-  text: string
+  text: string,
+  opts?: { userId?: string | null }
 ): Promise<void> {
-  if (!bot) return; // silently skip if no bot configured
-  try {
-    await bot.api.sendMessage(chatId, text, { parse_mode: "HTML" });
-  } catch (error) {
-    console.error("Telegram send error:", error);
+  const { db } = await import("./db");
+  const log = await db.telegramLog.create({
+    data: {
+      chatId,
+      body: text,
+      userId: opts?.userId ?? null,
+      status: "queued",
+      attempts: 0,
+    },
+  });
+
+  if (!bot) {
+    await db.telegramLog.update({
+      where: { id: log.id },
+      data: { status: "failed", error: "bot not configured" },
+    });
+    return;
   }
+
+  let attempt = 0;
+  let lastError: unknown = null;
+
+  while (attempt < MAX_RETRIES) {
+    attempt += 1;
+    try {
+      await bot.api.sendMessage(chatId, text, { parse_mode: "HTML" });
+      await db.telegramLog.update({
+        where: { id: log.id },
+        data: {
+          status: "sent",
+          attempts: attempt,
+          sentAt: new Date(),
+        },
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      const retryAfter = extractRetryAfterSeconds(error);
+      if (retryAfter === null || attempt >= MAX_RETRIES) {
+        break;
+      }
+      await sleep(retryAfter * 1000);
+    }
+  }
+
+  const rateLimited = extractRetryAfterSeconds(lastError) !== null;
+  const errorText =
+    lastError instanceof Error
+      ? lastError.message
+      : typeof lastError === "string"
+        ? lastError
+        : JSON.stringify(lastError);
+  await db.telegramLog.update({
+    where: { id: log.id },
+    data: {
+      status: rateLimited ? "rate_limited" : "failed",
+      error: errorText?.slice(0, 500) ?? "unknown",
+      attempts: attempt,
+    },
+  });
+  console.error("Telegram send error:", lastError);
 }
 
 export type NotificationType = "temperature" | "deviations" | "compliance" | "expiry";
@@ -54,7 +139,7 @@ export async function notifyOrganization(
       telegramChatId: { not: null },
       isActive: true,
     },
-    select: { telegramChatId: true, notificationPrefs: true },
+    select: { id: true, telegramChatId: true, notificationPrefs: true },
   });
 
   // Filter by notification preference if type is specified
@@ -67,7 +152,11 @@ export async function notifyOrganization(
     : users;
 
   await Promise.allSettled(
-    filtered.map((u) => sendTelegramMessage(u.telegramChatId!, message))
+    filtered.map((u) =>
+      sendTelegramMessage(u.telegramChatId!, message, {
+        userId: (u as { id?: string }).id ?? null,
+      })
+    )
   );
 }
 
