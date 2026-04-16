@@ -49,6 +49,34 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
+export async function sendVerificationEmail(to: string, code: string) {
+  const subject = `Код подтверждения — HACCP-Online`;
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте!</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Ваш код подтверждения регистрации:</p>
+    <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin:0 0 24px;text-align:center">
+      <p style="margin:0;font-size:32px;font-weight:700;letter-spacing:8px;color:#18181b">${escapeHtml(code)}</p>
+    </div>
+    <p style="margin:0;color:#71717a;font-size:13px">Код действителен 10 минут. Если вы не запрашивали регистрацию, проигнорируйте это письмо.</p>`;
+  await sendEmail(to, subject, layout(subject, body));
+}
+
+export async function sendInviteTokenEmail(params: {
+  to: string;
+  name: string;
+  organizationName: string;
+  inviteUrl: string;
+}) {
+  const { to, name, organizationName, inviteUrl } = params;
+  const subject = `Вас пригласили в ${organizationName} — HACCP-Online`;
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Здравствуйте, <strong>${escapeHtml(name)}</strong>!</p>
+    <p style="margin:0 0 16px;color:#3f3f46;line-height:1.6">Вас пригласили в организацию <strong>${escapeHtml(organizationName)}</strong>. Нажмите кнопку ниже, чтобы установить пароль и войти.</p>
+    <a href="${inviteUrl}" style="display:inline-block;background:#5566f6;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">Установить пароль</a>
+    <p style="margin:24px 0 0;font-size:13px;color:#a1a1aa">Ссылка действительна 7 дней. После установки пароля приглашение станет недействительным.</p>`;
+  await sendEmail(to, subject, layout(subject, body));
+}
+
 export async function sendInviteEmail(params: {
   to: string;
   name: string;
