@@ -164,30 +164,53 @@ Route groups:
 
 Core multi-tenancy rule:
 - all business data is scoped by `organizationId` from the session
+- `session.user.organizationId` is the **home** org, `getActiveOrgId(session)` returns the **currently-viewed** org (different when a ROOT user impersonates a customer). Always use `getActiveOrgId` in server components and API handlers.
 
-Roles:
-- `owner`
-- `technologist`
-- `operator`
+Three-tier access model:
+- **ROOT** (`User.isRoot = true`): platform superadmin, lives in the synthetic `platform` organisation (id `platform`). Sees `/root/*`. Non-root requests to `/root/*` are 404 (via `src/middleware.ts`), not redirected, so existence is not leaked.
+- **Company owner / manager** (`role in {manager, head_chef}` or legacy `owner`/`technologist`): sees every journal + user in their org. Bypasses per-journal ACL.
+- **Employee** (`cook`, `waiter`, or any role when `journalAccessMigrated=true` + no row): only sees journals explicitly granted via `UserJournalAccess`. See `src/lib/journal-acl.ts` for the truth table and 60-second LRU cache.
+
+Roles (legacy-compatible):
+- `owner` / `manager`
+- `technologist` / `head_chef`
+- `operator` / `cook` / `waiter`
+
+Registration + invite:
+- `/register` is a 3-step wizard — details → 6-digit email code (`POST /api/auth/register/request` + `/confirm`) → tariff picker. On confirm we create Organization + manager User + auto-sign-in.
+- Employee invite flow: owner clicks "Пригласить" → `POST /api/users/invite` creates a placeholder User (`isActive=false`, empty `passwordHash`) + `InviteToken` (SHA-256 stored, 7-day TTL) → email with `/invite/<raw>` link → `/invite/[token]` page accepts password and activates.
+
+Impersonation:
+- ROOT clicks "Войти как X" → `POST /api/root/impersonate` writes AuditLog + the client calls `useSession().update({ actingAsOrganizationId })` so the JWT gets the claim. Dashboard shows a red sticky banner with "Выйти" button (`/src/components/dashboard/impersonation-banner.tsx`). No cookie swap.
 
 Common API pattern:
 1. `getServerSession(authOptions)`
-2. role check
-3. Zod validation
-4. Prisma query
-5. `NextResponse.json()`
+2. role check (`isManagementRole`, `session.user.isRoot`, or `requireRoot()` for platform endpoints)
+3. ACL check via `hasJournalAccess` for journal-bound endpoints
+4. Zod validation
+5. Prisma query (scope by `getActiveOrgId`)
+6. `NextResponse.json()`
 
 ## Key Modules
 
 Important files in `src/lib/`:
 - `db.ts`: Prisma singleton
-- `auth.ts`: NextAuth config
-- `auth-helpers.ts`: `requireAuth()` / `requireRole()`
+- `auth.ts`: NextAuth config (JWT carries `isRoot`, `actingAsOrganizationId`)
+- `auth-helpers.ts`: `requireAuth()` / `requireRole()` / `requireRoot()` / `getActiveOrgId()` / `isImpersonating()`
+- `journal-acl.ts`: `hasJournalAccess` + `canWriteJournal` + `canFinalizeJournal`, LRU-cached; `invalidateJournalAcl(userId)` on ACL save
+- `invite-tokens.ts`: 32-byte base64url tokens, SHA-256 hash, `buildInviteUrl` helper
+- `registration.ts`: 6-digit code generator + bcrypt compare + TTL config
 - `validators.ts`: Zod schemas
-- `email.ts`: mail sending
-- `telegram.ts`: Telegram notifications
+- `email.ts`: mail sending (`sendVerificationEmail`, `sendInviteTokenEmail`, `sendWelcomeEmail`, alert templates)
+- `telegram.ts`: `sendTelegramMessage` with TelegramLog + 429 retry, `notifyOrganization`, link-token HMAC
 - `tuya.ts`: Tuya integration
 - `pdf.ts`: PDF generation
+
+Required env (for the three-tier model):
+- `PLATFORM_ORG_ID=platform`
+- `ROOT_EMAIL`, `ROOT_PASSWORD_HASH` (seed creates the first root from these; plain `ROOT_PASSWORD` also accepted for dev)
+- `TELEGRAM_BOT_USERNAME`, `TELEGRAM_LINK_TOKEN_SECRET`, `TELEGRAM_WEBHOOK_SECRET`
+- `EMAIL_VERIFICATION_TTL_MIN=10`, `TELEGRAM_LOG_RETENTION_DAYS=30`
 
 ## Journal System
 
