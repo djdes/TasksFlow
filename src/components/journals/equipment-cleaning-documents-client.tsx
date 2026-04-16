@@ -131,7 +131,7 @@ export function EquipmentCleaningDocumentsClient({
         {documents.map((document) => (
           <div
             key={document.id}
-            className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
+            className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
               <div className="text-[17px] font-semibold leading-none tracking-tight text-black">
@@ -142,7 +142,7 @@ export function EquipmentCleaningDocumentsClient({
               href={`/journals/${templateCode}/documents/${document.id}`}
               className="justify-self-end pr-2"
             >
-              <div className="text-[14px] text-[#85889b]">Дата начала</div>
+              <div className="text-[14px] text-[#84849a]">Дата начала</div>
               <div className="text-[15px] leading-none text-black">
                 {document.startedAtLabel}
               </div>

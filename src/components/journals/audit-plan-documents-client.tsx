@@ -469,7 +469,7 @@ export function AuditPlanDocumentsClient({
           return (
             <div
               key={document.id}
-              className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[1.8fr_170px_360px_220px_64px] sm:items-center sm:gap-0 sm:px-8"
+              className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_170px_360px_220px_64px] sm:items-center sm:gap-0 sm:px-8"
             >
               <Link
                 href={href}
@@ -478,17 +478,17 @@ export function AuditPlanDocumentsClient({
                 {document.title || AUDIT_PLAN_DOCUMENT_TITLE}
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Год</div>
+                <div className="text-[14px] text-[#84849a]">Год</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">{cfg.year}</div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Должность &quot;Утверждаю&quot;</div>
+                <div className="text-[14px] text-[#84849a]">Должность &quot;Утверждаю&quot;</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {getAuditPlanApproveLabel(cfg.approveRole, cfg.approveEmployee)}
                 </div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Дата документа</div>
+                <div className="text-[14px] text-[#84849a]">Дата документа</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {getAuditPlanDocumentDateLabel(cfg.documentDate)}
                 </div>

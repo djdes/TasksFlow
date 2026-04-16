@@ -234,7 +234,7 @@ export function ProductWriteoffDocumentsClient({
           {normalizedDocuments.map((document) => (
             <div
               key={document.id}
-              className="grid grid-cols-1 gap-4 rounded-[16px] border border-[#eceef5] bg-white px-5 py-4 sm:grid-cols-[minmax(0,1.8fr)_280px_280px_56px] sm:items-center sm:gap-0 sm:px-7"
+              className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.8fr)_280px_280px_56px] sm:items-center sm:gap-0 sm:px-7"
             >
               <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
                 <div className="text-[17px] font-semibold tracking-[-0.02em] text-black">{document.listTitle}</div>
@@ -243,7 +243,7 @@ export function ProductWriteoffDocumentsClient({
                 href={`/journals/${templateCode}/documents/${document.id}`}
                 className="min-w-0 border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
-                <div className="text-[16px] text-[#85889b]">Комментарий</div>
+                <div className="text-[14px] text-[#84849a]">Комментарий</div>
                 <div className="mt-1 truncate text-[15px] leading-none text-black">
                   {document.config.comment || "—"}
                 </div>
@@ -252,8 +252,8 @@ export function ProductWriteoffDocumentsClient({
                 href={`/journals/${templateCode}/documents/${document.id}`}
                 className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
-                <div className="text-[16px] text-[#85889b]">Дата документа</div>
-                <div className="mt-1 text-[20px] font-semibold leading-none text-black">
+                <div className="text-[14px] text-[#84849a]">Дата документа</div>
+                <div className="mt-2 text-[14px] font-semibold text-black">
                   {formatProductWriteoffDate(document.config.documentDate || document.dateFrom)}
                 </div>
               </Link>

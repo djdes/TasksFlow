@@ -152,7 +152,7 @@ export function FinishedProductDocumentsClient({
               href={`/journals/${templateCode}/documents/${document.id}`}
               className="justify-self-end pr-2 text-right"
             >
-              <div className="text-[14px] text-[#85889b]">Дата начала</div>
+              <div className="text-[14px] text-[#84849a]">Дата начала</div>
               <div className="text-[16px] font-semibold text-black">{document.startedAtLabel}</div>
             </Link>
             <DocumentActionsMenu

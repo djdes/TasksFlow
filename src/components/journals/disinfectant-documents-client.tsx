@@ -387,7 +387,7 @@ export function DisinfectantDocumentsClient({
           return (
             <div
               key={document.id}
-              className="flex items-center justify-between rounded-[18px] border border-[#eaedf7] bg-white px-8 py-5"
+              className="flex items-center justify-between rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
             >
               <Link
                 href={href}
@@ -397,7 +397,7 @@ export function DisinfectantDocumentsClient({
               </Link>
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <div className="text-[14px] text-[#7c8094]">
+                  <div className="text-[14px] text-[#84849a]">
                     Ответственный за получение
                   </div>
                   <div className="mt-1 text-[16px] font-semibold text-black">

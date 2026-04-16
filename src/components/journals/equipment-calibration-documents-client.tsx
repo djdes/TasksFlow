@@ -167,21 +167,21 @@ export function EquipmentCalibrationDocumentsClient({
           return (
             <div
               key={doc.id}
-              className="grid grid-cols-[1fr_80px_240px_160px_48px] items-center rounded-[16px] border border-[#eceef5] bg-white px-4 py-3"
+              className="grid grid-cols-[1fr_80px_240px_160px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
             >
               <Link href={`/journals/${templateCode}/documents/${doc.id}`} className="min-w-0">
                 <div className="text-[17px] font-semibold text-black">{doc.title}</div>
               </Link>
               <div className="text-center">
-                <div className="text-[13px] text-[#85889b]">Год</div>
+                <div className="text-[14px] text-[#84849a]">Год</div>
                 <div className="text-[15px] font-semibold">{cfg.year}</div>
               </div>
               <div className="px-3">
-                <div className="text-[13px] text-[#85889b]">Должность &quot;Утверждаю&quot;</div>
+                <div className="text-[14px] text-[#84849a]">Должность &quot;Утверждаю&quot;</div>
                 <div className="text-[14px] font-semibold">{cfg.approveRole}: {cfg.approveEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[13px] text-[#85889b]">Дата документа</div>
+                <div className="text-[14px] text-[#84849a]">Дата документа</div>
                 <div className="text-[15px] font-semibold">{formatCalibrationDate(cfg.documentDate)}</div>
               </div>
               <DropdownMenu>

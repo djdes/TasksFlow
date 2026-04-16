@@ -314,8 +314,8 @@ export function ColdEquipmentDocumentsClient({
                   {document.title}
                 </Link>
 
-                <Link href={href} className="border-l border-[#e7eaf3] px-8 py-6">
-                  <div className="text-[13px] text-[#8a8fa2]">Ответственный</div>
+                <Link href={href} className="border-l border-[#e6e6f0] px-10">
+                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
                   <div className="mt-1 text-[14px] font-medium text-black">
                     {document.responsibleTitle && document.responsibleUserName
                       ? `${document.responsibleTitle}: ${document.responsibleUserName}`
@@ -323,8 +323,8 @@ export function ColdEquipmentDocumentsClient({
                   </div>
                 </Link>
 
-                <Link href={href} className="border-l border-[#e7eaf3] px-8 py-6">
-                  <div className="text-[13px] text-[#8a8fa2]">Период</div>
+                <Link href={href} className="border-l border-[#e6e6f0] px-10">
+                  <div className="text-[14px] text-[#84849a]">Период</div>
                   <div className="mt-1 text-[14px] font-medium text-black">
                     {document.periodLabel}
                   </div>

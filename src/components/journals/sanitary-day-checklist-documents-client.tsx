@@ -392,14 +392,14 @@ export function SanitaryDayChecklistDocumentsClient({
           return (
             <div
               key={document.id}
-              className="grid grid-cols-[1fr_280px_64px] items-center rounded-[18px] border border-[#eaedf7] bg-white px-8 py-5"
+              className="grid grid-cols-[1fr_280px_64px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
             >
               <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
                 {document.title || checklistTitle}
               </Link>
 
-              <Link href={href} className="border-l border-[#e8ebf5] px-8">
-                <div className="text-[14px] text-[#7c8094]">Дата проведения</div>
+              <Link href={href} className="border-l border-[#e6e6f0] px-8">
+                <div className="text-[14px] text-[#84849a]">Дата проведения</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {formatDateLabel(documentDate)}
                 </div>

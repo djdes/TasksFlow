@@ -494,7 +494,7 @@ export function MetalImpurityDocumentsClient({
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-[minmax(0,1fr)_260px_190px_56px] items-center rounded-[16px] border border-[#eef0f6] bg-white px-7 py-5"
+                className="grid grid-cols-[minmax(0,1fr)_260px_190px_56px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
               >
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
@@ -506,7 +506,7 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[13px] text-[#979aab]">Ответственный</div>
+                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
                   <div className="mt-1 text-[13px] font-semibold text-black">
                     {`${config.responsiblePosition}: ${config.responsibleEmployee}`}
                   </div>
@@ -515,7 +515,7 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[13px] text-[#979aab]">Дата начала</div>
+                  <div className="text-[14px] text-[#84849a]">Дата начала</div>
                   <div className="mt-1 text-[13px] font-semibold text-black">
                     {formatRuDate(config.startDate)}
                   </div>

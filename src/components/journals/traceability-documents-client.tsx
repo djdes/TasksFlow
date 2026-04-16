@@ -416,7 +416,7 @@ export function TraceabilityDocumentsClient({
                 </div>
               </Link>
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="justify-self-end pr-2">
-                <div className="text-[14px] text-[#85889b]">Дата начала</div>
+                <div className="text-[14px] text-[#84849a]">Дата начала</div>
                 <div className="text-[15px] font-medium leading-none tracking-[-0.03em] text-black">
                   {formatDateLabel(document.dateFrom)}
                 </div>

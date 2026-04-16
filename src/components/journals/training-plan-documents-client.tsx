@@ -445,25 +445,25 @@ export function TrainingPlanDocumentsClient({
           return (
             <div
               key={document.id}
-              className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[1.7fr_200px_430px_270px_64px] sm:items-center sm:gap-0 sm:px-8"
+              className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.7fr_200px_430px_270px_64px] sm:items-center sm:gap-0 sm:px-8"
             >
               <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
                 {document.title || TRAINING_PLAN_DOCUMENT_TITLE}
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Год</div>
+                <div className="text-[14px] text-[#84849a]">Год</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {getTrainingPlanYearLabel(config.year)}
                 </div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Должность &quot;Утверждаю&quot;</div>
+                <div className="text-[14px] text-[#84849a]">Должность &quot;Утверждаю&quot;</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {getTrainingPlanApproveLabel(config.approveRole, config.approveEmployee)}
                 </div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#7c8094]">Дата документа</div>
+                <div className="text-[14px] text-[#84849a]">Дата документа</div>
                 <div className="mt-2 text-[14px] font-semibold text-black">
                   {getTrainingPlanDocumentDateLabel(config.documentDate)}
                 </div>

@@ -660,13 +660,13 @@ export function CleaningDocumentsClient(props: Props) {
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[minmax(0,1.5fr)_360px_360px_240px_56px] sm:items-center sm:gap-0 sm:px-7"
+                className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.5fr)_360px_360px_240px_56px] sm:items-center sm:gap-0 sm:px-7"
               >
                 <Link href={href} className="min-w-0 text-[17px] font-semibold text-black">
                   {document.title || CLEANING_DOCUMENT_TITLE}
                 </Link>
                 <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                  <div className="text-[16px] text-[#85889b]">Ответственный за уборку</div>
+                  <div className="text-[14px] text-[#84849a]">Ответственный за уборку</div>
                   <div className="mt-2 space-y-1 text-[20px] font-semibold leading-[1.3] text-black">
                     {cleaningLines.map((line) => (
                       <div key={line}>{line}</div>
@@ -674,14 +674,14 @@ export function CleaningDocumentsClient(props: Props) {
                   </div>
                 </Link>
                 <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                  <div className="text-[16px] text-[#85889b]">Ответственный за контроль</div>
-                  <div className="mt-2 text-[20px] font-semibold leading-[1.3] text-black">
+                  <div className="text-[14px] text-[#84849a]">Ответственный за контроль</div>
+                  <div className="mt-2 text-[14px] font-semibold text-black">
                     {controlLine}
                   </div>
                 </Link>
                 <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                  <div className="text-[16px] text-[#85889b]">Период</div>
-                  <div className="mt-2 text-[20px] font-semibold leading-[1.3] text-black">
+                  <div className="text-[14px] text-[#84849a]">Период</div>
+                  <div className="mt-2 text-[14px] font-semibold text-black">
                     {getCleaningPeriodLabel(document.dateFrom, document.dateTo)}
                   </div>
                 </Link>

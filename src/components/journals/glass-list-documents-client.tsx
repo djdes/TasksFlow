@@ -444,28 +444,28 @@ export function GlassListDocumentsClient(props: Props) {
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-[minmax(0,1.4fr)_270px_270px_220px_56px] items-center rounded-[16px] border border-[#eef0f6] bg-white px-7 py-5"
+                className="grid grid-cols-[minmax(0,1.4fr)_270px_270px_220px_56px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
               >
                 <Link href={href} className="min-w-0 text-[17px] font-semibold text-black">
                   {config.documentName || document.title || props.templateName}
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
-                  <div className="text-[16px] text-[#85889b]">Место расположения</div>
-                  <div className="mt-1 text-[20px] font-semibold leading-none text-black">
+                <Link href={href} className="border-l border-[#e6e6f0] px-8">
+                  <div className="text-[14px] text-[#84849a]">Место расположения</div>
+                  <div className="mt-2 text-[14px] font-semibold text-black">
                     {config.location || "—"}
                   </div>
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
-                  <div className="text-[16px] text-[#85889b]">Должность</div>
-                  <div className="mt-1 text-[20px] font-semibold leading-none text-black">
+                <Link href={href} className="border-l border-[#e6e6f0] px-8">
+                  <div className="text-[14px] text-[#84849a]">Должность</div>
+                  <div className="mt-2 text-[14px] font-semibold text-black">
                     {responsibleUser
                       ? `${responsibleTitle}: ${responsibleUser.name}`
                       : responsibleTitle}
                   </div>
                 </Link>
-                <Link href={href} className="border-l border-[#eceef5] px-8">
-                  <div className="text-[16px] text-[#85889b]">Дата документа</div>
-                  <div className="mt-1 text-[20px] font-semibold leading-none text-black">
+                <Link href={href} className="border-l border-[#e6e6f0] px-8">
+                  <div className="text-[14px] text-[#84849a]">Дата документа</div>
+                  <div className="mt-2 text-[14px] font-semibold text-black">
                     {formatGlassListDate(config.documentDate || document.dateFrom)}
                   </div>
                 </Link>
