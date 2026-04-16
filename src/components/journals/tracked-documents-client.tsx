@@ -322,7 +322,7 @@ function TrackedDocumentsClientImpl({
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-12 rounded-xl border-[#eef0fb] px-4 text-[14px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -335,7 +335,7 @@ function TrackedDocumentsClientImpl({
                 templateCode={templateCode}
                 templateName={templateName}
                 users={users}
-                triggerClassName="h-12 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
                 triggerLabel="Создать документ"
                 triggerIcon={<Plus className="size-4" />}
               />
@@ -344,7 +344,7 @@ function TrackedDocumentsClientImpl({
         </div>
 
         <div className="border-b border-[#d9dce8]">
-          <div className="flex gap-9 text-[15px]">
+          <div className="flex gap-12 text-[16px]">
             <Link
               href={`/journals/${templateCode}`}
               className={`relative pb-4 ${
@@ -370,7 +370,7 @@ function TrackedDocumentsClientImpl({
 
         <div className="space-y-3">
           {documents.length === 0 && (
-            <div className="rounded-[16px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[16px] text-[#7d8196]">
+            <div className="rounded-[16px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[15px] text-[#7d8196]">
               Документов пока нет
             </div>
           )}
@@ -383,20 +383,20 @@ function TrackedDocumentsClientImpl({
                 key={document.id}
                 className="grid grid-cols-[minmax(0,1.6fr)_220px_180px_40px] items-start gap-0 rounded-[16px] border border-[#eef0f6] bg-white px-3 py-4"
               >
-                <Link href={href} className="px-2 text-[14px] font-semibold leading-5 text-black">
+                <Link href={href} className="px-2 text-[17px] font-semibold leading-[1.25] text-black">
                   {document.title}
                 </Link>
 
                 <Link href={href} className="border-l border-[#edf0f7] px-6">
                   <div className="text-[13px] text-[#979aab]">Ответственный</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">
+                  <div className="mt-1 text-[14px] font-semibold text-black">
                     {getResponsibleCardValue(document)}
                   </div>
                 </Link>
 
                 <Link href={href} className="border-l border-[#edf0f7] px-6">
                   <div className="text-[13px] text-[#979aab]">{document.metaLabel}</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">{document.metaValue}</div>
+                  <div className="mt-1 text-[14px] font-semibold text-black">{document.metaValue}</div>
                 </Link>
 
                 <div className="flex justify-center">
