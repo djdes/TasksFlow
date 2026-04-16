@@ -81,6 +81,7 @@ import {
   isSanitaryDayChecklistTemplate,
 } from "@/lib/sanitary-day-checklist-document";
 import { isManagementRole, pickPrimaryManager } from "@/lib/user-roles";
+import { aclActorFromSession, canWriteJournal, hasJournalAccess } from "@/lib/journal-acl";
 import {
   normalizeJournalStaffBoundConfig,
   normalizeJournalDocumentStaffState,
@@ -101,6 +102,16 @@ export async function GET(request: Request) {
   const resolvedTemplateCode = resolveJournalCodeAlias(templateCode);
   const template = await db.journalTemplate.findUnique({ where: { code: resolvedTemplateCode } });
   if (!template) return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
+
+  // ACL: employees without an explicit grant for this template get 403.
+  // Root/managers/unmigrated users bypass inside hasJournalAccess.
+  const allowed = await hasJournalAccess(
+    aclActorFromSession(session),
+    resolvedTemplateCode
+  );
+  if (!allowed) {
+    return NextResponse.json({ error: "Нет доступа к журналу" }, { status: 403 });
+  }
 
   const documents = await db.journalDocument.findMany({
     where: {
