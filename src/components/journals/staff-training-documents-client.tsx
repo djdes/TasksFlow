@@ -114,7 +114,7 @@ export function StaffTrainingDocumentsClient({
             </Link>
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="border-t border-[#eceef5] pt-3 sm:justify-self-end sm:border-t-0 sm:pr-2 sm:pt-0">
               <div className="text-[14px] text-[#85889b]">Дата начала</div>
-              <div className="text-[20px] leading-none text-black sm:text-[30px]">{document.startedAtLabel}</div>
+              <div className="text-[15px] leading-none text-black sm:text-[30px]">{document.startedAtLabel}</div>
             </Link>
             <DocumentActionsMenu
               size="sm"

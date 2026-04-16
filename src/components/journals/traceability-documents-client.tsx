@@ -158,7 +158,7 @@ function TraceabilitySettingsDialog(props: {
                   type="date"
                   value={activeState.dateFrom}
                   onChange={(e) => setState({ ...activeState, dateFrom: toIsoDate(e.target.value) })}
-                  className="h-11 rounded-2xl border-[#d8dae6] px-7 pr-14 text-[22px] tracking-[-0.02em]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-7 pr-14 text-[15px] tracking-[-0.02em]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-6 top-1/2 size-7 -translate-y-1/2 text-[#6e7080]" />
               </div>

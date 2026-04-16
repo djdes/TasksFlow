@@ -1037,7 +1037,7 @@ function ImportRowsDialog(props: {
             }`}
           >
             <Paperclip className="size-10 text-[#6f7282]" />
-            <span className="text-[20px] text-[#5863f8]">Выберите файл</span>
+            <span className="text-[15px] text-[#5863f8]">Выберите файл</span>
             <span className="text-[18px] text-[#3d4152]">или перетащите его сюда</span>
           </button>
           {errorMessage ? (

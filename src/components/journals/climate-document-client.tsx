@@ -221,7 +221,7 @@ function RoomDialog({
                   onCheckedChange={setTemperatureEnabled}
                   className="h-8 w-14 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
                 />
-                <div className="text-[20px] text-black">Температура (T)</div>
+                <div className="text-[15px] text-black">Температура (T)</div>
                 <Input
                   type="number"
                   value={temperatureMin}
@@ -246,7 +246,7 @@ function RoomDialog({
                   onCheckedChange={setHumidityEnabled}
                   className="h-8 w-14 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
                 />
-                <div className="text-[20px] text-black">Влажность воздуха (ВВ)</div>
+                <div className="text-[15px] text-black">Влажность воздуха (ВВ)</div>
                 <Input
                   type="number"
                   value={humidityMin}
@@ -699,7 +699,7 @@ function JournalSettingsDialog({
               onCheckedChange={(checked) => setSkipWeekends(checked === true)}
               className="size-6"
             />
-            <Label htmlFor="skip-weekends" className="text-[20px] text-black">
+            <Label htmlFor="skip-weekends" className="text-[15px] text-black">
               Не заполнять в выходные дни
             </Label>
           </div>

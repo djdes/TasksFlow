@@ -107,7 +107,7 @@ function SettingsDialog(props: {
         {activeState ? (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(event) => setState({ ...activeState, title: event.target.value })}
@@ -115,7 +115,7 @@ function SettingsDialog(props: {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Дата начала</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Дата начала</Label>
               <div className="relative">
                 <Input
                   type="date"

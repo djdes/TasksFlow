@@ -144,7 +144,7 @@ function EditDocumentDialog({
           {isStaffDocumentTemplate(templateCode) && templateCode !== "health_check" && (
             <div className="space-y-2 rounded-3xl border border-[#dfe1ec] px-6 py-5">
               <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
-              <div className="text-lg leading-[1.35] text-black sm:text-[22px]">{HYGIENE_PERIODICITY_TEXT}</div>
+              <div className="text-lg leading-[1.35] text-black sm:text-[15px]">{HYGIENE_PERIODICITY_TEXT}</div>
             </div>
           )}
 
@@ -205,7 +205,7 @@ function DocumentRow({
           <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-6 shadow-xl">
             {canManage && (
               <DropdownMenuItem
-                className="mb-3 h-11 rounded-2xl px-4 text-[20px]"
+                className="mb-3 h-11 rounded-2xl px-4 text-[15px]"
                 onSelect={() => onEdit(document)}
               >
                 <Pencil className="mr-4 size-7 text-[#6f7282]" />
@@ -213,7 +213,7 @@ function DocumentRow({
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              className="mb-3 h-11 rounded-2xl px-4 text-[20px]"
+              className="mb-3 h-11 rounded-2xl px-4 text-[15px]"
               onSelect={() => openDocumentPdf(document.id)}
             >
               <Printer className="mr-4 size-7 text-[#6f7282]" />
@@ -221,7 +221,7 @@ function DocumentRow({
             </DropdownMenuItem>
             {canManage && (
               <DropdownMenuItem
-                className="h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                 onSelect={() => onDelete(document)}
               >
                 <Trash2 className="mr-4 size-7 text-[#ff3b30]" />

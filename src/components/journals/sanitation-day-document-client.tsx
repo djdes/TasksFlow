@@ -302,7 +302,7 @@ function DocumentSettingsDialog(props: {
                   documentDate: toIsoDate(event.target.value),
                 }))
               }
-              className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[15px]"
             />
             <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
           </div>
@@ -683,10 +683,10 @@ export function SanitationDayDocumentClient({
               >
                 {organizationName}
               </td>
-              <td className="border border-black p-2 text-center text-[22px]">
+              <td className="border border-black p-2 text-center text-[15px]">
                 СИСТЕМА ХАССП
               </td>
-              <td className="w-[22%] border border-black p-2 text-center text-[20px]">
+              <td className="w-[22%] border border-black p-2 text-center text-[15px]">
                 СТР. 1 ИЗ 1
               </td>
             </tr>

@@ -455,7 +455,7 @@ export function ComplaintDocumentClient({
                 <td rowSpan={2} className="w-[240px] border border-black px-6 py-10 text-center text-[22px] font-medium">
                   {organizationName}
                 </td>
-                <td className="w-[980px] border border-black px-6 py-5 text-center text-[20px]">
+                <td className="w-[980px] border border-black px-6 py-5 text-center text-[15px]">
                   СИСТЕМА ХАССП
                 </td>
                 <td rowSpan={2} className="w-[240px] border border-black px-6 py-4 align-top text-[18px] leading-[1.6]">

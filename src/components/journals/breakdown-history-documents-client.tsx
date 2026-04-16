@@ -121,7 +121,7 @@ function SettingsDialog(props: {
         {activeState && (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
@@ -130,7 +130,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Дата начала</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Дата начала</Label>
               <div className="relative">
                 <Input
                   type="date"
@@ -199,7 +199,7 @@ function DeleteDialog(props: {
           </div>
         </DialogHeader>
         <div className="space-y-5 px-10 py-8">
-          <p className="text-[22px] text-[#7a7c8e]">
+          <p className="text-[15px] text-[#7a7c8e]">
             Вы уверены, что хотите удалить этот документ? Это действие нельзя отменить.
           </p>
           <div className="flex justify-end pt-3">

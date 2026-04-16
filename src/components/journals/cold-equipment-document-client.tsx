@@ -353,7 +353,7 @@ function JournalSettingsDialog({
 
         <div className="space-y-8 px-16 py-12">
           <div className="space-y-3">
-            <Label htmlFor="journal-title" className="text-[20px] text-[#8b8fa3]">
+            <Label htmlFor="journal-title" className="text-[15px] text-[#8b8fa3]">
               Название журнала
             </Label>
             <Input
@@ -365,11 +365,11 @@ function JournalSettingsDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[20px] text-[#8b8fa3]">
+            <Label className="text-[15px] text-[#8b8fa3]">
               Должность ответственного за снятие показателей
             </Label>
             <Select value={position} onValueChange={setPosition}>
-              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[22px]">
+              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[15px]">
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
@@ -383,9 +383,9 @@ function JournalSettingsDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[20px] text-[#8b8fa3]">Сотрудник</Label>
+            <Label className="text-[15px] text-[#8b8fa3]">Сотрудник</Label>
             <Select value={userId} onValueChange={setUserId}>
-              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[22px]">
+              <SelectTrigger className="h-22 rounded-[24px] border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[15px]">
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
@@ -406,7 +406,7 @@ function JournalSettingsDialog({
             />
             <Label
               htmlFor="skip-weekends"
-              className="cursor-pointer text-[20px] font-normal text-black"
+              className="cursor-pointer text-[15px] font-normal text-black"
             >
               Не заполнять в выходные дни
             </Label>
@@ -417,7 +417,7 @@ function JournalSettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-20 rounded-[24px] bg-[#5566f6] px-12 text-[22px] text-white hover:bg-[#4858eb]"
+              className="h-20 rounded-[24px] bg-[#5566f6] px-12 text-[15px] text-white hover:bg-[#4858eb]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -768,13 +768,13 @@ export function ColdEquipmentDocumentClient({
                   key={item.id}
                   className="grid gap-4 rounded-[24px] bg-white/70 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_170px_170px_44px]"
                 >
-                  <div className="text-[20px] leading-[1.35] text-black">
+                  <div className="text-[15px] leading-[1.35] text-black">
                     {item.name}, Темп. (T)
                   </div>
-                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[20px]">
+                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[15px]">
                     От {item.min ?? "—"}
                   </div>
-                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[20px]">
+                  <div className="rounded-[18px] border border-[#d6d9e6] bg-white px-6 py-4 text-[15px]">
                     До {item.max ?? "—"}
                   </div>
                   <div className="flex items-center justify-end">
@@ -794,7 +794,7 @@ export function ColdEquipmentDocumentClient({
                 </div>
               ))}
 
-              <div className="flex flex-wrap items-center gap-6 pt-2 text-[20px]">
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-[15px]">
                 <div className="rounded-[20px] bg-white px-6 py-4">
                   Ответственный: {(() => {
                     const userName = responsibleUserId

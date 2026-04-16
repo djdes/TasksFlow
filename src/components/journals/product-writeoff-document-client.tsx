@@ -430,7 +430,7 @@ export function ProductWriteoffDocumentClient({
               </select>
               <div className="flex gap-3">
                 <Input value={rowDialog.newProductName} onChange={(event) => setRowDialog((prev) => ({ ...prev, newProductName: event.target.value }))} placeholder="Добавить название новых ТМЦ" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
-                <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
+                <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[15px] text-white" onClick={() => {
                   const item = rowDialog.newProductName.trim();
                   if (!item) return;
                   setRowDialogProductOptions((current) => (
@@ -524,7 +524,7 @@ export function ProductWriteoffDocumentClient({
           <div className="space-y-5 px-8 py-6">
             {config.productLists[0]?.items.map((item, index) => (
               <div key={`${item}-${index}`} className="flex items-center gap-3 rounded-2xl bg-[#f8f9ff] px-4 py-3">
-                <div className="flex-1 text-[20px]">{item}</div>
+                <div className="flex-1 text-[15px]">{item}</div>
                 {!isClosed && (
                   <button
                     type="button"
@@ -548,7 +548,7 @@ export function ProductWriteoffDocumentClient({
               <>
                 <div className="flex gap-3">
                   <Input value={rowDialog.newProductName} onChange={(event) => setRowDialog((prev) => ({ ...prev, newProductName: event.target.value }))} placeholder="Введите наименование продукции" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
+                  <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[15px] text-white" onClick={() => {
                     const item = rowDialog.newProductName.trim();
                     if (!item) return;
                     setConfig((prev) => ({

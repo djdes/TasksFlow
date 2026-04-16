@@ -256,7 +256,7 @@ function ManageSectionsDialog(props: {
                   className="h-12 flex-1 rounded-2xl border-[#d8dae6] px-4 text-[18px]"
                 />
               ) : (
-                <div className="flex-1 text-[20px] text-black">{section.title}</div>
+                <div className="flex-1 text-[15px] text-black">{section.title}</div>
               )}
               {editingId === section.id ? (
                 <Button

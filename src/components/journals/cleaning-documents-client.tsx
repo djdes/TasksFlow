@@ -638,7 +638,7 @@ export function CleaningDocumentsClient(props: Props) {
 
         <div className="space-y-4">
           {props.documents.length === 0 ? (
-            <div className="rounded-[18px] border border-[#eaedf7] bg-white px-8 py-10 text-[22px] text-[#8a8ea4]">
+            <div className="rounded-[18px] border border-[#eaedf7] bg-white px-8 py-10 text-[15px] text-[#8a8ea4]">
               Документов пока нет
             </div>
           ) : null}
@@ -697,7 +697,7 @@ export function CleaningDocumentsClient(props: Props) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setArchiveDocument(document)}
                       >
                         {document.status === "active" ? (
@@ -709,7 +709,7 @@ export function CleaningDocumentsClient(props: Props) {
                       </DropdownMenuItem>
                       {document.status === "active" ? (
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setSettingsDocument(document)}
                         >
                           <Pencil className="mr-4 size-6 text-[#6f7282]" />
@@ -717,7 +717,7 @@ export function CleaningDocumentsClient(props: Props) {
                         </DropdownMenuItem>
                       ) : null}
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() =>
                           window.open(
                             `/api/journal-documents/${document.id}/pdf`,
@@ -731,7 +731,7 @@ export function CleaningDocumentsClient(props: Props) {
                       </DropdownMenuItem>
                       {document.status === "active" ? (
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => setDeleteDocument(document)}
                         >
                           <Trash2 className="mr-4 size-6 text-[#ff3b30]" />

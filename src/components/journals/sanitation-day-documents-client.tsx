@@ -170,7 +170,7 @@ function SettingsDialog(props: {
         {activeState ? (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">
+              <Label className="text-[15px] text-[#7a7c8e]">
                 Название документа
               </Label>
               <Input
@@ -183,7 +183,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">
+              <Label className="text-[15px] text-[#7a7c8e]">
                 Дата документа
               </Label>
               <div className="relative">
@@ -203,7 +203,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Год</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Год</Label>
               <Select
                 value={activeState.year}
                 onValueChange={(value) =>
@@ -227,7 +227,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">
+              <Label className="text-[15px] text-[#7a7c8e]">
                 Должность &quot;Утверждаю&quot;
               </Label>
               <Select
@@ -257,7 +257,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
                 value={activeState.approveEmployeeId}
                 onValueChange={(value) => {
@@ -285,7 +285,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">
+              <Label className="text-[15px] text-[#7a7c8e]">
                 Ответственный
               </Label>
               <Select
@@ -315,7 +315,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
                 value={activeState.responsibleEmployeeId}
                 onValueChange={(value) => {

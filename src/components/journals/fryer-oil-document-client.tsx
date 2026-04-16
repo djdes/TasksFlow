@@ -285,7 +285,7 @@ export function FryerOilDocumentClient(props: Props) {
         <div className="overflow-x-auto">
           <div className="min-w-[1400px]">
             <div className="grid grid-cols-[240px_1fr_280px] border border-black">
-              <div className="flex min-h-[110px] items-center justify-center border-r border-black px-6 text-center text-[22px]">{props.organizationName}</div>
+              <div className="flex min-h-[110px] items-center justify-center border-r border-black px-6 text-center text-[15px]">{props.organizationName}</div>
               <div className="grid grid-rows-[55px_55px]"><div className="flex items-center justify-center border-b border-black text-[20px] uppercase">Система ХАССП</div><div className="flex items-center justify-center text-[18px] italic uppercase">Журнал учета использования фритюрных жиров</div></div>
               <div className="grid grid-rows-[55px_55px] border-l border-black"><div className="space-y-1 border-b border-black px-6 py-3 text-[18px]"><div className="flex items-center justify-between"><span>Начат</span><span>{formatDateRu(dateFrom)}</span></div><div className="flex items-center justify-between"><span>Окончен</span><span>__________</span></div></div><div className="flex items-center justify-center text-[18px] uppercase">Стр. 1 из 1</div></div>
             </div>

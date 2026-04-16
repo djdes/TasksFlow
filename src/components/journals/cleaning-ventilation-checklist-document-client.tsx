@@ -220,7 +220,7 @@ function DocumentSettingsDialog(props: {
                 onChange={(event) =>
                   setState((current) => ({ ...current, dateFrom: event.target.value }))
                 }
-                className="h-11 rounded-2xl border-[#d8dae6] px-6 pr-14 text-[22px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-6 pr-14 text-[15px]"
               />
               <CalendarDays className="pointer-events-none absolute right-5 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
             </div>
@@ -234,7 +234,7 @@ function DocumentSettingsDialog(props: {
                 }
                 className="size-6 rounded-[10px]"
               />
-              <span className="text-[20px] text-black">Проветривание</span>
+              <span className="text-[15px] text-black">Проветривание</span>
             </label>
             <p className="text-[15px] text-black/70">
               Включайте, если помещение действительно проветривается. Без окон магия не сработает,

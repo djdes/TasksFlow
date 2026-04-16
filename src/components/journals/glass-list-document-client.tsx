@@ -344,7 +344,7 @@ export function GlassListDocumentClient({
                     };
                   });
                 }}
-                className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
+                className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[15px]"
               >
                 {RESPONSIBLE_TITLES.map((item) => (
                   <option key={item} value={item}>
@@ -369,7 +369,7 @@ export function GlassListDocumentClient({
                     return { ...prev, responsibleUserId: userId };
                   });
                 }}
-                className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
+                className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[15px]"
               >
                 <option value="">- Выберите значение -</option>
                 {(config.responsibleTitle ? getUsersForRoleLabel(users, config.responsibleTitle) : users).map((user) => (

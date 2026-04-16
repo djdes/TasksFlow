@@ -665,7 +665,7 @@ export function CreateDocumentDialog({
               {!isMedBookJournal && !isPerishableRejectionJournal && !isProductWriteoffJournal && !isStaffTrainingJournal && !isEquipmentMaintenanceJournal && !isEquipmentCalibrationJournal && !isCleaningJournal && !isEquipmentCleaningJournal && (isStaffJournal || trackedCreateMode === "staff" ? (
                 <div className="space-y-2 rounded-2xl border border-[#dfe1ec] px-5 py-4">
                   <div className="text-[18px] text-[#73738a]">Периодичность контроля</div>
-                  <div className="text-[22px] leading-[1.35] text-black">
+                  <div className="text-[15px] leading-[1.35] text-black">
                     {templateCode === "health_check"
                       ? "Документ создается автоматически на период 15 дней."
                       : HYGIENE_PERIODICITY_TEXT}

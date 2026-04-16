@@ -331,7 +331,7 @@ export function EquipmentCleaningDocumentClient({
               <td rowSpan={2} className="w-[18%] border border-black p-3 text-center text-[26px] font-semibold">
                 {organizationName}
               </td>
-              <td className="border border-black p-2 text-center text-[22px]">
+              <td className="border border-black p-2 text-center text-[15px]">
                 СИСТЕМА ХАССП
               </td>
               <td className="w-[22%] border border-black p-2 text-[20px] font-semibold">

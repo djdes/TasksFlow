@@ -172,7 +172,7 @@ function SettingsDialog(props: {
                   onChange={(e) =>
                     setState({ ...activeState, documentDate: toIsoDate(e.target.value) })
                   }
-                  className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[15px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
               </div>
@@ -458,7 +458,7 @@ export function AuditPlanDocumentsClient({
 
       <div className="space-y-4">
         {documents.length === 0 && (
-          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[20px] text-[#8a8ea4]">
+          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[15px] text-[#8a8ea4]">
             Документов пока нет
           </div>
         )}

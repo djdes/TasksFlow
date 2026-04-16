@@ -171,7 +171,7 @@ function SettingsDialog(props: {
                   onChange={(event) =>
                     setState({ ...activeState, documentDate: toIsoDate(event.target.value) })
                   }
-                  className="h-11 rounded-2xl border-[#d8dae6] px-7 pr-14 text-[22px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-7 pr-14 text-[15px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-6 top-1/2 size-7 -translate-y-1/2 text-[#6e7080]" />
               </div>

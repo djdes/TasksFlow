@@ -142,7 +142,7 @@ function SettingsDialog(props: {
         {activeState && (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
@@ -151,7 +151,7 @@ function SettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[22px] text-[#7a7c8e]">Дата проведения</Label>
+              <Label className="text-[15px] text-[#7a7c8e]">Дата проведения</Label>
               <div className="relative">
                 <Input
                   type="date"
@@ -495,13 +495,13 @@ export function SanitaryDayChecklistDocumentsClient({
           </DialogHeader>
           {archiveTarget && (
             <div className="px-10 py-8 space-y-6">
-              <p className="text-lg text-[#3a3d52] sm:text-[22px]">
+              <p className="text-lg text-[#3a3d52] sm:text-[15px]">
                 Перенести в архив документ &quot;{archiveTarget.title || checklistTitle}&quot;?
               </p>
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
-                  className="h-11 rounded-2xl px-8 text-[20px]"
+                  className="h-11 rounded-2xl px-8 text-[15px]"
                   onClick={() => setArchiveTarget(null)}
                 >
                   Отмена

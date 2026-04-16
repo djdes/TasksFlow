@@ -136,7 +136,7 @@ function EditDocumentDialog({
 
         <div className="space-y-10 px-18 py-12">
           <div className="space-y-3">
-            <Label htmlFor="cold-document-title" className="text-[20px] text-[#8b8fa3]">
+            <Label htmlFor="cold-document-title" className="text-[15px] text-[#8b8fa3]">
               Название документа
             </Label>
             <Input
@@ -148,7 +148,7 @@ function EditDocumentDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[20px] text-[#8b8fa3]">
+            <Label className="text-[15px] text-[#8b8fa3]">
               Должность ответственного за снятие показателей
             </Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
@@ -166,7 +166,7 @@ function EditDocumentDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[20px] text-[#8b8fa3]">Сотрудник</Label>
+            <Label className="text-[15px] text-[#8b8fa3]">Сотрудник</Label>
             <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
               <SelectTrigger className="h-24 rounded-[24px] border-[#d7dbe8] bg-[#f3f4fb] px-8 text-[24px]">
                 <SelectValue placeholder="Выберите сотрудника" />
@@ -245,7 +245,7 @@ export function ColdEquipmentDocumentsClient({
           <div className="flex flex-wrap items-center gap-4">
             <Button
               variant="outline"
-              className="h-22 rounded-[22px] border-[#eef0fb] px-8 text-[22px] text-[#5566f6] shadow-none hover:bg-[#f7f8ff]"
+              className="h-22 rounded-[22px] border-[#eef0fb] px-8 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f7f8ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -294,7 +294,7 @@ export function ColdEquipmentDocumentsClient({
 
         <div className="space-y-4">
           {documents.length === 0 ? (
-            <div className="rounded-[30px] border border-[#e8ebf4] bg-white px-10 py-12 text-[22px] text-[#7b7f93]">
+            <div className="rounded-[30px] border border-[#e8ebf4] bg-white px-10 py-12 text-[15px] text-[#7b7f93]">
               Документов пока нет
             </div>
           ) : null}
@@ -346,7 +346,7 @@ export function ColdEquipmentDocumentsClient({
                     >
                       {document.status === "active" ? (
                         <DropdownMenuItem
-                          className="mb-2 h-15 rounded-2xl px-5 text-[20px]"
+                          className="mb-2 h-15 rounded-2xl px-5 text-[15px]"
                           onSelect={() => setEditingDocument(document)}
                         >
                           <Pencil className="mr-3 size-5 text-[#6f7282]" />
@@ -354,7 +354,7 @@ export function ColdEquipmentDocumentsClient({
                         </DropdownMenuItem>
                       ) : null}
                       <DropdownMenuItem
-                        className="mb-2 h-15 rounded-2xl px-5 text-[20px]"
+                        className="mb-2 h-15 rounded-2xl px-5 text-[15px]"
                         onSelect={() => {
                           handlePrint(document.id).catch(() => undefined);
                         }}
@@ -364,7 +364,7 @@ export function ColdEquipmentDocumentsClient({
                       </DropdownMenuItem>
                       {document.status === "active" ? (
                         <DropdownMenuItem
-                          className="h-15 rounded-2xl px-5 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-15 rounded-2xl px-5 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => handleDelete(document.id, document.title)}
                         >
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

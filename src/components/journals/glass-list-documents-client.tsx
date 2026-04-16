@@ -158,7 +158,7 @@ function GlassListFormDialog(props: {
               onChange={(event) =>
                 setState((prev) => ({ ...prev, responsibleTitle: event.target.value }))
               }
-              className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
+              className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[15px]"
             >
               <option value="">- Выберите значение -</option>
               {RESPONSIBLE_TITLES.map((title) => (
@@ -175,7 +175,7 @@ function GlassListFormDialog(props: {
               onChange={(event) =>
                 setState((prev) => ({ ...prev, responsibleUserId: event.target.value }))
               }
-              className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[20px]"
+              className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[15px]"
             >
               <option value="">- Выберите значение -</option>
               {props.users.map((user) => (
@@ -481,21 +481,21 @@ export function GlassListDocumentsClient(props: Props) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsDocument(document)}
                       >
                         <Pencil className="mr-4 size-6 text-[#6f7282]" />
                         Настройки
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => copyDocument(document)}
                       >
                         <Copy className="mr-4 size-6 text-[#6f7282]" />
                         Сделать копию
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() =>
                           window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")
                         }
@@ -505,7 +505,7 @@ export function GlassListDocumentsClient(props: Props) {
                       </DropdownMenuItem>
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[20px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setArchiveDocument(document)}
                         >
                           <Archive className="mr-4 size-6 text-[#6f7282]" />
@@ -513,7 +513,7 @@ export function GlassListDocumentsClient(props: Props) {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        className="h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteDocument(document)}
                       >
                         <Trash2 className="mr-4 size-6 text-[#ff3b30]" />

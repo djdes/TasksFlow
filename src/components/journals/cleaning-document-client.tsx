@@ -283,7 +283,7 @@ export function CleaningDocumentClient(props: Props) {
           <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
             <div className="flex items-center gap-3">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button className="h-11 rounded-2xl bg-[#5863f8] px-7 text-[22px] text-white hover:bg-[#4756f6]"><Plus className="size-6" />Добавить<ChevronDown className="size-5" /></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button className="h-11 rounded-2xl bg-[#5863f8] px-7 text-[15px] text-white hover:bg-[#4756f6]"><Plus className="size-6" />Добавить<ChevronDown className="size-5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[340px] rounded-[24px] border-0 p-3 shadow-xl">
                   <DropdownMenuItem className="h-11 rounded-2xl text-[18px]" onSelect={() => setRoomDialog(buildRoomState())}><Plus className="mr-3 size-5 text-[#5863f8]" />Добавить помещение</DropdownMenuItem>
                   <DropdownMenuItem className="h-11 rounded-2xl text-[18px]" onSelect={() => setResponsibleDialog(buildResponsibleState("cleaning"))}><UserPlus className="mr-3 size-5 text-[#5863f8]" />Добавить отв. за уборку</DropdownMenuItem>
