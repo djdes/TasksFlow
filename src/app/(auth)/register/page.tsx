@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,13 +95,18 @@ export default function RegisterPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || "Не удалось завершить регистрацию");
       }
-      // Sign in automatically so the user lands in the dashboard.
-      const login = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
+      // Sign in via the custom /api/auth/login endpoint (not next-auth/react
+      // signIn) so we overwrite the site's primary session cookie
+      // `haccp-online.session-token` that server components read. If a
+      // root/impersonation cookie from a previous login is still in the
+      // browser, signIn() would leave it intact and the user would land in
+      // someone else's organisation.
+      const login = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      if (login?.error) {
+      if (!login.ok) {
         router.push("/login?registered=true");
       } else {
         router.push("/dashboard");

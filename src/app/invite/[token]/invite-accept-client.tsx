@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -84,12 +83,15 @@ export function InviteAcceptClient({ status, token, user }: Props) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || "Не удалось установить пароль");
       }
-      const login = await signIn("credentials", {
-        email: user?.email,
-        password,
-        redirect: false,
+      // Use the custom login endpoint so we write the site's primary
+      // session cookie (`haccp-online.session-token`) rather than the
+      // NextAuth cookie which our server components ignore.
+      const login = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user?.email, password }),
       });
-      if (login?.error) {
+      if (!login.ok) {
         router.push("/login?invite=accepted");
       } else {
         router.push("/dashboard");
