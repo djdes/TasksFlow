@@ -212,7 +212,7 @@ function RowDialog({
 
               return (
                 <div key={field.key} className="space-y-3">
-                  <Label className="text-[18px] text-[#73738a]">{field.label}</Label>
+                  <Label className="text-[14px] text-[#73738a]">{field.label}</Label>
                   {field.type === "select" ||
                   field.type === "employee" ||
                   field.type === "equipment" ? (
@@ -360,7 +360,7 @@ function SettingsDialog({
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Ответственный по умолчанию</Label>
+              <Label className="text-[14px] text-[#73738a]">Ответственный по умолчанию</Label>
               <Select
                 value={userId}
                 onValueChange={(nextValue) => {
@@ -385,7 +385,7 @@ function SettingsDialog({
             </div>
 
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+              <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
               <Input
                 value={responsibleTitle}
                 onChange={(event) => setResponsibleTitle(event.target.value)}

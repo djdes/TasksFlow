@@ -192,11 +192,11 @@ function SettingsDialog(props: {
         </DialogHeader>
         <div className="space-y-6 px-10 py-8">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Название документа</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
             <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Дата начала</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Дата начала</Label>
             <Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />
           </div>
           <fieldset className="space-y-4 rounded-[28px] border border-[#d8dae6] px-6 py-5">
@@ -207,7 +207,7 @@ function SettingsDialog(props: {
             <FieldToggle checked={state.showCaps} onCheckedChange={(checked) => setState({ ...state, showCaps: checked })} label="Выдача шапочек" />
           </fieldset>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Сотрудник по умолчанию, выдавший СИЗ</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Сотрудник по умолчанию, выдавший СИЗ</Label>
             <Select value={state.defaultIssuerUserId || ""} onValueChange={(value) => {
               const user = props.users.find((item) => item.id === value);
               setState({
@@ -230,7 +230,7 @@ function SettingsDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
             <Select value={state.defaultIssuerTitle || ""} onValueChange={(value) => setState({ ...state, defaultIssuerTitle: value })}>
               <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -312,7 +312,7 @@ function RowDialog(props: {
             {props.config.showClothing && <Input value={state.clothingSetsCount} onChange={(e) => setState({ ...state, clothingSetsCount: e.target.value })} placeholder="Введите количество комплектов одежды" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
             {props.config.showCaps && <Input value={state.capCount} onChange={(e) => setState({ ...state, capCount: e.target.value })} placeholder="Введите количество шапочек" className="h-16 rounded-3xl border-[#d8dae6] px-7 text-[22px]" />}
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Должность лица, получившего СИЗ</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Должность лица, получившего СИЗ</Label>
               <Select value={state.recipientTitle} onValueChange={(value) => setState({ ...state, recipientTitle: value })}>
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
@@ -321,7 +321,7 @@ function RowDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
               <Select value={state.recipientUserId} onValueChange={(value) => {
                 const user = props.users.find((item) => item.id === value);
                 setState({ ...state, recipientUserId: value, recipientTitle: state.recipientTitle || (user ? getHygienePositionLabel(user.role) : "") });
@@ -336,7 +336,7 @@ function RowDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
               <Select value={state.issuerTitle} onValueChange={(value) => setState({ ...state, issuerTitle: value })}>
                 <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-7 text-[22px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
@@ -345,7 +345,7 @@ function RowDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
               <Select value={state.issuerUserId} onValueChange={(value) => {
                 const user = props.users.find((item) => item.id === value);
                 setState({ ...state, issuerUserId: value, issuerTitle: state.issuerTitle || (user ? getHygienePositionLabel(user.role) : "") });

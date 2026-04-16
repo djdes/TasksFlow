@@ -77,19 +77,19 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input value={state.title} onChange={(e) => setState({ ...state, title: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата аудита</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата аудита</Label>
             <Input type="date" value={state.documentDate} onChange={(e) => setState({ ...state, documentDate: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Основание проверки</Label>
+            <Label className="text-[14px] text-[#73738a]">Основание проверки</Label>
             <Input value={state.basisTitle} onChange={(e) => setState({ ...state, basisTitle: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Подразделение / объект аудита</Label>
+            <Label className="text-[14px] text-[#73738a]">Подразделение / объект аудита</Label>
             <Input value={state.auditedObject} onChange={(e) => setState({ ...state, auditedObject: e.target.value })} className="h-16 rounded-[18px] border-[#dfe1ec] px-6 text-[18px]" />
           </div>
           <div className="flex justify-end">

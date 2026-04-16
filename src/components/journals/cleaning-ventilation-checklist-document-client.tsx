@@ -204,7 +204,7 @@ function DocumentSettingsDialog(props: {
         </DialogHeader>
         <div className="space-y-5 px-8 py-7">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Название документа</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
             <Input
               value={state.title}
               onChange={(event) => setState((current) => ({ ...current, title: event.target.value }))}
@@ -212,7 +212,7 @@ function DocumentSettingsDialog(props: {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Дата начала</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Дата начала</Label>
             <div className="relative">
               <Input
                 type="date"
@@ -242,7 +242,7 @@ function DocumentSettingsDialog(props: {
             </p>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Должность ответственного</Label>
             <Select
               value={state.mainResponsibleTitle}
               onValueChange={(value) =>
@@ -262,7 +262,7 @@ function DocumentSettingsDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
             <Select
               value={state.mainResponsibleUserId}
               onValueChange={(value) =>
@@ -342,7 +342,7 @@ function AddResponsibleDialog(props: {
         </DialogHeader>
         <div className="space-y-5 px-8 py-7">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Должность ответственного</Label>
             <Select value={title} onValueChange={setTitle}>
               <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -357,7 +357,7 @@ function AddResponsibleDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
             <Select value={userId} onValueChange={setUserId}>
               <SelectTrigger className="h-16 rounded-3xl border-[#d8dae6] bg-[#f4f5fb] px-6 text-[22px]">
                 <SelectValue placeholder="- Выберите значение -" />

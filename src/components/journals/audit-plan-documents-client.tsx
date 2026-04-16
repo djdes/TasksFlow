@@ -156,7 +156,7 @@ function SettingsDialog(props: {
         {activeState && (
           <div className="space-y-4 px-8 py-6">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
@@ -164,7 +164,7 @@ function SettingsDialog(props: {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
               <div className="relative">
                 <Input
                   type="date"
@@ -178,7 +178,7 @@ function SettingsDialog(props: {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Год</Label>
+              <Label className="text-[14px] text-[#73738a]">Год</Label>
               <Select
                 value={activeState.year}
                 onValueChange={(v) => setState({ ...activeState, year: v })}
@@ -199,7 +199,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Должность &quot;Утверждаю&quot;</Label>
+              <Label className="text-[14px] text-[#73738a]">Должность &quot;Утверждаю&quot;</Label>
               <Select
                 value={activeState.approveRole}
                 onValueChange={(v) => {
@@ -225,7 +225,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <Select
                 value={activeState.approveEmployeeId}
                 onValueChange={(v) => {

@@ -77,7 +77,7 @@ function DocumentDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
@@ -85,7 +85,7 @@ function DocumentDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
             <Input
               type="date"
               value={state.documentDate}
@@ -94,7 +94,7 @@ function DocumentDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Основание проверки</Label>
+            <Label className="text-[14px] text-[#73738a]">Основание проверки</Label>
             <Input
               value={state.basisTitle}
               onChange={(event) => setState({ ...state, basisTitle: event.target.value })}
@@ -102,7 +102,7 @@ function DocumentDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Проверяемый объект</Label>
+            <Label className="text-[14px] text-[#73738a]">Проверяемый объект</Label>
             <Input
               value={state.auditedObject}
               onChange={(event) => setState({ ...state, auditedObject: event.target.value })}

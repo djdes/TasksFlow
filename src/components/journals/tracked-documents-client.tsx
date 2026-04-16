@@ -190,7 +190,7 @@ function EditTrackedDocumentDialog({
           )}
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
               <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -212,7 +212,7 @@ function EditTrackedDocumentDialog({
             </div>
           ) : (
             <div className="space-y-3">
-              <Label htmlFor="tracked-edit-date-from" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="tracked-edit-date-from" className="text-[14px] text-[#73738a]">
                 {createMode === "uv" || isAcceptance ? "Дата начала" : "Дата документа"}
               </Label>
               <Input
@@ -228,7 +228,7 @@ function EditTrackedDocumentDialog({
           {isAcceptance && (
             <>
               <div className="space-y-3">
-                <Label className="text-[18px] text-[#73738a]">Добавить поля</Label>
+                <Label className="text-[14px] text-[#73738a]">Добавить поля</Label>
                 <div className="flex items-center gap-3">
                   <Switch checked={showPackagingField} onCheckedChange={setShowPackagingField} />
                   <span className="text-[14px]">
@@ -237,7 +237,7 @@ function EditTrackedDocumentDialog({
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+                <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
                 <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
                   <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                     <SelectValue placeholder="- Выберите значение -" />

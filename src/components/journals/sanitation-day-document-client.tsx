@@ -163,7 +163,7 @@ function RoomDialog(props: {
 
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">
+            <Label className="text-[14px] text-[#73738a]">
               Название помещения
             </Label>
             <Input
@@ -183,7 +183,7 @@ function RoomDialog(props: {
             <>
               {SANITATION_MONTHS.map((month) => (
                 <div key={month.key} className="space-y-2">
-                  <Label className="text-[18px] text-[#73738a]">
+                  <Label className="text-[14px] text-[#73738a]">
                     {MONTH_FIELD_LABELS[month.key]}
                   </Label>
                   <Select

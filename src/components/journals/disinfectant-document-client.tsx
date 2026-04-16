@@ -960,7 +960,7 @@ function DocumentSettingsDialog(props: {
         </DialogHeader>
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">
+            <Label className="text-[14px] text-[#73738a]">
               Название документа
             </Label>
             <Input
@@ -972,7 +972,7 @@ function DocumentSettingsDialog(props: {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">
+            <Label className="text-[14px] text-[#73738a]">
               Должность ответственного
             </Label>
             <Select
@@ -1001,7 +1001,7 @@ function DocumentSettingsDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select
               value={state.responsibleEmployeeId || "__empty__"}
               onValueChange={(v) => {

@@ -181,7 +181,7 @@ function DocumentDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={state.title}
               placeholder="Введите название документа"
@@ -190,7 +190,7 @@ function DocumentDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата начала</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата начала</Label>
             <Input
               type="date"
               value={state.startDate}
@@ -199,7 +199,7 @@ function DocumentDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={state.responsiblePosition}
               onValueChange={(value) =>
@@ -228,7 +228,7 @@ function DocumentDialog({
           </div>
           {showEmployeeField && (
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <Select
                 value={state.responsibleEmployeeId || "__empty__"}
                 onValueChange={(value) => {

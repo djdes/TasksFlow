@@ -134,7 +134,7 @@ function AddPositionDialog(props: {
         </DialogHeader>
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Должность</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность</Label>
             <Select value={position || "__empty__"} onValueChange={(value) => setPosition(value === "__empty__" ? "" : value)}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -257,7 +257,7 @@ function DocumentSettingsDialog(props: {
         </DialogHeader>
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
@@ -265,7 +265,7 @@ function DocumentSettingsDialog(props: {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
             <div className="relative">
               <Input
                 type="date"
@@ -277,7 +277,7 @@ function DocumentSettingsDialog(props: {
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Год</Label>
+            <Label className="text-[14px] text-[#73738a]">Год</Label>
             <Select value={state.year} onValueChange={(value) => setState({ ...state, year: value })}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue />
@@ -295,7 +295,7 @@ function DocumentSettingsDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Должность &quot;Утверждаю&quot;</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность &quot;Утверждаю&quot;</Label>
             <Select
               value={state.approveRole}
               onValueChange={(value) => {
@@ -321,7 +321,7 @@ function DocumentSettingsDialog(props: {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select
               value={state.approveEmployeeId || "__empty__"}
               onValueChange={(value) => {

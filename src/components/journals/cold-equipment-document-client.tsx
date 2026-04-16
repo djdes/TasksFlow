@@ -205,7 +205,7 @@ function EquipmentDialog({
 
         <div className="space-y-7 px-12 py-10">
           <div className="space-y-3">
-            <Label htmlFor="equipment-name" className="text-[18px] text-[#73738a]">
+            <Label htmlFor="equipment-name" className="text-[14px] text-[#73738a]">
               Наименование
             </Label>
             <Input
@@ -219,7 +219,7 @@ function EquipmentDialog({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
-              <Label htmlFor="equipment-min" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="equipment-min" className="text-[14px] text-[#73738a]">
                 Температура от
               </Label>
               <Input
@@ -231,7 +231,7 @@ function EquipmentDialog({
               />
             </div>
             <div className="space-y-3">
-              <Label htmlFor="equipment-max" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="equipment-max" className="text-[14px] text-[#73738a]">
                 Температура до
               </Label>
               <Input

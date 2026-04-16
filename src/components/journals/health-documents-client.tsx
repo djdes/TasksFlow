@@ -109,7 +109,7 @@ function EditDocumentDialog(props: {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Добавлять пустых строк при печати</Label>
+            <Label className="text-[14px] text-[#73738a]">Добавлять пустых строк при печати</Label>
             <select
               value={emptyRows}
               onChange={(event) => setEmptyRows(event.target.value)}

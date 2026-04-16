@@ -298,7 +298,7 @@ export function GlassListDocumentClient({
           </DialogHeader>
           <div className="space-y-8 px-14 py-12">
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Название документа</Label>
               <Input
                 value={config.documentName}
                 onChange={(event) =>
@@ -308,7 +308,7 @@ export function GlassListDocumentClient({
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Место расположения (участок)</Label>
+              <Label className="text-[14px] text-[#73738a]">Место расположения (участок)</Label>
               <Input
                 value={config.location}
                 onChange={(event) =>
@@ -318,7 +318,7 @@ export function GlassListDocumentClient({
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
               <Input
                 type="date"
                 value={config.documentDate}
@@ -329,7 +329,7 @@ export function GlassListDocumentClient({
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Должность</Label>
+              <Label className="text-[14px] text-[#73738a]">Должность</Label>
               <select
                 value={config.responsibleTitle}
                 onChange={(event) => {
@@ -354,7 +354,7 @@ export function GlassListDocumentClient({
               </select>
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <select
                 value={config.responsibleUserId}
                 onChange={(event) => {
@@ -412,7 +412,7 @@ export function GlassListDocumentClient({
           </DialogHeader>
           <div className="space-y-8 px-14 py-12">
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Место расположения (участок)</Label>
+              <Label className="text-[14px] text-[#73738a]">Место расположения (участок)</Label>
               <Input
                 value={rowDialog.row.location}
                 onChange={(event) =>
@@ -425,7 +425,7 @@ export function GlassListDocumentClient({
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Наименование объекта контроля (предмета)</Label>
+              <Label className="text-[14px] text-[#73738a]">Наименование объекта контроля (предмета)</Label>
               <Input
                 value={rowDialog.row.itemName}
                 onChange={(event) =>
@@ -438,7 +438,7 @@ export function GlassListDocumentClient({
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Кол-во</Label>
+              <Label className="text-[14px] text-[#73738a]">Кол-во</Label>
               <Input
                 value={rowDialog.row.quantity}
                 onChange={(event) =>

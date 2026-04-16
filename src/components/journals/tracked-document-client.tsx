@@ -657,7 +657,7 @@ function TrackedDocumentClientImpl({
 
           <div className="space-y-7 px-12 py-10">
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Р”Р°С‚Р°</Label>
+              <Label className="text-[14px] text-[#73738a]">Р”Р°С‚Р°</Label>
               <Input
                 type="date"
                 value={newDate}
@@ -667,7 +667,7 @@ function TrackedDocumentClientImpl({
             </div>
 
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <Select value={newEmployeeId} onValueChange={setNewEmployeeId}>
                 <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                   <SelectValue placeholder="Выберите сотрудника" />
@@ -712,7 +712,7 @@ function TrackedDocumentClientImpl({
 
           <div className="space-y-8 px-14 py-12">
             <div className="space-y-3">
-              <Label htmlFor="journal-title" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="journal-title" className="text-[14px] text-[#73738a]">
                 Название журнала
               </Label>
               <Input
@@ -725,7 +725,7 @@ function TrackedDocumentClientImpl({
 
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-3">
-                <Label className="text-[18px] text-[#73738a]">Ответственный</Label>
+                <Label className="text-[14px] text-[#73738a]">Ответственный</Label>
                 <Select
                   value={responsibleUserIdInput}
                   onValueChange={(value) => setResponsibleUserIdInput(value)}
@@ -744,7 +744,7 @@ function TrackedDocumentClientImpl({
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="journal-responsible-title" className="text-[18px] text-[#73738a]">
+                <Label htmlFor="journal-responsible-title" className="text-[14px] text-[#73738a]">
                   Должность ответственного
                 </Label>
                 <Input

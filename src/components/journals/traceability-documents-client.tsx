@@ -142,7 +142,7 @@ function TraceabilitySettingsDialog(props: {
         {activeState && (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
@@ -152,7 +152,7 @@ function TraceabilitySettingsDialog(props: {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Дата начала</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Дата начала</Label>
               <div className="relative">
                 <Input
                   type="date"

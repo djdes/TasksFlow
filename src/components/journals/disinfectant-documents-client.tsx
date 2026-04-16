@@ -128,7 +128,7 @@ function SettingsDialog(props: {
         {activeState && (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">
+              <Label className="text-[14px] text-[#7a7c8e]">
                 Название документа
               </Label>
               <Input
@@ -141,7 +141,7 @@ function SettingsDialog(props: {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">
+              <Label className="text-[14px] text-[#7a7c8e]">
                 Должность ответственного
               </Label>
               <Select
@@ -170,7 +170,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
                 value={activeState.responsibleEmployeeId}
                 onValueChange={(v) => {

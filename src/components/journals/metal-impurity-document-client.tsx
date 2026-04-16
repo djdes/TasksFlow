@@ -107,7 +107,7 @@ function AddableSelectField(props: {
 }) {
   return (
     <div className="space-y-3">
-      <Label className="text-[18px] text-[#73738a]">{props.label}</Label>
+      <Label className="text-[14px] text-[#73738a]">{props.label}</Label>
       <Select value={props.value} onValueChange={props.onValueChange}>
         <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-white px-5 text-[16px]">
           <SelectValue placeholder={props.selectPlaceholder} />
@@ -229,7 +229,7 @@ function RowDialog({
         </DialogHeader>
         <div className="space-y-5 px-10 py-8">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата</Label>
             <div className="relative">
               <Input
                 type="date"
@@ -313,7 +313,7 @@ function RowDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={draftPosition}
               onValueChange={(value) => {
@@ -346,7 +346,7 @@ function RowDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select
               value={draftEmployeeId || "__empty__"}
               onValueChange={(value) => {
@@ -474,7 +474,7 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-5 px-10 py-8">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
@@ -482,7 +482,7 @@ function SettingsDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата начала</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата начала</Label>
             <div className="relative">
               <Input
                 type="date"
@@ -496,7 +496,7 @@ function SettingsDialog({
             </div>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={draftConfig.responsiblePosition}
               onValueChange={(value) => {
@@ -524,7 +524,7 @@ function SettingsDialog({
             </Select>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select
               value={draftConfig.responsibleEmployeeId || "__empty__"}
               onValueChange={(value) => {

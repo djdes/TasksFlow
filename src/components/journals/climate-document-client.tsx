@@ -362,7 +362,7 @@ function ResponsibleDialog({
 
         <div className="space-y-7 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                 <SelectValue placeholder="Выберите должность" />
@@ -378,7 +378,7 @@ function ResponsibleDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                 <SelectValue placeholder="Выберите сотрудника" />
@@ -474,7 +474,7 @@ function AddRowDialog({
 
         <div className="space-y-7 px-12 py-10">
           <div className="space-y-3">
-            <Label htmlFor="row-date" className="text-[18px] text-[#73738a]">
+            <Label htmlFor="row-date" className="text-[14px] text-[#73738a]">
               Дата
             </Label>
             <Input
@@ -487,7 +487,7 @@ function AddRowDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                 <SelectValue placeholder="Выберите должность" />
@@ -503,7 +503,7 @@ function AddRowDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                 <SelectValue placeholder="Выберите сотрудника" />
@@ -633,7 +633,7 @@ function JournalSettingsDialog({
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+              <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
               <Select value={position} onValueChange={setPosition}>
                 <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                   <SelectValue placeholder="Выберите должность" />
@@ -649,7 +649,7 @@ function JournalSettingsDialog({
             </div>
 
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник по умолчанию</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник по умолчанию</Label>
               <Select value={userId} onValueChange={setUserId}>
                 <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[20px]">
                   <SelectValue placeholder="Выберите сотрудника" />
@@ -667,7 +667,7 @@ function JournalSettingsDialog({
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
-              <Label htmlFor="time-one" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="time-one" className="text-[14px] text-[#73738a]">
                 Время контроля 1
               </Label>
               <Input
@@ -679,7 +679,7 @@ function JournalSettingsDialog({
               />
             </div>
             <div className="space-y-3">
-              <Label htmlFor="time-two" className="text-[18px] text-[#73738a]">
+              <Label htmlFor="time-two" className="text-[14px] text-[#73738a]">
                 Время контроля 2
               </Label>
               <Input

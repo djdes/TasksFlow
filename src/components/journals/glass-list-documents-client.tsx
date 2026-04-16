@@ -119,7 +119,7 @@ function GlassListFormDialog(props: {
         </DialogHeader>
         <div className="space-y-8 px-14 py-12">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={state.documentName}
               onChange={(event) =>
@@ -130,7 +130,7 @@ function GlassListFormDialog(props: {
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Место расположения (участок)</Label>
+            <Label className="text-[14px] text-[#73738a]">Место расположения (участок)</Label>
             <Input
               value={state.location}
               onChange={(event) =>
@@ -141,7 +141,7 @@ function GlassListFormDialog(props: {
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
             <Input
               type="date"
               value={state.documentDate}
@@ -152,7 +152,7 @@ function GlassListFormDialog(props: {
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность</Label>
             <select
               value={state.responsibleTitle}
               onChange={(event) =>
@@ -169,7 +169,7 @@ function GlassListFormDialog(props: {
             </select>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+            <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
             <select
               value={state.responsibleUserId}
               onChange={(event) =>

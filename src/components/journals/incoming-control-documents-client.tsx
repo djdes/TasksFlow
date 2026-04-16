@@ -144,7 +144,7 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={state.title}
               onChange={(event) => setState({ ...state, title: event.target.value })}
@@ -153,7 +153,7 @@ function SettingsDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата начала</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата начала</Label>
             <Input
               type="date"
               value={state.startDate}
@@ -185,7 +185,7 @@ function SettingsDialog({
             </label>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select
               value={state.responsibleTitle}
               onValueChange={(value) =>
@@ -210,7 +210,7 @@ function SettingsDialog({
           </div>
           {showEmployeeField && (
             <div className="space-y-3">
-              <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
               <Select
                 value={state.responsibleUserId}
                 onValueChange={(value) => setState({ ...state, responsibleUserId: value })}

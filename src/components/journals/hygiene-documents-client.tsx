@@ -126,7 +126,7 @@ function EditDocumentDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
               <SelectTrigger className="h-14 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]">
                 <SelectValue placeholder="- Выберите значение -" />

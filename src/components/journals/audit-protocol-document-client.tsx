@@ -98,7 +98,7 @@ function RowDialog({
         </DialogHeader>
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Раздел</Label>
+            <Label className="text-[14px] text-[#73738a]">Раздел</Label>
             <Select value={draft.sectionId} onValueChange={(value) => setDraft({ ...draft, sectionId: value })}>
               <SelectTrigger className="h-14 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-4 text-[20px]">
                 <SelectValue placeholder="Выберите раздел" />
@@ -111,7 +111,7 @@ function RowDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[18px] text-[#73738a]">Требование</Label>
+            <Label className="text-[14px] text-[#73738a]">Требование</Label>
             <Textarea value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} className="min-h-[160px] rounded-2xl border-[#d8dae6] px-4 py-3 text-[18px]" />
           </div>
           <div className="flex justify-end">
@@ -368,19 +368,19 @@ export function AuditProtocolDocumentClient({
           </DialogHeader>
           <div className="space-y-4 px-8 py-6">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Название документа</Label>
               <Input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+              <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
               <Input type="date" value={config.documentDate} onChange={(e) => setConfig({ ...config, documentDate: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Основание проверки</Label>
+              <Label className="text-[14px] text-[#73738a]">Основание проверки</Label>
               <Input value={config.basisTitle} onChange={(e) => setConfig({ ...config, basisTitle: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#73738a]">Проверяемый объект</Label>
+              <Label className="text-[14px] text-[#73738a]">Проверяемый объект</Label>
               <Input value={config.auditedObject} onChange={(e) => setConfig({ ...config, auditedObject: e.target.value })} className="h-14 rounded-2xl border-[#d8dae6] px-4 text-[20px]" />
             </div>
             <div className="flex justify-end">

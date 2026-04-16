@@ -453,7 +453,7 @@ export function CreateDocumentDialog({
               {isEquipmentCleaningJournal && (
                 <>
                   <div className="space-y-3">
-                    <Label htmlFor="equipment-cleaning-date-from" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="equipment-cleaning-date-from" className="text-[14px] text-[#73738a]">
                       Дата начала
                     </Label>
                     <Input
@@ -489,7 +489,7 @@ export function CreateDocumentDialog({
 
               {isPerishableRejectionJournal && (
                 <div className="space-y-3">
-                  <Label htmlFor="perishable-date-from" className="text-[18px] text-[#73738a]">
+                  <Label htmlFor="perishable-date-from" className="text-[14px] text-[#73738a]">
                     Дата начала
                   </Label>
                   <Input
@@ -506,7 +506,7 @@ export function CreateDocumentDialog({
               {isProductWriteoffJournal && (
                 <>
                   <div className="space-y-3">
-                    <Label htmlFor="product-writeoff-act-number" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="product-writeoff-act-number" className="text-[14px] text-[#73738a]">
                       № акта
                     </Label>
                     <Input
@@ -518,7 +518,7 @@ export function CreateDocumentDialog({
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label htmlFor="product-writeoff-date" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="product-writeoff-date" className="text-[14px] text-[#73738a]">
                       Дата документа
                     </Label>
                     <Input
@@ -531,7 +531,7 @@ export function CreateDocumentDialog({
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label htmlFor="product-writeoff-comment" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="product-writeoff-comment" className="text-[14px] text-[#73738a]">
                       Комментарий
                     </Label>
                     <Textarea
@@ -547,7 +547,7 @@ export function CreateDocumentDialog({
               {isStaffTrainingJournal && (
                 <>
                   <div className="space-y-3">
-                    <Label htmlFor="training-date-from" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="training-date-from" className="text-[14px] text-[#73738a]">
                       Дата начала
                     </Label>
                     <Input
@@ -574,7 +574,7 @@ export function CreateDocumentDialog({
               {(isEquipmentMaintenanceJournal || isEquipmentCalibrationJournal) && (
                 <>
                   <div className="space-y-3">
-                    <Label className="text-[18px] text-[#73738a]">Дата документа</Label>
+                    <Label className="text-[14px] text-[#73738a]">Дата документа</Label>
                     <Input
                       type="date"
                       value={dateFrom}
@@ -583,7 +583,7 @@ export function CreateDocumentDialog({
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[18px] text-[#73738a]">Год</Label>
+                    <Label className="text-[14px] text-[#73738a]">Год</Label>
                     <select
                       value={dateFrom.slice(0, 4)}
                       onChange={(e) => setDateFrom(`${e.target.value}-01-01`)}
@@ -600,7 +600,7 @@ export function CreateDocumentDialog({
               {isCleaningJournal && (
                 <>
                   <div className="space-y-3">
-                    <Label htmlFor="cleaning-date-from" className="text-[18px] text-[#73738a]">
+                    <Label htmlFor="cleaning-date-from" className="text-[14px] text-[#73738a]">
                       Дата начала
                     </Label>
                     <Input
@@ -627,7 +627,7 @@ export function CreateDocumentDialog({
                     </p>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+                    <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
                     <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
                       <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                         <SelectValue placeholder="- Выберите значение -" />
@@ -646,7 +646,7 @@ export function CreateDocumentDialog({
 
               {!isMedBookJournal && !isPerishableRejectionJournal && !isProductWriteoffJournal && !isStaffTrainingJournal && !isEquipmentMaintenanceJournal && !isEquipmentCalibrationJournal && !isCleaningJournal && !isEquipmentCleaningJournal && (
               <div className="space-y-3">
-                <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+                <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
                 <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
                   <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                     <SelectValue placeholder="- Выберите значение -" />
@@ -673,7 +673,7 @@ export function CreateDocumentDialog({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <Label htmlFor="tracked-date-from" className="text-[18px] text-[#73738a]">
+                  <Label htmlFor="tracked-date-from" className="text-[14px] text-[#73738a]">
                     {trackedCreateMode === "uv" || isAcceptanceJournal
                       ? "Дата начала"
                       : "Дата документа"}
@@ -692,7 +692,7 @@ export function CreateDocumentDialog({
               {isAcceptanceJournal && (
                 <>
                   <div className="space-y-3">
-                    <Label className="text-[18px] text-[#73738a]">Добавить поля</Label>
+                    <Label className="text-[14px] text-[#73738a]">Добавить поля</Label>
                     <label className="flex items-center gap-3 text-[15px]">
                       <Checkbox
                         checked={fpShowCorrectiveAction}
@@ -702,7 +702,7 @@ export function CreateDocumentDialog({
                     </label>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[18px] text-[#73738a]">Сотрудник</Label>
+                    <Label className="text-[14px] text-[#73738a]">Сотрудник</Label>
                     <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
                       <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                         <SelectValue placeholder="- Выберите значение -" />

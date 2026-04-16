@@ -155,7 +155,7 @@ function SettingsDialog(props: {
         {activeState && (
           <div className="space-y-5 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={activeState.title}
                 onChange={(event) => setState({ ...activeState, title: event.target.value })}
@@ -163,7 +163,7 @@ function SettingsDialog(props: {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Дата документа</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Дата документа</Label>
               <div className="relative">
                 <Input
                   type="date"
@@ -177,7 +177,7 @@ function SettingsDialog(props: {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Год</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Год</Label>
               <Select
                 value={activeState.year}
                 onValueChange={(value) => setState({ ...activeState, year: value })}
@@ -198,7 +198,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Должность &quot;Утверждаю&quot;</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Должность &quot;Утверждаю&quot;</Label>
               <Select
                 value={activeState.approveRole}
                 onValueChange={(value) => {
@@ -224,7 +224,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Сотрудник</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Сотрудник</Label>
               <Select
                 value={activeState.approveEmployeeId}
                 onValueChange={(value) => {

@@ -108,7 +108,7 @@ function CreateDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]" htmlFor="complaint-doc-start">
+            <Label className="text-[14px] text-[#73738a]" htmlFor="complaint-doc-start">
               Дата начала
             </Label>
             <Input
@@ -194,7 +194,7 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-8 px-14 py-12">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]" htmlFor="complaint-settings-title">
+            <Label className="text-[14px] text-[#73738a]" htmlFor="complaint-settings-title">
               Название документа
             </Label>
             <Input
@@ -205,7 +205,7 @@ function SettingsDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]" htmlFor="complaint-settings-start">
+            <Label className="text-[14px] text-[#73738a]" htmlFor="complaint-settings-start">
               Дата начала
             </Label>
             <Input

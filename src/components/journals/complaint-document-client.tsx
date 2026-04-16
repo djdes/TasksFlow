@@ -109,7 +109,7 @@ function ComplaintRowDialog({
         </DialogHeader>
         <div className="space-y-6 px-12 py-10">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата поступления</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата поступления</Label>
             <Input
               type="date"
               value={draft.values.receiptDate || ""}
@@ -127,7 +127,7 @@ function ComplaintRowDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Форма поступления жалобы</Label>
+            <Label className="text-[14px] text-[#73738a]">Форма поступления жалобы</Label>
             <Select
               value={draft.values.complaintReceiptForm || ""}
               onValueChange={(value) => setValue("complaintReceiptForm", value)}
@@ -145,7 +145,7 @@ function ComplaintRowDialog({
             </Select>
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Реквизиты заявителя</Label>
+            <Label className="text-[14px] text-[#73738a]">Реквизиты заявителя</Label>
             <Textarea
               value={draft.values.applicantDetails || ""}
               onChange={(event) => setValue("applicantDetails", event.target.value)}
@@ -153,7 +153,7 @@ function ComplaintRowDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Содержание жалобы</Label>
+            <Label className="text-[14px] text-[#73738a]">Содержание жалобы</Label>
             <Textarea
               value={draft.values.complaintContent || ""}
               onChange={(event) => setValue("complaintContent", event.target.value)}
@@ -161,7 +161,7 @@ function ComplaintRowDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата решения</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата решения</Label>
             <Input
               type="date"
               value={draft.values.decisionDate || ""}
@@ -170,7 +170,7 @@ function ComplaintRowDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Решение, краткое содержание</Label>
+            <Label className="text-[14px] text-[#73738a]">Решение, краткое содержание</Label>
             <Textarea
               value={draft.values.decisionSummary || ""}
               onChange={(event) => setValue("decisionSummary", event.target.value)}
@@ -238,7 +238,7 @@ function SettingsDialog({
         </DialogHeader>
         <div className="space-y-8 px-14 py-12">
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Название документа</Label>
+            <Label className="text-[14px] text-[#73738a]">Название документа</Label>
             <Input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
@@ -246,7 +246,7 @@ function SettingsDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Дата начала</Label>
+            <Label className="text-[14px] text-[#73738a]">Дата начала</Label>
             <Input
               type="date"
               value={draftDate}

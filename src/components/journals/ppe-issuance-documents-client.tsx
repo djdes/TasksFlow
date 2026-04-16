@@ -192,7 +192,7 @@ function SettingsDialog(props: {
         {active && (
           <div className="space-y-6 px-10 py-8">
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Название документа</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Название документа</Label>
               <Input
                 value={active.title}
                 placeholder="Введите название документа"
@@ -201,7 +201,7 @@ function SettingsDialog(props: {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Дата начала</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Дата начала</Label>
               <div className="relative">
                 <Input
                   type="date"
@@ -220,7 +220,7 @@ function SettingsDialog(props: {
               <FieldToggle checked={active.showCaps} onCheckedChange={(checked) => setState({ ...active, showCaps: checked })} label="Выдача шапочек" />
             </fieldset>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Сотрудник по умолчанию, выдавший СИЗ</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Сотрудник по умолчанию, выдавший СИЗ</Label>
               <Select
                 value={active.defaultIssuerUserId}
                 onValueChange={(value) => {
@@ -247,7 +247,7 @@ function SettingsDialog(props: {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[18px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
+              <Label className="text-[14px] text-[#7a7c8e]">Должность лица, выдавшего СИЗ</Label>
               <Select
                 value={active.defaultIssuerTitle}
                 onValueChange={(value) => setState({ ...active, defaultIssuerTitle: value })}

@@ -128,7 +128,7 @@ function AddEmployeeDialog({
             Выберите соответствующую должность и сотрудника.
           </p>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность</Label>
             <Select value={value} onValueChange={setValue} disabled={availableUsers.length === 0}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
                 <SelectValue placeholder="- Выберите значение -" />
@@ -237,7 +237,7 @@ function FillFromStaffDialog({
         <div className="space-y-6 px-10 py-8">
           <div className="text-[18px] text-black">Добавить из категории:</div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="h-18 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-6 text-[18px]">
                 <SelectValue />
@@ -342,7 +342,7 @@ function JournalSettingsDialog({
             />
           </div>
           <div className="space-y-3">
-            <Label className="text-[18px] text-[#73738a]">Должность ответственного</Label>
+            <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsible} onValueChange={setResponsible}>
               <SelectTrigger className="h-22 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-8 text-[24px]">
                 <SelectValue placeholder="- Выберите значение -" />
