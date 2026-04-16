@@ -7,169 +7,215 @@ datasource db {
 }
 
 model Organization {
-  id               String         @id @default(cuid())
-  name             String
-  type             String
-  inn              String?
-  address          String?
-  phone            String?
-  subscriptionPlan String         @default("trial")
-  subscriptionEnd  DateTime?
-  locale           String         @default("ru")
-  brandColor       String?
-  logoUrl          String?
-  yookassaShopId   String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                String            @id @default(cuid())
+  name              String
+  type              String
+  inn               String?
+  address           String?
+  phone             String?
+  subscriptionPlan  String            @default("trial")
+  subscriptionEnd   DateTime?
+  locale            String            @default("ru")
+  brandColor        String?
+  logoUrl           String?
+  yookassaShopId    String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   /// Per-organisation bearer token for POST /api/external/entries. When set,
   /// overrides the shared EXTERNAL_API_TOKEN env and resolves the caller's
   /// organizationId automatically. Keep unique across orgs.
-  externalApiToken String?        @unique
-  users            User[]
-  areas            Area[]
-  journalEntries   JournalEntry[]
-  products         Product[]
-  auditLogs        AuditLog[]
-  batches          Batch[]
-  capaTickets      CapaTicket[]
-  lossRecords      LossRecord[]
-  productionPlans  ProductionPlan[]
-  changeRequests   ChangeRequest[]
+  externalApiToken  String?           @unique
+  users             User[]
+  areas             Area[]
+  journalEntries    JournalEntry[]
+  products          Product[]
+  auditLogs         AuditLog[]
+  batches           Batch[]
+  capaTickets       CapaTicket[]
+  lossRecords       LossRecord[]
+  productionPlans   ProductionPlan[]
+  changeRequests    ChangeRequest[]
   staffCompetencies StaffCompetency[]
   journalDocuments  JournalDocument[]
 }
 
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
-  name            String
-  phone           String?
-  passwordHash    String
-  role            String         @default("cook")
+  id                    String              @id @default(cuid())
+  email                 String              @unique
+  name                  String
+  phone                 String?
+  passwordHash          String
+  role                  String              @default("cook")
   // Free-form job title that overrides the role-based label in journals.
   // Lets the same "cook" role user be displayed as "Повар холодного цеха" or
   // "Официант" per employee, instead of flipping between journals.
-  positionTitle   String?
-  organizationId  String
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  telegramChatId    String?
-  notificationPrefs Json?
-  isActive          Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  journalEntries  JournalEntry[]
+  positionTitle         String?
+  organizationId        String
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  telegramChatId        String?
+  notificationPrefs     Json?
+  isActive              Boolean             @default(true)
+  // Platform-level superadmin flag. Orthogonal to `role` (which is the in-org
+  // job title). Root users still belong to a real `Organization`; the synthetic
+  // "platform" org carries them so every existing FK/query keeps working.
+  isRoot                Boolean             @default(false)
+  // False until the owner has explicitly edited this user's journal ACL in
+  // /settings/users. While false, `hasJournalAccess` grants all journals —
+  // this gives zero-regression behaviour for employees predating the ACL.
+  journalAccessMigrated Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  journalEntries        JournalEntry[]
+  journalAccess         UserJournalAccess[]
+  inviteToken           InviteToken?
+}
+
+/// Invite flow token. Created alongside a placeholder `User` when an owner
+/// invites a new employee; mailed to them as /invite/<token> URL. The user
+/// clicks, sets their password, and the token is marked `usedAt`.
+///
+/// `tokenHash` is a bcrypt/sha256 digest of the raw token — raw value never
+/// persisted, so a DB leak cannot produce usable invite links.
+model InviteToken {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// Per-journal access grant for an employee. Rows only exist for explicit
+/// grants; absence = no access (after `User.journalAccessMigrated` flips to
+/// true). Managers / root bypass this table entirely.
+model UserJournalAccess {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateCode String
+  canRead      Boolean  @default(true)
+  canWrite     Boolean  @default(true)
+  canFinalize  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, templateCode])
+  @@index([userId])
 }
 
 model Area {
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  organizationId  String
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  equipment       Equipment[]
-  journalEntries  JournalEntry[]
+  id             String         @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  equipment      Equipment[]
+  journalEntries JournalEntry[]
 }
 
 model Equipment {
-  id              String         @id @default(cuid())
-  name            String
-  type            String
-  serialNumber    String?
-  tempMin         Float?
-  tempMax         Float?
-  tuyaDeviceId    String?
-  areaId          String
-  area            Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  journalEntries  JournalEntry[]
+  id             String         @id @default(cuid())
+  name           String
+  type           String
+  serialNumber   String?
+  tempMin        Float?
+  tempMax        Float?
+  tuyaDeviceId   String?
+  areaId         String
+  area           Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntry[]
 }
 
 model JournalTemplate {
-  id                  String         @id @default(cuid())
-  code                String         @unique
-  name                String
-  description         String?
-  fields              Json
-  isActive            Boolean        @default(true)
-  sortOrder           Int            @default(0)
-  isMandatorySanpin   Boolean        @default(false)
-  isMandatoryHaccp    Boolean        @default(false)
-  entries             JournalEntry[]
-  documents           JournalDocument[]
+  id                String            @id @default(cuid())
+  code              String            @unique
+  name              String
+  description       String?
+  fields            Json
+  isActive          Boolean           @default(true)
+  sortOrder         Int               @default(0)
+  isMandatorySanpin Boolean           @default(false)
+  isMandatoryHaccp  Boolean           @default(false)
+  entries           JournalEntry[]
+  documents         JournalDocument[]
 }
 
 model Product {
-  id              String       @id @default(cuid())
-  name            String
-  supplier        String?
-  barcode         String?
-  unit            String       @default("kg")
-  category        String?
-  storageTemp     String?
-  shelfLifeDays   Int?
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  isActive        Boolean      @default(true)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  supplier       String?
+  barcode        String?
+  unit           String       @default("kg")
+  category       String?
+  storageTemp    String?
+  shelfLifeDays  Int?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([organizationId, name])
   @@index([organizationId, barcode])
 }
 
 model JournalEntry {
-  id              String          @id @default(cuid())
-  templateId      String
-  template        JournalTemplate @relation(fields: [templateId], references: [id])
-  organizationId  String
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  areaId          String?
-  area            Area?           @relation(fields: [areaId], references: [id])
-  equipmentId     String?
-  equipment       Equipment?      @relation(fields: [equipmentId], references: [id])
-  filledById      String
-  filledBy        User            @relation(fields: [filledById], references: [id])
-  data            Json
-  status          String          @default("submitted")
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             String          @id @default(cuid())
+  templateId     String
+  template       JournalTemplate @relation(fields: [templateId], references: [id])
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  areaId         String?
+  area           Area?           @relation(fields: [areaId], references: [id])
+  equipmentId    String?
+  equipment      Equipment?      @relation(fields: [equipmentId], references: [id])
+  filledById     String
+  filledBy       User            @relation(fields: [filledById], references: [id])
+  data           Json
+  status         String          @default("submitted")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([organizationId, templateId, createdAt])
   @@index([filledById])
 }
 
 model AuditLog {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId          String?
-  userName        String?
-  action          String
-  entity          String
-  entityId        String?
-  details         Json?
-  ipAddress       String?
-  createdAt       DateTime     @default(now())
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  userName       String?
+  action         String
+  entity         String
+  entityId       String?
+  details        Json?
+  ipAddress      String?
+  createdAt      DateTime     @default(now())
 
   @@index([organizationId, createdAt])
   @@index([entity, entityId])
 }
 
 model Batch {
-  id              String       @id @default(cuid())
-  code            String
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  productName     String
-  supplier        String?
-  quantity        Float
-  unit            String       @default("kg")
-  receivedAt      DateTime     @default(now())
-  expiryDate      DateTime?
-  status          String       @default("received")
-  sourceEntryId   String?
-  notes           String?
-  createdById     String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  code           String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productName    String
+  supplier       String?
+  quantity       Float
+  unit           String       @default("kg")
+  receivedAt     DateTime     @default(now())
+  expiryDate     DateTime?
+  status         String       @default("received")
+  sourceEntryId  String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@unique([organizationId, code])
   @@index([organizationId, status])
@@ -177,64 +223,64 @@ model Batch {
 }
 
 model CapaTicket {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  priority        String       @default("medium")
-  status          String       @default("open")
-  category        String       @default("other")
-  sourceType      String?
-  sourceEntryId   String?
-  assignedToId    String?
-  dueDate         DateTime?
-  slaHours        Int          @default(24)
-  rootCause       String?
-  correctiveAction String?
-  preventiveAction String?
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  priority           String       @default("medium")
+  status             String       @default("open")
+  category           String       @default("other")
+  sourceType         String?
+  sourceEntryId      String?
+  assignedToId       String?
+  dueDate            DateTime?
+  slaHours           Int          @default(24)
+  rootCause          String?
+  correctiveAction   String?
+  preventiveAction   String?
   verificationResult String?
-  resolvedAt      DateTime?
-  closedAt        DateTime?
-  createdById     String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  createdById        String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@index([organizationId, status])
   @@index([organizationId, priority])
 }
 
 model LossRecord {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  date            DateTime     @default(now())
-  category        String
-  productName     String
-  quantity        Float
-  unit            String       @default("kg")
-  costRub         Float?
-  cause           String?
-  areaId          String?
-  createdById     String?
-  createdAt       DateTime     @default(now())
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  date           DateTime     @default(now())
+  category       String
+  productName    String
+  quantity       Float
+  unit           String       @default("kg")
+  costRub        Float?
+  cause          String?
+  areaId         String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
 
   @@index([organizationId, date])
   @@index([organizationId, category])
 }
 
 model ProductionPlan {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  date            DateTime
-  shift           String       @default("morning")
-  items           Json
-  status          String       @default("draft")
-  notes           String?
-  createdById     String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  date           DateTime
+  shift          String       @default("morning")
+  items          Json
+  status         String       @default("draft")
+  notes          String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@unique([organizationId, date, shift])
   @@index([organizationId, date])
@@ -261,18 +307,18 @@ model ChangeRequest {
 }
 
 model StaffCompetency {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId          String
-  skill           String
-  level           Int          @default(0)
-  certifiedAt     DateTime?
-  expiresAt       DateTime?
-  certifiedById   String?
-  notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  skill          String
+  level          Int          @default(0)
+  certifiedAt    DateTime?
+  expiresAt      DateTime?
+  certifiedById  String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@unique([organizationId, userId, skill])
   @@index([organizationId, userId])
@@ -285,22 +331,22 @@ model StaffCompetency {
 // ============================================================
 
 model JournalDocument {
-  id                String                @id @default(cuid())
+  id                String                 @id @default(cuid())
   templateId        String
-  template          JournalTemplate       @relation(fields: [templateId], references: [id])
+  template          JournalTemplate        @relation(fields: [templateId], references: [id])
   organizationId    String
-  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  title             String                // e.g. "Гигиенический журнал"
+  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title             String // e.g. "Гигиенический журнал"
   config            Json?
   dateFrom          DateTime
   dateTo            DateTime
   responsibleUserId String?
-  responsibleTitle  String?               // e.g. "Управляющий"
-  status            String                @default("active") // active | closed
-  autoFill          Boolean               @default(false)
+  responsibleTitle  String? // e.g. "Управляющий"
+  status            String                 @default("active") // active | closed
+  autoFill          Boolean                @default(false)
   createdById       String?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
   entries           JournalDocumentEntry[]
 
   @@index([organizationId, templateId, status])
@@ -308,14 +354,14 @@ model JournalDocument {
 }
 
 model JournalDocumentEntry {
-  id            String          @id @default(cuid())
-  documentId    String
-  document      JournalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  employeeId    String
-  date          DateTime        // the specific day (date-only, truncated to midnight)
-  data          Json            // template-specific: { healthStatus: "healthy"|"day_off"|..., temperatureAbove37: false }
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  documentId String
+  document   JournalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  employeeId String
+  date       DateTime // the specific day (date-only, truncated to midnight)
+  data       Json // template-specific: { healthStatus: "healthy"|"day_off"|..., temperatureAbove37: false }
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@unique([documentId, employeeId, date])
   @@index([documentId, date])
@@ -339,19 +385,19 @@ model JournalExternalIdempotency {
 // Keeps raw payload + outcome so we can debug upstream apps (employee app, sensor feed)
 // without touching production logs.
 model JournalExternalLog {
-  id              String   @id @default(cuid())
-  organizationId  String?
-  journalCode     String?
-  date            DateTime?
-  source          String?   // e.g. "employee_app" | "sensor" | "manual"
-  tokenHint       String?   // last 4 chars of token used
-  httpStatus      Int
-  status          String    // "ok" | "error"
-  errorMessage    String?
-  documentId      String?
-  entriesWritten  Int       @default(0)
-  payload         Json?
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(cuid())
+  organizationId String?
+  journalCode    String?
+  date           DateTime?
+  source         String? // e.g. "employee_app" | "sensor" | "manual"
+  tokenHint      String? // last 4 chars of token used
+  httpStatus     Int
+  status         String // "ok" | "error"
+  errorMessage   String?
+  documentId     String?
+  entriesWritten Int       @default(0)
+  payload        Json?
+  createdAt      DateTime  @default(now())
 
   @@index([organizationId, createdAt])
   @@index([journalCode, createdAt])
