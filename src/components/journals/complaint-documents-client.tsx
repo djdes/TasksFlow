@@ -391,7 +391,7 @@ export function ComplaintDocumentsClient({
                   <DropdownMenuContent align="end" className="w-[280px] rounded-[24px] border-0 p-4 shadow-xl">
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsDocument(document)}
                       >
                         <Settings2 className="mr-3 size-5 text-[#6f7282]" />
@@ -399,7 +399,7 @@ export function ComplaintDocumentsClient({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")
                       }
@@ -409,7 +409,7 @@ export function ComplaintDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteDocument(document)}
                       >
                         <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

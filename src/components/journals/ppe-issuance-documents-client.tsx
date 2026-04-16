@@ -486,7 +486,7 @@ export function PpeIssuanceDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[18px] font-semibold tracking-[-0.02em] text-black"
+                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
               >
                 {document.title || PPE_ISSUANCE_DOCUMENT_TITLE}
               </Link>
@@ -512,14 +512,14 @@ export function PpeIssuanceDocumentsClient({
                   >
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" /> Настройки
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className={`h-11 rounded-2xl px-4 text-[18px] ${
+                      className={`h-11 rounded-2xl px-4 text-[15px] ${
                         document.status === "active" ? "mb-2" : ""
                       }`}
                       onSelect={() =>
@@ -530,7 +530,7 @@ export function PpeIssuanceDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteTarget(document)}
                       >
                         <Trash2 className="mr-3 size-6 text-[#ff3b30]" /> Удалить

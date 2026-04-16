@@ -230,17 +230,17 @@ function TraceabilityActionsMenu(props: {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-4 shadow-xl">
         <DropdownMenuItem
-          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
           onSelect={props.onSettings}
         >
           <Pencil className="mr-3 size-5 text-[#6f7282]" />
           Настройки
         </DropdownMenuItem>
-        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[18px]" onSelect={props.onPrint}>
+        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[15px]" onSelect={props.onPrint}>
           <Printer className="mr-3 size-5 text-[#6f7282]" />
           Печать
         </DropdownMenuItem>
-        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[18px]" onSelect={props.onArchiveToggle}>
+        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[15px]" onSelect={props.onArchiveToggle}>
           {isActive ? (
             <>
               <Archive className="mr-3 size-5 text-[#6f7282]" />
@@ -254,7 +254,7 @@ function TraceabilityActionsMenu(props: {
           )}
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
           onSelect={props.onDelete}
         >
           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

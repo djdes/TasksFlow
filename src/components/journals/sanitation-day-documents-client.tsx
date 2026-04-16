@@ -652,7 +652,7 @@ export function SanitationDayDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[18px] font-semibold tracking-[-0.02em] text-black"
+                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
               >
                 {document.title || SANITATION_DAY_DOCUMENT_TITLE}
               </Link>
@@ -723,14 +723,14 @@ export function SanitationDayDocumentsClient({
                     {document.status === "active" ? (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setSettingsTarget(document)}
                         >
                           <Pencil className="mr-3 size-6 text-[#6f7282]" />
                           Настройки
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => cloneDocument(document.id)}
                         >
                           <Copy className="mr-3 size-6 text-[#6f7282]" />
@@ -740,7 +740,7 @@ export function SanitationDayDocumentsClient({
                     ) : null}
 
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         window.open(
                           `/api/journal-documents/${document.id}/pdf`,
@@ -754,7 +754,7 @@ export function SanitationDayDocumentsClient({
 
                     {document.status === "closed" ? (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => moveToActive(document.id)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
@@ -763,14 +763,14 @@ export function SanitationDayDocumentsClient({
                     ) : (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => moveToClosed(document.id)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
                           Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => setDeleteTarget(document)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" />

@@ -473,7 +473,7 @@ export function AuditPlanDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[18px] font-semibold tracking-[-0.02em] text-black"
+                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
               >
                 {document.title || AUDIT_PLAN_DOCUMENT_TITLE}
               </Link>
@@ -509,7 +509,7 @@ export function AuditPlanDocumentsClient({
                   >
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" /> Настройки
@@ -517,14 +517,14 @@ export function AuditPlanDocumentsClient({
                     )}
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => copyDocument(document)}
                       >
                         <Copy className="mr-3 size-6 text-[#6f7282]" /> Сделать копию
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         void openDocumentPdf(document.id).catch((error) =>
                           toast.error(
@@ -537,14 +537,14 @@ export function AuditPlanDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "active" ? (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setArchiveTarget(document)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Отправить в закрытые
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => moveToStatus(document.id, "active")}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Вернуть в активные
@@ -552,7 +552,7 @@ export function AuditPlanDocumentsClient({
                     )}
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteTarget(document)}
                       >
                         <Trash2 className="mr-3 size-6 text-[#ff3b30]" /> Удалить

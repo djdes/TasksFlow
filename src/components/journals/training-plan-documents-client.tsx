@@ -447,7 +447,7 @@ export function TrainingPlanDocumentsClient({
               key={document.id}
               className="grid grid-cols-1 gap-4 rounded-[18px] border border-[#eaedf7] bg-white px-5 py-5 sm:grid-cols-[1.7fr_200px_430px_270px_64px] sm:items-center sm:gap-0 sm:px-8"
             >
-              <Link href={href} className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+              <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
                 {document.title || TRAINING_PLAN_DOCUMENT_TITLE}
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
@@ -481,14 +481,14 @@ export function TrainingPlanDocumentsClient({
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" /> Настройки
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         window.open(`/api/journal-documents/${document.id}/pdf`, "_blank", "noopener,noreferrer")
                       }
@@ -498,13 +498,13 @@ export function TrainingPlanDocumentsClient({
                     {document.status === "active" && (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setArchiveTarget(document)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => handleDelete(document.id, document.title)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" /> Удалить
@@ -513,7 +513,7 @@ export function TrainingPlanDocumentsClient({
                     )}
                     {document.status === "closed" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => moveToStatus(document.id, "active")}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Отправить в активные

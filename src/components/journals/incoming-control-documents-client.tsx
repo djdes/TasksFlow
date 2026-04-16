@@ -518,14 +518,14 @@ export function IncomingControlDocumentsClient({
                     >
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setSettingsDocument(document)}
                         >
                           Настройки
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() =>
                           window.open(
                             `/api/journal-documents/${document.id}/pdf`,
@@ -539,7 +539,7 @@ export function IncomingControlDocumentsClient({
                       </DropdownMenuItem>
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => setDeleteDocument(document)}
                         >
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

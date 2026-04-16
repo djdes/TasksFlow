@@ -394,7 +394,7 @@ export function SanitaryDayChecklistDocumentsClient({
               key={document.id}
               className="grid grid-cols-[1fr_280px_64px] items-center rounded-[18px] border border-[#eaedf7] bg-white px-8 py-5"
             >
-              <Link href={href} className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+              <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
                 {document.title || checklistTitle}
               </Link>
 
@@ -418,7 +418,7 @@ export function SanitaryDayChecklistDocumentsClient({
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" />
@@ -426,14 +426,14 @@ export function SanitaryDayChecklistDocumentsClient({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() => cloneDocument(document.id)}
                     >
                       <Copy className="mr-3 size-6 text-[#6f7282]" />
                       Сделать копию
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")
                       }
@@ -443,7 +443,7 @@ export function SanitaryDayChecklistDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "closed" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => moveToActive(document.id)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
@@ -453,14 +453,14 @@ export function SanitaryDayChecklistDocumentsClient({
                     {document.status === "active" && (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setArchiveTarget(document)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
                           Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => handleDelete(document.id, document.title)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" />

@@ -151,7 +151,7 @@ function HealthDocumentRow(props: {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_240px_40px] items-center rounded-[18px] border border-[#ececf4] bg-white px-5 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
       <Link href={href} className="min-w-0 pr-4">
-        <div className="truncate text-[18px] font-semibold tracking-[-0.02em] text-black">
+        <div className="truncate text-[17px] font-semibold tracking-[-0.02em] text-black">
           {props.document.title}
         </div>
       </Link>
@@ -174,7 +174,7 @@ function HealthDocumentRow(props: {
           <DropdownMenuContent align="end" className="w-[300px] rounded-[24px] border-0 p-4 shadow-xl">
             {canManage ? (
               <DropdownMenuItem
-                className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                 onSelect={() => props.onEdit(props.document)}
               >
                 <Pencil className="mr-3 size-5 text-[#6f7282]" />
@@ -182,7 +182,7 @@ function HealthDocumentRow(props: {
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem
-              className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+              className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
               onSelect={() => window.open(`/api/journal-documents/${props.document.id}/pdf`, "_blank")}
             >
               <Printer className="mr-3 size-5 text-[#6f7282]" />
@@ -190,7 +190,7 @@ function HealthDocumentRow(props: {
             </DropdownMenuItem>
             {canManage ? (
               <DropdownMenuItem
-                className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                 onSelect={() => props.onDelete(props.document)}
               >
                 <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

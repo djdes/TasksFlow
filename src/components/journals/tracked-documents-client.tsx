@@ -412,7 +412,7 @@ function TrackedDocumentsClientImpl({
                     <DropdownMenuContent align="end" className="w-[280px] rounded-[24px] border-0 p-4 shadow-xl">
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setEditingDocument(document)}
                         >
                           <Pencil className="mr-3 size-5 text-[#6f7282]" />
@@ -420,7 +420,7 @@ function TrackedDocumentsClientImpl({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
                       >
                         <Printer className="mr-3 size-5 text-[#6f7282]" />
@@ -428,7 +428,7 @@ function TrackedDocumentsClientImpl({
                       </DropdownMenuItem>
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => handleDelete(document.id, document.title)}
                         >
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

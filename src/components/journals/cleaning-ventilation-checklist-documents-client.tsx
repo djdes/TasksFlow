@@ -330,21 +330,21 @@ export function CleaningVentilationChecklistDocumentsClient({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() => setSettingsTarget(document)}
                     >
                       <Settings2 className="mr-3 size-5 text-[#5b66ff]" />
                       Настройки
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
                     >
                       <Printer className="mr-3 size-5 text-[#5b66ff]" />
                       Печать
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         moveDocument(document.id, document.status === "active" ? "closed" : "active")
                       }
@@ -353,7 +353,7 @@ export function CleaningVentilationChecklistDocumentsClient({
                       {document.status === "active" ? "Закрыть" : "Вернуть в активные"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                      className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                       onSelect={() =>
                         deleteDocument(
                           document.id,

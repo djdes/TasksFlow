@@ -536,7 +536,7 @@ export function MetalImpurityDocumentsClient({
                     >
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setSettingsDocument(document)}
                         >
                           <Settings2 className="mr-3 size-5 text-[#6f7282]" />
@@ -544,7 +544,7 @@ export function MetalImpurityDocumentsClient({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() =>
                           void openDocumentPdf(document.id).catch((error) =>
                             toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF")
@@ -556,7 +556,7 @@ export function MetalImpurityDocumentsClient({
                       </DropdownMenuItem>
                       {document.status === "active" && (
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => setDeleteDocument(document)}
                         >
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

@@ -391,7 +391,7 @@ export function DisinfectantDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[18px] font-semibold tracking-[-0.02em] text-black"
+                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
               >
                 {document.title || DISINFECTANT_DOCUMENT_TITLE}
               </Link>
@@ -422,7 +422,7 @@ export function DisinfectantDocumentsClient({
                   >
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" />{" "}
@@ -430,7 +430,7 @@ export function DisinfectantDocumentsClient({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                       onSelect={() =>
                         window.open(
                           `/api/journal-documents/${document.id}/pdf`,
@@ -443,14 +443,14 @@ export function DisinfectantDocumentsClient({
                     {document.status === "active" && (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                           onSelect={() => setArchiveTarget(document)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" />{" "}
                           Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[15px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() =>
                             handleDelete(document.id, document.title)
                           }
@@ -462,7 +462,7 @@ export function DisinfectantDocumentsClient({
                     )}
                     {document.status === "closed" && (
                       <DropdownMenuItem
-                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[15px]"
                         onSelect={() => moveToStatus(document.id, "active")}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />{" "}
