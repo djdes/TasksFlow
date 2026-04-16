@@ -31,14 +31,12 @@ export function InviteUserDialog() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
 
   function resetForm() {
     setName("");
     setEmail("");
-    setPassword("");
     setRole("");
     setPhone("");
     setError(null);
@@ -56,7 +54,6 @@ export function InviteUserDialog() {
         body: JSON.stringify({
           name,
           email,
-          password,
           role,
           phone: phone || undefined,
         }),
@@ -128,19 +125,9 @@ export function InviteUserDialog() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-password">
-              Пароль <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="user-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Минимум 6 символов"
-              minLength={6}
-              required
-            />
+          <div className="rounded-lg border border-[#eef0fb] bg-[#f8f9ff] p-3 text-[13px] text-[#5464ff]">
+            Сотруднику на email придёт ссылка для установки пароля.
+            Ссылка действительна 7 дней.
           </div>
           <div className="space-y-2">
             <Label htmlFor="user-role">
