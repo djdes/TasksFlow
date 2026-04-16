@@ -178,7 +178,7 @@ function SettingsDialog(props: {
                 onChange={(event) =>
                   setState({ ...activeState, title: event.target.value })
                 }
-                className="h-14 rounded-3xl border-[#d8dae6] px-5 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:text-[28px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-5 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:text-[28px]"
               />
             </div>
 
@@ -196,7 +196,7 @@ function SettingsDialog(props: {
                       documentDate: toIsoDate(event.target.value),
                     })
                   }
-                  className="h-14 rounded-3xl border-[#d8dae6] px-5 pr-12 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-5 pr-12 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080] sm:right-6 sm:size-8" />
               </div>
@@ -210,7 +210,7 @@ function SettingsDialog(props: {
                   setState({ ...activeState, year: value })
                 }
               >
-                <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -243,7 +243,7 @@ function SettingsDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,7 +269,7 @@ function SettingsDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -301,7 +301,7 @@ function SettingsDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -328,7 +328,7 @@ function SettingsDialog(props: {
                   });
                 }}
               >
-                <SelectTrigger className="h-14 rounded-3xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f1f2f8] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -399,7 +399,7 @@ function DeleteDialog(props: {
                 setSubmitting(false);
               }
             }}
-            className="h-14 rounded-3xl bg-[#5563ff] px-10 text-[24px] text-white hover:bg-[#4554ff]"
+            className="h-11 rounded-2xl bg-[#5563ff] px-10 text-[24px] text-white hover:bg-[#4554ff]"
           >
             {submitting ? "Удаление..." : "Удалить"}
           </Button>
@@ -723,14 +723,14 @@ export function SanitationDayDocumentsClient({
                     {document.status === "active" ? (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                           onSelect={() => setSettingsTarget(document)}
                         >
                           <Pencil className="mr-3 size-6 text-[#6f7282]" />
                           Настройки
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                           onSelect={() => cloneDocument(document.id)}
                         >
                           <Copy className="mr-3 size-6 text-[#6f7282]" />
@@ -740,7 +740,7 @@ export function SanitationDayDocumentsClient({
                     ) : null}
 
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() =>
                         window.open(
                           `/api/journal-documents/${document.id}/pdf`,
@@ -754,7 +754,7 @@ export function SanitationDayDocumentsClient({
 
                     {document.status === "closed" ? (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => moveToActive(document.id)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
@@ -763,14 +763,14 @@ export function SanitationDayDocumentsClient({
                     ) : (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                           onSelect={() => moveToClosed(document.id)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
                           Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => setDeleteTarget(document)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" />

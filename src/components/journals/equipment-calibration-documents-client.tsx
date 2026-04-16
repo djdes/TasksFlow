@@ -237,16 +237,16 @@ export function EquipmentCalibrationDocumentsClient({
           <div className="space-y-4 px-7 py-6">
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Название документа</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
             </div>
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Дата документа</Label>
-              <Input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+              <Input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
             </div>
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Год</Label>
               <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - 3 + i)).map((y) => (
                     <SelectItem key={y} value={y}>{y}</SelectItem>
@@ -262,7 +262,7 @@ export function EquipmentCalibrationDocumentsClient({
                 setApproveEmployeeId(user?.id || "");
                 setApproveEmployee(user?.name || approveEmployee);
               }}>
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
@@ -276,7 +276,7 @@ export function EquipmentCalibrationDocumentsClient({
                 setApproveEmployee(user?.name || approveEmployee);
                 if (user) setApproveRole(getUserRoleLabel(user.role));
               }}>
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
                   {users.map((u) => <SelectItem key={u.id} value={u.id}>{buildStaffOptionLabel(u)}</SelectItem>)}
                 </SelectContent>

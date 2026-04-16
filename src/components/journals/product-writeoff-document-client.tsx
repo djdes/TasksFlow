@@ -422,7 +422,7 @@ export function ProductWriteoffDocumentClient({
           <div className="space-y-5 px-8 py-6">
             <div className="space-y-2">
               <Label>Наименование ТМЦ</Label>
-              <select value={rowDialog.row.productName} onChange={(event) => setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: event.target.value } }))} className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-white px-5 text-[18px]">
+              <select value={rowDialog.row.productName} onChange={(event) => setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: event.target.value } }))} className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-white px-5 text-[18px]">
                 <option value="">Выберите из списка</option>
                 {(rowDialogProductOptions.length > 0 ? rowDialogProductOptions : productOptions).map((item) => (
                   <option key={item} value={item}>{item}</option>
@@ -430,7 +430,7 @@ export function ProductWriteoffDocumentClient({
               </select>
               <div className="flex gap-3">
                 <Input value={rowDialog.newProductName} onChange={(event) => setRowDialog((prev) => ({ ...prev, newProductName: event.target.value }))} placeholder="Добавить название новых ТМЦ" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
-                <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
+                <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
                   const item = rowDialog.newProductName.trim();
                   if (!item) return;
                   setRowDialogProductOptions((current) => (
@@ -481,7 +481,7 @@ export function ProductWriteoffDocumentClient({
           <div className="space-y-5 px-8 py-6">
             <div className="space-y-2">
               <Label>Должность</Label>
-              <select value={commissionDialog.member.role} onChange={(event) => setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, role: event.target.value } }))} className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+              <select value={commissionDialog.member.role} onChange={(event) => setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, role: event.target.value } }))} className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                 {ROLE_OPTIONS.map((role) => (
                   <option key={role} value={role}>{role}</option>
                 ))}
@@ -492,7 +492,7 @@ export function ProductWriteoffDocumentClient({
               <select value={commissionDialog.member.employeeId} onChange={(event) => {
                 const user = users.find((item) => item.id === event.target.value);
                 setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, employeeId: event.target.value, employeeName: user?.name || "", role: user ? getUserRoleLabel(user.role) : prev.member.role } }));
-              }} className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
+              }} className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
                 <option value="">Выберите сотрудника</option>
                 {(commissionDialog.member.role
                   ? getUsersForRoleLabel(users, commissionDialog.member.role)
@@ -548,7 +548,7 @@ export function ProductWriteoffDocumentClient({
               <>
                 <div className="flex gap-3">
                   <Input value={rowDialog.newProductName} onChange={(event) => setRowDialog((prev) => ({ ...prev, newProductName: event.target.value }))} placeholder="Введите наименование продукции" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-14 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
+                  <Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-5 text-[22px] text-white" onClick={() => {
                     const item = rowDialog.newProductName.trim();
                     if (!item) return;
                     setConfig((prev) => ({

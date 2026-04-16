@@ -220,7 +220,7 @@ function DocumentSettingsDialog(props: {
                 onChange={(event) =>
                   setState((current) => ({ ...current, dateFrom: event.target.value }))
                 }
-                className="h-16 rounded-3xl border-[#d8dae6] px-6 pr-14 text-[22px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-6 pr-14 text-[22px]"
               />
               <CalendarDays className="pointer-events-none absolute right-5 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
             </div>
@@ -626,7 +626,7 @@ export function CleaningVentilationChecklistDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[17px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[17px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
               >
                 Настройки журнала
               </Button>

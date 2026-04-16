@@ -128,7 +128,7 @@ function FryerOilSettingsDialog(props: {
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[24px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[24px]"
             />
           </div>
 
@@ -138,7 +138,7 @@ function FryerOilSettingsDialog(props: {
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[24px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[24px]"
             />
           </div>
 

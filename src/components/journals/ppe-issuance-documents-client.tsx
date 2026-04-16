@@ -207,7 +207,7 @@ function SettingsDialog(props: {
                   type="date"
                   value={active.dateFrom}
                   onChange={(e) => setState({ ...active, dateFrom: e.target.value })}
-                  className="h-16 rounded-3xl border-[#d8dae6] px-7 pr-14 text-[22px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-7 pr-14 text-[22px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-6 top-1/2 size-7 -translate-y-1/2 text-[#6e7080]" />
               </div>
@@ -512,14 +512,14 @@ export function PpeIssuanceDocumentsClient({
                   >
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" /> Настройки
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className={`h-14 rounded-2xl px-4 text-[18px] ${
+                      className={`h-11 rounded-2xl px-4 text-[18px] ${
                         document.status === "active" ? "mb-2" : ""
                       }`}
                       onSelect={() =>
@@ -530,7 +530,7 @@ export function PpeIssuanceDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteTarget(document)}
                       >
                         <Trash2 className="mr-3 size-6 text-[#ff3b30]" /> Удалить

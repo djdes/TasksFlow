@@ -587,7 +587,7 @@ export function CreateDocumentDialog({
                     <select
                       value={dateFrom.slice(0, 4)}
                       onChange={(e) => setDateFrom(`${e.target.value}-01-01`)}
-                      className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]"
+                      className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]"
                     >
                       {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - 3 + i)).map((y) => (
                         <option key={y} value={y}>{y}</option>

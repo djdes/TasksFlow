@@ -63,22 +63,22 @@ function ProductWriteoffActionsMenu(props: {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
-        <DropdownMenuItem className="mb-2 h-16 rounded-2xl px-4 text-[20px]" onSelect={props.onEdit}>
+        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[20px]" onSelect={props.onEdit}>
           <Pencil className="mr-4 size-6 text-[#6f7282]" />
           Настройки
         </DropdownMenuItem>
-        <DropdownMenuItem className="mb-2 h-16 rounded-2xl px-4 text-[20px]" onSelect={props.onPrint}>
+        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[20px]" onSelect={props.onPrint}>
           <Printer className="mr-4 size-6 text-[#6f7282]" />
           Печать
         </DropdownMenuItem>
         {props.isActive && (
-          <DropdownMenuItem className="mb-2 h-16 rounded-2xl px-4 text-[20px]" onSelect={props.onArchive}>
+          <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[20px]" onSelect={props.onArchive}>
             <Archive className="mr-4 size-6 text-[#6f7282]" />
             Отправить в закрытые
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          className="h-16 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+          className="h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
           onSelect={props.onDelete}
         >
           <Trash2 className="mr-4 size-6 text-[#ff3b30]" />

@@ -538,14 +538,14 @@ export function StaffJournalToolbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[360px] rounded-[24px] border-0 p-4 shadow-xl">
                 <DropdownMenuItem
-                  className="h-16 rounded-2xl px-4 text-[18px] text-[#5464ff]"
+                  className="h-11 rounded-2xl px-4 text-[18px] text-[#5464ff]"
                   onSelect={() => setAddOpen(true)}
                 >
                   <UserPlus className="mr-4 size-6 text-[#5464ff]" />
                   Добавить сотрудника
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="h-16 rounded-2xl px-4 text-[18px] text-[#5464ff]"
+                  className="h-11 rounded-2xl px-4 text-[18px] text-[#5464ff]"
                   onSelect={() => setFillOpen(true)}
                 >
                   <Users className="mr-4 size-6 text-[#5464ff]" />

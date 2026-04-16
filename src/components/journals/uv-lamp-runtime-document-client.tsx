@@ -193,7 +193,7 @@ function UvSpecEditDialog(props: {
             <Input
               value={microorganism}
               onChange={(e) => setMicroorganism(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
           </div>
 
@@ -255,7 +255,7 @@ function UvSpecEditDialog(props: {
               type="number"
               value={lampHours}
               onChange={(e) => setLampHours(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
             <div className="text-[12px] text-[#999]">*срок замены отработавших ламп</div>
           </div>
@@ -266,7 +266,7 @@ function UvSpecEditDialog(props: {
               type="date"
               value={commDate}
               onChange={(e) => setCommDate(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
           </div>
 
@@ -275,7 +275,7 @@ function UvSpecEditDialog(props: {
             <Input
               value={minInterval}
               onChange={(e) => setMinInterval(e.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
             <div className="text-[12px] text-[#999]">*для повторно-кратковременного облучения</div>
           </div>
@@ -283,7 +283,7 @@ function UvSpecEditDialog(props: {
           <div className="space-y-1">
             <Label className="text-[16px] text-[#6f7282]">Частота контроля работы установки</Label>
             <Select value={frequency} onValueChange={setFrequency}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -392,7 +392,7 @@ function UvRuntimeSettingsDialog(props: {
             <Input
               value={lampNumber}
               onChange={(event) => setLampNumber(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[24px] leading-none"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[24px] leading-none"
             />
           </div>
           <div className="space-y-1">

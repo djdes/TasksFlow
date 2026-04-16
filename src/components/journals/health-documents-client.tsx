@@ -113,7 +113,7 @@ function EditDocumentDialog(props: {
             <select
               value={emptyRows}
               onChange={(event) => setEmptyRows(event.target.value)}
-              className="h-14 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]"
+              className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]"
             >
               {[0, 1, 2, 3, 4, 5, 10, 15, 20].map((n) => (
                 <option key={n} value={String(n)}>
@@ -174,7 +174,7 @@ function HealthDocumentRow(props: {
           <DropdownMenuContent align="end" className="w-[300px] rounded-[24px] border-0 p-4 shadow-xl">
             {canManage ? (
               <DropdownMenuItem
-                className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                 onSelect={() => props.onEdit(props.document)}
               >
                 <Pencil className="mr-3 size-5 text-[#6f7282]" />
@@ -182,7 +182,7 @@ function HealthDocumentRow(props: {
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem
-              className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+              className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
               onSelect={() => window.open(`/api/journal-documents/${props.document.id}/pdf`, "_blank")}
             >
               <Printer className="mr-3 size-5 text-[#6f7282]" />
@@ -190,7 +190,7 @@ function HealthDocumentRow(props: {
             </DropdownMenuItem>
             {canManage ? (
               <DropdownMenuItem
-                className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                 onSelect={() => props.onDelete(props.document)}
               >
                 <Trash2 className="mr-3 size-5 text-[#ff3b30]" />

@@ -111,7 +111,7 @@ function SettingsDialog(props: {
               <Input
                 value={activeState.title}
                 onChange={(event) => setState({ ...activeState, title: event.target.value })}
-                className="h-14 rounded-3xl border-[#d8dae6] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-5 text-[16px] sm:h-20 sm:px-7 sm:text-[28px]"
               />
             </div>
             <div className="space-y-2">
@@ -121,7 +121,7 @@ function SettingsDialog(props: {
                   type="date"
                   value={activeState.dateFrom}
                   onChange={(event) => setState({ ...activeState, dateFrom: event.target.value })}
-                  className="h-14 rounded-3xl border-[#d8dae6] px-5 pr-12 text-[16px] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-5 pr-12 text-[16px] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080] sm:right-6 sm:size-8" />
               </div>
@@ -330,21 +330,21 @@ export function CleaningVentilationChecklistDocumentsClient({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() => setSettingsTarget(document)}
                     >
                       <Settings2 className="mr-3 size-5 text-[#5b66ff]" />
                       Настройки
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
                     >
                       <Printer className="mr-3 size-5 text-[#5b66ff]" />
                       Печать
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() =>
                         moveDocument(document.id, document.status === "active" ? "closed" : "active")
                       }
@@ -353,7 +353,7 @@ export function CleaningVentilationChecklistDocumentsClient({
                       {document.status === "active" ? "Закрыть" : "Вернуть в активные"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                      className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                       onSelect={() =>
                         deleteDocument(
                           document.id,

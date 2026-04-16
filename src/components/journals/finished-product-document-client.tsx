@@ -204,9 +204,9 @@ export function FinishedProductDocumentClient({
               <Button type="button" className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] hover:bg-[#4d58f5]"><Plus className="size-5" />Добавить<ChevronDown className="ml-1 size-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-[300px] rounded-[24px] border-0 p-3 shadow-xl">
-              <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px]" onSelect={() => setAddModalOpen(true)}>Добавить изделие</DropdownMenuItem>
-              <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px]" onSelect={() => { const count = Number(window.prompt("Сколько изделий добавить?", "3") || "0"); if (count > 0) { for (let i = 0; i < count; i += 1) setConfig((prev) => ({ ...prev, rows: [...prev.rows, createDraft(users)] })); } }}>Добавить несколько изделий</DropdownMenuItem>
-              <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px]" onSelect={() => { const text = window.prompt("Вставьте названия изделий, каждое с новой строки:"); if (!text) return; const items = text.split("\n").map((item) => item.trim()).filter(Boolean); setConfig((prev) => ({ ...prev, rows: [...prev.rows, ...items.map((item) => createDraft(users, item))] })); }}>Добавить из файла</DropdownMenuItem>
+              <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px]" onSelect={() => setAddModalOpen(true)}>Добавить изделие</DropdownMenuItem>
+              <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px]" onSelect={() => { const count = Number(window.prompt("Сколько изделий добавить?", "3") || "0"); if (count > 0) { for (let i = 0; i < count; i += 1) setConfig((prev) => ({ ...prev, rows: [...prev.rows, createDraft(users)] })); } }}>Добавить несколько изделий</DropdownMenuItem>
+              <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px]" onSelect={() => { const text = window.prompt("Вставьте названия изделий, каждое с новой строки:"); if (!text) return; const items = text.split("\n").map((item) => item.trim()).filter(Boolean); setConfig((prev) => ({ ...prev, rows: [...prev.rows, ...items.map((item) => createDraft(users, item))] })); }}>Добавить из файла</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button type="button" variant="outline" className="h-11 rounded-2xl border-0 bg-[#f5f6ff] px-4 text-[15px] text-[#5464ff] hover:bg-[#eceeff]" onClick={() => setCatalogOpen(true)}>Редактировать список изделий</Button>

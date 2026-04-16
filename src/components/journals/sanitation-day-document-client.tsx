@@ -302,7 +302,7 @@ function DocumentSettingsDialog(props: {
                   documentDate: toIsoDate(event.target.value),
                 }))
               }
-              className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
+              className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
             />
             <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
           </div>

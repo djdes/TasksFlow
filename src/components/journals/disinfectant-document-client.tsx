@@ -423,7 +423,7 @@ function EditSubdivisionDialog(props: {
                 <Label className="text-[14px] text-[#73738a]">
                   На одну обработку (кг, л)
                 </Label>
-                <div className="h-14 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
+                <div className="h-11 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
                   {formatNumber(computeNeedPerTreatment(active))}
                 </div>
               </div>
@@ -431,7 +431,7 @@ function EditSubdivisionDialog(props: {
                 <Label className="text-[14px] text-[#73738a]">
                   На один месяц (кг, л)
                 </Label>
-                <div className="h-14 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
+                <div className="h-11 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
                   {formatNumber(computeNeedPerMonth(active))}
                 </div>
               </div>
@@ -439,7 +439,7 @@ function EditSubdivisionDialog(props: {
                 <Label className="text-[14px] text-[#73738a]">
                   На один год (кг, л)
                 </Label>
-                <div className="h-14 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
+                <div className="h-11 rounded-2xl border border-[#d8dae6] bg-[#f1f2f8] px-4 py-4 text-[18px]">
                   {formatNumber(computeNeedPerYear(active))}
                 </div>
               </div>
@@ -520,7 +520,7 @@ function ReceiptDialog(props: {
                   onChange={(e) =>
                     setRow({ ...active, date: toIsoDate(e.target.value) })
                   }
-                  className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[18px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[18px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
               </div>
@@ -585,7 +585,7 @@ function ReceiptDialog(props: {
                       expiryDate: toIsoDate(e.target.value),
                     })
                   }
-                  className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[18px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[18px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
               </div>

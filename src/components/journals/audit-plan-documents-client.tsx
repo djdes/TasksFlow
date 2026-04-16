@@ -172,7 +172,7 @@ function SettingsDialog(props: {
                   onChange={(e) =>
                     setState({ ...activeState, documentDate: toIsoDate(e.target.value) })
                   }
-                  className="h-14 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-4 pr-14 text-[20px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080]" />
               </div>
@@ -509,7 +509,7 @@ export function AuditPlanDocumentsClient({
                   >
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" /> Настройки
@@ -517,14 +517,14 @@ export function AuditPlanDocumentsClient({
                     )}
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => copyDocument(document)}
                       >
                         <Copy className="mr-3 size-6 text-[#6f7282]" /> Сделать копию
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() =>
                         void openDocumentPdf(document.id).catch((error) =>
                           toast.error(
@@ -537,14 +537,14 @@ export function AuditPlanDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "active" ? (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => setArchiveTarget(document)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Отправить в закрытые
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => moveToStatus(document.id, "active")}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" /> Вернуть в активные
@@ -552,7 +552,7 @@ export function AuditPlanDocumentsClient({
                     )}
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => setDeleteTarget(document)}
                       >
                         <Trash2 className="mr-3 size-6 text-[#ff3b30]" /> Удалить

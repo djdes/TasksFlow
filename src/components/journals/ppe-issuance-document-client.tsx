@@ -610,7 +610,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  className="h-14 rounded-2xl bg-[#5b66ff] px-6 text-[16px] text-white hover:bg-[#4b57ff]"
+                  className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[16px] text-white hover:bg-[#4b57ff]"
                 >
                   <Plus className="mr-2 size-5" />
                   Добавить

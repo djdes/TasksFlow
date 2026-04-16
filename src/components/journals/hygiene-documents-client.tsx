@@ -121,14 +121,14 @@ function EditDocumentDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Введите название документа"
-              className="h-14 rounded-3xl border-[#dfe1ec] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]"
             />
           </div>
 
           <div className="space-y-3">
             <Label className="text-[14px] text-[#73738a]">Должность ответственного</Label>
             <Select value={responsibleTitle} onValueChange={setResponsibleTitle}>
-              <SelectTrigger className="h-14 rounded-3xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px] sm:h-20 sm:px-6 sm:text-[24px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -205,7 +205,7 @@ function DocumentRow({
           <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-6 shadow-xl">
             {canManage && (
               <DropdownMenuItem
-                className="mb-3 h-16 rounded-2xl px-4 text-[20px]"
+                className="mb-3 h-11 rounded-2xl px-4 text-[20px]"
                 onSelect={() => onEdit(document)}
               >
                 <Pencil className="mr-4 size-7 text-[#6f7282]" />
@@ -213,7 +213,7 @@ function DocumentRow({
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              className="mb-3 h-16 rounded-2xl px-4 text-[20px]"
+              className="mb-3 h-11 rounded-2xl px-4 text-[20px]"
               onSelect={() => openDocumentPdf(document.id)}
             >
               <Printer className="mr-4 size-7 text-[#6f7282]" />
@@ -221,7 +221,7 @@ function DocumentRow({
             </DropdownMenuItem>
             {canManage && (
               <DropdownMenuItem
-                className="h-16 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                className="h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
                 onSelect={() => onDelete(document)}
               >
                 <Trash2 className="mr-4 size-7 text-[#ff3b30]" />

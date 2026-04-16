@@ -109,7 +109,7 @@ function AddableSelectField(props: {
     <div className="space-y-3">
       <Label className="text-[14px] text-[#73738a]">{props.label}</Label>
       <Select value={props.value} onValueChange={props.onValueChange}>
-        <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-white px-5 text-[16px]">
+        <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-white px-5 text-[16px]">
           <SelectValue placeholder={props.selectPlaceholder} />
         </SelectTrigger>
         <SelectContent>
@@ -125,7 +125,7 @@ function AddableSelectField(props: {
           value={props.addValue}
           placeholder={props.addPlaceholder}
           onChange={(event) => props.onAddValueChange(event.target.value)}
-          className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+          className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
         />
         <Button
           type="button"
@@ -235,7 +235,7 @@ function RowDialog({
                 type="date"
                 value={draft.date}
                 onChange={(event) => setDraft({ ...draft, date: event.target.value })}
-                className="h-14 rounded-[18px] border-[#dfe1ec] px-5 pr-12 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 pr-12 text-[16px]"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#767b90]" />
             </div>
@@ -286,7 +286,7 @@ function RowDialog({
               onChange={(event) =>
                 setDraft({ ...draft, consumedQuantityKg: event.target.value })
               }
-              className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
 
@@ -297,7 +297,7 @@ function RowDialog({
               onChange={(event) =>
                 setDraft({ ...draft, impurityQuantityG: event.target.value })
               }
-              className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
 
@@ -308,7 +308,7 @@ function RowDialog({
               onChange={(event) =>
                 setDraft({ ...draft, impurityCharacteristic: event.target.value })
               }
-              className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
 
@@ -332,7 +332,7 @@ function RowDialog({
                 }));
               }}
             >
-              <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -364,7 +364,7 @@ function RowDialog({
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -403,7 +403,7 @@ function RowDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : row ? "Сохранить" : "Добавить"}
             </Button>
@@ -478,7 +478,7 @@ function SettingsDialog({
             <Input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
-              className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
           <div className="space-y-3">
@@ -490,7 +490,7 @@ function SettingsDialog({
                 onChange={(event) =>
                   setDraftConfig({ ...draftConfig, startDate: event.target.value })
                 }
-                className="h-14 rounded-[18px] border-[#dfe1ec] px-5 pr-12 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 pr-12 text-[16px]"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#767b90]" />
             </div>
@@ -511,7 +511,7 @@ function SettingsDialog({
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -544,7 +544,7 @@ function SettingsDialog({
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-[18px] border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
@@ -570,7 +570,7 @@ function SettingsDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -635,7 +635,7 @@ function ListEditorSection({
             value={draftValue}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder={addPlaceholder}
-            className="h-14 rounded-[18px] border-[#dfe1ec] px-5 text-[16px]"
+            className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
           />
           <Button
             type="button"
@@ -864,7 +864,7 @@ function ListsDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Закрыть"}
             </Button>
@@ -1078,7 +1078,7 @@ export function MetalImpurityDocumentClient({
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-14 rounded-[14px] border-[#eef0fb] px-6 text-[16px] text-[#5464ff] shadow-none"
+              className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[16px] text-[#5464ff] shadow-none"
             >
               Настройки журнала
             </Button>
@@ -1308,7 +1308,7 @@ export function MetalImpurityDocumentClient({
                   toast.error(error instanceof Error ? error.message : "Ошибка закрытия")
                 )
               }
-              className="h-14 rounded-[14px] bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               Закончить
             </Button>

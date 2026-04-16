@@ -131,8 +131,8 @@ export function DocumentActionsMenu(props: {
           <DropdownMenuItem
             className={
               md
-                ? "mb-3 h-16 rounded-2xl px-4 text-[20px]"
-                : "mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                ? "mb-3 h-11 rounded-2xl px-4 text-[20px]"
+                : "mb-2 h-11 rounded-2xl px-4 text-[18px]"
             }
             onSelect={props.onEdit}
           >
@@ -143,8 +143,8 @@ export function DocumentActionsMenu(props: {
         <DropdownMenuItem
           className={
             md
-              ? `${hasDelete ? "mb-3 " : ""}h-16 rounded-2xl px-4 text-[20px]`
-              : `${hasDelete ? "mb-2 " : ""}h-14 rounded-2xl px-4 text-[18px]`
+              ? `${hasDelete ? "mb-3 " : ""}h-11 rounded-2xl px-4 text-[20px]`
+              : `${hasDelete ? "mb-2 " : ""}h-11 rounded-2xl px-4 text-[18px]`
           }
           onSelect={props.onPrint}
         >
@@ -155,8 +155,8 @@ export function DocumentActionsMenu(props: {
           <DropdownMenuItem
             className={
               md
-                ? "h-16 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
-                : "h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                ? "h-11 rounded-2xl px-4 text-[20px] text-[#ff3b30] focus:text-[#ff3b30]"
+                : "h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
             }
             onSelect={props.onDelete}
           >

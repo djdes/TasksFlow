@@ -502,37 +502,37 @@ export function EquipmentCalibrationDocumentClient({
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
               placeholder="Введите наименование, тип, заводское обозначение СИ"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <Input
               value={draftNumber}
               onChange={(e) => setDraftNumber(e.target.value)}
               placeholder="Введите номер СИ"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <Input
               value={draftLocation}
               onChange={(e) => setDraftLocation(e.target.value)}
               placeholder="Введите место расположения СИ"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <Input
               value={draftPurpose}
               onChange={(e) => setDraftPurpose(e.target.value)}
               placeholder="Введите назначение (измеряемые параметры)"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <Input
               value={draftRange}
               onChange={(e) => setDraftRange(e.target.value)}
               placeholder="Введите предел (диапазон) измерений"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <Input
               value={draftInterval}
               onChange={(e) => setDraftInterval(e.target.value)}
               placeholder="Введите межповерочный интервал, месяцев"
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Дата последней поверки</Label>
@@ -540,7 +540,7 @@ export function EquipmentCalibrationDocumentClient({
                 type="date"
                 value={draftLastDate}
                 onChange={(e) => setDraftLastDate(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <Textarea
@@ -584,7 +584,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -592,7 +592,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editNumber}
                 onChange={(e) => setEditNumber(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -600,7 +600,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editLocation}
                 onChange={(e) => setEditLocation(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -608,7 +608,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editPurpose}
                 onChange={(e) => setEditPurpose(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -616,7 +616,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editRange}
                 onChange={(e) => setEditRange(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -624,7 +624,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={editInterval}
                 onChange={(e) => setEditInterval(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -633,7 +633,7 @@ export function EquipmentCalibrationDocumentClient({
                 type="date"
                 value={editLastDate}
                 onChange={(e) => setEditLastDate(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -678,7 +678,7 @@ export function EquipmentCalibrationDocumentClient({
               <Input
                 value={settingsTitle}
                 onChange={(e) => setSettingsTitle(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -687,7 +687,7 @@ export function EquipmentCalibrationDocumentClient({
                 type="date"
                 value={settingsDate}
                 onChange={(e) => setSettingsDate(e.target.value)}
-                className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+                className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
               />
             </div>
             <div className="space-y-1">
@@ -696,7 +696,7 @@ export function EquipmentCalibrationDocumentClient({
                 value={String(settingsYear)}
                 onValueChange={(val) => setSettingsYear(Number(val))}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -717,7 +717,7 @@ export function EquipmentCalibrationDocumentClient({
                   setSettingsApproveEmployee(user?.name || settingsApproveEmployee);
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
@@ -738,7 +738,7 @@ export function EquipmentCalibrationDocumentClient({
                   if (user) setSettingsApproveRole(getUserRoleLabel(user.role));
                 }}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[16px]">
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>

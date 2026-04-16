@@ -146,7 +146,7 @@ function SettingsDialog(props: {
               <Input
                 value={activeState.title}
                 onChange={(e) => setState({ ...activeState, title: e.target.value })}
-                className="h-14 rounded-3xl border-[#d8dae6] px-5 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:text-[28px]"
+                className="h-11 rounded-2xl border-[#d8dae6] px-5 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:text-[28px]"
               />
             </div>
 
@@ -159,7 +159,7 @@ function SettingsDialog(props: {
                   onChange={(e) =>
                     setState({ ...activeState, documentDate: toIsoDate(e.target.value) })
                   }
-                  className="h-14 rounded-3xl border-[#d8dae6] px-5 pr-12 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
+                  className="h-11 rounded-2xl border-[#d8dae6] px-5 pr-12 text-[16px] tracking-[-0.02em] sm:h-20 sm:px-7 sm:pr-14 sm:text-[28px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#6e7080] sm:right-6 sm:size-8" />
               </div>
@@ -418,7 +418,7 @@ export function SanitaryDayChecklistDocumentsClient({
                   <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-5 shadow-xl">
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => setSettingsTarget(document)}
                       >
                         <Pencil className="mr-3 size-6 text-[#6f7282]" />
@@ -426,14 +426,14 @@ export function SanitaryDayChecklistDocumentsClient({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() => cloneDocument(document.id)}
                     >
                       <Copy className="mr-3 size-6 text-[#6f7282]" />
                       Сделать копию
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                      className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() =>
                         window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")
                       }
@@ -443,7 +443,7 @@ export function SanitaryDayChecklistDocumentsClient({
                     </DropdownMenuItem>
                     {document.status === "closed" && (
                       <DropdownMenuItem
-                        className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                        className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => moveToActive(document.id)}
                       >
                         <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
@@ -453,14 +453,14 @@ export function SanitaryDayChecklistDocumentsClient({
                     {document.status === "active" && (
                       <>
                         <DropdownMenuItem
-                          className="mb-2 h-14 rounded-2xl px-4 text-[18px]"
+                          className="mb-2 h-11 rounded-2xl px-4 text-[18px]"
                           onSelect={() => setArchiveTarget(document)}
                         >
                           <BookOpenText className="mr-3 size-6 text-[#6f7282]" />
                           Отправить в закрытые
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                          className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                           onSelect={() => handleDelete(document.id, document.title)}
                         >
                           <Trash2 className="mr-3 size-6 text-[#ff3b30]" />
@@ -501,7 +501,7 @@ export function SanitaryDayChecklistDocumentsClient({
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
-                  className="h-14 rounded-3xl px-8 text-[20px]"
+                  className="h-11 rounded-2xl px-8 text-[20px]"
                   onClick={() => setArchiveTarget(null)}
                 >
                   Отмена

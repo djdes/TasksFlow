@@ -150,7 +150,7 @@ function RowDialog(props: {
                 type="date"
                 value={row.productionDate}
                 onChange={(event) => setValue("productionDate", event.target.value)}
-                className="h-14 rounded-2xl border-[#d7dbea] pr-12"
+                className="h-11 rounded-2xl border-[#d7dbea] pr-12"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#6e7387]" />
             </div>
@@ -159,7 +159,7 @@ function RowDialog(props: {
                 value={row.productionHour}
                 onValueChange={(value) => setValue("productionHour", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Часы" />
                 </SelectTrigger>
                 <SelectContent>
@@ -174,7 +174,7 @@ function RowDialog(props: {
                 value={row.productionMinute}
                 onValueChange={(value) => setValue("productionMinute", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Минуты" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,7 +192,7 @@ function RowDialog(props: {
             list="intensive-cooling-dishes"
             value={row.dishName}
             onChange={(event) => setValue("dishName", event.target.value)}
-            className="h-14 rounded-2xl border-[#d7dbea]"
+            className="h-11 rounded-2xl border-[#d7dbea]"
             placeholder="Введите наименование блюда"
           />
           <datalist id="intensive-cooling-dishes">
@@ -204,14 +204,14 @@ function RowDialog(props: {
           <Input
             value={row.startTemperature}
             onChange={(event) => setValue("startTemperature", event.target.value)}
-            className="h-14 rounded-2xl border-[#d7dbea]"
+            className="h-11 rounded-2xl border-[#d7dbea]"
             placeholder="Введите температуру в начале процесса охлаждения, °C"
           />
 
           <Input
             value={row.endTemperature}
             onChange={(event) => setValue("endTemperature", event.target.value)}
-            className="h-14 rounded-2xl border-[#d7dbea]"
+            className="h-11 rounded-2xl border-[#d7dbea]"
             placeholder="Введите температуру через 1 час, °C"
           />
 
@@ -248,7 +248,7 @@ function RowDialog(props: {
                 });
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                 <SelectValue placeholder="Лицо, проводившее контроль" />
               </SelectTrigger>
               <SelectContent>
@@ -280,7 +280,7 @@ function RowDialog(props: {
                 }));
               }}
             >
-              <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+              <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                 <SelectValue placeholder="Сотрудник" />
               </SelectTrigger>
               <SelectContent>
@@ -299,7 +299,7 @@ function RowDialog(props: {
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
             >
               {submitting
                 ? "Сохранение..."
@@ -364,7 +364,7 @@ function SettingsDialog(props: {
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#d7dbea]"
+              className="h-11 rounded-2xl border-[#d7dbea]"
             />
           </div>
           <div className="space-y-2">
@@ -374,7 +374,7 @@ function SettingsDialog(props: {
                 type="date"
                 value={dateFrom}
                 onChange={(event) => setDateFrom(event.target.value)}
-                className="h-14 rounded-2xl border-[#d7dbea] pr-12"
+                className="h-11 rounded-2xl border-[#d7dbea] pr-12"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#6e7387]" />
             </div>
@@ -384,7 +384,7 @@ function SettingsDialog(props: {
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -435,7 +435,7 @@ function FinishDialog(props: {
             type="button"
             onClick={handleConfirm}
             disabled={submitting}
-            className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+            className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
           >
             {submitting ? "Завершение..." : "Закончить"}
           </Button>

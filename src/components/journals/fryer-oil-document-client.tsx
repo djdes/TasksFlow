@@ -98,59 +98,59 @@ function EntryDialog(props: {
           </button>
         </DialogHeader>
         <div className="space-y-4 px-7 py-6">
-          <Input type="date" value={data.startDate} onChange={(e) => setData((v) => ({ ...v, startDate: e.target.value }))} className="h-14 rounded-2xl" />
+          <Input type="date" value={data.startDate} onChange={(e) => setData((v) => ({ ...v, startDate: e.target.value }))} className="h-11 rounded-2xl" />
           <div className="grid gap-3 md:grid-cols-2">
             <Select value={String(data.startHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startHour: Number(v) }))}>
-              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Часы" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Часы" /></SelectTrigger>
               <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={String(data.startMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startMinute: Number(v) }))}>
-              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Минуты" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Минуты" /></SelectTrigger>
               <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <Select value={data.fatType} onValueChange={(v) => setData((d) => ({ ...d, fatType: v }))}>
-            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Вид фритюрного жира" /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Вид фритюрного жира" /></SelectTrigger>
             <SelectContent>{props.lists.fatTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={String(data.qualityStart)} onValueChange={(v) => setData((d) => ({ ...d, qualityStart: Number(v) }))}>
-            <SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
             <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={data.equipmentType} onValueChange={(v) => setData((d) => ({ ...d, equipmentType: v }))}>
-            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Тип жарочного оборудования" /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Тип жарочного оборудования" /></SelectTrigger>
             <SelectContent>{props.lists.equipmentTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={data.productType} onValueChange={(v) => setData((d) => ({ ...d, productType: v }))}>
-            <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Вид продукции" /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Вид продукции" /></SelectTrigger>
             <SelectContent>{props.lists.productTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
           </Select>
           <div className="grid gap-3 md:grid-cols-2">
             <Select value={String(data.endHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endHour: Number(v) }))}>
-              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Часы окончания" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Часы окончания" /></SelectTrigger>
               <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={String(data.endMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endMinute: Number(v) }))}>
-              <SelectTrigger className="h-14 rounded-2xl"><SelectValue placeholder="Минуты окончания" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Минуты окончания" /></SelectTrigger>
               <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <Select value={String(data.qualityEnd)} onValueChange={(v) => setData((d) => ({ ...d, qualityEnd: Number(v) }))}>
-            <SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
             <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
           </Select>
           <div className="grid gap-3 md:grid-cols-2">
-            <Input type="number" min="0" step="0.01" value={String(data.carryoverKg)} onChange={(e) => setData((d) => ({ ...d, carryoverKg: Number(e.target.value) || 0 }))} className="h-14 rounded-2xl" placeholder="Переходящий остаток, кг" />
-            <Input type="number" min="0" step="0.01" value={String(data.disposedKg)} onChange={(e) => setData((d) => ({ ...d, disposedKg: Number(e.target.value) || 0 }))} className="h-14 rounded-2xl" placeholder="Утилизированный, кг" />
+            <Input type="number" min="0" step="0.01" value={String(data.carryoverKg)} onChange={(e) => setData((d) => ({ ...d, carryoverKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl" placeholder="Переходящий остаток, кг" />
+            <Input type="number" min="0" step="0.01" value={String(data.disposedKg)} onChange={(e) => setData((d) => ({ ...d, disposedKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl" placeholder="Утилизированный, кг" />
           </div>
-          <Input value={data.controllerName} onChange={(e) => setData((d) => ({ ...d, controllerName: e.target.value }))} className="h-14 rounded-2xl" placeholder="Должность, ФИО контролера" />
+          <Input value={data.controllerName} onChange={(e) => setData((d) => ({ ...d, controllerName: e.target.value }))} className="h-11 rounded-2xl" placeholder="Должность, ФИО контролера" />
           <div className={`flex ${props.initialEntry && props.onDelete ? "justify-between" : "justify-end"} gap-3 pt-2`}>
             {props.initialEntry && props.onDelete ? (
-              <Button type="button" variant="outline" className="h-14 rounded-xl border-[#ffd7d3] text-[#ff3b30]" onClick={() => { void props.onDelete?.(props.initialEntry!.id); props.onOpenChange(false); }}>
+              <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#ffd7d3] text-[#ff3b30]" onClick={() => { void props.onDelete?.(props.initialEntry!.id); props.onOpenChange(false); }}>
                 Удалить
               </Button>
             ) : null}
-            <Button type="button" disabled={busy} className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void save(); }}>
+            <Button type="button" disabled={busy} className="h-11 rounded-2xl bg-[#5863f8] px-7 text-white" onClick={() => { void save(); }}>
               {busy ? "Сохранение..." : props.initialEntry ? "Сохранить" : "Добавить"}
             </Button>
           </div>
@@ -185,7 +185,7 @@ function ListsDialog(props: { open: boolean; onOpenChange: (open: boolean) => vo
               </TabsContent>
             ))}
           </Tabs>
-          <div className="mt-6 flex justify-end"><Button type="button" className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave(lists); props.onOpenChange(false); }}>Сохранить</Button></div>
+          <div className="mt-6 flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave(lists); props.onOpenChange(false); }}>Сохранить</Button></div>
         </div>
       </DialogContent>
     </Dialog>
@@ -204,10 +204,10 @@ function SettingsDialog(props: { open: boolean; onOpenChange: (open: boolean) =>
           <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
         </DialogHeader>
         <div className="space-y-4 px-7 py-6">
-          <div className="space-y-1"><Label>Название документа</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-14 rounded-2xl" /></div>
-          <div className="space-y-1"><Label>Дата начала</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-14 rounded-2xl" /></div>
-          <div className="space-y-1"><Label>Статус документа</Label><Select value={status} onValueChange={(v: "active" | "closed") => setStatus(v)}><SelectTrigger className="h-14 rounded-2xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Активный</SelectItem><SelectItem value="closed">Закрытый</SelectItem></SelectContent></Select></div>
-          <div className="flex justify-end"><Button type="button" className="h-14 rounded-xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave({ title, dateFrom, status }); props.onOpenChange(false); }}>Сохранить</Button></div>
+          <div className="space-y-1"><Label>Название документа</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-2xl" /></div>
+          <div className="space-y-1"><Label>Дата начала</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-11 rounded-2xl" /></div>
+          <div className="space-y-1"><Label>Статус документа</Label><Select value={status} onValueChange={(v: "active" | "closed") => setStatus(v)}><SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Активный</SelectItem><SelectItem value="closed">Закрытый</SelectItem></SelectContent></Select></div>
+          <div className="flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5863f8] px-7 text-white" onClick={() => { void props.onSave({ title, dateFrom, status }); props.onOpenChange(false); }}>Сохранить</Button></div>
         </div>
       </DialogContent>
     </Dialog>
@@ -265,7 +265,7 @@ export function FryerOilDocumentClient(props: Props) {
             <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{title}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline" className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => setSettingsOpen(true)}><Settings2 className="size-5" />Настройки журнала</Button>
+            <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]" onClick={() => setSettingsOpen(true)}><Settings2 className="size-5" />Настройки журнала</Button>
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export function FryerOilDocumentClient(props: Props) {
               documentId={props.documentId}
               title={title}
               variant="outline"
-              className="h-14 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]"
+              className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[#5464ff]"
             >
               Закончить журнал
             </DocumentCloseButton>

@@ -121,7 +121,7 @@ function RowDialog(props: {
                 type="date"
                 value={row.accidentDate}
                 onChange={(event) => setValue("accidentDate", event.target.value)}
-                className="h-14 rounded-2xl border-[#d7dbea] pr-12"
+                className="h-11 rounded-2xl border-[#d7dbea] pr-12"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#6e7387]" />
             </div>
@@ -130,7 +130,7 @@ function RowDialog(props: {
                 value={row.accidentHour}
                 onValueChange={(value) => setValue("accidentHour", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Часы" />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,7 +145,7 @@ function RowDialog(props: {
                 value={row.accidentMinute}
                 onValueChange={(value) => setValue("accidentMinute", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Минуты" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,7 +162,7 @@ function RowDialog(props: {
           <Input
             value={row.locationName}
             onChange={(event) => setValue("locationName", event.target.value)}
-            className="h-14 rounded-2xl border-[#d7dbea]"
+            className="h-11 rounded-2xl border-[#d7dbea]"
             placeholder="Введите наименование помещения"
           />
 
@@ -199,7 +199,7 @@ function RowDialog(props: {
                 type="date"
                 value={row.resolvedDate}
                 onChange={(event) => setValue("resolvedDate", event.target.value)}
-                className="h-14 rounded-2xl border-[#d7dbea] pr-12"
+                className="h-11 rounded-2xl border-[#d7dbea] pr-12"
               />
               <CalendarDays className="pointer-events-none absolute right-4 top-1/2 size-5 -translate-y-1/2 text-[#6e7387]" />
             </div>
@@ -208,7 +208,7 @@ function RowDialog(props: {
                 value={row.resolvedHour}
                 onValueChange={(value) => setValue("resolvedHour", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Часы" />
                 </SelectTrigger>
                 <SelectContent>
@@ -223,7 +223,7 @@ function RowDialog(props: {
                 value={row.resolvedMinute}
                 onValueChange={(value) => setValue("resolvedMinute", value)}
               >
-                <SelectTrigger className="h-14 rounded-2xl border-[#d7dbea]">
+                <SelectTrigger className="h-11 rounded-2xl border-[#d7dbea]">
                   <SelectValue placeholder="Минуты" />
                 </SelectTrigger>
                 <SelectContent>
@@ -267,7 +267,7 @@ function RowDialog(props: {
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
             >
               {submitting
                 ? "Сохранение..."
@@ -332,7 +332,7 @@ function SettingsDialog(props: {
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-14 rounded-2xl border-[#d7dbea]"
+              className="h-11 rounded-2xl border-[#d7dbea]"
             />
           </div>
           <div className="space-y-2">
@@ -341,7 +341,7 @@ function SettingsDialog(props: {
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
-              className="h-14 rounded-2xl border-[#d7dbea]"
+              className="h-11 rounded-2xl border-[#d7dbea]"
             />
           </div>
           <div className="flex justify-end">
@@ -349,7 +349,7 @@ function SettingsDialog(props: {
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -419,7 +419,7 @@ function FinishDialog(props: {
               type="button"
               onClick={handleFinish}
               disabled={submitting}
-              className="h-14 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
+              className="h-11 rounded-2xl bg-[#5563ff] px-8 text-base text-white hover:bg-[#4452ee]"
             >
               {submitting ? "Завершение..." : "Закончить журнал"}
             </Button>

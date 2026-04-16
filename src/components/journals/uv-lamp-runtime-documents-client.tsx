@@ -160,7 +160,7 @@ function UvRuntimeSettingsDialog(props: {
             <Input
               value={lampNumber}
               onChange={(event) => setLampNumber(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-4 text-[24px] leading-none"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[24px] leading-none"
             />
           </div>
 
@@ -395,7 +395,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                   <DropdownMenuContent align="end" className="w-[260px] rounded-[20px] border border-[#eceef5] p-3 shadow-lg">
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-14 rounded-xl px-4 text-[18px]"
+                        className="h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() =>
                           setEditing({
                             id: document.id,
@@ -412,7 +412,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      className="h-14 rounded-xl px-4 text-[18px]"
+                      className="h-11 rounded-2xl px-4 text-[18px]"
                       onSelect={() => window.open(`/api/journal-documents/${document.id}/pdf`, "_blank")}
                     >
                       <Printer className="mr-2 size-4 text-[#6f7282]" />
@@ -420,7 +420,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                     </DropdownMenuItem>
                     {document.status === "closed" && (
                       <DropdownMenuItem
-                        className="h-14 rounded-xl px-4 text-[18px]"
+                        className="h-11 rounded-2xl px-4 text-[18px]"
                         onSelect={() => handleReactivate(document.id, resolvedTitle)}
                       >
                         <RotateCcw className="mr-2 size-4 text-[#6f7282]" />
@@ -429,7 +429,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                     )}
                     {document.status === "active" && (
                       <DropdownMenuItem
-                        className="h-14 rounded-xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
+                        className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]"
                         onSelect={() => handleDelete(document.id, resolvedTitle)}
                       >
                         <Trash2 className="mr-2 size-4 text-[#ff3b30]" />

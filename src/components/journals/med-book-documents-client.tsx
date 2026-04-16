@@ -195,7 +195,7 @@ export function MedBookDocumentsClient({
             asChild
             type="button"
             variant="ghost"
-            className="h-16 rounded-2xl border border-[#edf0ff] bg-[#fafbff] px-7 text-[18px] font-medium text-[#5863f8] hover:bg-[#f3f5ff] hover:text-[#5863f8]"
+            className="h-11 rounded-2xl border border-[#edf0ff] bg-[#fafbff] px-7 text-[18px] font-medium text-[#5863f8] hover:bg-[#f3f5ff] hover:text-[#5863f8]"
           >
             <Link href={firstDocumentLink}>
               <BookOpenText className="size-5" />

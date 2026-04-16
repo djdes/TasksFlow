@@ -264,13 +264,13 @@ function RowDialog(props: {
             <legend className="px-2 text-[14px] text-[#6f7282]">Дата и время поставки</legend>
             <div className="space-y-1">
               <Label className="text-[14px] text-[#6f7282]">Дата поставки</Label>
-              <Input type="date" value={row.deliveryDate} onChange={(e) => setValue("deliveryDate", e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+              <Input type="date" value={row.deliveryDate} onChange={(e) => setValue("deliveryDate", e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
             </div>
             <div className="flex gap-3">
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Часы</Label>
                 <Select value={row.deliveryHour || "--"} onValueChange={(v) => setValue("deliveryHour", v === "--" ? "" : v)}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="max-h-[200px]">
                     <SelectItem value="--">--</SelectItem>
                     {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
@@ -280,7 +280,7 @@ function RowDialog(props: {
               <div className="flex-1 space-y-1">
                 <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
                 <Select value={row.deliveryMinute || "--"} onValueChange={(v) => setValue("deliveryMinute", v === "--" ? "" : v)}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="max-h-[200px]">
                     <SelectItem value="--">--</SelectItem>
                     {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
@@ -392,13 +392,13 @@ function RowDialog(props: {
                 <legend className="px-2 text-[14px] font-semibold">{getExpiryFieldDisplayLabel(props.config.expiryFieldLabel)}</legend>
                 <div className="space-y-1">
                   <Label className="text-[14px] text-[#6f7282]">Годен до</Label>
-                  <Input type="date" value={row.expiryDate} onChange={(e) => setValue("expiryDate", e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+                  <Input type="date" value={row.expiryDate} onChange={(e) => setValue("expiryDate", e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
                 </div>
                 <div className="flex gap-3">
                   <div className="flex-1 space-y-1">
                     <Label className="text-[14px] text-[#6f7282]">Часы</Label>
                     <Select value={row.expiryHour || "--"} onValueChange={(v) => setValue("expiryHour", v === "--" ? "" : v)}>
-                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
                       <SelectContent className="max-h-[200px]">
                         <SelectItem value="--">--</SelectItem>
                         {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
@@ -408,7 +408,7 @@ function RowDialog(props: {
                   <div className="flex-1 space-y-1">
                     <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
                     <Select value={row.expiryMinute || "--"} onValueChange={(v) => setValue("expiryMinute", v === "--" ? "" : v)}>
-                      <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
                       <SelectContent className="max-h-[200px]">
                         <SelectItem value="--">--</SelectItem>
                         {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
@@ -430,7 +430,7 @@ function RowDialog(props: {
                   setValue("responsibleTitle", v);
                   if (!stillValid) setValue("responsibleUserId", "");
                 }}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                   <SelectContent>
                     {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
@@ -447,7 +447,7 @@ function RowDialog(props: {
                     if (user) setValue("responsibleTitle", getUserRoleLabel(user.role));
                   }
                 }}>
-                  <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                   <SelectContent>
                     {(row.responsibleTitle ? getUsersForRoleLabel(props.users, row.responsibleTitle) : props.users).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                   </SelectContent>
@@ -823,11 +823,11 @@ function SettingsDialog(props: {
         <div className="space-y-4 px-8 py-6">
           <div className="space-y-1">
             <Label className="text-[14px] text-[#6f7282]">Название документа</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
           </div>
           <div className="space-y-1">
             <Label className="text-[14px] text-[#6f7282]">Дата начала</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
           </div>
           <div className="space-y-2">
             <div className="text-[14px] font-semibold">Название поля</div>
@@ -848,7 +848,7 @@ function SettingsDialog(props: {
               setResponsibleTitle(v);
               if (!stillValid) setResponsibleUserId("");
             }}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
               <SelectContent>
                 {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
@@ -863,7 +863,7 @@ function SettingsDialog(props: {
                 if (user) setResponsibleTitle(getUserRoleLabel(user.role));
               }
             }}>
-              <SelectTrigger className="h-14 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
               <SelectContent>
                 {(responsibleTitle ? getUsersForRoleLabel(props.users, responsibleTitle) : props.users).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
@@ -1135,7 +1135,7 @@ function AddMultipleRowsDialog(props: {
               max={100}
               value={count}
               onChange={(event) => setCount(event.target.value)}
-              className="h-14 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]"
             />
           </div>
           {errorMessage ? (
@@ -1426,7 +1426,7 @@ export function AcceptanceDocumentClient(props: Props) {
           <div className="flex flex-wrap items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" className="h-14 rounded-2xl bg-[#5b66ff] px-6 text-[16px]">
+                <Button type="button" className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[16px]">
                   <Plus className="size-5" /> Добавить <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>

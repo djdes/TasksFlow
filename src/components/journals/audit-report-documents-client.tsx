@@ -220,15 +220,15 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[280px] rounded-[24px] border-0 p-4 shadow-xl">
                       {document.status === "active" && (
-                        <DropdownMenuItem className="mb-2 h-14 rounded-2xl px-4 text-[18px]" onSelect={() => setSettingsDocument(document)}>
+                        <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[18px]" onSelect={() => setSettingsDocument(document)}>
                           <Settings2 className="mr-3 size-5 text-[#6f7282]" />Настройки
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="mb-2 h-14 rounded-2xl px-4 text-[18px]" onSelect={() => void openDocumentPdf(document.id).catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF"))}>
+                      <DropdownMenuItem className="mb-2 h-11 rounded-2xl px-4 text-[18px]" onSelect={() => void openDocumentPdf(document.id).catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось открыть PDF"))}>
                         <Printer className="mr-3 size-5 text-[#6f7282]" />Печать
                       </DropdownMenuItem>
                       {document.status === "active" && (
-                        <DropdownMenuItem className="h-14 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]" onSelect={() => setDeleteDocument(document)}>
+                        <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px] text-[#ff3b30] focus:text-[#ff3b30]" onSelect={() => setDeleteDocument(document)}>
                           <Trash2 className="mr-3 size-5 text-[#ff3b30]" />Удалить
                         </DropdownMenuItem>
                       )}
@@ -256,7 +256,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
             <DialogTitle className="pr-10 text-[22px] font-medium text-black">{`Удалить документ "${deleteDocument?.title || AUDIT_REPORT_DOCUMENT_TITLE}"`}</DialogTitle>
           </DialogHeader>
           <div className="flex justify-end px-12 py-10">
-            <Button type="button" onClick={async () => { if (!deleteDocument) return; await deleteById(deleteDocument.id); setDeleteDocument(null); }} className="h-16 rounded-[18px] bg-[#ff5e57] px-10 text-[18px] text-white hover:bg-[#ef4b44]">
+            <Button type="button" onClick={async () => { if (!deleteDocument) return; await deleteById(deleteDocument.id); setDeleteDocument(null); }} className="h-11 rounded-2xl bg-[#ff5e57] px-10 text-[18px] text-white hover:bg-[#ef4b44]">
               Удалить
             </Button>
           </div>
