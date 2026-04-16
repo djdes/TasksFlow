@@ -250,15 +250,15 @@ export function FryerOilDocumentsClient(props: Props) {
           return (
             <div
               key={document.id}
-              className="grid grid-cols-[minmax(0,1fr)_180px_40px] items-start gap-0 rounded-[16px] border border-[#eef0f6] bg-white px-3 py-4"
+              className="grid grid-cols-[1.8fr_320px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
             >
-              <Link href={href} className="px-2 text-[14px] font-semibold leading-5 text-black">
+              <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
                 {document.title}
               </Link>
 
-              <Link href={href} className="border-l border-[#edf0f7] px-6">
-                <div className="text-[13px] text-[#979aab]">Дата начала</div>
-                <div className="mt-1 text-[13px] font-semibold text-black">
+              <Link href={href} className="border-l border-[#e6e6f0] px-10">
+                <div className="text-[14px] text-[#84849a]">Дата начала</div>
+                <div className="mt-2 text-[14px] font-semibold text-black">
                   {formatDateDash(document.dateFrom)}
                 </div>
               </Link>
