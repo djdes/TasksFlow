@@ -3,9 +3,15 @@ import crypto from "node:crypto";
 import { escapeHtml } from "@/lib/html-escape";
 import { getDbRoleValuesWithLegacy, MANAGEMENT_ROLES } from "@/lib/user-roles";
 
-// Initialize bot (only if token is set)
+// Initialize bot (only if token is set). In regions where api.telegram.org is
+// blocked (e.g. RU), set TELEGRAM_API_ROOT to a reverse proxy URL, such as a
+// Cloudflare Worker that forwards requests to https://api.telegram.org. Grammy
+// will use that as its API base.
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = token ? new Bot(token) : null;
+const apiRoot = process.env.TELEGRAM_API_ROOT?.replace(/\/+$/, "") || undefined;
+const bot = token
+  ? new Bot(token, apiRoot ? { client: { apiRoot } } : undefined)
+  : null;
 
 /**
  * Escape user-provided text before interpolating into a Telegram HTML message.
