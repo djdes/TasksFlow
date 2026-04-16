@@ -146,10 +146,10 @@ export function ScanJournalDocumentsClient({
                 </Link>
                 {document.responsibleValue ? (
                   <Link href={href} className="px-2 md:border-l md:border-[#edf0f7] md:px-6">
-                    <div className="text-[11px] text-[#979aab]">
+                    <div className="text-[13px] text-[#979aab]">
                       {document.responsibleLabel || "Ответственный"}
                     </div>
-                    <div className="mt-1 text-[12px] font-semibold text-black">
+                    <div className="mt-1 text-[13px] font-semibold text-black">
                       {document.responsibleValue}
                     </div>
                   </Link>
@@ -157,8 +157,8 @@ export function ScanJournalDocumentsClient({
                   <div className="hidden md:block md:border-l md:border-[#edf0f7]" />
                 )}
                 <Link href={href} className="px-2 md:border-l md:border-[#edf0f7] md:px-6">
-                  <div className="text-[11px] text-[#979aab]">{document.dateLabel}</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{document.dateValue}</div>
+                  <div className="text-[13px] text-[#979aab]">{document.dateLabel}</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{document.dateValue}</div>
                 </Link>
                 <div className="flex justify-center">
                   {document.status === "active" && (

@@ -500,8 +500,8 @@ export function MedBookDocumentClient({
                               <div
                                 className={
                                   expired
-                                    ? "text-[12px] text-[#d30000]"
-                                    : "text-[12px]"
+                                    ? "text-[13px] text-[#d30000]"
+                                    : "text-[13px]"
                                 }
                               >
                                 до {formatMedBookDate(exam.expiryDate)}
@@ -679,8 +679,8 @@ export function MedBookDocumentClient({
                                     <div
                                       className={
                                         expired
-                                          ? "text-[12px] text-[#d30000]"
-                                          : "text-[12px]"
+                                          ? "text-[13px] text-[#d30000]"
+                                          : "text-[13px]"
                                       }
                                     >
                                       до {formatMedBookDate(vacc.expiryDate)}

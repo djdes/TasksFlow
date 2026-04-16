@@ -207,12 +207,12 @@ function RoomDialog({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Введите название помещения"
-              className="h-12 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
             />
           </div>
 
           <div className="space-y-6">
-            <div className="text-[18px] font-medium text-black">Нормы условий</div>
+            <div className="text-[16px] font-medium text-black">Нормы условий</div>
 
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-3">
@@ -229,7 +229,7 @@ function RoomDialog({
                   className="h-11 w-[96px] rounded-2xl border-[#dfe1ec] px-3 text-[15px]"
                   disabled={!temperatureEnabled}
                 />
-                <span className="text-[18px]">°C</span>
+                <span className="text-[15px] text-[#6d7285]">°C</span>
                 <Input
                   type="number"
                   value={temperatureMax}
@@ -237,7 +237,7 @@ function RoomDialog({
                   className="h-11 w-[96px] rounded-2xl border-[#dfe1ec] px-3 text-[15px]"
                   disabled={!temperatureEnabled}
                 />
-                <span className="text-[18px]">°C</span>
+                <span className="text-[15px] text-[#6d7285]">°C</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -254,7 +254,7 @@ function RoomDialog({
                   className="h-11 w-[96px] rounded-2xl border-[#dfe1ec] px-3 text-[15px]"
                   disabled={!humidityEnabled}
                 />
-                <span className="text-[18px]">%</span>
+                <span className="text-[15px] text-[#6d7285]">%</span>
                 <Input
                   type="number"
                   value={humidityMax}
@@ -262,7 +262,7 @@ function RoomDialog({
                   className="h-11 w-[96px] rounded-2xl border-[#dfe1ec] px-3 text-[15px]"
                   disabled={!humidityEnabled}
                 />
-                <span className="text-[18px]">%</span>
+                <span className="text-[15px] text-[#6d7285]">%</span>
               </div>
             </div>
           </div>
@@ -1229,7 +1229,7 @@ export function ClimateDocumentClient({
                   disabled={status !== "active"}
                   className="size-5"
                 />
-                <Label htmlFor="climate-skip-weekends" className="text-[18px] text-black">
+                <Label htmlFor="climate-skip-weekends" className="text-[15px] text-black">
                   Не заполнять в выходные дни
                 </Label>
               </div>
@@ -1305,7 +1305,7 @@ export function ClimateDocumentClient({
                                       setEditingRoom(null);
                                       setRoomDialogOpen(true);
                                     }}
-                                    className="flex h-16 w-full items-center justify-center gap-3 bg-[#5661f6] px-6 text-[18px] font-medium text-white hover:bg-[#4854ee]"
+                                    className="flex h-11 w-full items-center justify-center gap-3 bg-[#5661f6] px-4 text-[15px] font-medium text-white hover:bg-[#4854ee]"
                                   >
                                     <Plus className="size-6" />
                                     Добавить помещение
@@ -1544,7 +1544,7 @@ export function ClimateDocumentClient({
                 <tr>
                   <td
                     colSpan={3 + totalMeasurementColumns}
-                    className="border border-black px-4 py-10 text-center text-[18px] text-[#666a80]"
+                    className="border border-black px-4 py-10 text-center text-[15px] text-[#666a80]"
                   >
                     Пока нет строк. Добавь первую запись вручную или включи автозаполнение.
                   </td>

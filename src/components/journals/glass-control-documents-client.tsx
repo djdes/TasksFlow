@@ -385,8 +385,8 @@ export function GlassControlDocumentsClient(props: Props) {
               </Link>
 
               <Link href={href} className="border-l border-[#edf0f7] px-6">
-                <div className="text-[11px] text-[#979aab]">Ответственный</div>
-                <div className="mt-1 text-[12px] font-semibold text-black">
+                <div className="text-[13px] text-[#979aab]">Ответственный</div>
+                <div className="mt-1 text-[13px] font-semibold text-black">
                   {document.responsibleTitle
                     ? `${document.responsibleTitle}${responsibleName ? `: ${responsibleName}` : ""}`
                     : "—"}
@@ -394,8 +394,8 @@ export function GlassControlDocumentsClient(props: Props) {
               </Link>
 
               <Link href={href} className="border-l border-[#edf0f7] px-6">
-                <div className="text-[11px] text-[#979aab]">Дата начала</div>
-                <div className="mt-1 text-[12px] font-semibold text-black">
+                <div className="text-[13px] text-[#979aab]">Дата начала</div>
+                <div className="mt-1 text-[13px] font-semibold text-black">
                   {formatRuDateDash(document.dateFrom)}
                 </div>
               </Link>

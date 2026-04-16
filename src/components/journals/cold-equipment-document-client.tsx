@@ -887,7 +887,7 @@ export function ColdEquipmentDocumentClient({
                     }`}
                   >
                     <div className="text-[18px]">{getDayNumber(dateKey)}</div>
-                    <div className="text-[11px] font-normal uppercase text-[#666]">
+                    <div className="text-[13px] font-normal uppercase text-[#666]">
                       {getWeekdayShort(dateKey)}
                     </div>
                   </th>

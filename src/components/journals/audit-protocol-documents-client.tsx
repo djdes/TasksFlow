@@ -285,12 +285,12 @@ export function AuditProtocolDocumentsClient({
                   {document.title || AUDIT_PROTOCOL_DOCUMENT_TITLE}
                 </Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 sm:border-l sm:border-t-0 sm:px-6 sm:pt-0">
-                  <div className="text-[11px] text-[#979aab]">Основание проверки</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{config.basisTitle}</div>
+                  <div className="text-[13px] text-[#979aab]">Основание проверки</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{config.basisTitle}</div>
                 </Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 text-left sm:border-l sm:border-t-0 sm:px-6 sm:pt-0 sm:text-right">
-                  <div className="text-[11px] text-[#979aab]">Дата документа</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{config.documentDate}</div>
+                  <div className="text-[13px] text-[#979aab]">Дата документа</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{config.documentDate}</div>
                 </Link>
                 <div className="justify-self-start sm:justify-self-end">
                   <DropdownMenu>

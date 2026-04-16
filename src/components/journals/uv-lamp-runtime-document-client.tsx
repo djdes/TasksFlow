@@ -257,7 +257,7 @@ function UvSpecEditDialog(props: {
               onChange={(e) => setLampHours(e.target.value)}
               className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
-            <div className="text-[12px] text-[#999]">*срок замены отработавших ламп</div>
+            <div className="text-[13px] text-[#999]">*срок замены отработавших ламп</div>
           </div>
 
           <div className="space-y-1">
@@ -277,7 +277,7 @@ function UvSpecEditDialog(props: {
               onChange={(e) => setMinInterval(e.target.value)}
               className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[16px]"
             />
-            <div className="text-[12px] text-[#999]">*для повторно-кратковременного облучения</div>
+            <div className="text-[13px] text-[#999]">*для повторно-кратковременного облучения</div>
           </div>
 
           <div className="space-y-1">
@@ -292,7 +292,7 @@ function UvSpecEditDialog(props: {
                 ))}
               </SelectContent>
             </Select>
-            <div className="text-[12px] text-[#999]">*частота включений</div>
+            <div className="text-[13px] text-[#999]">*частота включений</div>
           </div>
 
           <div className="flex justify-end pt-1">

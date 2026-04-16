@@ -204,12 +204,12 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
               <div key={document.id} className="grid grid-cols-[minmax(0,1fr)_280px_170px_56px] items-center rounded-[16px] border border-[#eef0f6] bg-white px-7 py-5">
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="text-[16px] font-semibold text-black">{document.title || AUDIT_REPORT_DOCUMENT_TITLE}</Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6">
-                  <div className="text-[11px] text-[#979aab]">Объект аудита</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{config.auditedObject}</div>
+                  <div className="text-[13px] text-[#979aab]">Объект аудита</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{config.auditedObject}</div>
                 </Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6 text-right">
-                  <div className="text-[11px] text-[#979aab]">Дата аудита</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{config.documentDate}</div>
+                  <div className="text-[13px] text-[#979aab]">Дата аудита</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{config.documentDate}</div>
                 </Link>
                 <div className="justify-self-end">
                   <DropdownMenu>

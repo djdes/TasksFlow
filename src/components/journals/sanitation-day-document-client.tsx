@@ -702,7 +702,7 @@ export function SanitationDayDocumentClient({
         </table>
 
         <div className="flex justify-end">
-          <div className="w-[320px] pr-2 text-right text-[12px] leading-snug">
+          <div className="w-[320px] pr-2 text-right text-[13px] leading-snug">
             <div className="font-semibold">УТВЕРЖДАЮ</div>
             <div>{normalized.approveRole}</div>
             <div className="border-b border-black pb-1">

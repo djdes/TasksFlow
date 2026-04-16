@@ -70,7 +70,7 @@ function HeaderTable(props: {
 }) {
   return (
     <div className="mx-auto w-full max-w-[1040px] overflow-x-auto">
-      <table className="w-full border-collapse text-[12px] text-black">
+      <table className="w-full border-collapse text-[13px] text-black">
         <tbody>
           <tr>
             <td rowSpan={2} className="w-[200px] border border-black px-4 py-5 text-center font-semibold">
@@ -90,7 +90,7 @@ function HeaderTable(props: {
             </td>
           </tr>
           <tr>
-            <td className="border border-black px-4 py-5 text-center text-[11px] italic uppercase">
+            <td className="border border-black px-4 py-5 text-center text-[13px] italic uppercase">
               {props.title}
             </td>
             <td className="border border-black px-4 py-5 text-right">СТР. 1 ИЗ 1</td>

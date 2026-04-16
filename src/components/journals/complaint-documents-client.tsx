@@ -373,8 +373,8 @@ export function ComplaintDocumentsClient({
                 href={`/journals/${routeCode}/documents/${document.id}`}
                 className="justify-self-end text-right"
               >
-                <div className="text-[11px] text-[#979aab]">Дата начала</div>
-                <div className="mt-1 text-[12px] font-semibold text-black">
+                <div className="text-[13px] text-[#979aab]">Дата начала</div>
+                <div className="mt-1 text-[13px] font-semibold text-black">
                   {formatComplaintDate(document.dateFrom)}
                 </div>
               </Link>

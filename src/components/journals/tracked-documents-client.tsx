@@ -388,15 +388,15 @@ function TrackedDocumentsClientImpl({
                 </Link>
 
                 <Link href={href} className="border-l border-[#edf0f7] px-6">
-                  <div className="text-[11px] text-[#979aab]">Ответственный</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">
+                  <div className="text-[13px] text-[#979aab]">Ответственный</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">
                     {getResponsibleCardValue(document)}
                   </div>
                 </Link>
 
                 <Link href={href} className="border-l border-[#edf0f7] px-6">
-                  <div className="text-[11px] text-[#979aab]">{document.metaLabel}</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">{document.metaValue}</div>
+                  <div className="text-[13px] text-[#979aab]">{document.metaLabel}</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">{document.metaValue}</div>
                 </Link>
 
                 <div className="flex justify-center">

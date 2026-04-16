@@ -1669,7 +1669,7 @@ export function DisinfectantDocumentClient({
                   </td>
                   <td className="border border-black/70 px-2 py-2 text-center">
                     <div>{formatDateRu(con.periodFrom)}</div>
-                    <div className="my-1 text-[11px] text-[#999]">—</div>
+                    <div className="my-1 text-[13px] text-[#999]">—</div>
                     <div>{formatDateRu(con.periodTo)}</div>
                   </td>
                   <td className="border border-black/70 px-2 py-2">

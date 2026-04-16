@@ -655,7 +655,7 @@ export function TrainingPlanDocumentClient({
                             cell.required ? (
                               <>
                                 <Checkbox checked disabled />
-                                {cell.date && <span className="text-[12px] text-[#5b66ff]">{cell.date}</span>}
+                                {cell.date && <span className="text-[13px] text-[#5b66ff]">{cell.date}</span>}
                               </>
                             ) : (
                               <Checkbox checked={false} disabled />
@@ -668,7 +668,7 @@ export function TrainingPlanDocumentClient({
                               />
                               {cell.required && (
                                 <select
-                                  className="w-[128px] border-b border-dashed border-[#5b66ff] bg-transparent text-center text-[12px] text-[#5b66ff] outline-none"
+                                  className="w-[128px] border-b border-dashed border-[#5b66ff] bg-transparent text-center text-[13px] text-[#5b66ff] outline-none"
                                   value={cell.date ? cell.date.split(".")[0] : ""}
                                   onChange={(event) => {
                                     const month = event.target.value;

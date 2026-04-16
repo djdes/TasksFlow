@@ -506,8 +506,8 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[11px] text-[#979aab]">Ответственный</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">
+                  <div className="text-[13px] text-[#979aab]">Ответственный</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">
                     {`${config.responsiblePosition}: ${config.responsibleEmployee}`}
                   </div>
                 </Link>
@@ -515,8 +515,8 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[11px] text-[#979aab]">Дата начала</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">
+                  <div className="text-[13px] text-[#979aab]">Дата начала</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">
                     {formatRuDate(config.startDate)}
                   </div>
                 </Link>

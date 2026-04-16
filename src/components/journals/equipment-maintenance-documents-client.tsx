@@ -181,20 +181,20 @@ export function EquipmentMaintenanceDocumentsClient({
                 <div className="text-[17px] font-semibold text-black">{doc.title}</div>
               </Link>
               <div className="text-center">
-                <div className="text-[12px] text-[#85889b]">Год</div>
-                <div className="text-[18px] font-semibold">{cfg.year}</div>
+                <div className="text-[13px] text-[#85889b]">Год</div>
+                <div className="text-[15px] font-semibold">{cfg.year}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">Должность &quot;Утверждаю&quot;</div>
+                <div className="text-[13px] text-[#85889b]">Должность &quot;Утверждаю&quot;</div>
                 <div className="text-[14px] font-semibold">{cfg.approveRole}: {cfg.approveEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">Ответственный</div>
+                <div className="text-[13px] text-[#85889b]">Ответственный</div>
                 <div className="text-[14px] font-semibold">{cfg.responsibleRole}: {cfg.responsibleEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[12px] text-[#85889b]">Дата документа</div>
-                <div className="text-[18px] font-semibold">{formatMaintenanceDate(cfg.documentDate)}</div>
+                <div className="text-[13px] text-[#85889b]">Дата документа</div>
+                <div className="text-[15px] font-semibold">{formatMaintenanceDate(cfg.documentDate)}</div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

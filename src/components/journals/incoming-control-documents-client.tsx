@@ -487,8 +487,8 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[11px] text-[#979aab]">Ответственный</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">
+                  <div className="text-[13px] text-[#979aab]">Ответственный</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">
                     {(config.defaultResponsibleTitle || "Управляющий") +
                       (responsibleUser?.name ? `: ${responsibleUser.name}` : "")}
                   </div>
@@ -497,8 +497,8 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[11px] text-[#979aab]">Дата начала</div>
-                  <div className="mt-1 text-[12px] font-semibold text-black">
+                  <div className="text-[13px] text-[#979aab]">Дата начала</div>
+                  <div className="mt-1 text-[13px] font-semibold text-black">
                     {formatRuDate(document.dateFrom)}
                   </div>
                 </Link>
