@@ -435,7 +435,7 @@ export function TrainingPlanDocumentsClient({
 
       <div className="space-y-4">
         {documents.length === 0 && activeTab === "active" && (
-          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[28px] text-[#8a8ea4]">
+          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-6 py-6 text-[15px] text-[#8a8ea4]">
             Документов пока нет
           </div>
         )}

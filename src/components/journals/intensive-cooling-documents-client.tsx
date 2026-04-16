@@ -127,7 +127,7 @@ function DocumentDialog(props: {
                   setState({ ...activeState, title: event.target.value })
                 }
                 placeholder="Введите название документа"
-                className="h-11 rounded-2xl border-[#d7dbea] px-6 text-[26px]"
+                className="h-11 rounded-2xl border-[#d7dbea] px-4 text-[15px]"
               />
             </div>
             <div className="space-y-2">
@@ -139,7 +139,7 @@ function DocumentDialog(props: {
                   onChange={(event) =>
                     setState({ ...activeState, dateFrom: event.target.value })
                   }
-                  className="h-11 rounded-2xl border-[#d7dbea] px-6 pr-14 text-[26px]"
+                  className="h-11 rounded-2xl border-[#d7dbea] px-4 text-[15px]"
                 />
                 <CalendarDays className="pointer-events-none absolute right-5 top-1/2 size-6 -translate-y-1/2 text-[#6e7387]" />
               </div>
@@ -342,7 +342,7 @@ export function IntensiveCoolingDocumentsClient({
 
       <div className="space-y-4">
         {documents.length === 0 ? (
-          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-8 py-8 text-[28px] text-[#8a8ea4]">
+          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-6 py-6 text-[15px] text-[#8a8ea4]">
             Документов пока нет
           </div>
         ) : null}

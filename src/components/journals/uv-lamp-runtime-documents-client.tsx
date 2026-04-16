@@ -160,7 +160,7 @@ function UvRuntimeSettingsDialog(props: {
             <Input
               value={lampNumber}
               onChange={(event) => setLampNumber(event.target.value)}
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[24px] leading-none"
+              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px] leading-none"
             />
           </div>
 
