@@ -65,3 +65,4 @@ haccp-deploy.tar.gz
 
 .agent/tasks/journals-external-api/.external-token.secret
 .agent/tasks/journals-external-api/.sensor-token.secret
+.agent/tasks/*/PROD_CREDENTIALS.md
