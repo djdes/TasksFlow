@@ -38,6 +38,7 @@ import {
 } from "@/lib/glass-control-document";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type UserItem = {
   id: string;
   name: string;
@@ -363,9 +364,7 @@ export function GlassControlDocumentsClient(props: Props) {
 
       <div className="space-y-3">
         {props.documents.length === 0 && (
-          <div className="rounded-[16px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[16px] text-[#7d8196]">
-            Документов пока нет
-          </div>
+          <EmptyDocumentsState />
         )}
 
         {props.documents.map((document) => {

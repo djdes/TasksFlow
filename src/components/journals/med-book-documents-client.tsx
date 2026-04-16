@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type MedBookListDocument = {
   id: string;
   title: string;
@@ -239,9 +240,7 @@ export function MedBookDocumentsClient({
       </div>
 
       {documents.length === 0 ? (
-        <div className="rounded-[18px] border border-[#e6e9f5] bg-white px-8 py-7 text-[18px] text-[#7c7c93]">
-          Документов пока нет
-        </div>
+        <EmptyDocumentsState />
       ) : (
         <div className="space-y-3">
           {documents.map((document) => {

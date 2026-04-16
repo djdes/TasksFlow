@@ -23,6 +23,7 @@ import {
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type DocumentItem = {
   id: string;
   title: string;
@@ -197,7 +198,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
         </div>
 
         <div className="space-y-3">
-          {documents.length === 0 && <div className="rounded-[16px] border border-[#eef0f6] bg-white px-8 py-10 text-[18px] text-[#7c7c93]">Документов пока нет</div>}
+          {documents.length === 0 && <EmptyDocumentsState />}
           {documents.map((document) => {
             const config = normalizeAuditReportConfig(document.config);
             return (

@@ -43,6 +43,7 @@ import {
   type CleaningDocumentConfig,
 } from "@/lib/cleaning-document";
 import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 
 type UserItem = {
   id: string;
@@ -638,9 +639,7 @@ export function CleaningDocumentsClient(props: Props) {
 
         <div className="space-y-4">
           {props.documents.length === 0 ? (
-            <div className="rounded-[18px] border border-[#eaedf7] bg-white px-8 py-10 text-[15px] text-[#8a8ea4]">
-              Документов пока нет
-            </div>
+            <EmptyDocumentsState />
           ) : null}
 
           {props.documents.map((document) => {

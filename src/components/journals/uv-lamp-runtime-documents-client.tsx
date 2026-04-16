@@ -38,6 +38,7 @@ import {
 } from "@/lib/uv-lamp-runtime-document";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type DocumentItem = {
   id: string;
   title: string;
@@ -343,9 +344,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
 
       <div className="space-y-6">
         {props.documents.length === 0 && (
-          <div className="rounded-[16px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[16px] text-[#7d8196]">
-            Документов пока нет
-          </div>
+          <EmptyDocumentsState />
         )}
 
         {props.documents.map((document) => {

@@ -29,6 +29,7 @@ import {
   type AcceptanceDocumentConfig,
 } from "@/lib/acceptance-document";
 import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 
 type User = { id: string; name: string; role: string };
 
@@ -463,9 +464,7 @@ export function IncomingControlDocumentsClient({
 
         <div className="space-y-3">
           {documents.length === 0 && (
-            <div className="rounded-[16px] border border-[#eef0f6] bg-white px-8 py-10 text-[18px] text-[#7c7c93]">
-              Документов пока нет
-            </div>
+            <EmptyDocumentsState />
           )}
           {documents.map((document) => {
             const config = normalizeAcceptanceDocumentConfig(document.config, users);

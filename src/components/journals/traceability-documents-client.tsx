@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type TraceabilityDocumentItem = {
   id: string;
   title: string;
@@ -401,9 +402,7 @@ export function TraceabilityDocumentsClient({
 
       <div className="space-y-4">
         {documents.length === 0 ? (
-          <div className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-10 text-center text-[18px] text-[#7d8196]">
-            Документов пока нет
-          </div>
+          <EmptyDocumentsState />
         ) : (
           documents.map((document) => (
             <div

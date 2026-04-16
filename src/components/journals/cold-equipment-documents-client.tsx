@@ -31,6 +31,7 @@ import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type UserItem = {
   id: string;
   name: string;
@@ -294,9 +295,7 @@ export function ColdEquipmentDocumentsClient({
 
         <div className="space-y-4">
           {documents.length === 0 ? (
-            <div className="rounded-[30px] border border-[#e8ebf4] bg-white px-10 py-12 text-[15px] text-[#7b7f93]">
-              Документов пока нет
-            </div>
+            <EmptyDocumentsState />
           ) : null}
 
           {documents.map((document) => {

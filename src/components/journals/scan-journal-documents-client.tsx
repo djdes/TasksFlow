@@ -7,6 +7,7 @@ import { BookOpenText, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type JournalDocumentRow = {
   id: string;
   title: string;
@@ -130,9 +131,7 @@ export function ScanJournalDocumentsClient({
 
       <div className="space-y-3">
         {documents.length === 0 ? (
-          <div className="rounded-[16px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[16px] text-[#7d8196]">
-            Документов пока нет
-          </div>
+          <EmptyDocumentsState />
         ) : (
           documents.map((document) => {
             const href = `/journals/${templateCode}/documents/${document.id}`;

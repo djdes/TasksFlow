@@ -32,6 +32,7 @@ import {
 import { getSanitaryDayChecklistTitle } from "@/lib/sanitary-day-checklist-document";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type DocumentItem = {
   id: string;
   title: string;
@@ -377,9 +378,7 @@ export function SanitaryDayChecklistDocumentsClient({
 
       <div className="space-y-4">
         {documents.length === 0 && (
-          <div className="rounded-[18px] border border-[#e9ecf7] bg-white px-6 py-6 text-[15px] text-[#8a8ea4]">
-            Документов пока нет
-          </div>
+          <EmptyDocumentsState />
         )}
 
         {documents.map((document) => {

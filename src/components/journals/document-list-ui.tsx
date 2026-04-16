@@ -86,10 +86,15 @@ export function JournalTabs(props: {
   );
 }
 
-export function EmptyDocumentsState() {
+export function EmptyDocumentsState({ label }: { label?: string } = {}) {
   return (
-    <div className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[17px] text-[#7d8196]">
-      Документов пока нет
+    <div className="rounded-2xl border border-[#ececf4] bg-white px-6 py-10 text-center shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+      <div className="text-[15px] font-medium text-[#6f7282]">
+        {label ?? "Документов пока нет"}
+      </div>
+      <div className="mt-1 text-[13px] text-[#9b9fb3]">
+        Создайте первый документ кнопкой выше.
+      </div>
     </div>
   );
 }

@@ -3124,7 +3124,8 @@ export default async function JournalDocumentsPage({
       const manufacturerNames = supplierNames;
       const responsibleUser = pickPrimaryManager(acceptanceUsers) || acceptanceUsers[0] || null;
 
-      if (!acceptanceStatuses.has("active")) {
+      // Sample docs only for the demo org — real customer orgs start empty.
+      if (shouldNormalizeDemoSamples && !acceptanceStatuses.has("active")) {
         const config = buildAcceptanceDocumentConfigFromData({
           users: acceptanceUsers,
           products: productNames,
@@ -3152,7 +3153,7 @@ export default async function JournalDocumentsPage({
         });
       }
 
-      if (!acceptanceStatuses.has("closed")) {
+      if (shouldNormalizeDemoSamples && !acceptanceStatuses.has("closed")) {
         const config = buildAcceptanceDocumentConfigFromData({
           users: acceptanceUsers,
           products: productNames,

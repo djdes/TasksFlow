@@ -29,6 +29,7 @@ import {
 } from "@/lib/product-writeoff-document";
 
 import { toast } from "sonner";
+import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -226,9 +227,7 @@ export function ProductWriteoffDocumentsClient({
 
         <div className="space-y-4">
           {normalizedDocuments.length === 0 && (
-            <div className="rounded-[26px] border border-[#eceef5] bg-white px-6 py-8 text-center text-[17px] text-[#7d8196]">
-              Документов пока нет
-            </div>
+            <EmptyDocumentsState />
           )}
 
           {normalizedDocuments.map((document) => (
