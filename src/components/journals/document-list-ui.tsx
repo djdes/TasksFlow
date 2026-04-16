@@ -23,19 +23,13 @@ export function JournalTopBar(props: {
 
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <h1
-        className={
-          compact
-            ? "max-w-[70%] text-[32px] font-semibold tracking-[-0.03em] text-black"
-            : "text-[62px] font-semibold tracking-[-0.04em] text-black"
-        }
-      >
+      <h1 className="max-w-[70%] text-[48px] font-semibold tracking-[-0.04em] text-black">
         {props.heading}
       </h1>
       <div className="flex shrink-0 items-center gap-3">
         <Button
           variant="outline"
-          className="h-12 rounded-xl border-[#eef0fb] px-4 text-[14px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
           asChild
         >
           <Link href="/sanpin">
@@ -48,7 +42,7 @@ export function JournalTopBar(props: {
             templateCode={props.templateCode}
             templateName={props.templateName}
             users={props.users}
-            triggerClassName="h-12 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
+            triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
             triggerLabel="Создать документ"
             triggerIcon={<Plus className="size-4" />}
           />

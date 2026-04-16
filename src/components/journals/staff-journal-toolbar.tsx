@@ -484,7 +484,7 @@ export function StaffJournalToolbar({
 
         <div className="flex items-start justify-between gap-6">
           {!hideHeading ? (
-            <h1 className="text-[62px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
+            <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
           ) : (
             <div />
           )}
