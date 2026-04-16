@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { Agent } from "undici";
+import { Agent, setGlobalDispatcher } from "undici";
 import crypto from "node:crypto";
 import { escapeHtml } from "@/lib/html-escape";
 import { getDbRoleValuesWithLegacy, MANAGEMENT_ROLES } from "@/lib/user-roles";
@@ -19,12 +19,15 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 const apiRoot = process.env.TELEGRAM_API_ROOT?.replace(/\/+$/, "") || undefined;
 const forceIp = process.env.TELEGRAM_FORCE_IP?.trim() || undefined;
 
-const tgDispatcher = forceIp
-  ? new Agent({
+// Grammy doesn't forward undici's `dispatcher` option through its
+// baseFetchConfig. setGlobalDispatcher is the only reliable way to hook
+// into Node's global fetch used by grammy. It affects every fetch() call in
+// the process, but the lookup override only fires for hostname ===
+// "api.telegram.org"; all other hostnames fall back to system DNS unchanged.
+if (forceIp) {
+  setGlobalDispatcher(
+    new Agent({
       connect: {
-        // undici's Agent.connect.lookup must call back with LookupAddress[],
-        // not the legacy dns.lookup 3-arg form (err, address, family) —
-        // undici throws "Invalid IP address: undefined" on the 3-arg shape.
         lookup: ((
           hostname: string,
           options: object,
@@ -37,32 +40,17 @@ const tgDispatcher = forceIp
             callback(null, [{ address: forceIp, family: 4 }]);
             return;
           }
-          // Fall back to system DNS for everything else (grammy only hits
-          // api.telegram.org in practice, but be defensive).
           import("node:dns").then(({ lookup }) => {
             lookup(hostname, { ...options, all: true }, callback);
           });
         }) as unknown as undefined,
       },
     })
-  : undefined;
+  );
+}
 
 const bot = token
-  ? new Bot(token, {
-      client: {
-        ...(apiRoot ? { apiRoot } : {}),
-        ...(tgDispatcher
-          ? {
-              // grammy types its baseFetchConfig as RequestInit which doesn't
-              // include undici's `dispatcher` extension. Runtime fetch (also
-              // undici) does honour it, so we force-cast.
-              baseFetchConfig: {
-                dispatcher: tgDispatcher,
-              } as unknown as Omit<RequestInit, "method" | "headers" | "body">,
-            }
-          : {}),
-      },
-    })
+  ? new Bot(token, apiRoot ? { client: { apiRoot } } : undefined)
   : null;
 
 /**
