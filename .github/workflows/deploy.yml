@@ -133,6 +133,8 @@ jobs:
               . ./.env
               set +a
               npx tsx prisma/seed.ts 2>&1 | tail -20
+              echo "=== Seeding job positions (idempotent) ==="
+              npx tsx prisma/seed-job-positions.ts 2>&1 | tail -5
             else
               echo ".env not found, skip seed"
             fi

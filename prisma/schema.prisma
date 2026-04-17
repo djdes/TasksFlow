@@ -37,6 +37,7 @@ model Organization {
   changeRequests    ChangeRequest[]
   staffCompetencies StaffCompetency[]
   journalDocuments  JournalDocument[]
+  jobPositions      JobPosition[]
 }
 
 model User {
@@ -63,10 +64,102 @@ model User {
   // /settings/users. While false, `hasJournalAccess` grants all journals —
   // this gives zero-regression behaviour for employees predating the ACL.
   journalAccessMigrated Boolean             @default(false)
+  // Soft-archive marker for the staff page. When set, the user disappears
+  // from active lists + can no longer log in, but stays referenced by old
+  // journal entries. Separate from `isActive` so the staff screen can
+  // distinguish "uploaded an employee but disabled them" from "formally
+  // dismissed / transferred to archive".
+  archivedAt            DateTime?
+  // Structured job position reference. Optional — existing rows keep their
+  // free-form `positionTitle` until the seed migration buckets them into
+  // per-org `JobPosition` rows. New UI writes only `jobPositionId`; legacy
+  // UI continues to read `positionTitle` via the getUserDisplayTitle helper.
+  jobPositionId         String?
+  jobPosition           JobPosition?        @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
   createdAt             DateTime            @default(now())
   journalEntries        JournalEntry[]
   journalAccess         UserJournalAccess[]
   inviteToken           InviteToken?
+  workOffDays           StaffWorkOffDay[]
+  vacations             StaffVacation[]
+  sickLeaves            StaffSickLeave[]
+  dismissal             StaffDismissal?
+
+  @@index([organizationId, archivedAt])
+  @@index([jobPositionId])
+}
+
+/// A custom job title (должность) an organisation has chosen to use.
+/// `categoryKey` groups positions into the two columns from the staff page —
+/// "management" (Руководство) and "staff" (Сотрудники). `sortOrder` lets the
+/// owner drag positions around; unique (org, category, name) keeps duplicates
+/// out.
+model JobPosition {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// "management" | "staff"
+  categoryKey    String
+  name           String
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  users          User[]
+
+  @@unique([organizationId, categoryKey, name])
+  @@index([organizationId, sortOrder])
+}
+
+/// Hygiene-journal autofill input: a day the employee is off duty.
+model StaffWorkOffDay {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Day at 00:00 UTC — stored as DateTime for Prisma friendliness.
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+/// Vacation period (график отпусков) — inclusive on both ends.
+model StaffVacation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateFrom  DateTime
+  dateTo    DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([dateFrom, dateTo])
+}
+
+/// Sick-leave period (график больничных) — inclusive on both ends.
+model StaffSickLeave {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateFrom  DateTime
+  dateTo    DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([dateFrom, dateTo])
+}
+
+/// Formal dismissal record (график увольнений). Unique per user — a single
+/// dismissal is enough; if the employee is re-hired, remove the row + unarchive.
+model StaffDismissal {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@index([date])
 }
 
 /// Invite flow token. Created alongside a placeholder `User` when an owner
