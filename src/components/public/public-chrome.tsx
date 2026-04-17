@@ -38,8 +38,8 @@ export function PublicHeader({
         <span className="text-[#0b1024]">WeSetup</span>
       </Link>
       <div className="flex items-center gap-4 sm:gap-5">
-        {link("blog", "Блог", "/blog")}
         {link("journals-info", "Журналы", "/journals-info")}
+        {link("blog", "Блог", "/blog")}
         <Link
           href="/login"
           className="hidden h-10 items-center rounded-2xl border border-[#dcdfed] bg-white px-4 text-[14px] font-medium text-[#0b1024] transition-colors hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] sm:inline-flex"

@@ -65,6 +65,26 @@ export default async function FeatureDetailPage({
     <div className="min-h-screen bg-white text-[#0b1024]">
       <PublicHeader activeSection="home" />
 
+      {/* BREADCRUMB */}
+      <nav
+        aria-label="breadcrumbs"
+        className="mx-auto flex max-w-[1200px] items-center gap-1.5 px-6 pb-2 text-[13px] text-[#6f7282]"
+      >
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-[#f5f6ff] hover:text-[#0b1024]"
+        >
+          <ArrowLeft className="size-3.5" />
+          Главная
+        </Link>
+        <span className="text-[#dcdfed]">/</span>
+        <span className="px-2 py-1 text-[#9b9fb3]">Возможности</span>
+        <span className="text-[#dcdfed]">/</span>
+        <span className="truncate px-2 py-1 font-medium text-[#0b1024]">
+          {info.title}
+        </span>
+      </nav>
+
       {/* HERO */}
       <section className="mx-auto max-w-[1200px] px-6">
         <div className="relative overflow-hidden rounded-3xl bg-[#0b1024] px-6 py-14 text-white md:px-12 md:py-16">
@@ -73,14 +93,7 @@ export default async function FeatureDetailPage({
             <div className="absolute -bottom-32 -right-32 size-[420px] rounded-full bg-[#7a5cff] opacity-30 blur-[140px]" />
           </div>
           <div className="relative">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-white/70 transition-colors hover:text-white"
-            >
-              <ArrowLeft className="size-4" />
-              На главную
-            </Link>
-            <div className="mt-6 inline-flex size-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur">
+            <div className="inline-flex size-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur">
               <Icon className="size-7" />
             </div>
             <h1 className="mt-5 max-w-[760px] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] md:text-[48px]">
