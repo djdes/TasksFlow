@@ -184,10 +184,17 @@ async function runIntegrationTest() {
   const orgName = `test-bot-${tag}`;
   const templateCode = `test_bot_wizard_${tag}`;
 
+  // Handles we populate progressively — cleaned up in finally no matter
+  // which assertion throws.
+  let orgId: string | null = null;
+  let userId: string | null = null;
+  let templateId: string | null = null;
+
   try {
     const org = await prisma.organization.create({
       data: { name: orgName, type: "restaurant" },
     });
+    orgId = org.id;
     const user = await prisma.user.create({
       data: {
         email: `bot-test-${tag}@example.invalid`,
@@ -198,6 +205,7 @@ async function runIntegrationTest() {
         isActive: false,
       },
     });
+    userId = user.id;
     const template = await prisma.journalTemplate.create({
       data: {
         code: templateCode,
@@ -211,6 +219,7 @@ async function runIntegrationTest() {
         sortOrder: 9999,
       },
     });
+    templateId = template.id;
 
     const data = { temp: -18.5, note: "cold storage fine" };
     const fields = parseFields(template.fields);
@@ -257,16 +266,21 @@ async function runIntegrationTest() {
     // validator blocks it the way saveWizard() does.
     const missingNow = findMissingRequired(fields, { note: "no temp here" });
     expectEq("required block when temp missing", missingNow, ["Temp"]);
-
-    // Cleanup
-    await prisma.journalEntry.deleteMany({ where: { templateId: template.id } });
-    await prisma.journalTemplate.delete({ where: { id: template.id } });
-    await prisma.user.delete({ where: { id: user.id } });
-    await prisma.organization.delete({ where: { id: org.id } });
-    ok("fixtures cleaned up");
   } catch (err) {
     bad("integration aborted", (err as Error).message);
   } finally {
+    // Always attempt cleanup, even when an assertion above threw.
+    try {
+      if (templateId) {
+        await prisma.journalEntry.deleteMany({ where: { templateId } });
+        await prisma.journalTemplate.delete({ where: { id: templateId } });
+      }
+      if (userId) await prisma.user.delete({ where: { id: userId } });
+      if (orgId) await prisma.organization.delete({ where: { id: orgId } });
+      if (templateId || userId || orgId) ok("fixtures cleaned up");
+    } catch (cleanupErr) {
+      bad("cleanup failed", (cleanupErr as Error).message);
+    }
     await prisma.$disconnect();
   }
 }
