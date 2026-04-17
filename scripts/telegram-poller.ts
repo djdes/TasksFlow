@@ -8,8 +8,6 @@
  *   - Inline-keyboard navigation over the journal catalogue
  *   - Text/number/date/select/boolean wizard for new entries in
  *     field-based journals; document-based journals deep-link to the web
- *   - Optional per-journal videos from ./videos/<code>.mp4 (or the codename
- *     mapping below) — sent along with the journal card for onboarding
  *
  * Prisma runs in-process so entries are persisted the same way the web
  * handler does. ACL mirrors src/lib/journal-acl.ts (management + root
@@ -17,15 +15,13 @@
  */
 
 import "dotenv/config";
-import { Bot, InlineKeyboard, InputFile } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import type { Context } from "grammy";
 import { Agent, fetch as undiciFetch, setGlobalDispatcher } from "undici";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import crypto from "node:crypto";
-import path from "node:path";
-import fs from "node:fs";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const FORCE_IP = process.env.TELEGRAM_FORCE_IP?.trim();
@@ -222,26 +218,6 @@ const DOCUMENT_TEMPLATE_CODES = new Set<string>([
 
 function isDocumentTemplate(code: string): boolean {
   return DOCUMENT_TEMPLATE_CODES.has(code);
-}
-
-// ---------------------------------------------------------------------------
-// Video mapping: videos/<code>.mp4 by default; legacy filenames override here.
-// ---------------------------------------------------------------------------
-
-const VIDEO_DIR = path.resolve(process.cwd(), "videos");
-const VIDEO_FILE_BY_CODE: Record<string, string> = {
-  uv_lamp_runtime: "bactericiplantjournal_tg.mp4",
-};
-
-function getVideoPathForCode(code: string): string | null {
-  const explicit = VIDEO_FILE_BY_CODE[code];
-  if (explicit) {
-    const p = path.join(VIDEO_DIR, explicit);
-    if (fs.existsSync(p)) return p;
-  }
-  const p = path.join(VIDEO_DIR, `${code}.mp4`);
-  if (fs.existsSync(p)) return p;
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -452,19 +428,6 @@ async function showJournalCard(ctx: Context, code: string) {
       ? "\n<i>У журнала нет полей для заполнения из бота — откройте его в вебе.</i>"
       : `\n<b>Полей:</b> ${fields.length}`);
 
-  const video = getVideoPathForCode(template.code);
-  if (video) {
-    try {
-      await ctx.replyWithVideo(new InputFile(video), {
-        caption,
-        parse_mode: "HTML",
-        reply_markup: kb,
-      });
-      return;
-    } catch (err) {
-      console.error(`[video] failed for ${template.code}`, err);
-    }
-  }
   await ctx.reply(caption, { parse_mode: "HTML", reply_markup: kb });
 }
 
