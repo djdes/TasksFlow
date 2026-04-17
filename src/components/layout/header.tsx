@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  ChevronDown,
   ClipboardList,
   FileText,
   Settings,
@@ -168,31 +169,62 @@ export function Header({
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex">
-          {navItems.map((item, idx) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            const isHome = idx === 0;
+        {/*
+          Desktop: only the home pill is visible. Secondary nav lives in a
+          hover/focus-within dropdown that anchors to the pill. Click on the
+          pill goes to /dashboard (native <Link> navigation), hover/keyboard
+          focus reveals the rest. The wrapper covers trigger + panel as a
+          single box so the pointer doesn't fall through the gap.
+        */}
+        <div className="hidden min-w-0 flex-1 items-center md:flex">
+          <div className="group/nav relative">
+            <Link
+              href="/dashboard"
+              title={homeTooltip}
+              className={cn(
+                "relative z-10 flex min-w-0 max-w-[280px] items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                pathname === "/dashboard"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground group-hover/nav:bg-accent group-hover/nav:text-accent-foreground group-focus-within/nav:bg-accent group-focus-within/nav:text-accent-foreground"
+              )}
+            >
+              <HomeIcon className="size-4 shrink-0" />
+              <span className="truncate">{homeLabel}</span>
+              <ChevronDown
+                className="size-3.5 shrink-0 opacity-60 transition-transform duration-150 group-hover/nav:rotate-180 group-focus-within/nav:rotate-180"
+                aria-hidden
+              />
+            </Link>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.tooltip}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  isHome && "min-w-0 max-w-[260px]",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <item.icon className="size-4 shrink-0" />
-                <span className={cn(isHome && "truncate")}>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+            <div
+              role="menu"
+              className="pointer-events-none invisible absolute left-0 top-full z-20 w-[260px] translate-y-[-4px] rounded-xl border bg-white p-1.5 opacity-0 shadow-[0_10px_32px_-12px_rgba(11,16,36,0.18)] transition-[opacity,transform] duration-150 group-hover/nav:pointer-events-auto group-hover/nav:visible group-hover/nav:translate-y-0 group-hover/nav:opacity-100 group-focus-within/nav:pointer-events-auto group-focus-within/nav:visible group-focus-within/nav:translate-y-0 group-focus-within/nav:opacity-100"
+            >
+              {secondaryNavItems.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none"
+                    )}
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex-1" />
+        </div>
 
         <div className="flex-1 md:hidden" />
         <Sheet>
