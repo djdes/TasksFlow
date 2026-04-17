@@ -218,7 +218,7 @@ export default async function JournalDocumentPage({
         organizationId: session.user.organizationId,
         isActive: true,
       },
-      select: { id: true, name: true, role: true, email: true },
+      select: { id: true, name: true, role: true, email: true, positionTitle: true, jobPosition: { select: { name: true, categoryKey: true } } },
       orderBy: [{ role: "asc" }, { name: "asc" }],
     }),
     db.equipment.findMany({

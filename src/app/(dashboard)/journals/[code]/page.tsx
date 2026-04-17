@@ -1316,7 +1316,7 @@ export default async function JournalDocumentsPage({
       organizationId: session.user.organizationId,
       isActive: true,
     },
-    select: { id: true, name: true, role: true, email: true },
+    select: { id: true, name: true, role: true, email: true, positionTitle: true, jobPosition: { select: { name: true, categoryKey: true } } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
   const shouldNormalizeDemoSamples = isDemoSeedOrganization(orgUsers);
@@ -2960,7 +2960,7 @@ export default async function JournalDocumentsPage({
             organizationId: session.user.organizationId,
             isActive: true,
           },
-          select: { id: true, name: true, role: true },
+          select: { id: true, name: true, role: true, positionTitle: true, jobPosition: { select: { name: true, categoryKey: true } } },
           orderBy: [{ role: "asc" }, { name: "asc" }],
         }),
         db.product.findMany({
@@ -3092,7 +3092,7 @@ export default async function JournalDocumentsPage({
               organizationId: session.user.organizationId,
               isActive: true,
             },
-            select: { id: true, name: true, role: true },
+            select: { id: true, name: true, role: true, positionTitle: true, jobPosition: { select: { name: true, categoryKey: true } } },
             orderBy: [{ role: "asc" }, { name: "asc" }],
           }),
           db.product.findMany({

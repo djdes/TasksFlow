@@ -19,7 +19,44 @@ export type UserLike = {
   id?: string;
   name: string;
   role: string;
+  positionTitle?: string | null;
+  /// DB-backed structured job position. When present, takes priority over
+  /// the legacy role enum everywhere that renders / filters by "должность"
+  /// (journal selectors, grouped dropdowns, etc). Loaded by server pages
+  /// with `include: { jobPosition: true }`.
+  jobPosition?: {
+    name: string;
+    categoryKey: string;
+  } | null;
 };
+
+/**
+ * Position label priority: DB `jobPosition.name` > free-form `positionTitle`
+ * > role enum label. Journal selectors should lean on this so the dropdown
+ * always mirrors whatever the admin set up on /settings/users — no more
+ * hard-coded «Управляющий/Шеф-повар/Повар/Официант» four-item enum once
+ * the org has custom positions.
+ */
+export function getUserPositionLabel(user: UserLike): string {
+  const posName = user.jobPosition?.name?.trim();
+  if (posName) return posName;
+  const pt = typeof user.positionTitle === "string" ? user.positionTitle.trim() : "";
+  if (pt) return pt;
+  return getUserRoleLabel(user.role);
+}
+
+/**
+ * Category grouping for the "Должность" dropdown. Mirrors the two columns
+ * on /settings/users. Falls back to `isManagerRole`-driven grouping when
+ * `jobPosition` is absent.
+ */
+export function getUserPositionCategory(
+  user: UserLike
+): "management" | "staff" {
+  const k = user.jobPosition?.categoryKey;
+  if (k === "management" || k === "staff") return k;
+  return isManagerRole(user.role) ? "management" : "staff";
+}
 
 const LEGACY_TO_ROLE: Record<string, UserRole> = {
   owner: "manager",
@@ -86,17 +123,29 @@ export function getUserRoleLabel(role: string | null | undefined): string {
 }
 
 /**
- * Resolve the display title for an employee on a journal. Prefers the free-form
- * `positionTitle` stored on the User record, falling back to the role-based label
- * so unmigrated data keeps working. Use this instead of `getUserRoleLabel(role)`
- * whenever a journal needs to show "what this person does" — otherwise a cook
- * working the hot kitchen can end up labelled identically to the bar cook, or a
- * legacy `waiter` role ends up overwriting a more specific title.
+ * Resolve the display title for an employee on a journal. Prefers the DB-backed
+ * `jobPosition.name` (the structured «должность» owner sets up on
+ * /settings/users), then the legacy free-form `positionTitle`, and finally the
+ * role enum label — so every journal automatically shows the admin's chosen
+ * label without per-file edits.
  */
 export function getUserDisplayTitle(
-  user: { role?: string | null; positionTitle?: string | null } | null | undefined
+  user:
+    | {
+        role?: string | null;
+        positionTitle?: string | null;
+        jobPosition?: { name?: string | null } | null;
+      }
+    | null
+    | undefined
 ): string {
-  const raw = typeof user?.positionTitle === "string" ? user.positionTitle.trim() : "";
+  const pos =
+    typeof user?.jobPosition?.name === "string"
+      ? user.jobPosition.name.trim()
+      : "";
+  if (pos) return pos;
+  const raw =
+    typeof user?.positionTitle === "string" ? user.positionTitle.trim() : "";
   if (raw) return raw;
   return getUserRoleLabel(user?.role);
 }
@@ -131,15 +180,44 @@ export function getUserRoleSortOrder(role: string | null | undefined): number {
   }
 }
 
-export function getDistinctRoleLabels(users: Array<Pick<UserLike, "role">>): string[] {
-  return [...new Set(users.map((user) => getUserRoleLabel(user.role)))];
+/**
+ * Distinct «должности» across a user set — DB-backed jobPosition.name when
+ * available, else positionTitle/role fallback. This is what journal dropdowns
+ * bind to, so changing the admin's positions on /settings/users immediately
+ * propagates here without per-journal edits.
+ */
+export function getDistinctRoleLabels(users: UserLike[]): string[] {
+  return [...new Set(users.map((u) => getUserPositionLabel(u)))];
 }
 
-export function getUsersForRoleLabel<T extends Pick<UserLike, "role">>(
+export function getUsersForRoleLabel<T extends UserLike>(
   users: T[],
-  roleLabel: string
+  positionLabel: string
 ): T[] {
-  return users.filter((user) => getUserRoleLabel(user.role) === roleLabel);
+  return users.filter((u) => getUserPositionLabel(u) === positionLabel);
+}
+
+/**
+ * Return distinct positions split into the two categories — for a single
+ * Select with Руководство / Сотрудники optgroups. Labels are unique across
+ * the whole list, but listed in the category where the first user with that
+ * label happens to land.
+ */
+export function getPositionLabelsGrouped(users: UserLike[]): {
+  management: string[];
+  staff: string[];
+} {
+  const management: string[] = [];
+  const staff: string[] = [];
+  const seen = new Set<string>();
+  for (const u of users) {
+    const label = getUserPositionLabel(u);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    if (getUserPositionCategory(u) === "management") management.push(label);
+    else staff.push(label);
+  }
+  return { management, staff };
 }
 
 export function hasAnyUserRole(
