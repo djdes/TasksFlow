@@ -225,15 +225,17 @@ export function NotificationsBell() {
             </div>
 
             {/* ACTIONS */}
-            {tab === "unread" && rows.length > 0 && (
+            {rows.length > 0 && (
               <div className="flex flex-wrap gap-2 px-6 pt-4">
-                <button
-                  type="button"
-                  onClick={markReadSelected}
-                  className="rounded-xl bg-[#eef1ff] px-4 py-2 text-[13px] font-medium text-[#3848c7] transition-colors hover:bg-[#e3e7ff]"
-                >
-                  Прочитать
-                </button>
+                {tab === "unread" && (
+                  <button
+                    type="button"
+                    onClick={markReadSelected}
+                    className="rounded-xl bg-[#eef1ff] px-4 py-2 text-[13px] font-medium text-[#3848c7] transition-colors hover:bg-[#e3e7ff]"
+                  >
+                    Прочитать
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={removeSelected}
@@ -294,12 +296,16 @@ export function NotificationsBell() {
                           {row.items.map((item) => (
                             <li
                               key={item.id}
-                              className="flex items-center gap-3 px-4 py-3"
+                              onClick={() => toggleSelected(row.id)}
+                              className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-white/60"
                             >
                               <input
                                 type="checkbox"
                                 aria-label={item.label}
-                                className="size-4 shrink-0 cursor-pointer rounded border-[#dcdfed] text-[#5566f6] focus:ring-[#5566f6]"
+                                checked={selected.has(row.id)}
+                                readOnly
+                                tabIndex={-1}
+                                className="pointer-events-none size-4 shrink-0 rounded border-[#dcdfed] text-[#5566f6] focus:ring-[#5566f6]"
                               />
                               <span className="text-[14px] text-[#0b1024]">
                                 {item.label}
