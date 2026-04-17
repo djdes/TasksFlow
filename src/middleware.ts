@@ -49,7 +49,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // `/root/:path*` alone does NOT match `/root` itself (no trailing segment),
-  // so the base page would slip past the guard. Listing both forms fixes it.
-  matcher: ["/root", "/root/:path*", "/api/root", "/api/root/:path*"],
+  // Next.js 16 path-to-regexp misses the bare `/root` and `/api/root/<handler>`
+  // segments no matter how we list them (`/root`, `/root/:path*`, `/root{/:path*}`
+  // all leak anon probes to the page layer, which then 307s to /login and
+  // leaks the section's existence). Catch every request that isn't a Next.js
+  // internal asset instead, and let the early `startsWith` check above exit
+  // in a single string-compare for the 99.9% of traffic that isn't `/root`.
+  matcher: ["/((?!_next/|favicon\\.ico$).*)"],
 };
