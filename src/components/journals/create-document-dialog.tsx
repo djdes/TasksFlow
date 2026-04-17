@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { getUserRoleLabel } from "@/lib/user-roles";
+import { getUsersForRoleLabel } from "@/lib/user-roles";
 import {
   COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE,
   getColdEquipmentCreatePeriodBounds,
@@ -64,7 +64,10 @@ import {
   HYGIENE_PERIODICITY_TEXT,
 } from "@/lib/hygiene-document";
 import { isStaffDocumentTemplate } from "@/lib/journal-document-helpers";
-import { PositionSelectItems } from "@/components/shared/position-select";
+import {
+  PositionEmployeePicker,
+  PositionSelectItems,
+} from "@/components/shared/position-select";
 import {
   getTrackedDocumentCreateMode,
   getTrackedDocumentTitle,
@@ -701,7 +704,10 @@ export function CreateDocumentDialog({
                         <SelectValue placeholder="- Выберите значение -" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.map((user) => (
+                        {(responsibleTitle
+                          ? getUsersForRoleLabel(users, responsibleTitle)
+                          : users
+                        ).map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.name}
                           </SelectItem>
@@ -775,42 +781,16 @@ export function CreateDocumentDialog({
               )}
 
               {!isCleaningJournal && (
-                <div className="space-y-2">
-                  <Label>Ответственный</Label>
-                  <Select
-                    value={responsibleUserId}
-                    onValueChange={(value) => {
-                      setResponsibleUserId(value);
-                      const user = users.find((item) => item.id === value);
-                      if (user) {
-                        setResponsibleTitle(getUserRoleLabel(user.role));
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите ответственного..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({getUserRoleLabel(user.role)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {!isCleaningJournal && (
-                <div className="space-y-2">
-                  <Label htmlFor="doc-title-fallback">Должность ответственного</Label>
-                  <Input
-                    id="doc-title-fallback"
-                    value={responsibleTitle}
-                    onChange={(e) => setResponsibleTitle(e.target.value)}
-                    placeholder="Например: Управляющий"
-                  />
-                </div>
+                <PositionEmployeePicker
+                  users={users}
+                  value={{ positionTitle: responsibleTitle, userId: responsibleUserId }}
+                  onChange={(next) => {
+                    setResponsibleTitle(next.positionTitle);
+                    setResponsibleUserId(next.userId);
+                  }}
+                  positionLabel="Должность ответственного"
+                  employeeLabel="Ответственный"
+                />
               )}
 
               {isCleaningJournal && (

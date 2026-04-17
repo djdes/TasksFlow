@@ -30,7 +30,10 @@ import {
 } from "@/lib/hygiene-document";
 
 import { toast } from "sonner";
-import { PositionSelectItems } from "@/components/shared/position-select";
+import {
+  PositionEmployeePicker,
+  PositionSelectItems,
+} from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -81,7 +84,10 @@ function AddEmployeeDialog({
   documentId: string;
 }) {
   const router = useRouter();
-  const [value, setValue] = useState("");
+  const [pick, setPick] = useState<{ positionTitle: string; userId: string }>({
+    positionTitle: "",
+    userId: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const availableUsers = useMemo(
     () => users.filter((user) => !includedEmployeeIds.includes(user.id)),
@@ -90,11 +96,11 @@ function AddEmployeeDialog({
 
   useEffect(() => {
     if (!open) return;
-    setValue(availableUsers[0]?.id || "");
-  }, [availableUsers, open]);
+    setPick({ positionTitle: "", userId: "" });
+  }, [open]);
 
   async function handleSubmit() {
-    if (!value) return;
+    if (!pick.userId) return;
 
     setIsSubmitting(true);
     try {
@@ -103,7 +109,7 @@ function AddEmployeeDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "add_employee",
-          employeeId: value,
+          employeeId: pick.userId,
         }),
       });
 
@@ -128,26 +134,18 @@ function AddEmployeeDialog({
           <p className="text-[18px] text-black">
             Выберите соответствующую должность и сотрудника.
           </p>
-          <div className="space-y-3">
-            <Label className="text-[14px] text-[#73738a]">Должность</Label>
-            <Select value={value} onValueChange={setValue} disabled={availableUsers.length === 0}>
-              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]">
-                <SelectValue placeholder="- Выберите значение -" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {getHygienePositionLabel(user.role)} — {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <PositionEmployeePicker
+            users={availableUsers}
+            value={pick}
+            onChange={setPick}
+            disabled={availableUsers.length === 0}
+            triggerClassName="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]"
+          />
           <div className="flex justify-end pt-2">
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !value}
+              disabled={isSubmitting || !pick.userId}
               className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Добавление..." : "Добавить"}
