@@ -64,6 +64,7 @@ import {
   HYGIENE_PERIODICITY_TEXT,
 } from "@/lib/hygiene-document";
 import { isStaffDocumentTemplate } from "@/lib/journal-document-helpers";
+import { PositionSelectItems } from "@/components/shared/position-select";
 import {
   getTrackedDocumentCreateMode,
   getTrackedDocumentTitle,
@@ -633,11 +634,7 @@ export function CreateDocumentDialog({
                         <SelectValue placeholder="- Выберите значение -" />
                       </SelectTrigger>
                       <SelectContent>
-                        {responsibleTitleOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
+                        <PositionSelectItems users={users} />
                       </SelectContent>
                     </Select>
                   </div>
@@ -652,11 +649,7 @@ export function CreateDocumentDialog({
                     <SelectValue placeholder="- Выберите значение -" />
                   </SelectTrigger>
                   <SelectContent>
-                    {responsibleTitleOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
+                    <PositionSelectItems users={users} />
                   </SelectContent>
                 </Select>
               </div>

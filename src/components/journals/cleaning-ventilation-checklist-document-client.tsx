@@ -59,6 +59,7 @@ function filterUsersByBucket<T extends { role?: string | null }>(
 }
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -253,11 +254,7 @@ function DocumentSettingsDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {["Управляющий", "Сотрудник"].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={props.users} />
               </SelectContent>
             </Select>
           </div>
@@ -348,11 +345,7 @@ function AddResponsibleDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {["Управляющий", "Сотрудник"].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={props.users} />
               </SelectContent>
             </Select>
           </div>

@@ -46,6 +46,7 @@ import { DocumentCloseButton } from "@/components/journals/document-close-button
 
 import { toast } from "sonner";
 import { StickyActionBar } from "@/components/journals/sticky-action-bar";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -368,11 +369,7 @@ function ResponsibleDialog({
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
-                {titleOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={employees} />
               </SelectContent>
             </Select>
           </div>
@@ -493,11 +490,7 @@ function AddRowDialog({
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
-                {titleOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={employees} />
               </SelectContent>
             </Select>
           </div>
@@ -639,11 +632,7 @@ function JournalSettingsDialog({
                   <SelectValue placeholder="Выберите должность" />
                 </SelectTrigger>
                 <SelectContent>
-                  {titleOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={employees} />
                 </SelectContent>
               </Select>
             </div>

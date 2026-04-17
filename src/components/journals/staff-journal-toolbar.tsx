@@ -30,6 +30,7 @@ import {
 } from "@/lib/hygiene-document";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -348,11 +349,7 @@ function JournalSettingsDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>

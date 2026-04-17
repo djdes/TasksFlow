@@ -53,6 +53,7 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type EmployeeItem = {
   id: string;
   name: string;
@@ -373,11 +374,7 @@ function JournalSettingsDialog({
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
-                {titleOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={employees} />
               </SelectContent>
             </Select>
           </div>

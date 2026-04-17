@@ -32,6 +32,7 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -157,11 +158,7 @@ function EditDocumentDialog({
                 <SelectValue placeholder="Выберите должность" />
               </SelectTrigger>
               <SelectContent>
-                {titleOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>

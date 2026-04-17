@@ -45,6 +45,7 @@ import {
 } from "@/lib/intensive-cooling-document";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -253,11 +254,7 @@ function RowDialog(props: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__empty__">- Выберите значение -</SelectItem>
-                {["Управляющий", "Технолог", "Шеф-повар", "Менеджер"].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={props.users} />
               </SelectContent>
             </Select>
           </div>
