@@ -37,41 +37,49 @@ export const revalidate = 0;
 const FEATURES = [
   {
     icon: Plug,
+    slug: "sync-iiko-1c",
     title: "Синхронизация с iiko / 1С",
     text: "Подтягиваем поставщиков, продукты и поступления — бракераж и входной контроль заполняются автоматически.",
   },
   {
     icon: Wand2,
+    slug: "autofill",
     title: "Автозаполнение",
     text: "Гигиена, температуры, уборка — сервис подставляет значения там, где это безопасно и разрешено.",
   },
   {
     icon: Cloud,
+    slug: "cloud",
     title: "Всё в облаке",
     text: "Журналы доступны из любой точки — компьютер, планшет у шефа, телефон в цехе. История сохраняется.",
   },
   {
     icon: UserCheck,
+    slug: "role-access",
     title: "Доступы по ролям",
     text: "Каждый сотрудник видит только свои журналы. Управляющий видит всех и может закрыть период.",
   },
   {
     icon: BellRing,
+    slug: "reminders",
     title: "Напоминания",
     text: "Почта и Telegram пишут, если до конца смены остался незаполненный журнал. Конец дня — журналы закрыты.",
   },
   {
     icon: Bell,
+    slug: "alerts",
     title: "Алерты о нарушениях",
     text: "Температура вне нормы, просрочка, отклонение — уведомление ответственному в реальном времени.",
   },
   {
     icon: Leaf,
+    slug: "paperless",
     title: "Без бумаги",
     text: "Не нужно покупать журналы, заводить распечатки, хранить коробки — все записи сразу в электронном виде.",
   },
   {
     icon: Timer,
+    slug: "time-saving",
     title: "Экономия времени",
     text: "5–10 минут на заполнение всех журналов в конце смены вместо часа возни с бумагой и пастами.",
   },
@@ -301,20 +309,25 @@ export default async function LandingPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f) => (
-            <div
+            <Link
               key={f.title}
-              className="group rounded-2xl border border-[#ececf4] bg-white p-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#d6d9ee] hover:shadow-[0_12px_28px_-16px_rgba(85,102,246,0.22)]"
+              href={`/features/${f.slug}`}
+              className="group flex flex-col rounded-2xl border border-[#ececf4] bg-white p-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#5566f6]/40 hover:shadow-[0_14px_32px_-16px_rgba(85,102,246,0.28)]"
             >
               <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#5566f6] transition-transform group-hover:scale-105">
                 <f.icon className="size-6" />
               </div>
-              <div className="text-[16px] font-semibold tracking-[-0.01em] text-[#0b1024]">
+              <div className="text-[16px] font-semibold tracking-[-0.01em] text-[#0b1024] group-hover:text-[#3848c7]">
                 {f.title}
               </div>
-              <p className="mt-2 text-[13px] leading-[1.55] text-[#6f7282]">
+              <p className="mt-2 flex-1 text-[13px] leading-[1.55] text-[#6f7282]">
                 {f.text}
               </p>
-            </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-[12px] font-medium text-[#3848c7] opacity-0 transition-opacity group-hover:opacity-100">
+                Подробнее
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </Link>
           ))}
         </div>
       </section>
