@@ -43,6 +43,7 @@ import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type DocumentItem = {
   id: string;
   title: string;
@@ -219,11 +220,7 @@ function DocumentDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {METAL_IMPURITY_RESPONSIBLE_POSITIONS.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>

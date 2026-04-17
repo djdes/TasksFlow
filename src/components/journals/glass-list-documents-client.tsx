@@ -37,6 +37,7 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionNativeOptions } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -162,11 +163,7 @@ function GlassListFormDialog(props: {
               className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[15px]"
             >
               <option value="">- Выберите значение -</option>
-              {RESPONSIBLE_TITLES.map((title) => (
-                <option key={title} value={title}>
-                  {title}
-                </option>
-              ))}
+              <PositionNativeOptions users={props.users} />
             </select>
           </div>
           <div className="space-y-3">

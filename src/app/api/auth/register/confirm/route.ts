@@ -6,6 +6,7 @@ import {
   compareVerificationCode,
 } from "@/lib/registration";
 import { sendWelcomeEmail } from "@/lib/email";
+import { seedDefaultJobPositions } from "@/lib/default-job-positions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,6 +127,22 @@ export async function POST(request: Request) {
       },
     });
 
+    // Seed the standard JobPosition catalogue so the new owner's journals
+    // have the full Руководство / Сотрудники dropdown from day one. The
+    // manager is linked to "Управляющий" right away for nice default UX
+    // on /settings/users.
+    await seedDefaultJobPositions(tx, organization.id);
+    const managerPosition = await tx.jobPosition.findUnique({
+      where: {
+        organizationId_categoryKey_name: {
+          organizationId: organization.id,
+          categoryKey: "management",
+          name: "Управляющий",
+        },
+      },
+      select: { id: true },
+    });
+
     const user = await tx.user.create({
       data: {
         email,
@@ -134,6 +151,7 @@ export async function POST(request: Request) {
         passwordHash,
         role: "manager",
         organizationId: organization.id,
+        jobPositionId: managerPosition?.id ?? null,
         // Manager bypasses ACL anyway, but flip for cleanliness so any future
         // code that reads the flag sees "yes, owner has reviewed access".
         journalAccessMigrated: true,

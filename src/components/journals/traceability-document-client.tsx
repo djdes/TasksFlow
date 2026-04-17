@@ -35,6 +35,7 @@ import {
 } from "@/lib/traceability-document";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type PersonItem = { id: string; name: string; role?: string | null };
 type TraceabilitySettingsDraft = { title: string; dateFrom: string; showShockTempField: boolean; showShipmentBlock: boolean };
 type TraceabilityRowDraft = {
@@ -410,7 +411,7 @@ function RowDialog(props: {
             <div className="space-y-2 rounded-[28px] border border-[#e3e5f0] px-4 py-4">
               <div className="text-[20px] font-semibold tracking-[-0.02em] text-black">Ответственный</div>
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2"><Label className="text-[15px] text-[#7a7c8e]">Должность ответственного</Label><Select value={draft.responsibleRole || "__empty__"} onValueChange={(value) => setField("responsibleRole", value === "__empty__" ? "" : value)} disabled={employees.length > 0}><SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f3f4fb] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger><SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem>{roleOptions.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label className="text-[15px] text-[#7a7c8e]">Должность ответственного</Label><Select value={draft.responsibleRole || "__empty__"} onValueChange={(value) => setField("responsibleRole", value === "__empty__" ? "" : value)} disabled={employees.length > 0}><SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-[#f3f4fb] px-4 text-[15px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger><SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem><PositionSelectItems users={props.employees} /></SelectContent></Select></div>
                 <div className="space-y-2"><Label className="text-[15px] text-[#7a7c8e]">Сотрудник</Label>{employees.length > 0 ? <Select value={draft.responsibleEmployeeId || "__empty__"} onValueChange={(value) => {
                   if (value === "__empty__") {
                     setField("responsibleEmployeeId", "");

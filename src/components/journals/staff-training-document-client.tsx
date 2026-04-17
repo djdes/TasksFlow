@@ -43,6 +43,7 @@ import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type Props = {
   documentId: string;
   title: string;
@@ -491,11 +492,7 @@ export function StaffTrainingDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {POSITION_OPTIONS.map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {pos}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
 
@@ -588,11 +585,7 @@ export function StaffTrainingDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {POSITION_OPTIONS.map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {pos}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
 
@@ -665,11 +658,7 @@ export function StaffTrainingDocumentClient({
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
-                  {POSITION_OPTIONS.map((pos) => (
-                    <SelectItem key={pos} value={pos}>
-                      {pos}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={users} />
                 </SelectContent>
               </Select>
             )}

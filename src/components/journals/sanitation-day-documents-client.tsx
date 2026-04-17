@@ -52,6 +52,7 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -248,11 +249,7 @@ function SettingsDialog(props: {
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={props.users} />
                 </SelectContent>
               </Select>
             </div>
@@ -306,11 +303,7 @@ function SettingsDialog(props: {
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={props.users} />
                 </SelectContent>
               </Select>
             </div>

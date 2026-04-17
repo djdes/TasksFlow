@@ -46,6 +46,7 @@ import {
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -344,11 +345,7 @@ function DocumentSettingsDialog(props: {
               <SelectValue placeholder='Должность "Утверждаю"' />
             </SelectTrigger>
             <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {role}
-                </SelectItem>
-              ))}
+              <PositionSelectItems users={props.users} />
             </SelectContent>
           </Select>
 
@@ -403,11 +400,7 @@ function DocumentSettingsDialog(props: {
               <SelectValue placeholder="Должность ответственного" />
             </SelectTrigger>
             <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {role}
-                </SelectItem>
-              ))}
+              <PositionSelectItems users={props.users} />
             </SelectContent>
           </Select>
 

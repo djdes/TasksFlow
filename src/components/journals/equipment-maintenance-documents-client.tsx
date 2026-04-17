@@ -35,6 +35,7 @@ import {
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 const POSITION_OPTIONS = USER_ROLE_LABEL_VALUES;
 
 type JournalListDocument = {
@@ -272,7 +273,7 @@ export function EquipmentMaintenanceDocumentsClient({
               }}>
                 <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
-                  {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  <PositionSelectItems users={users} />
                 </SelectContent>
               </Select>
             </div>
@@ -300,7 +301,7 @@ export function EquipmentMaintenanceDocumentsClient({
               }}>
                 <SelectTrigger><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                 <SelectContent>
-                  {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  <PositionSelectItems users={users} />
                 </SelectContent>
               </Select>
             </div>

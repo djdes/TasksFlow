@@ -42,6 +42,7 @@ import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type Props = {
   documentId: string;
   title: string;
@@ -336,11 +337,7 @@ function RowDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {METAL_IMPURITY_RESPONSIBLE_POSITIONS.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>
@@ -515,11 +512,7 @@ function SettingsDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {METAL_IMPURITY_RESPONSIBLE_POSITIONS.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>

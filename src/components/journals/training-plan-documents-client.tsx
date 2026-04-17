@@ -50,6 +50,7 @@ import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = { id: string; name: string; role: string };
 
 type TrainingPlanDocumentItem = {
@@ -216,11 +217,7 @@ function SettingsDialog(props: {
                   <SelectValue placeholder="- Выберите значение -" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={props.users} />
                 </SelectContent>
               </Select>
             </div>

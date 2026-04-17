@@ -34,6 +34,7 @@ import {
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -623,11 +624,7 @@ export function EquipmentCleaningDocumentClient({
                   <SelectValue placeholder="Мойщик" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={users} />
                 </SelectContent>
               </Select>
             </div>
@@ -682,11 +679,7 @@ export function EquipmentCleaningDocumentClient({
                   <SelectValue placeholder="Должность" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
+                  <PositionSelectItems users={users} />
                 </SelectContent>
               </Select>
             </div>

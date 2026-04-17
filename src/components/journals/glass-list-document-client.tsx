@@ -21,6 +21,7 @@ import {
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
+import { PositionNativeOptions } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
   name: string;
@@ -346,11 +347,7 @@ export function GlassListDocumentClient({
                 }}
                 className="h-18 w-full rounded-[22px] border border-[#dfe1ec] bg-[#f3f4fb] px-7 text-[15px]"
               >
-                {RESPONSIBLE_TITLES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
+                <PositionNativeOptions users={users} />
               </select>
             </div>
             <div className="space-y-3">

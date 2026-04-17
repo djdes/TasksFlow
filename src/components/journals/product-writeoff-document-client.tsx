@@ -23,6 +23,7 @@ import {
   type ProductWriteoffRow,
 } from "@/lib/product-writeoff-document";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
+import { PositionNativeOptions } from "@/components/shared/position-select";
 
 type UserItem = { id: string; name: string; role: string };
 
@@ -482,9 +483,7 @@ export function ProductWriteoffDocumentClient({
             <div className="space-y-2">
               <Label>Должность</Label>
               <select value={commissionDialog.member.role} onChange={(event) => setCommissionDialog((prev) => ({ ...prev, member: { ...prev.member, role: event.target.value } }))} className="h-11 w-full rounded-2xl border border-[#dfe1ec] bg-[#f3f4fb] px-5 text-[18px]">
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
+                <PositionNativeOptions users={users} />
               </select>
             </div>
             <div className="space-y-2">

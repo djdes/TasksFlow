@@ -31,6 +31,7 @@ import {
   type PerishableRejectionRow,
 } from "@/lib/perishable-rejection-document";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
+import { PositionNativeOptions } from "@/components/shared/position-select";
 
 type Props = {
   documentId: string;
@@ -963,11 +964,7 @@ export function PerishableRejectionDocumentClient({
                 }
               }}
             >
-              {RESPONSIBLE_POSITIONS.map((pos) => (
-                <option key={pos} value={pos}>
-                  {pos}
-                </option>
-              ))}
+              <PositionNativeOptions users={users} />
             </select>
 
             {/* Сотрудник */}

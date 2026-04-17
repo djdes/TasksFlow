@@ -18,7 +18,7 @@ export type KnownUserRole = UserRole | LegacyUserRole;
 export type UserLike = {
   id?: string;
   name: string;
-  role: string;
+  role?: string | null;
   positionTitle?: string | null;
   /// DB-backed structured job position. When present, takes priority over
   /// the legacy role enum everywhere that renders / filters by "должность"

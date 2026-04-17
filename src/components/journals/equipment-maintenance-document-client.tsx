@@ -39,6 +39,7 @@ import { DocumentBackLink } from "@/components/journals/document-back-link";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
 
 import { toast } from "sonner";
+import { PositionSelectItems } from "@/components/shared/position-select";
 type Props = {
   documentId: string;
   title: string;
@@ -716,11 +717,7 @@ export function EquipmentMaintenanceDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {POSITION_OPTIONS.map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {pos}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
 
@@ -760,11 +757,7 @@ export function EquipmentMaintenanceDocumentClient({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {POSITION_OPTIONS.map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {pos}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
 

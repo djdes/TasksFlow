@@ -30,6 +30,7 @@ import {
 } from "@/lib/acceptance-document";
 import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { PositionSelectItems } from "@/components/shared/position-select";
 
 type User = { id: string; name: string; role: string };
 
@@ -201,11 +202,7 @@ function SettingsDialog({
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {USER_ROLE_LABEL_VALUES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
+                <PositionSelectItems users={users} />
               </SelectContent>
             </Select>
           </div>

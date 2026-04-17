@@ -53,6 +53,7 @@ import {
   type AcceptanceDocumentConfig,
   type AcceptanceRow,
 } from "@/lib/acceptance-document";
+import { PositionSelectItems } from "@/components/shared/position-select";
 
 type User = { id: string; name: string; role: string };
 
@@ -432,7 +433,7 @@ function RowDialog(props: {
                 }}>
                   <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
                   <SelectContent>
-                    {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    <PositionSelectItems users={props.users} />
                   </SelectContent>
                 </Select>
               </div>
@@ -850,7 +851,7 @@ function SettingsDialog(props: {
             }}>
               <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
               <SelectContent>
-                {POSITION_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                <PositionSelectItems users={props.users} />
               </SelectContent>
             </Select>
           </div>

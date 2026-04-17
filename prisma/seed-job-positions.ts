@@ -13,6 +13,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import pg from "pg";
+import { DEFAULT_JOB_POSITIONS } from "../src/lib/default-job-positions";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -55,8 +56,33 @@ async function main() {
 
   let totalPositions = 0;
   let totalLinked = 0;
+  let totalDefaults = 0;
 
   for (const org of orgs) {
+    // First: always upsert the standard catalogue — ensures existing orgs
+    // pick up new positions added to DEFAULT_JOB_POSITIONS later too.
+    let defaultsSortOrder = 0;
+    for (const { categoryKey, name } of DEFAULT_JOB_POSITIONS) {
+      await prisma.jobPosition.upsert({
+        where: {
+          organizationId_categoryKey_name: {
+            organizationId: org.id,
+            categoryKey,
+            name,
+          },
+        },
+        create: {
+          organizationId: org.id,
+          categoryKey,
+          name,
+          sortOrder: defaultsSortOrder,
+        },
+        update: {},
+      });
+      defaultsSortOrder += 1;
+      totalDefaults += 1;
+    }
+
     const users = await prisma.user.findMany({
       where: { organizationId: org.id, jobPositionId: null },
       select: {
@@ -115,7 +141,7 @@ async function main() {
   }
 
   console.log(
-    `[seed-job-positions] upserted=${totalPositions} linked_users=${totalLinked} orgs=${orgs.length}`
+    `[seed-job-positions] defaults_upserted=${totalDefaults} user-derived_upserted=${totalPositions} linked_users=${totalLinked} orgs=${orgs.length}`
   );
 }
 
