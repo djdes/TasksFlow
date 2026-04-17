@@ -6,11 +6,13 @@ import {
   Building2,
   CheckCircle2,
   ClipboardList,
+  Clock,
   Cloud,
   Flame,
   HelpCircle,
   Leaf,
   Network,
+  NotebookText,
   Plug,
   Rocket,
   ShieldCheck,
@@ -21,6 +23,7 @@ import {
   Users,
   Wand2,
 } from "lucide-react";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -68,19 +71,19 @@ const FEATURES = [
   },
 ];
 
-const JOURNAL_PREVIEW: string[] = [
-  "Гигиенический журнал",
-  "Журнал здоровья (ЗОЖ)",
-  "Контроль температуры и влажности",
-  "Журнал уборки помещений",
-  "Работа УФ-бактерицидной установки",
-  "Бракераж готовой продукции",
-  "Учёт фритюрных жиров",
-  "Температура холодильного оборудования",
-  "Чек-лист проветривания",
-  "График генеральных уборок",
-  "Приёмка и входной контроль сырья",
-  "Медицинские книжки",
+const JOURNAL_PREVIEW: Array<{ code: string; name: string }> = [
+  { code: "hygiene", name: "Гигиенический журнал" },
+  { code: "health_check", name: "Журнал здоровья (ЗОЖ)" },
+  { code: "climate_control", name: "Контроль температуры и влажности" },
+  { code: "cleaning", name: "Журнал уборки помещений" },
+  { code: "uv_lamp_runtime", name: "Работа УФ-бактерицидной установки" },
+  { code: "finished_product", name: "Бракераж готовой продукции" },
+  { code: "fryer_oil", name: "Учёт фритюрных жиров" },
+  { code: "cold_equipment_control", name: "Температура холодильного оборудования" },
+  { code: "cleaning_ventilation_checklist", name: "Чек-лист проветривания" },
+  { code: "general_cleaning", name: "График генеральных уборок" },
+  { code: "incoming_control", name: "Приёмка и входной контроль сырья" },
+  { code: "med_books", name: "Медицинские книжки" },
 ];
 
 const STEPS = [
@@ -154,6 +157,20 @@ const FAQ = [
 ];
 
 export default async function LandingPage() {
+  const latestArticles = await db.article.findMany({
+    where: { publishedAt: { not: null } },
+    orderBy: { publishedAt: "desc" },
+    take: 3,
+    select: {
+      slug: true,
+      title: true,
+      excerpt: true,
+      tags: true,
+      readMinutes: true,
+      publishedAt: true,
+    },
+  });
+
   return (
     <div className="min-h-screen bg-white text-[#0b1024]">
       {/* NAV */}
@@ -167,7 +184,19 @@ export default async function LandingPage() {
           </span>
           <span className="text-[#0b1024]">WeSetup</span>
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-5">
+          <Link
+            href="/journals-info"
+            className="hidden text-[14px] font-medium text-[#6f7282] transition-colors hover:text-[#0b1024] sm:inline"
+          >
+            Журналы
+          </Link>
+          <Link
+            href="/blog"
+            className="hidden text-[14px] font-medium text-[#6f7282] transition-colors hover:text-[#0b1024] sm:inline"
+          >
+            Блог
+          </Link>
           <Link
             href="/login"
             className="hidden h-10 items-center rounded-2xl border border-[#dcdfed] bg-white px-4 text-[14px] font-medium text-[#0b1024] transition-colors hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] sm:inline-flex"
@@ -330,7 +359,7 @@ export default async function LandingPage() {
             </p>
           </div>
           <Link
-            href="/login"
+            href="/journals-info"
             className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[14px] font-medium text-[#0b1024] transition-colors hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
           >
             Смотреть весь список
@@ -338,16 +367,20 @@ export default async function LandingPage() {
           </Link>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {JOURNAL_PREVIEW.map((name, idx) => (
-            <div
-              key={name}
-              className="flex items-center gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-3 text-[14px] font-medium text-[#0b1024] shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
+          {JOURNAL_PREVIEW.map((j, idx) => (
+            <Link
+              key={j.code}
+              href={`/journals-info/${j.code}`}
+              className="group flex items-center gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-3 text-[14px] font-medium text-[#0b1024] shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#5566f6]/40 hover:shadow-[0_12px_28px_-16px_rgba(85,102,246,0.22)]"
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f5f6ff] text-[12px] font-semibold text-[#5566f6]">
                 {String(idx + 1).padStart(2, "0")}
               </span>
-              <span className="truncate">{name}</span>
-            </div>
+              <span className="flex-1 truncate group-hover:text-[#3848c7]">
+                {j.name}
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-[#5566f6] opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
           ))}
         </div>
       </section>
@@ -460,6 +493,67 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* BLOG */}
+      {latestArticles.length > 0 && (
+        <section className="mx-auto max-w-[1200px] px-6 pb-20">
+          <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
+            <div className="max-w-[640px]">
+              <div className="mb-3 inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
+                <NotebookText className="size-4" />
+                Блог
+              </div>
+              <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+                Как вести журналы и проходить проверки
+              </h2>
+              <p className="mt-4 text-[15px] text-[#6f7282]">
+                Разборы норм, чек-листы и истории клиентов. Короткие тексты —
+                читать можно в перерыве между заготовками.
+              </p>
+            </div>
+            <Link
+              href="/blog"
+              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[14px] font-medium text-[#0b1024] transition-colors hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
+            >
+              Все статьи
+              <ArrowRight className="size-4 text-[#5566f6]" />
+            </Link>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {latestArticles.map((a) => (
+              <Link
+                key={a.slug}
+                href={`/blog/${a.slug}`}
+                className="group flex flex-col rounded-3xl border border-[#ececf4] bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-[#5566f6]/40 hover:shadow-[0_20px_50px_-30px_rgba(85,102,246,0.35)]"
+              >
+                <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#6f7282]">
+                  {a.tags.slice(0, 2).map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-[#f5f6ff] px-2.5 py-1 text-[#3848c7]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                  <span className="ml-auto inline-flex items-center gap-1">
+                    <Clock className="size-3.5" /> {a.readMinutes} мин
+                  </span>
+                </div>
+                <h3 className="mt-4 text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[#0b1024] group-hover:text-[#3848c7]">
+                  {a.title}
+                </h3>
+                <p className="mt-3 line-clamp-3 flex-1 text-[14px] leading-[1.6] text-[#6f7282]">
+                  {a.excerpt}
+                </p>
+                <span className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-[#3848c7]">
+                  Читать
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section className="mx-auto max-w-[1200px] px-6 pb-20">
