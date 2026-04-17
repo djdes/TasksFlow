@@ -8,11 +8,17 @@ import { isManagementRole } from "@/lib/user-roles";
 /**
  * Minimal "add an employee" endpoint matching the reference-staff screen:
  * just Position + full name — no email invite here. We still create a `User`
- * row (everything downstream of hygiene / journals keys on userId), but with
- * `isActive=false`, an empty passwordHash, and a synthetic unique email so
- * the standard @unique constraint stays satisfied. If the owner later wants
- * the employee to log in, the existing `POST /api/users/invite` flow still
- * works — it looks up by id and sends a real token.
+ * row (everything downstream of hygiene / journals keys on userId), so:
+ * - `isActive: true` — the employee is actively on staff and has to appear
+ *   in every journal's employee selector (those selectors filter on
+ *   isActive). Login is gated by a non-empty bcrypt hash, which we leave
+ *   empty here, so no login is possible.
+ * - empty passwordHash — bcrypt.compare against "" always returns false,
+ *   locking logins cleanly. If the owner later wants the employee in the
+ *   system as a real account, the existing POST /api/users/invite flow
+ *   issues a token and writes a real hash.
+ * - synthetic unique email — the @unique constraint on User.email stays
+ *   satisfied without the owner having to think about addresses.
  */
 
 const createSchema = z.object({
@@ -76,7 +82,10 @@ export async function POST(request: Request) {
       positionTitle: position.name,
       jobPositionId: position.id,
       organizationId: orgId,
-      isActive: false, // no login until they go through /api/users/invite
+      // Active on staff from the first day — journals filter their employee
+      // selectors on isActive, so we must start in the active set. Login
+      // stays impossible while passwordHash is empty.
+      isActive: true,
       journalAccessMigrated: false,
     },
     select: {

@@ -471,7 +471,7 @@ export function StaffPageClient(props: StaffPageProps) {
           />
         </button>
         {orgOpen ? (
-          <div className="grid gap-4 border-t border-[#ececf4] bg-[#fafbff] p-4 md:grid-cols-2">
+          <div className="grid gap-6 border-t border-[#ececf4] bg-[#f4f5fb] p-5 md:grid-cols-2 md:gap-8 md:p-6">
             {(["management", "staff"] as PositionCategory[]).map((cat) => (
               <CategoryColumn
                 key={cat}
@@ -765,7 +765,7 @@ function CategoryColumn(props: {
               return (
                 <div
                   key={p.id}
-                  className="group/pos overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-shadow hover:shadow-[0_8px_24px_-16px_rgba(85,102,246,0.15)]"
+                  className="group/pos overflow-hidden rounded-2xl border border-[#e2e5ef] bg-white shadow-[0_1px_2px_0_rgba(11,16,36,0.04),0_4px_10px_-6px_rgba(11,16,36,0.12)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(85,102,246,0.22)]"
                 >
                   <div className="flex items-center gap-2 px-4 py-2.5">
                     <button
@@ -833,11 +833,6 @@ function CategoryColumn(props: {
                                 </span>
                               ) : null}
                             </span>
-                            {!e.isActive ? (
-                              <span className="rounded-full bg-[#f3f4f6] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#9b9fb3]">
-                                неактивен
-                              </span>
-                            ) : null}
                           </label>
                         ))
                       )}
