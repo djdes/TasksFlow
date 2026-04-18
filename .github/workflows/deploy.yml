@@ -104,6 +104,13 @@ jobs:
             set -eo pipefail
             cd ${{ env.APP_DIR }}
 
+            echo "=== Cleaning stale source (keeps .env, node_modules, tarball) ==="
+            # Source dirs below are fully owned by the repo — nuke them before
+            # extraction so renamed/deleted files (e.g. src/app/(mini) moved
+            # to src/app/mini) don't leave orphans that collide with the new
+            # tree and break Next.js route resolution.
+            rm -rf src scripts prisma public .github docs
+
             echo "=== Extracting tarball ==="
             tar xf deploy.tar && rm deploy.tar
             # Restore .env from backup if it exists
