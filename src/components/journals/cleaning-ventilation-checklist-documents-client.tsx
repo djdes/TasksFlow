@@ -295,7 +295,7 @@ export function CleaningVentilationChecklistDocumentsClient({
           return (
             <div
               key={document.id}
-              className="grid grid-cols-[1fr_240px_220px_72px] items-center rounded-[22px] border border-[#eaedf7] bg-white px-8 py-5"
+              className="grid grid-cols-1 gap-3 rounded-[22px] border border-[#eaedf7] bg-white px-5 py-4 sm:grid-cols-[1fr_240px_220px_72px] sm:items-center sm:gap-0 sm:px-8 sm:py-5"
             >
               <Link href={href} className="min-w-0 pr-6">
                 <div className="truncate text-[22px] font-semibold tracking-[-0.02em] text-black">

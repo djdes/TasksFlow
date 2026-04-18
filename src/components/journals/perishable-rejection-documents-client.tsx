@@ -95,7 +95,7 @@ export function PerishableRejectionDocumentsClient({
         {documents.map((document) => (
           <div
             key={document.id}
-            className="grid grid-cols-[1.8fr_220px_48px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
+            className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_220px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
               <div className="text-[17px] font-semibold leading-none tracking-tight text-black">{document.title}</div>

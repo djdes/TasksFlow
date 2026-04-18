@@ -150,7 +150,7 @@ function HealthDocumentRow(props: {
   const canManage = props.document.status === "active";
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_240px_40px] items-center rounded-[18px] border border-[#ececf4] bg-white px-5 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+    <div className="grid grid-cols-1 gap-3 rounded-[18px] border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_240px_40px] sm:items-center sm:gap-0 sm:px-5">
       <Link href={href} className="min-w-0 pr-4">
         <div className="truncate text-[17px] font-semibold tracking-[-0.02em] text-black">
           {props.document.title}

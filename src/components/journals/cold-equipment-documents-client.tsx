@@ -301,7 +301,7 @@ export function ColdEquipmentDocumentsClient({
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-[minmax(0,1.6fr)_340px_260px_84px] items-center rounded-[30px] border border-[#e7eaf3] bg-white"
+                className="grid grid-cols-1 gap-3 rounded-[30px] border border-[#e7eaf3] bg-white sm:grid-cols-[minmax(0,1.6fr)_340px_260px_84px] sm:items-center sm:gap-0"
               >
                 <Link
                   href={href}

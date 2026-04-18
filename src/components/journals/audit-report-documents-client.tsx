@@ -202,7 +202,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
           {documents.map((document) => {
             const config = normalizeAuditReportConfig(document.config);
             return (
-              <div key={document.id} className="grid grid-cols-[minmax(0,1fr)_280px_170px_56px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+              <div key={document.id} className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_280px_170px_56px] sm:items-center sm:gap-0 sm:px-6 sm:py-5">
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="text-[16px] font-semibold text-black">{document.title || AUDIT_REPORT_DOCUMENT_TITLE}</Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6">
                   <div className="text-[14px] text-[#84849a]">Объект аудита</div>

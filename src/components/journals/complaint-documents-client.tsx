@@ -362,7 +362,7 @@ export function ComplaintDocumentsClient({
           {documents.map((document) => (
             <div
               key={document.id}
-              className="grid grid-cols-[minmax(0,1fr)_210px_56px] items-center rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
+              className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_210px_56px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
             >
               <Link
                 href={`/journals/${routeCode}/documents/${document.id}`}

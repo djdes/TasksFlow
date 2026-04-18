@@ -687,7 +687,7 @@ export function AuditPlanDocumentClient({
       )}
 
       <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
-        <div className="grid grid-cols-[220px_1fr_120px] border border-black/70">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_120px] border border-black/70">
           <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">{organizationName}</div>
           <div className="grid grid-rows-2">
             <div className="flex items-center justify-center border-b border-black/70 py-4 text-[14px]">СИСТЕМА ХАССП</div>

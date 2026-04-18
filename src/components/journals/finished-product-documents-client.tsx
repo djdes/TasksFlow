@@ -141,7 +141,7 @@ export function FinishedProductDocumentsClient({
         {documents.map((document) => (
           <div
             key={document.id}
-            className="grid grid-cols-[minmax(0,1fr)_180px_48px] items-center rounded-[16px] border border-[#e7eaf3] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(33,43,54,0.04)]"
+            className="grid grid-cols-1 gap-3 rounded-[16px] border border-[#e7eaf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(33,43,54,0.04)] sm:grid-cols-[minmax(0,1fr)_180px_48px] sm:items-center sm:gap-0 sm:px-5"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
               <div className="truncate text-[22px] font-medium tracking-[-0.02em] text-black">

@@ -544,7 +544,7 @@ export function TrainingPlanDocumentClient({
       )}
 
       <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8">
-        <div className="grid grid-cols-[220px_1fr_220px] border border-black/70">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_220px] border border-black/70">
           <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">
             {organizationName}
           </div>

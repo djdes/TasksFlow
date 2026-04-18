@@ -407,7 +407,7 @@ export function TraceabilityDocumentsClient({
           documents.map((document) => (
             <div
               key={document.id}
-              className="grid grid-cols-[minmax(0,1fr)_220px_48px] items-center rounded-[18px] border border-[#eceef5] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.02)]"
+              className="grid grid-cols-1 gap-3 rounded-[18px] border border-[#eceef5] bg-white px-4 py-4 shadow-[0_1px_0_rgba(17,24,39,0.02)] sm:grid-cols-[minmax(0,1fr)_220px_48px] sm:items-center sm:gap-0 sm:px-5"
             >
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="min-w-0">
                 <div className="truncate text-[17px] font-semibold tracking-[-0.03em] text-black">

@@ -168,7 +168,7 @@ export function AuditReportDocumentClient({
 
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
         <section className="min-w-[1100px] space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0 sm:min-w-0">
-          <div className="grid grid-cols-[220px_1fr_120px] border border-black/70">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_120px] border border-black/70">
             <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">{organizationName}</div>
             <div className="grid grid-rows-2">
               <div className="flex items-center justify-center border-b border-black/70 py-4 text-[14px]">СИСТЕМА ХАССП</div>
@@ -233,7 +233,7 @@ export function AuditReportDocumentClient({
                     ["Ответственный", `${finding.responsibleName}${finding.responsiblePosition ? `, ${finding.responsiblePosition}` : ""}`],
                     ["Дата завершения КД: план / факт", `${finding.dueDatePlan || "—"} / ${finding.dueDateFact || "—"}`],
                   ].map(([label, value], rowIndex) => (
-                    <div key={`${finding.id}-${rowIndex}`} className="grid grid-cols-[280px_1fr] border-t border-black/70 first:border-t-0">
+                    <div key={`${finding.id}-${rowIndex}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[280px_1fr] border-t border-black/70 first:border-t-0">
                       <div className="border-r border-black/70 px-5 py-4 font-medium">{label}</div>
                       <button
                         type="button"
@@ -266,7 +266,7 @@ export function AuditReportDocumentClient({
           <div className="space-y-3">
             <div className="text-[24px] font-semibold">Подписи</div>
             {config.signatures.map((signature, index) => (
-              <div key={signature.id} className="grid grid-cols-[180px_1fr_220px_180px] gap-3">
+              <div key={signature.id} className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr_220px_180px]">
                 <Input value={signature.role} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, role: e.target.value } : item) }))} onBlur={() => persist(documentTitle, config).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
                 <Input value={signature.name} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, name: e.target.value } : item) }))} onBlur={() => persist(documentTitle, config).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
                 <Input value={signature.position} disabled={status !== "active"} onChange={(e) => setConfig((current) => ({ ...current, signatures: current.signatures.map((item, idx) => idx === index ? { ...item, position: e.target.value } : item) }))} onBlur={() => persist(documentTitle, config).catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка сохранения"))} className="h-12 rounded-xl border-[#d8dae6] px-4 text-[16px]" />
