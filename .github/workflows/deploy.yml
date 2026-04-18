@@ -52,6 +52,7 @@ jobs:
           tar cf deploy.tar \
             --exclude=node_modules \
             --exclude=.next \
+            --exclude=public/screenshots \
             --exclude=.git \
             --exclude=.github \
             --exclude=.claude \
@@ -139,6 +140,8 @@ jobs:
               npx tsx prisma/seed-articles.ts 2>&1 | tail -5
               echo "=== Running bot wizard tests ==="
               npx tsx scripts/test-bot-wizard.ts 2>&1 | tail -40 || echo "[warn] bot wizard tests failed — deploy continues"
+              echo "=== Seeding demo-screenshots org (idempotent) ==="
+              npx tsx prisma/seed-demo-screenshots.ts 2>&1 | tail -5
             else
               echo ".env not found, skip seed"
             fi

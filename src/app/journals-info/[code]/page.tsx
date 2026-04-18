@@ -14,6 +14,7 @@ import {
   JOURNAL_CATEGORY_LABEL,
 } from "@/content/journal-info";
 import { JOURNAL_SEO } from "@/content/journal-seo";
+import { JournalScreenshot } from "@/components/public/journal-screenshot";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -128,6 +129,16 @@ export default async function JournalInfoDetailPage({
           </div>
         </section>
       ) : null}
+
+      {/* Live screenshot of the authenticated journal page, captured by
+          scripts/capture-screenshots.ts nightly. Falls back to a neutral
+          skeleton when the file isn't on disk yet. */}
+      <section className="mx-auto max-w-[1200px] px-6 pt-10">
+        <div className="mb-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-[#6f7282]">
+          Как это выглядит в системе
+        </div>
+        <JournalScreenshot code={code} label={info.tagline} />
+      </section>
 
       <section className="mx-auto max-w-[1200px] px-6 py-12">
         <div className="grid gap-6 md:grid-cols-[1fr_320px]">

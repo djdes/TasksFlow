@@ -1,0 +1,72 @@
+name: Capture screenshots
+
+on:
+  schedule:
+    # Every day at 03:17 UTC (06:17 MSK) — after nightly seed-cron window.
+    - cron: "17 3 * * *"
+  workflow_run:
+    workflows: ["Deploy to production"]
+    types: [completed]
+  workflow_dispatch:
+
+env:
+  APP_DIR: /var/www/wesetupru/data/www/wesetup.ru/app
+  BASE_URL: https://wesetup.ru
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture screenshots against prod
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          DEMO_SCREENSHOT_EMAIL: ${{ secrets.DEMO_SCREENSHOT_EMAIL }}
+          DEMO_SCREENSHOT_PASSWORD: ${{ secrets.DEMO_SCREENSHOT_PASSWORD }}
+        run: npx tsx scripts/capture-screenshots.ts
+
+      - name: Report artefact size
+        run: |
+          echo "== captured files =="
+          find public/screenshots -type f | wc -l
+          du -sh public/screenshots
+
+      - name: Upload screenshots as CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wesetup-screenshots-${{ github.run_id }}
+          path: public/screenshots
+          retention-days: 30
+
+      - name: SCP to prod
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          password: ${{ secrets.DEPLOY_SSH_PASS }}
+          port: ${{ secrets.DEPLOY_SSH_PORT }}
+          source: "public/screenshots/*"
+          target: ${{ env.APP_DIR }}/public/screenshots
+          strip_components: 2
+          rm: false
+
+      - name: Summary
+        run: |
+          echo "Captured screenshots are live at https://wesetup.ru/screenshots/{desktop,tablet,mobile}/<slug>.png"
