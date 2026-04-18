@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
+import { Copy, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -239,6 +241,21 @@ export function StaffEditPositionDialog(props: {
   );
 }
 
+type TgInvitePayload = {
+  inviteUrl: string;
+  qrPngDataUrl: string;
+  expiresAt: string;
+};
+
+type AddStep =
+  | { kind: "form" }
+  | { kind: "created"; userId: string; userName: string }
+  | {
+      kind: "tg-ready";
+      userName: string;
+      invite: TgInvitePayload;
+    };
+
 export function StaffAddEmployeeDialog(props: {
   position: StaffPosition;
   positions: StaffPosition[];
@@ -247,6 +264,18 @@ export function StaffAddEmployeeDialog(props: {
   const [fullName, setFullName] = useState("");
   const [positionId, setPositionId] = useState(props.position.id);
   const [pending, setPending] = useState(false);
+  const [step, setStep] = useState<AddStep>({ kind: "form" });
+  const [copied, setCopied] = useState(false);
+
+  function closeAll() {
+    // Reset local state so the next open starts clean.
+    setFullName("");
+    setPositionId(props.position.id);
+    setPending(false);
+    setStep({ kind: "form" });
+    setCopied(false);
+    props.onClose();
+  }
 
   async function submit() {
     if (fullName.trim().length < 2) {
@@ -260,20 +289,157 @@ export function StaffAddEmployeeDialog(props: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobPositionId: positionId, fullName: fullName.trim() }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
+      const data = (await res.json().catch(() => null)) as
+        | { user?: { id: string; name: string }; error?: string }
+        | null;
+      if (!res.ok || !data?.user) {
         toast.error(data?.error ?? "Не удалось создать");
         return;
       }
       toast.success("Сотрудник добавлен");
+      // Tell the parent to refresh the list, but stay open so the manager
+      // can immediately issue a Telegram invite without hunting for the row.
       props.onCreated();
+      setStep({
+        kind: "created",
+        userId: data.user.id,
+        userName: data.user.name,
+      });
     } finally {
       setPending(false);
     }
   }
 
+  async function issueTgInvite(userId: string, userName: string) {
+    setPending(true);
+    try {
+      const res = await fetch(`/api/staff/${userId}/invite-tg`, {
+        method: "POST",
+      });
+      const data = (await res.json().catch(() => null)) as
+        | (TgInvitePayload & { error?: string })
+        | null;
+      if (!res.ok || !data?.inviteUrl) {
+        toast.error(data?.error ?? "Не удалось создать приглашение");
+        return;
+      }
+      setStep({
+        kind: "tg-ready",
+        userName,
+        invite: {
+          inviteUrl: data.inviteUrl,
+          qrPngDataUrl: data.qrPngDataUrl,
+          expiresAt: data.expiresAt,
+        },
+      });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function copyInviteUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Не удалось скопировать — выделите ссылку вручную");
+    }
+  }
+
+  if (step.kind === "tg-ready") {
+    return (
+      <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
+        <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+          {shell(
+            `Приглашение для ${step.userName}`,
+            <div className="space-y-4">
+              <div className="rounded-lg border border-[#eef0fb] bg-[#f8f9ff] p-3 text-[13px] leading-5 text-[#5464ff]">
+                Отправьте ссылку сотруднику любым способом или покажите QR.
+                При первом открытии в Telegram кабинет активируется
+                автоматически. Ссылка действительна 7 дней.
+              </div>
+              <div className="flex justify-center">
+                <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-black/5">
+                  <Image
+                    src={step.invite.qrPngDataUrl}
+                    alt="QR-код приглашения"
+                    width={220}
+                    height={220}
+                    unoptimized
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={step.invite.inviteUrl}
+                  className="h-11 rounded-xl border-[#dcdfed] bg-white text-[13px] text-[#0b1024]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => copyInviteUrl(step.invite.inviteUrl)}
+                  className="h-11 rounded-xl px-3"
+                  aria-label="Скопировать ссылку"
+                >
+                  <Copy className="size-4" />
+                  {copied ? "Скопировано" : "Копировать"}
+                </Button>
+              </div>
+            </div>,
+            primaryBtn("Готово", closeAll)
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (step.kind === "created") {
+    return (
+      <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
+        <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+          {shell(
+            "Сотрудник добавлен",
+            <div className="space-y-3 text-[14px] leading-5 text-[#0b1024]">
+              <p>
+                <b>{step.userName}</b> добавлен в штат. Можно сразу выдать
+                ссылку-приглашение в Telegram — сотрудник тапнет её с телефона
+                и без пароля попадёт в рабочий кабинет бота.
+              </p>
+              <p className="text-[#6f7282]">
+                Если TG-бот пока не нужен, просто нажмите «Готово» — ссылку
+                можно будет сгенерировать позже.
+              </p>
+            </div>,
+            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeAll}
+                disabled={pending}
+                className="h-11 rounded-xl"
+              >
+                Готово
+              </Button>
+              <Button
+                type="button"
+                onClick={() => issueTgInvite(step.userId, step.userName)}
+                disabled={pending}
+                className="h-11 min-w-[180px] rounded-xl bg-[#5566f6] text-[14px] font-medium text-white shadow-[0_10px_26px_-12px_rgba(85,102,246,0.55)] hover:bg-[#4a5bf0] disabled:opacity-70"
+              >
+                <Send className="mr-1.5 size-4" />
+                {pending ? "..." : "Выдать ссылку в Telegram"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
+    <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
       <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
         {shell(
           "Добавление сотрудника",
