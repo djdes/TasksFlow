@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Copy, Send } from "lucide-react";
+import { Copy, ExternalLink, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -471,6 +471,171 @@ export function StaffAddEmployeeDialog(props: {
             />
           </div>,
           primaryBtn("Добавить", submit, pending)
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function StaffTelegramInviteDialog(props: {
+  employee: StaffEmployee;
+  mode: "invite" | "rebind";
+  botUrl: string | null;
+  onIssued: () => void;
+} & Close) {
+  const { employee, mode, botUrl, onIssued, onClose, open } = props;
+  const [pending, setPending] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [invite, setInvite] = useState<TgInvitePayload | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function issue() {
+      setPending(true);
+      setError(null);
+      setInvite(null);
+      try {
+        const res = await fetch(`/api/staff/${employee.id}/invite-tg`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | (TgInvitePayload & { error?: string })
+          | null;
+        if (!res.ok || !data?.inviteUrl) {
+          throw new Error(data?.error || "Не удалось создать приглашение");
+        }
+        if (cancelled) return;
+        setInvite({
+          inviteUrl: data.inviteUrl,
+          qrPngDataUrl: data.qrPngDataUrl,
+          expiresAt: data.expiresAt,
+        });
+        onIssued();
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Не удалось создать приглашение"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setPending(false);
+        }
+      }
+    }
+
+    if (open) {
+      void issue();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employee.id, mode, onIssued, open]);
+
+  async function copyInviteUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Не удалось скопировать ссылку");
+    }
+  }
+
+  const title =
+    mode === "rebind"
+      ? `Перепривязать TG для ${employee.name}`
+      : `Пригласить в TG: ${employee.name}`;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+        {shell(
+          title,
+          pending ? (
+            <div className="py-8 text-center text-[14px] text-[#6f7282]">
+              Готовим ссылку Telegram…
+            </div>
+          ) : error ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-[#ffd2cd] bg-[#fff4f2] p-3 text-[13px] text-[#d2453d]">
+                {error}
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" onClick={onClose} className="h-11 rounded-xl">
+                  Закрыть
+                </Button>
+              </div>
+            </div>
+          ) : invite ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-[#eef0fb] bg-[#f8f9ff] p-3 text-[13px] leading-5 text-[#5464ff]">
+                {mode === "rebind"
+                  ? "Ссылка обновлена. Сотрудник увидит ее в уведомлениях сайта, а если Telegram уже был привязан — еще и в сообщении Telegram."
+                  : "Ссылка готова. Сотрудник увидит ее в уведомлениях сайта, а вы можете сразу передать ее вручную или показать QR."}
+              </div>
+              <div className="flex justify-center">
+                <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-black/5">
+                  <Image
+                    src={invite.qrPngDataUrl}
+                    alt="QR-код приглашения в Telegram"
+                    width={220}
+                    height={220}
+                    unoptimized
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={invite.inviteUrl}
+                  className="h-11 rounded-xl border-[#dcdfed] bg-white text-[13px] text-[#0b1024]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => copyInviteUrl(invite.inviteUrl)}
+                  className="h-11 rounded-xl px-3"
+                >
+                  <Copy className="size-4" />
+                  {copied ? "Скопировано" : "Копировать"}
+                </Button>
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="h-11 rounded-xl"
+                >
+                  Готово
+                </Button>
+                <Button
+                  type="button"
+                  asChild
+                  className="h-11 rounded-xl bg-[#5566f6] text-white hover:bg-[#4a5bf0]"
+                >
+                  <a href={invite.inviteUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-1.5 size-4" />
+                    Открыть Telegram
+                  </a>
+                </Button>
+                {employee.telegramLinked && botUrl ? (
+                  <Button type="button" variant="outline" asChild className="h-11 rounded-xl">
+                    <a href={botUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-1.5 size-4" />
+                      Открыть чат бота
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null
         )}
       </DialogContent>
     </Dialog>

@@ -8,8 +8,10 @@ import {
   ArrowUpDown,
   BookOpen,
   ChevronDown,
+  ExternalLink,
   Pencil,
   Plus,
+  Send,
   Trash2,
   UserPlus,
   Users as UsersIcon,
@@ -28,6 +30,7 @@ import {
   StaffEditPositionDialog,
   StaffIikoDialog,
   StaffInstructionDialog,
+  StaffTelegramInviteDialog,
 } from "@/components/staff/staff-dialogs";
 import type {
   PositionCategory,
@@ -115,6 +118,11 @@ export function StaffPageClient(props: StaffPageProps) {
     | { kind: "add-position"; categoryKey: PositionCategory }
     | { kind: "edit-position"; position: StaffPosition }
     | { kind: "add-employee"; position: StaffPosition }
+    | {
+        kind: "tg-invite";
+        employee: StaffEmployee;
+        mode: "invite" | "rebind";
+      }
     | { kind: "archive"; employee: StaffEmployee }
     | { kind: "delete-blocked"; employee: StaffEmployee }
     | { kind: "iiko" }
@@ -412,6 +420,7 @@ export function StaffPageClient(props: StaffPageProps) {
           </button>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {selected.size === 1 && firstSelected ? (
+              <>
               <button
                 type="button"
                 onClick={() =>
@@ -430,6 +439,48 @@ export function StaffPageClient(props: StaffPageProps) {
                 <Pencil className="size-4" />
                 Редактировать
               </button>
+              {firstSelected.telegramLinked && props.telegramBotUrl ? (
+                <Link
+                  href={props.telegramBotUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dcdfed] bg-white px-3 text-[13px] font-medium text-[#0b1024] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
+                >
+                  <ExternalLink className="size-4" />
+                  Открыть TG
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDlg({
+                      kind: "tg-invite",
+                      employee: firstSelected,
+                      mode: "invite",
+                    })
+                  }
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dbe1ff] bg-[#eef1ff] px-3 text-[13px] font-medium text-[#4054d8] hover:bg-[#e5e9ff]"
+                >
+                  <Send className="size-4" />
+                  Пригласить в TG
+                </button>
+              )}
+              {firstSelected.telegramLinked ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDlg({
+                      kind: "tg-invite",
+                      employee: firstSelected,
+                      mode: "rebind",
+                    })
+                  }
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dcdfed] bg-white px-3 text-[13px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
+                >
+                  Перепривязать
+                </button>
+              ) : null}
+              </>
             ) : null}
             <button
               type="button"
@@ -485,6 +536,13 @@ export function StaffPageClient(props: StaffPageProps) {
                 employeesByPosition={employeesByPosition}
                 selected={selected}
                 toggleSelected={toggleSelected}
+                telegramBotUrl={props.telegramBotUrl}
+                onInviteTelegram={(employee) =>
+                  setDlg({ kind: "tg-invite", employee, mode: "invite" })
+                }
+                onRebindTelegram={(employee) =>
+                  setDlg({ kind: "tg-invite", employee, mode: "rebind" })
+                }
                 onAddPosition={() => setDlg({ kind: "add-position", categoryKey: cat })}
                 onAddEmployee={(position) => setDlg({ kind: "add-employee", position })}
                 onEditPosition={(position) => setDlg({ kind: "edit-position", position })}
@@ -644,6 +702,16 @@ export function StaffPageClient(props: StaffPageProps) {
           }}
         />
       ) : null}
+      {dlg?.kind === "tg-invite" ? (
+        <StaffTelegramInviteDialog
+          employee={dlg.employee}
+          mode={dlg.mode}
+          botUrl={props.telegramBotUrl}
+          open
+          onClose={() => setDlg(null)}
+          onIssued={() => startTransition(() => router.refresh())}
+        />
+      ) : null}
       {dlg?.kind === "archive" ? (
         <StaffArchiveDialog
           employee={dlg.employee}
@@ -701,6 +769,9 @@ function CategoryColumn(props: {
   employeesByPosition: Map<string | null, StaffEmployee[]>;
   selected: Set<string>;
   toggleSelected: (id: string) => void;
+  telegramBotUrl: string | null;
+  onInviteTelegram: (employee: StaffEmployee) => void;
+  onRebindTelegram: (employee: StaffEmployee) => void;
   onAddPosition: () => void;
   onAddEmployee: (position: StaffPosition) => void;
   onEditPosition: (position: StaffPosition) => void;
@@ -813,7 +884,7 @@ function CategoryColumn(props: {
                           <label
                             key={e.id}
                             className={cn(
-                              "flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] transition-colors",
+                              "flex cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors",
                               props.selected.has(e.id)
                                 ? "bg-[#eef1ff] text-[#0b1024]"
                                 : "text-[#0b1024] hover:bg-white"
@@ -831,6 +902,46 @@ function CategoryColumn(props: {
                                 <span className="ml-1.5 text-[11px] text-[#9b9fb3]">
                                   (вы)
                                 </span>
+                              ) : null}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {e.telegramLinked && props.telegramBotUrl ? (
+                                <Link
+                                  href={props.telegramBotUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#dcdfed] bg-white px-2 text-[11px] font-medium text-[#0b1024] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
+                                >
+                                  <ExternalLink className="size-3.5" />
+                                  Открыть TG
+                                </Link>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    props.onInviteTelegram(e);
+                                  }}
+                                  className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#dbe1ff] bg-[#eef1ff] px-2 text-[11px] font-medium text-[#4054d8] hover:bg-[#e5e9ff]"
+                                >
+                                  <Send className="size-3.5" />
+                                  Пригласить в TG
+                                </button>
+                              )}
+                              {e.telegramLinked ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    props.onRebindTelegram(e);
+                                  }}
+                                  className="inline-flex h-7 items-center rounded-lg border border-[#dcdfed] bg-white px-2 text-[11px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
+                                >
+                                  Перепривязать
+                                </button>
                               ) : null}
                             </span>
                           </label>

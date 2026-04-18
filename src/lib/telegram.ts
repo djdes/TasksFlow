@@ -294,6 +294,95 @@ export async function notifyEmployee(
   console.error("Telegram employee notification error:", lastError);
 }
 
+/**
+ * Send a direct deep-link invite message to an already linked Telegram chat.
+ *
+ * Used when a manager requests a rebind for an employee who already has
+ * `telegramChatId`: the employee gets the same fresh invite link in Telegram
+ * itself, in addition to the in-app site notification.
+ */
+export async function sendTelegramInviteLinkMessage(args: {
+  chatId: string;
+  userId: string;
+  employeeName: string;
+  inviteUrl: string;
+}): Promise<void> {
+  const { db } = await import("./db");
+  const text = [
+    `Руководитель обновил привязку Telegram для сотрудника ${escapeTelegramHtml(args.employeeName)}.`,
+    "Откройте кнопку ниже, чтобы подтвердить перепривязку.",
+  ].join("\n\n");
+
+  const log = await db.telegramLog.create({
+    data: {
+      chatId: args.chatId,
+      body: text,
+      userId: args.userId,
+      status: "queued",
+      attempts: 0,
+    },
+  });
+
+  if (!bot) {
+    await db.telegramLog.update({
+      where: { id: log.id },
+      data: { status: "failed", error: "bot not configured" },
+    });
+    return;
+  }
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: "Перепривязать Telegram",
+          url: args.inviteUrl,
+        },
+      ],
+    ],
+  };
+
+  let attempt = 0;
+  let lastError: unknown = null;
+
+  while (attempt < MAX_RETRIES) {
+    attempt += 1;
+    try {
+      await bot.api.sendMessage(args.chatId, text, {
+        parse_mode: "HTML",
+        reply_markup: replyMarkup,
+      });
+      await db.telegramLog.update({
+        where: { id: log.id },
+        data: { status: "sent", attempts: attempt, sentAt: new Date() },
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      const retryAfter = extractRetryAfterSeconds(error);
+      if (retryAfter === null || attempt >= MAX_RETRIES) break;
+      await sleep(retryAfter * 1000);
+    }
+  }
+
+  const rateLimited = extractRetryAfterSeconds(lastError) !== null;
+  const errorText =
+    lastError instanceof Error
+      ? lastError.message
+      : typeof lastError === "string"
+        ? lastError
+        : JSON.stringify(lastError);
+  await db.telegramLog.update({
+    where: { id: log.id },
+    data: {
+      status: rateLimited ? "rate_limited" : "failed",
+      error: errorText?.slice(0, 500) ?? "unknown",
+      attempts: attempt,
+    },
+  });
+  console.error("Telegram invite link message error:", lastError);
+}
+
 // Send notification to all owners/technologists of an organization
 export async function notifyOrganization(
   organizationId: string,

@@ -18,6 +18,7 @@ export type StaffEmployee = {
   isActive: boolean;
   isRoot: boolean;
   isSelf: boolean;
+  telegramLinked: boolean;
 };
 
 export type StaffWorkOff = {
@@ -50,6 +51,7 @@ export type StaffDismissalRow = {
 
 export type StaffPageProps = {
   organization: { id: string; name: string };
+  telegramBotUrl: string | null;
   positions: StaffPosition[];
   employees: StaffEmployee[];
   workOffDays: StaffWorkOff[];

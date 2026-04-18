@@ -14,6 +14,9 @@ export default async function StaffPage() {
   }
 
   const orgId = getActiveOrgId(session);
+  const telegramBotUrl = process.env.TELEGRAM_BOT_USERNAME
+    ? `https://t.me/${process.env.TELEGRAM_BOT_USERNAME.replace(/^@/, "")}`
+    : null;
 
   const [organization, positions, employees, workOffDays, vacations, sickLeaves, dismissals] =
     await Promise.all([
@@ -33,6 +36,7 @@ export default async function StaffPage() {
           name: true,
           email: true,
           phone: true,
+          telegramChatId: true,
           jobPositionId: true,
           positionTitle: true,
           role: true,
@@ -74,6 +78,7 @@ export default async function StaffPage() {
         id: organization?.id ?? orgId,
         name: organization?.name ?? "Организация",
       }}
+      telegramBotUrl={telegramBotUrl}
       positions={positions.map((p) => ({
         id: p.id,
         categoryKey: p.categoryKey as "management" | "staff",
@@ -91,6 +96,7 @@ export default async function StaffPage() {
         isActive: u.isActive,
         isRoot: u.isRoot,
         isSelf: u.id === session.user.id,
+        telegramLinked: Boolean(u.telegramChatId),
       }))}
       workOffDays={workOffDays.map((w) => ({
         userId: w.userId,

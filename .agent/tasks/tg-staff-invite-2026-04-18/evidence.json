@@ -1,0 +1,80 @@
+{
+  "task_id": "tg-staff-invite-2026-04-18",
+  "summary": "Telegram invite and rebind flow from /settings/users implemented with in-app notifications, manager modal handoff, and direct Telegram rebind DM support.",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "evidence": [
+        "src/components/staff/staff-page-client.tsx:457",
+        "src/components/staff/staff-page-client.tsx:920",
+        "src/components/staff/staff-dialogs.tsx:573",
+        "src/lib/staff-telegram-invite.ts:165"
+      ]
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "evidence": [
+        "src/components/staff/staff-page-client.tsx:442",
+        "src/components/staff/staff-page-client.tsx:468",
+        "src/lib/staff-telegram-invite.ts:195",
+        "src/lib/telegram.ts:304"
+      ]
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "evidence": [
+        "src/lib/staff-telegram-invite.ts:165",
+        "src/lib/staff-telegram-invite.test.ts:62"
+      ]
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "evidence": [
+        "src/lib/staff-telegram-invite.ts:84",
+        "src/app/api/staff/[id]/invite-tg/route.ts:13"
+      ]
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "evidence": [
+        "src/app/api/staff/[id]/invite-tg/route.ts:24",
+        "src/app/api/staff/[id]/invite-tg/route.ts:31",
+        "src/lib/staff-telegram-invite.ts:131",
+        "src/lib/staff-telegram-invite.test.ts:129"
+      ]
+    }
+  ],
+  "verification": {
+    "targeted_tests": {
+      "status": "PASS",
+      "command": "node --import tsx --test src/lib/staff-telegram-invite.test.ts",
+      "artifact": ".agent/tasks/tg-staff-invite-2026-04-18/raw/tests.txt"
+    },
+    "targeted_lint": {
+      "status": "PASS",
+      "command": "npm run lint -- src/components/staff/staff-page-client.tsx src/components/staff/staff-dialogs.tsx src/lib/staff-telegram-invite.ts src/app/api/staff/[id]/invite-tg/route.ts src/lib/telegram.ts",
+      "artifact": ".agent/tasks/tg-staff-invite-2026-04-18/raw/lint-targeted.txt"
+    },
+    "typescript": {
+      "status": "PASS",
+      "command": "npx tsc --noEmit --pretty false",
+      "artifact": ".agent/tasks/tg-staff-invite-2026-04-18/raw/tsc.txt"
+    },
+    "build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "artifact": ".agent/tasks/tg-staff-invite-2026-04-18/raw/build.txt"
+    },
+    "repo_lint": {
+      "status": "FAIL",
+      "command": "npm run lint",
+      "artifact": ".agent/tasks/tg-staff-invite-2026-04-18/raw/lint-full.txt",
+      "note": "Failure is caused by pre-existing unrelated files outside this task's touched paths."
+    }
+  }
+}
