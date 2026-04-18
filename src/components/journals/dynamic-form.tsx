@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FieldHint, FieldWarning } from "./field-hint";
+import { retryFetch } from "@/lib/retry-fetch";
 import {
   Select,
   SelectContent,
@@ -244,7 +245,11 @@ export function DynamicForm({
     setError(null);
 
     try {
-      const response = await fetch("/api/journals", {
+      // retryFetch: up to 3 attempts with exponential backoff on network
+      // errors only (HTTP 4xx/5xx still bubble up untouched). Shields TG
+      // Mini App users from transient mobile-radio drops without masking
+      // real server issues.
+      const response = await retryFetch("/api/journals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
