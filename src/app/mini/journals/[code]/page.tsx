@@ -84,11 +84,11 @@ export default function MiniJournalPage({
     <div className="flex flex-1 flex-col gap-4 pb-28">
       <BackLink />
       <header className="px-1">
-        <h1 className="text-[20px] font-semibold text-slate-900">
+        <h1 className="text-[20px] font-semibold leading-6 text-slate-900">
           {payload.template.name}
         </h1>
         {payload.template.description ? (
-          <p className="mt-1 text-[13px] text-slate-500">
+          <p className="mt-1 text-[13px] leading-5 text-slate-500">
             {payload.template.description}
           </p>
         ) : null}
@@ -142,7 +142,7 @@ function FieldJournalBody({
 
       <Link
         href={`/mini/journals/${code}/new`}
-        className="fixed inset-x-0 bottom-4 z-10 mx-auto flex max-w-md items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-[15px] font-semibold text-white shadow-lg active:scale-[0.98]"
+        className="fixed bottom-4 left-1/2 z-10 flex w-[calc(100%-24px)] max-w-lg -translate-x-1/2 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-[15px] font-semibold text-white shadow-lg active:scale-[0.98] sm:w-[calc(100%-32px)]"
       >
         <Plus className="size-5" />
         Новая запись
@@ -181,18 +181,18 @@ function DocumentJournalBody({
               <a
                 key={d.id}
                 href={`/journals/${code}/documents/${d.id}`}
-                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 active:scale-[0.98]"
+                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 active:scale-[0.98] sm:items-center"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-medium text-slate-900">
+                  <div className="text-[14px] font-medium leading-5 text-slate-900">
                     {d.title || dateRange}
                   </div>
-                  <div className="mt-0.5 text-[12px] text-slate-500">
+                  <div className="mt-1 text-[12px] leading-4 text-slate-500">
                     {dateRange}
                     {d.status === "closed" ? " · закрыт" : ""}
                   </div>
                 </div>
-                <ExternalLink className="size-4 shrink-0 text-slate-400" />
+                <ExternalLink className="mt-0.5 size-4 shrink-0 text-slate-400 sm:mt-0" />
               </a>
             );
           })
@@ -212,7 +212,7 @@ function EntryRow({ entry }: { entry: EntryItem }) {
   const preview = entryPreview(entry.data);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-[13px] font-medium text-slate-900">{dt}</div>
         <div className="text-[11px] text-slate-500">
           {entry.filledBy?.name ?? "—"}

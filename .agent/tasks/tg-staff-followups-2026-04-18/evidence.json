@@ -1,0 +1,84 @@
+{
+  "task_id": "tg-staff-followups-2026-04-18",
+  "summary": "Fixed Telegram rebind spam, stabilized staff invite dialogs, added manager unlink action, and improved Mini App journal phone layouts.",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "evidence": [
+        "src/lib/staff-telegram-invite.ts:131",
+        "src/lib/staff-telegram-invite.ts:213",
+        "src/lib/staff-telegram-invite.test.ts:116",
+        "src/components/staff/staff-page-client.tsx:343"
+      ]
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "evidence": [
+        "src/components/staff/staff-page-client.tsx:343",
+        "src/components/staff/staff-page-client.tsx:516",
+        "src/components/staff/staff-page-client.tsx:769",
+        "src/components/staff/staff-telegram-dialogs.tsx:43"
+      ]
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "evidence": [
+        "src/lib/staff-telegram-management.ts:68",
+        "src/lib/staff-telegram-management.test.ts:6",
+        "src/app/api/staff/[id]/unlink-tg/route.ts:14",
+        "src/components/staff/staff-page-client.tsx:383",
+        "src/components/staff/staff-page-client.tsx:536"
+      ]
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "evidence": [
+        "src/lib/staff-telegram-invite.ts:161",
+        "src/lib/staff-telegram-management.ts:85",
+        "src/app/api/staff/[id]/invite-tg/route.ts:14"
+      ]
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "evidence": [
+        "src/app/mini/layout.tsx:40",
+        "src/app/mini/_components/mini-card.tsx:33",
+        "src/app/mini/journals/[code]/page.tsx:145",
+        "src/app/mini/journals/[code]/page.tsx:184",
+        "src/app/mini/journals/[code]/new/page.tsx:133",
+        "src/components/journals/dynamic-form.tsx:540"
+      ]
+    }
+  ],
+  "verification": {
+    "targeted_tests": {
+      "status": "PASS",
+      "command": "node --import tsx --test src/lib/staff-telegram-invite.test.ts src/lib/staff-telegram-management.test.ts",
+      "artifact": ".agent/tasks/tg-staff-followups-2026-04-18/raw/tests.txt"
+    },
+    "targeted_lint": {
+      "status": "PASS",
+      "command": "npm run lint -- src/components/staff/staff-page-client.tsx src/components/staff/staff-telegram-dialogs.tsx src/components/staff/staff-types.ts src/lib/staff-telegram-invite.ts src/lib/staff-telegram-management.ts src/app/api/staff/[id]/unlink-tg/route.ts src/app/mini/journals/[code]/page.tsx src/app/mini/journals/[code]/new/page.tsx src/app/mini/_components/mini-card.tsx src/app/mini/layout.tsx src/components/journals/dynamic-form.tsx",
+      "artifact": ".agent/tasks/tg-staff-followups-2026-04-18/raw/lint-targeted.txt"
+    },
+    "typescript": {
+      "status": "PASS",
+      "command": "npx tsc --noEmit --pretty false",
+      "artifact": ".agent/tasks/tg-staff-followups-2026-04-18/raw/tsc.txt"
+    },
+    "build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "artifact": ".agent/tasks/tg-staff-followups-2026-04-18/raw/build.txt"
+    }
+  },
+  "notes": [
+    "Live authenticated browser verification was not run in this session because the staff settings flow requires a real signed-in account context.",
+    "Build still prints the pre-existing Next.js warning about deprecated middleware naming."
+  ]
+}

@@ -125,12 +125,12 @@ export default async function MiniNewJournalEntryPage({
         К журналу
       </Link>
       <header className="px-1">
-        <h1 className="text-[20px] font-semibold text-slate-900">
+        <h1 className="text-[20px] font-semibold leading-6 text-slate-900">
           Новая запись
         </h1>
-        <p className="mt-0.5 text-[13px] text-slate-500">{template.name}</p>
+        <p className="mt-0.5 text-[13px] leading-5 text-slate-500">{template.name}</p>
       </header>
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_-18px_rgba(15,23,42,0.28)] sm:p-5">
         <DynamicForm
           templateCode={code}
           templateName={template.name}

@@ -21,6 +21,12 @@ export type StaffEmployee = {
   telegramLinked: boolean;
 };
 
+export type StaffTelegramInvitePayload = {
+  inviteUrl: string;
+  qrPngDataUrl: string;
+  expiresAt: string;
+};
+
 export type StaffWorkOff = {
   userId: string;
   /// ISO YYYY-MM-DD

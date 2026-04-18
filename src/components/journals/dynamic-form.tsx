@@ -395,7 +395,7 @@ export function DynamicForm({
 
               {field.type === "number" && (
                 <div className="space-y-2">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       id={field.key}
                       type="number"
@@ -415,7 +415,7 @@ export function DynamicForm({
                         variant="outline"
                         onClick={fetchFromSensor}
                         disabled={isFetchingSensor}
-                        className="shrink-0"
+                        className="shrink-0 sm:self-start"
                       >
                         {isFetchingSensor ? (
                           <Loader2 className="size-4 animate-spin" />
@@ -537,8 +537,8 @@ export function DynamicForm({
         </div>
       ))}
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isSubmitting}>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
           {isSubmitting ? "Сохранение..." : "Сохранить запись"}
         </Button>
         <Button
@@ -546,6 +546,7 @@ export function DynamicForm({
           variant="outline"
           onClick={() => router.push(`${journalsBasePath}/${templateCode}`)}
           disabled={isSubmitting}
+          className="w-full sm:w-auto"
         >
           Отмена
         </Button>

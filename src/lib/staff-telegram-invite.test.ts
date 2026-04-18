@@ -47,6 +47,7 @@ test("issueStaffTelegramInvite creates token and site notification", async () =>
       upsertSiteNotification: async (payload) => {
         calls.notification = payload as unknown as Record<string, unknown>;
       },
+      hasRecentRebindTelegramMessage: async () => false,
       sendTelegramDeepLinkMessage: async (payload) => {
         calls.telegram = payload as unknown as Record<string, unknown>;
       },
@@ -97,6 +98,7 @@ test("issueStaffTelegramInvite sends telegram message on rebind for linked emplo
       upsertSiteNotification: async (payload) => {
         calls.notification = payload as unknown as Record<string, unknown>;
       },
+      hasRecentRebindTelegramMessage: async () => false,
       sendTelegramDeepLinkMessage: async (payload) => {
         calls.telegram = payload as unknown as Record<string, unknown>;
       },
@@ -109,6 +111,40 @@ test("issueStaffTelegramInvite sends telegram message on rebind for linked emplo
     calls.telegram?.inviteUrl,
     "https://t.me/wesetup_bot?start=inv_token_777"
   );
+});
+
+test("issueStaffTelegramInvite suppresses duplicate rebind telegram message when a recent one already exists", async () => {
+  let telegramCalls = 0;
+
+  await issueStaffTelegramInvite(
+    {
+      employeeId: "user-3",
+      organizationId: "org-1",
+      mode: "rebind",
+      botUsername: "wesetup_bot",
+    },
+    {
+      findEmployeeById: async () => ({
+        id: "user-3",
+        name: "РЎРµСЂРіРµР№ РЎРµСЂРіРµРµРІ",
+        organizationId: "org-1",
+        archivedAt: null,
+        telegramChatId: "888",
+      }),
+      replaceInviteToken: async () => ({
+        rawToken: "inv_token_888",
+        expiresAt: new Date("2026-04-26T10:00:00.000Z"),
+      }),
+      makeQrDataUrl: async (value) => `qr:${value}`,
+      upsertSiteNotification: async () => {},
+      hasRecentRebindTelegramMessage: async () => true,
+      sendTelegramDeepLinkMessage: async () => {
+        telegramCalls += 1;
+      },
+    }
+  );
+
+  assert.equal(telegramCalls, 0);
 });
 
 test("issueStaffTelegramInvite rejects archived employees", async () => {
@@ -138,6 +174,7 @@ test("issueStaffTelegramInvite rejects archived employees", async () => {
           upsertSiteNotification: async () => {
             throw new Error("should not be called");
           },
+          hasRecentRebindTelegramMessage: async () => false,
           sendTelegramDeepLinkMessage: async () => {
             throw new Error("should not be called");
           },

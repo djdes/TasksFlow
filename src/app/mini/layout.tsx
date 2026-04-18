@@ -37,7 +37,7 @@ export default function MiniLayout({
         strategy="beforeInteractive"
       />
       <MiniSessionProvider>
-        <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-6">
+        <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-slate-50 px-3 pb-6 pt-4 sm:px-4 sm:py-6">
           {children}
         </main>
       </MiniSessionProvider>

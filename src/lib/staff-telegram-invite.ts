@@ -48,6 +48,10 @@ type StaffTelegramInviteDeps = {
   }) => Promise<{ rawToken: string; expiresAt: Date }>;
   makeQrDataUrl: (inviteUrl: string) => Promise<string>;
   upsertSiteNotification: (payload: NotificationPayload) => Promise<void>;
+  hasRecentRebindTelegramMessage: (payload: {
+    userId: string;
+    chatId: string;
+  }) => Promise<boolean>;
   sendTelegramDeepLinkMessage: (
     payload: TelegramMessagePayload
   ) => Promise<void>;
@@ -124,6 +128,20 @@ function defaultDeps(): StaffTelegramInviteDeps {
     async upsertSiteNotification(payload) {
       await upsertNotification(payload);
     },
+    async hasRecentRebindTelegramMessage({ userId, chatId }) {
+      const since = new Date(Date.now() - 15_000);
+      const existing = await db.telegramLog.findFirst({
+        where: {
+          userId,
+          chatId,
+          createdAt: { gte: since },
+          status: { in: ["queued", "sent", "rate_limited"] },
+          body: { startsWith: "Руководитель обновил привязку Telegram" },
+        },
+        select: { id: true },
+      });
+      return Boolean(existing);
+    },
     async sendTelegramDeepLinkMessage(payload) {
       await sendTelegramInviteLinkMessage({
         chatId: payload.chatId,
@@ -192,12 +210,18 @@ export async function issueStaffTelegramInvite(
   });
 
   if (args.mode === "rebind" && target.telegramChatId) {
-    await deps.sendTelegramDeepLinkMessage({
-      chatId: target.telegramChatId,
+    const hasRecentMessage = await deps.hasRecentRebindTelegramMessage({
       userId: target.id,
-      employeeName: target.name,
-      inviteUrl,
+      chatId: target.telegramChatId,
     });
+    if (!hasRecentMessage) {
+      await deps.sendTelegramDeepLinkMessage({
+        chatId: target.telegramChatId,
+        userId: target.id,
+        employeeName: target.name,
+        inviteUrl,
+      });
+    }
   }
 
   return {

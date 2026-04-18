@@ -13,6 +13,7 @@ import {
   Plus,
   Send,
   Trash2,
+  Unlink,
   UserPlus,
   Users as UsersIcon,
   X,
@@ -30,13 +31,17 @@ import {
   StaffEditPositionDialog,
   StaffIikoDialog,
   StaffInstructionDialog,
-  StaffTelegramInviteDialog,
 } from "@/components/staff/staff-dialogs";
+import {
+  StaffTelegramInviteDialog,
+  StaffUnlinkTelegramDialog,
+} from "@/components/staff/staff-telegram-dialogs";
 import type {
   PositionCategory,
   StaffEmployee,
   StaffPageProps,
   StaffPosition,
+  StaffTelegramInvitePayload,
 } from "@/components/staff/staff-types";
 
 type TabKey = "work-off" | "vacations" | "sick-leaves" | "dismissals";
@@ -122,7 +127,11 @@ export function StaffPageClient(props: StaffPageProps) {
         kind: "tg-invite";
         employee: StaffEmployee;
         mode: "invite" | "rebind";
+        pending: boolean;
+        error: string | null;
+        invite: StaffTelegramInvitePayload | null;
       }
+    | { kind: "tg-unlink"; employee: StaffEmployee; pending: boolean }
     | { kind: "archive"; employee: StaffEmployee }
     | { kind: "delete-blocked"; employee: StaffEmployee }
     | { kind: "iiko" }
@@ -331,6 +340,58 @@ export function StaffPageClient(props: StaffPageProps) {
     }
   }
 
+  async function openTelegramInvite(employee: StaffEmployee, mode: "invite" | "rebind") {
+    setDlg({
+      kind: "tg-invite",
+      employee,
+      mode,
+      pending: true,
+      error: null,
+      invite: null,
+    });
+
+    try {
+      const data = (await callJson(`/api/staff/${employee.id}/invite-tg`, {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      })) as StaffTelegramInvitePayload;
+
+      setDlg((current) =>
+        current?.kind === "tg-invite" &&
+        current.employee.id === employee.id &&
+        current.mode === mode
+          ? { ...current, pending: false, error: null, invite: data }
+          : current
+      );
+    } catch (error) {
+      setDlg((current) =>
+        current?.kind === "tg-invite" &&
+        current.employee.id === employee.id &&
+        current.mode === mode
+          ? {
+              ...current,
+              pending: false,
+              error: (error as Error).message,
+              invite: null,
+            }
+          : current
+      );
+    }
+  }
+
+  async function handleTelegramUnlink(employee: StaffEmployee) {
+    setDlg({ kind: "tg-unlink", employee, pending: true });
+    try {
+      await callJson(`/api/staff/${employee.id}/unlink-tg`, { method: "POST" });
+      toast.success("Telegram отвязан");
+      setDlg(null);
+      startTransition(() => router.refresh());
+    } catch (error) {
+      toast.error((error as Error).message);
+      setDlg({ kind: "tg-unlink", employee, pending: false });
+    }
+  }
+
   const firstSelected = anySelected
     ? props.employees.find((e) => selected.has(e.id)) ?? null
     : null;
@@ -452,13 +513,7 @@ export function StaffPageClient(props: StaffPageProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={() =>
-                    setDlg({
-                      kind: "tg-invite",
-                      employee: firstSelected,
-                      mode: "invite",
-                    })
-                  }
+                  onClick={() => void openTelegramInvite(firstSelected, "invite")}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dbe1ff] bg-[#eef1ff] px-3 text-[13px] font-medium text-[#4054d8] hover:bg-[#e5e9ff]"
                 >
                   <Send className="size-4" />
@@ -466,19 +521,29 @@ export function StaffPageClient(props: StaffPageProps) {
                 </button>
               )}
               {firstSelected.telegramLinked ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDlg({
-                      kind: "tg-invite",
-                      employee: firstSelected,
-                      mode: "rebind",
-                    })
-                  }
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dcdfed] bg-white px-3 text-[13px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
-                >
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void openTelegramInvite(firstSelected, "rebind")}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dcdfed] bg-white px-3 text-[13px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
+                  >
                   Перепривязать
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDlg({
+                        kind: "tg-unlink",
+                        employee: firstSelected,
+                        pending: false,
+                      })
+                    }
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#ffd2cd] bg-[#fff4f2] px-3 text-[13px] font-medium text-[#d2453d] hover:bg-[#ffecea]"
+                  >
+                    <Unlink className="size-4" />
+                    РћС‚РІСЏР·Р°С‚СЊ TG
+                  </button>
+                </>
               ) : null}
               </>
             ) : null}
@@ -537,11 +602,10 @@ export function StaffPageClient(props: StaffPageProps) {
                 selected={selected}
                 toggleSelected={toggleSelected}
                 telegramBotUrl={props.telegramBotUrl}
-                onInviteTelegram={(employee) =>
-                  setDlg({ kind: "tg-invite", employee, mode: "invite" })
-                }
-                onRebindTelegram={(employee) =>
-                  setDlg({ kind: "tg-invite", employee, mode: "rebind" })
+                onInviteTelegram={(employee) => void openTelegramInvite(employee, "invite")}
+                onRebindTelegram={(employee) => void openTelegramInvite(employee, "rebind")}
+                onUnlinkTelegram={(employee) =>
+                  setDlg({ kind: "tg-unlink", employee, pending: false })
                 }
                 onAddPosition={() => setDlg({ kind: "add-position", categoryKey: cat })}
                 onAddEmployee={(position) => setDlg({ kind: "add-employee", position })}
@@ -707,9 +771,20 @@ export function StaffPageClient(props: StaffPageProps) {
           employee={dlg.employee}
           mode={dlg.mode}
           botUrl={props.telegramBotUrl}
+          pending={dlg.pending}
+          error={dlg.error}
+          invite={dlg.invite}
           open
           onClose={() => setDlg(null)}
-          onIssued={() => startTransition(() => router.refresh())}
+        />
+      ) : null}
+      {dlg?.kind === "tg-unlink" ? (
+        <StaffUnlinkTelegramDialog
+          employee={dlg.employee}
+          pending={dlg.pending}
+          open
+          onClose={() => setDlg(null)}
+          onConfirm={() => void handleTelegramUnlink(dlg.employee)}
         />
       ) : null}
       {dlg?.kind === "archive" ? (
@@ -772,6 +847,7 @@ function CategoryColumn(props: {
   telegramBotUrl: string | null;
   onInviteTelegram: (employee: StaffEmployee) => void;
   onRebindTelegram: (employee: StaffEmployee) => void;
+  onUnlinkTelegram: (employee: StaffEmployee) => void;
   onAddPosition: () => void;
   onAddEmployee: (position: StaffPosition) => void;
   onEditPosition: (position: StaffPosition) => void;
@@ -931,7 +1007,8 @@ function CategoryColumn(props: {
                                 </button>
                               )}
                               {e.telegramLinked ? (
-                                <button
+                                <>
+                                  <button
                                   type="button"
                                   onClick={(event) => {
                                     event.preventDefault();
@@ -941,7 +1018,20 @@ function CategoryColumn(props: {
                                   className="inline-flex h-7 items-center rounded-lg border border-[#dcdfed] bg-white px-2 text-[11px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
                                 >
                                   Перепривязать
-                                </button>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      props.onUnlinkTelegram(e);
+                                    }}
+                                    className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#ffd2cd] bg-[#fff4f2] px-2 text-[11px] font-medium text-[#d2453d] hover:bg-[#ffecea]"
+                                  >
+                                    <Unlink className="size-3.5" />
+                                    РћС‚РІСЏР·Р°С‚СЊ
+                                  </button>
+                                </>
                               ) : null}
                             </span>
                           </label>

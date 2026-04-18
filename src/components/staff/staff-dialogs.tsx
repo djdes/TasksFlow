@@ -481,13 +481,16 @@ export function StaffTelegramInviteDialog(props: {
   employee: StaffEmployee;
   mode: "invite" | "rebind";
   botUrl: string | null;
-  onIssued: () => void;
+  pending: boolean;
+  error: string | null;
+  invite: TgInvitePayload | null;
 } & Close) {
-  const { employee, mode, botUrl, onIssued, onClose, open } = props;
-  const [pending, setPending] = useState(true);
+  const { employee, mode, botUrl, onClose, open, pending, error, invite } = props;
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [invite, setInvite] = useState<TgInvitePayload | null>(null);
+  const setPending = (_value: boolean) => {};
+  const setError = (_value: string | null) => {};
+  const setInvite = (_value: TgInvitePayload | null) => {};
+  const onIssued = () => {};
 
   useEffect(() => {
     let cancelled = false;
