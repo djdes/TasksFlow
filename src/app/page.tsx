@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { PricingCalculator } from "@/components/public/pricing-calculator";
+import { PublicFooter } from "@/components/public/public-chrome";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -890,38 +891,7 @@ export default async function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#ececf4]">
-        <div className="mx-auto grid max-w-[1200px] gap-6 px-6 py-10 md:grid-cols-[1fr_auto]">
-          <div>
-            <div className="inline-flex items-center gap-2 text-[16px] font-semibold">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-[#5566f6] text-white">
-                <ShieldCheck className="size-4" />
-              </span>
-              WeSetup
-            </div>
-            <p className="mt-3 max-w-[480px] text-[13px] text-[#9b9fb3]">
-              Сервис электронных журналов СанПиН и ХАССП для общепита и пищевых
-              производств. © 2026 WeSetup.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-[13px] text-[#6f7282]">
-            <Link href="/login" className="hover:text-[#0b1024]">
-              Войти
-            </Link>
-            <Link href="/register" className="hover:text-[#0b1024]">
-              Регистрация
-            </Link>
-            <a
-              href="https://t.me/wesetupbot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#0b1024]"
-            >
-              Telegram
-            </a>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

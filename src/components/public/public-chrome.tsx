@@ -62,7 +62,7 @@ export function PublicHeader({
 export function PublicFooter() {
   return (
     <footer className="border-t border-[#ececf4]">
-      <div className="mx-auto grid max-w-[1200px] gap-6 px-6 py-10 md:grid-cols-[1fr_auto]">
+      <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-12 md:grid-cols-[1.4fr_auto_auto]">
         <div>
           <div className="inline-flex items-center gap-2 text-[16px] font-semibold">
             <span className="flex size-8 items-center justify-center rounded-lg bg-[#5566f6] text-white">
@@ -70,12 +70,39 @@ export function PublicFooter() {
             </span>
             WeSetup
           </div>
-          <p className="mt-3 max-w-[480px] text-[13px] text-[#9b9fb3]">
+          <p className="mt-3 max-w-[440px] text-[13px] text-[#9b9fb3]">
             Сервис электронных журналов СанПиН и ХАССП для общепита и пищевых
             производств. © 2026 WeSetup.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-[13px] text-[#6f7282]">
+
+        <div className="min-w-[220px] text-[12px] leading-[1.6] text-[#6f7282]">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9b9fb3]">
+            Реквизиты
+          </div>
+          <div className="font-medium text-[#0b1024]">ООО «БФС»</div>
+          <div>ИНН 5018215599 · КПП 501801001</div>
+          <div>ОГРН 1235000105306</div>
+          <div>141065, Московская область, г. Королёв, ул. Ленина, д. 10/6</div>
+          <div className="mt-2">
+            <a href="tel:+79996341612" className="hover:text-[#0b1024]">
+              +7 (999) 634-16-12
+            </a>
+          </div>
+          <div>
+            <a
+              href="mailto:magazinlenina@gmail.com"
+              className="hover:text-[#0b1024]"
+            >
+              magazinlenina@gmail.com
+            </a>
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-wrap gap-2 text-[13px] text-[#6f7282] md:items-end">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9b9fb3] md:text-right">
+            Разделы
+          </div>
           <Link href="/blog" className="hover:text-[#0b1024]">Блог</Link>
           <Link href="/journals-info" className="hover:text-[#0b1024]">Журналы</Link>
           <Link href="/login" className="hover:text-[#0b1024]">Войти</Link>
