@@ -105,7 +105,8 @@ export default async function OrganizationDetailPage({ params }: PageProps) {
           <div className="text-[18px] font-semibold">Сотрудники</div>
           <div className="text-[14px] text-[#8a8ea4]">{org.users.length}</div>
         </div>
-        <table className="w-full text-[14px]">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[840px] text-[14px]">
           <thead className="bg-[#f8f9fc] text-[13px] text-[#6f7282]">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Имя</th>
@@ -137,6 +138,7 @@ export default async function OrganizationDetailPage({ params }: PageProps) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

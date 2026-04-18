@@ -531,7 +531,7 @@ export function StaffJournalToolbar({
                   <ChevronDown className="size-6" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[360px] rounded-[24px] border-0 p-4 shadow-xl">
+              <DropdownMenuContent align="start" className="max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-4 shadow-xl sm:min-w-[360px]">
                 <DropdownMenuItem
                   className="h-11 rounded-2xl px-4 text-[18px] text-[#3848c7]"
                   onSelect={() => setAddOpen(true)}
