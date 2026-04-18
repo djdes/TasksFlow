@@ -193,8 +193,14 @@ function DesktopMockup() {
 
 function TelegramMockup() {
   return (
-    <div className="overflow-hidden rounded-[34px] border-[6px] border-[#0b1024] bg-[#0b1024] shadow-[0_30px_60px_-20px_rgba(11,16,36,0.4)]">
-      <div className="rounded-[28px] bg-white">
+    // aspect-[9/19] locks this to a realistic phone ratio. Without it, the
+    // inner chat content drives a tall natural height (~500 px for ~160 px
+    // width), so on tablets the "веер" rendered as squished vertical
+    // strips next to the desktop mockup — user feedback «телефоны в веере
+    // вытянулись и стало некрасиво». `overflow-hidden` clips surplus chat
+    // messages that don't fit inside the locked ratio.
+    <div className="aspect-[9/19] overflow-hidden rounded-[34px] border-[6px] border-[#0b1024] bg-[#0b1024] shadow-[0_30px_60px_-20px_rgba(11,16,36,0.4)]">
+      <div className="h-full rounded-[28px] bg-white">
         {/* header */}
         <div className="flex items-center gap-2 bg-[#4680c2] px-4 py-3 text-white">
           <div className="flex size-8 items-center justify-center rounded-full bg-white/20">
@@ -273,8 +279,10 @@ function TelegramMockup() {
 
 function PdfMockup() {
   return (
-    <div className="overflow-hidden rounded-[34px] border-[6px] border-[#0b1024] bg-[#0b1024] shadow-[0_30px_60px_-20px_rgba(11,16,36,0.4)]">
-      <div className="rounded-[28px] bg-[#fafbff]">
+    // Matched aspect with TelegramMockup so the "веер" reads as three phones
+    // of the same shape, not three rectangles of different proportions.
+    <div className="aspect-[9/19] overflow-hidden rounded-[34px] border-[6px] border-[#0b1024] bg-[#0b1024] shadow-[0_30px_60px_-20px_rgba(11,16,36,0.4)]">
+      <div className="h-full rounded-[28px] bg-[#fafbff]">
         {/* header */}
         <div className="flex items-center justify-between bg-white px-4 py-3">
           <div className="text-[11px] font-semibold tracking-[0.1em] text-[#0b1024]">
