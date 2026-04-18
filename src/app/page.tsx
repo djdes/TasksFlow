@@ -300,7 +300,10 @@ export default async function LandingPage() {
       </nav>
 
       {/* HERO — centered stack, megaplan-inspired */}
-      <section className="relative overflow-hidden">
+      {/* overflow-x-clip contains the tilted phones horizontally, but lets
+          vertical shadows + natural-height children extend freely so they
+          don't get guillotined by the section boundary. */}
+      <section className="relative overflow-x-clip pb-24 sm:pb-32">
         {/* Soft ambient gradient wash */}
         <div
           className="pointer-events-none absolute inset-0 -z-0"
@@ -318,6 +321,10 @@ export default async function LandingPage() {
                 "radial-gradient(ellipse at 50% 40%, black 30%, transparent 75%)",
             }}
           />
+          {/* Smooth fade to white at both ends so the hero "breathes" into
+              the page instead of cutting abruptly */}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
         </div>
 
         <div className="relative mx-auto max-w-[1100px] px-6 pt-8 text-center sm:pt-16">
@@ -380,8 +387,10 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Screenshot fan */}
-          <div className="relative mx-auto mt-20 h-[380px] max-w-[1100px] sm:h-[520px] md:h-[580px]">
+          {/* Screenshot fan — min-h sized to the tallest child (phone
+              ≈480px + shadow + top offset). h-auto lets natural height
+              win so phones never clip. */}
+          <div className="relative mx-auto mt-20 min-h-[540px] max-w-[1100px] sm:min-h-[620px] md:min-h-[680px]">
             <ScreenshotFan />
           </div>
         </div>
