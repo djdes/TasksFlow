@@ -570,13 +570,13 @@ export function CleaningDocumentsClient(props: Props) {
     <>
       <div className="space-y-10">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {CLEANING_PAGE_TITLE}
           </h1>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -588,7 +588,7 @@ export function CleaningDocumentsClient(props: Props) {
               <Button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
               >
                 <Plus className="size-6" />
                 Создать документ
@@ -603,7 +603,7 @@ export function CleaningDocumentsClient(props: Props) {
               href={`/journals/${props.routeCode}`}
               className={`relative pb-6 ${
                 props.activeTab === "active"
-                  ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
                   : "text-[#8a8ea4]"
               }`}
             >
@@ -613,7 +613,7 @@ export function CleaningDocumentsClient(props: Props) {
               href={`/journals/${props.routeCode}?tab=closed`}
               className={`relative pb-6 ${
                 props.activeTab === "closed"
-                  ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
                   : "text-[#8a8ea4]"
               }`}
             >
@@ -674,7 +674,7 @@ export function CleaningDocumentsClient(props: Props) {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex size-10 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]"
+                        className="flex size-10 items-center justify-center rounded-full text-[#5566f6] hover:bg-[#f5f6ff]"
                       >
                         <Ellipsis className="size-8" />
                       </button>

@@ -219,7 +219,7 @@ export function AuditProtocolDocumentClient({
       <div className="space-y-8">
         {selectedRowIds.length > 0 && status === "active" && (
           <div className="flex items-center gap-4 rounded-2xl bg-[#f3f4fe] px-6 py-3 print:hidden">
-            <button type="button" className="flex items-center gap-1 text-[16px] text-[#5b66ff]" onClick={() => setSelectedRowIds([])}>
+            <button type="button" className="flex items-center gap-1 text-[16px] text-[#5566f6]" onClick={() => setSelectedRowIds([])}>
               <X className="size-4" /> Выбрано: {selectedRowIds.length}
             </button>
             <button type="button" className="flex items-center gap-1 text-[16px] text-[#ff3b30]" onClick={() => deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Ошибка удаления"))}>
@@ -233,7 +233,7 @@ export function AuditProtocolDocumentClient({
           <div />
           {status === "active" && (
             <>
-            <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]" onClick={() => setSettingsOpen(true)}>
+            <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]" onClick={() => setSettingsOpen(true)}>
               <Settings2 className="size-4" />
               Настройки журнала
             </Button>
@@ -241,7 +241,7 @@ export function AuditProtocolDocumentClient({
               documentId={documentId}
               title={documentTitle}
               variant="outline"
-              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]"
             >
               Закончить журнал
             </DocumentCloseButton>
@@ -249,7 +249,7 @@ export function AuditProtocolDocumentClient({
           )}
         </div>
 
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">{documentTitle}</h1>
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">{documentTitle}</h1>
 
         <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
           <div className="grid grid-cols-[220px_1fr_120px] border border-black/70">

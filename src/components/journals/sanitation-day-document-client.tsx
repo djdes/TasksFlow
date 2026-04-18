@@ -653,7 +653,7 @@ export function SanitationDayDocumentClient({
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               <Settings2 className="size-4" />
               Настройки журнала
@@ -662,7 +662,7 @@ export function SanitationDayDocumentClient({
         </div>
       </div>
 
-      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">
+      <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">
         {title}
       </h1>
 
@@ -736,7 +736,7 @@ export function SanitationDayDocumentClient({
                 });
                 setRoomDialogOpen(true);
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
             >
               <Plus className="size-5" />
               Добавить помещение
@@ -758,7 +758,7 @@ export function SanitationDayDocumentClient({
                     });
                     setRoomDialogOpen(true);
                   }}
-                  className="rounded-2xl border-[#e9ecf6] px-5 py-3 text-[18px] text-[#5b66ff]"
+                  className="rounded-2xl border-[#e9ecf6] px-5 py-3 text-[18px] text-[#5566f6]"
                 >
                   <Pencil className="size-5" />
                   Редактировать

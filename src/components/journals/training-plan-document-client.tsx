@@ -204,7 +204,7 @@ function AddTopicDialog(props: {
             value={topicName}
             onChange={(event) => setTopicName(event.target.value)}
             placeholder="Тема обучения"
-            className="h-11 rounded-2xl border-[#5b66ff] px-4 text-[15px]"
+            className="h-11 rounded-2xl border-[#5566f6] px-4 text-[15px]"
           />
           <div className="flex justify-end pt-2">
             <Button
@@ -505,7 +505,7 @@ export function TrainingPlanDocumentClient({
             <Button
               type="button"
               variant="outline"
-              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff] hover:bg-[#f6f7ff]"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6] hover:bg-[#f6f7ff]"
               onClick={() => {
                 closeDocument().catch(() => toast.error("Не удалось закрыть журнал"));
               }}
@@ -516,7 +516,7 @@ export function TrainingPlanDocumentClient({
           {!readOnly && (
             <Button
               variant="outline"
-              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]"
               onClick={() => setSettingsOpen(true)}
             >
               <Settings2 className="size-4" />
@@ -526,13 +526,13 @@ export function TrainingPlanDocumentClient({
         </div>
       </div>
 
-      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+      <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{title}</h1>
 
       {selectedRowIds.length > 0 && !readOnly && (
-        <div className="sticky top-0 z-30 -mx-6 flex items-center gap-4 rounded-2xl border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-30 -mx-6 flex items-center gap-4 rounded-2xl border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
           <button
             type="button"
-            className="flex items-center gap-1 text-[16px] text-[#5b66ff]"
+            className="flex items-center gap-1 text-[16px] text-[#5566f6]"
             onClick={() => setSelectedRowIds([])}
           >
             <X className="size-4" /> Выбрано: {selectedRowIds.length}
@@ -648,7 +648,7 @@ export function TrainingPlanDocumentClient({
                             cell.required ? (
                               <>
                                 <Checkbox checked disabled />
-                                {cell.date && <span className="text-[13px] text-[#5b66ff]">{cell.date}</span>}
+                                {cell.date && <span className="text-[13px] text-[#5566f6]">{cell.date}</span>}
                               </>
                             ) : (
                               <Checkbox checked={false} disabled />
@@ -661,7 +661,7 @@ export function TrainingPlanDocumentClient({
                               />
                               {cell.required && (
                                 <select
-                                  className="w-[128px] border-b border-dashed border-[#5b66ff] bg-transparent text-center text-[13px] text-[#5b66ff] outline-none"
+                                  className="w-[128px] border-b border-dashed border-[#5566f6] bg-transparent text-center text-[13px] text-[#5566f6] outline-none"
                                   value={cell.date ? cell.date.split(".")[0] : ""}
                                   onChange={(event) => {
                                     const month = event.target.value;

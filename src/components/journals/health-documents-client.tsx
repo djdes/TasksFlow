@@ -129,7 +129,7 @@ function EditDocumentDialog(props: {
               type="button"
               disabled={isSubmitting}
               onClick={handleSave}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -162,7 +162,7 @@ function HealthDocumentRow(props: {
           {props.document.periodLabel}
         </div>
       </Link>
-      <div className="flex items-center justify-center text-[#5b66ff]">
+      <div className="flex items-center justify-center text-[#5566f6]">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -233,14 +233,14 @@ export function HealthDocumentsClient(props: Props) {
       <div className="space-y-12">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {heading}
             </h1>
           </div>
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -253,7 +253,7 @@ export function HealthDocumentsClient(props: Props) {
                 templateCode={props.templateCode}
                 templateName={props.templateName}
                 users={props.users}
-                triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerClassName="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] font-medium text-white hover:bg-[#4a5bf0]"
                 triggerLabel="Создать документ"
                 triggerIcon={<Plus className="size-7" />}
               />
@@ -261,14 +261,14 @@ export function HealthDocumentsClient(props: Props) {
           </div>
         </div>
 
-        <div className="border-b border-[#d9d9e4]">
+        <div className="border-b border-[#ececf4]">
           <div className="flex gap-12 text-[16px]">
             <Link
               href={`/journals/${props.templateCode}`}
               className={`relative pb-5 ${
                 props.activeTab === "active"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Активные
@@ -277,8 +277,8 @@ export function HealthDocumentsClient(props: Props) {
               href={`/journals/${props.templateCode}?tab=closed`}
               className={`relative pb-5 ${
                 props.activeTab === "closed"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Закрытые

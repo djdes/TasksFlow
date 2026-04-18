@@ -12,7 +12,7 @@ export function StickyActionBar({ children, className }: StickyActionBarProps) {
   return (
     <div
       className={cn(
-        "sticky top-0 z-30 -mx-6 mb-6 flex flex-wrap items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur",
+        "sticky top-0 z-30 -mx-6 mb-6 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur",
         className
       )}
     >

@@ -226,7 +226,7 @@ function TraceabilityActionsMenu(props: {
           type="button"
           className="flex size-10 items-center justify-center rounded-full hover:bg-[#f5f6ff]"
         >
-          <Ellipsis className="size-8 text-[#5b66ff]" />
+          <Ellipsis className="size-8 text-[#5566f6]" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[320px] rounded-[28px] border-0 p-4 shadow-xl">
@@ -362,16 +362,16 @@ export function TraceabilityDocumentsClient({
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {heading}
           </h1>
           <div className="mt-5 flex items-center gap-10 border-b border-[#d8dbe6] text-[18px]">
             <Link
               href={`/journals/${routeCode}`}
               className={cn(
-                "relative pb-4 text-[#7c7c93]",
+                "relative pb-4 text-[#6f7282]",
                 activeTab === "active" &&
-                  "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
               )}
             >
               Активные
@@ -379,9 +379,9 @@ export function TraceabilityDocumentsClient({
             <Link
               href={`/journals/${routeCode}?tab=closed`}
               className={cn(
-                "relative pb-4 text-[#7c7c93]",
+                "relative pb-4 text-[#6f7282]",
                 activeTab === "closed" &&
-                  "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                  "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
               )}
             >
               Закрытые

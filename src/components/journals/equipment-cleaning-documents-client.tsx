@@ -182,7 +182,7 @@ export function EquipmentCleaningDocumentsClient({
                       type="radio"
                       checked={fieldVariant === variant}
                       onChange={() => setFieldVariant(variant)}
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {EQUIPMENT_CLEANING_VARIANT_LABELS[variant]}
                   </label>
@@ -190,7 +190,7 @@ export function EquipmentCleaningDocumentsClient({
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={saveSettings} disabled={isSaving} className="bg-[#5b66ff] text-white hover:bg-[#4d58f5]">
+              <Button onClick={saveSettings} disabled={isSaving} className="bg-[#5566f6] text-white hover:bg-[#4d58f5]">
                 {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
@@ -209,7 +209,7 @@ export function EquipmentCleaningDocumentsClient({
             <Button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-[#5b66ff] text-white hover:bg-[#4d58f5]"
+              className="bg-[#5566f6] text-white hover:bg-[#4d58f5]"
             >
               {isDeleting ? "Удаление..." : "Удалить"}
             </Button>

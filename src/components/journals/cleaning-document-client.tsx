@@ -245,7 +245,7 @@ export function CleaningDocumentClient(props: Props) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 onClick={() => setSettingsOpen(true)}
               >
                 Настройки журнала
@@ -255,7 +255,7 @@ export function CleaningDocumentClient(props: Props) {
                   documentId={props.documentId}
                   title={config.documentTitle || CLEANING_PAGE_TITLE}
                   variant="outline"
-                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 >
                   Закончить журнал
                 </DocumentCloseButton>
@@ -265,7 +265,7 @@ export function CleaningDocumentClient(props: Props) {
         ) : null}
 
         <div className="flex items-start justify-between gap-6">
-          <div><h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{config.documentTitle || CLEANING_PAGE_TITLE}</h1><p className="mt-2 text-[18px] text-[#6d7285]">{getCleaningPeriodLabel(props.dateFrom, props.dateTo)}</p></div>
+          <div><h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{config.documentTitle || CLEANING_PAGE_TITLE}</h1><p className="mt-2 text-[18px] text-[#6d7285]">{getCleaningPeriodLabel(props.dateFrom, props.dateTo)}</p></div>
           {!printMode && saving ? <div className="text-[16px] text-[#6d7285]">Сохранение...</div> : null}
         </div>
 
@@ -281,7 +281,7 @@ export function CleaningDocumentClient(props: Props) {
         </section>
 
         {!printMode ? (
-          <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+          <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
             <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button className="h-11 rounded-2xl bg-[#5863f8] px-7 text-[15px] text-white hover:bg-[#4756f6]"><Plus className="size-6" />Добавить<ChevronDown className="size-5" /></Button></DropdownMenuTrigger>

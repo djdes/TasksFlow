@@ -279,7 +279,7 @@ function RowDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : initialRow ? "Сохранить" : "Создать"}
             </Button>
@@ -399,7 +399,7 @@ function SettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -523,7 +523,7 @@ export function RegisterDocumentClient({
         {templateCode ? <DocumentBackLink href={`/journals/${templateCode}`} documentId={documentId} /> : null}
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
             <div className="mt-3 text-[18px] text-[#63667a]">
@@ -536,7 +536,7 @@ export function RegisterDocumentClient({
               type="button"
               variant="outline"
               onClick={() => window.open(`/api/journal-documents/${documentId}/pdf`, "_blank")}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               <Printer className="size-6" />
               Печать
@@ -547,7 +547,7 @@ export function RegisterDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки журнала
@@ -556,7 +556,7 @@ export function RegisterDocumentClient({
                 documentId={documentId}
                 title={documentTitle}
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Закончить журнал
               </DocumentCloseButton>
@@ -582,7 +582,7 @@ export function RegisterDocumentClient({
             <button
               type="button"
               onClick={() => setSummaryOpen((value) => !value)}
-              className="flex size-11 items-center justify-center rounded-full text-[#5b66ff] hover:bg-white/70"
+              className="flex size-11 items-center justify-center rounded-full text-[#5566f6] hover:bg-white/70"
             >
               {summaryOpen ? <ChevronUp className="size-7" /> : <ChevronDown className="size-7" />}
             </button>
@@ -612,7 +612,7 @@ export function RegisterDocumentClient({
                 setEditingRow(null);
                 setRowDialogOpen(true);
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-7" />
               Добавить строку
@@ -687,7 +687,7 @@ export function RegisterDocumentClient({
                               setEditingRow(row);
                               setRowDialogOpen(true);
                             }}
-                            className="flex w-full items-start justify-between gap-3 text-left hover:text-[#5464ff]"
+                            className="flex w-full items-start justify-between gap-3 text-left hover:text-[#3848c7]"
                           >
                             <span>{cellValue || "—"}</span>
                             <Pencil className="mt-1 size-4 shrink-0" />

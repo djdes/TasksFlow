@@ -196,7 +196,7 @@ function GlassListFormDialog(props: {
                   setSubmitting(false);
                 }
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : props.submitLabel}
             </Button>
@@ -244,7 +244,7 @@ function ConfirmDialog(props: {
                 setSubmitting(false);
               }
             }}
-            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Сохранение..." : props.submitLabel}
           </Button>
@@ -387,14 +387,14 @@ export function GlassListDocumentsClient(props: Props) {
     <>
       <div className="space-y-10">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {GLASS_LIST_PAGE_TITLE}
           </h1>
           {props.activeTab === "active" && (
             <Button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4d58f5]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] font-medium text-white hover:bg-[#4d58f5]"
             >
               <Plus className="size-6" />
               Создать документ
@@ -408,8 +408,8 @@ export function GlassListDocumentsClient(props: Props) {
               href={`/journals/${routeCode}`}
               className={`relative pb-4 ${
                 props.activeTab === "active"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Активные
@@ -418,8 +418,8 @@ export function GlassListDocumentsClient(props: Props) {
               href={`/journals/${routeCode}?tab=closed`}
               className={`relative pb-4 ${
                 props.activeTab === "closed"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Закрытые
@@ -472,7 +472,7 @@ export function GlassListDocumentsClient(props: Props) {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex size-10 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]"
+                        className="flex size-10 items-center justify-center rounded-full text-[#5566f6] hover:bg-[#f5f6ff]"
                       >
                         <Ellipsis className="size-8" />
                       </button>

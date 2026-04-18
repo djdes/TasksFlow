@@ -328,7 +328,7 @@ export function PerishableRejectionDocumentClient({
       <DocumentBackLink href="/journals/perishable_rejection" documentId={documentId} />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.03em]">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {title}
           </h1>
         </div>
@@ -387,7 +387,7 @@ export function PerishableRejectionDocumentClient({
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  className="bg-[#5b66ff] hover:bg-[#4d58f5]"
+                  className="bg-[#5566f6] hover:bg-[#4d58f5]"
                 >
                   <Plus className="size-4" />
                   Добавить
@@ -1024,7 +1024,7 @@ export function PerishableRejectionDocumentClient({
                   type="button"
                   className={`rounded-t-md px-4 py-2 text-sm font-medium ${
                     activeListSection === key
-                      ? "bg-[#5b66ff] text-white"
+                      ? "bg-[#5566f6] text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                   onClick={() => {
@@ -1156,7 +1156,7 @@ export function PerishableRejectionDocumentClient({
                   </div>
                   <button
                     type="button"
-                    className="text-[#5b66ff] underline"
+                    className="text-[#5566f6] underline"
                     onClick={() => importItemsFromText("products")}
                   >
                     Добавить из файла
@@ -1203,7 +1203,7 @@ export function PerishableRejectionDocumentClient({
                 </div>
                 <button
                   type="button"
-                  className="text-[#5b66ff] underline"
+                  className="text-[#5566f6] underline"
                   onClick={() => importItemsFromText("manufacturers")}
                 >
                   Добавить из файла
@@ -1247,7 +1247,7 @@ export function PerishableRejectionDocumentClient({
                 </div>
                 <button
                   type="button"
-                  className="text-[#5b66ff] underline"
+                  className="text-[#5566f6] underline"
                   onClick={() => importItemsFromText("suppliers")}
                 >
                   Добавить из файла

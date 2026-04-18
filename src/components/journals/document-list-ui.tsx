@@ -23,13 +23,13 @@ export function JournalTopBar(props: {
 
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <h1 className="max-w-[70%] text-[48px] font-semibold tracking-[-0.04em] text-black">
+      <h1 className="max-w-[70%] text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
         {props.heading}
       </h1>
       <div className="flex shrink-0 items-center gap-3">
         <Button
           variant="outline"
-          className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
           asChild
         >
           <Link href="/sanpin">
@@ -42,7 +42,7 @@ export function JournalTopBar(props: {
             templateCode={props.templateCode}
             templateName={props.templateName}
             users={props.users}
-            triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
+            triggerClassName="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] font-medium text-white hover:bg-[#4a5bf0]"
             triggerLabel="Создать документ"
             triggerIcon={<Plus className="size-4" />}
           />
@@ -59,14 +59,14 @@ export function JournalTabs(props: {
 }) {
   const compact = props.compact ?? true;
   return (
-    <div className={compact ? "border-b border-[#d9dce8]" : "border-b border-[#d9d9e4]"}>
+    <div className={compact ? "border-b border-[#d9dce8]" : "border-b border-[#ececf4]"}>
       <div className="flex gap-12 text-[16px]">
         <Link
           href={`/journals/${props.templateCode}`}
           className={`relative pb-5 ${
             props.activeTab === "active"
-              ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
-              : "text-[#7c7c93]"
+              ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
+              : "text-[#6f7282]"
           }`}
         >
           Активные
@@ -75,8 +75,8 @@ export function JournalTabs(props: {
           href={`/journals/${props.templateCode}?tab=closed`}
           className={`relative pb-5 ${
             props.activeTab === "closed"
-              ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
-              : "text-[#7c7c93]"
+              ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
+              : "text-[#6f7282]"
           }`}
         >
           Закрытые
@@ -115,7 +115,7 @@ export function DocumentActionsMenu(props: {
           type="button"
           className="flex size-10 items-center justify-center rounded-full hover:bg-[#f5f6ff]"
         >
-          <Ellipsis className="size-8 text-[#5b66ff]" />
+          <Ellipsis className="size-8 text-[#5566f6]" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

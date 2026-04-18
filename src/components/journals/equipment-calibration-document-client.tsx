@@ -257,7 +257,7 @@ export function EquipmentCalibrationDocumentClient({
 
       {/* screen header */}
       <div className="flex items-start justify-between gap-4 print:hidden">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{title}</h1>
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em]">{title}</h1>
         <Button
           type="button"
           variant="outline"
@@ -270,7 +270,7 @@ export function EquipmentCalibrationDocumentClient({
             setSettingsApproveEmployee(config.approveEmployee);
             setSettingsOpen(true);
           }}
-          className="h-11 shrink-0 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          className="h-11 shrink-0 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
         >
           Настройки журнала
         </Button>
@@ -282,7 +282,7 @@ export function EquipmentCalibrationDocumentClient({
           <button
             type="button"
             onClick={() => setSelectedRows([])}
-            className="text-[#7c7c93] hover:text-black"
+            className="text-[#6f7282] hover:text-black"
           >
             <X className="size-4" />
           </button>
@@ -354,7 +354,7 @@ export function EquipmentCalibrationDocumentClient({
           <div className="flex flex-wrap items-center gap-3 print:hidden">
             <Button
               type="button"
-              className="bg-[#5b66ff] hover:bg-[#4d58f5]"
+              className="bg-[#5566f6] hover:bg-[#4d58f5]"
               onClick={() => {
                 resetDraft();
                 setAddModalOpen(true);

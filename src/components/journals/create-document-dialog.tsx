@@ -448,7 +448,7 @@ export function CreateDocumentDialog({
                     type="checkbox"
                     checked={medBookIncludeVaccinations}
                     onChange={(e) => setMedBookIncludeVaccinations(e.target.checked)}
-                    className="size-5 rounded accent-[#5b66ff]"
+                    className="size-5 rounded accent-[#5566f6]"
                   />
                   включить &quot;Прививки&quot;
                 </label>
@@ -481,7 +481,7 @@ export function CreateDocumentDialog({
                             type="radio"
                             checked={equipmentCleaningVariant === variant}
                             onChange={() => setEquipmentCleaningVariant(variant)}
-                            className="size-5 accent-[#5b66ff]"
+                            className="size-5 accent-[#5566f6]"
                           />
                           {EQUIPMENT_CLEANING_VARIANT_LABELS[variant]}
                         </label>
@@ -568,7 +568,7 @@ export function CreateDocumentDialog({
                       type="checkbox"
                       checked={medBookIncludeVaccinations}
                       onChange={(e) => setMedBookIncludeVaccinations(e.target.checked)}
-                      className="size-5 rounded accent-[#5b66ff]"
+                      className="size-5 rounded accent-[#5566f6]"
                     />
                     Добавить поле &quot;Подпись инструктируемого&quot;
                   </label>
@@ -622,7 +622,7 @@ export function CreateDocumentDialog({
                         type="checkbox"
                         checked={cleaningVentilation}
                         onChange={(e) => setCleaningVentilation(e.target.checked)}
-                        className="size-5 rounded accent-[#5b66ff]"
+                        className="size-5 rounded accent-[#5566f6]"
                       />
                       Проветривание
                     </label>
@@ -729,7 +729,7 @@ export function CreateDocumentDialog({
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
+                  className="h-11 rounded-2xl bg-[#5566f6] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
                 >
                   {isSubmitting ? "Создание..." : "Создать"}
                 </Button>

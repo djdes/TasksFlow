@@ -535,13 +535,13 @@ export function AccidentDocumentClient(props: Props) {
 
 
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em]">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em]">
             {title || ACCIDENT_DOCUMENT_HEADING}
           </h1>
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 className="size-4" />
@@ -610,7 +610,7 @@ export function AccidentDocumentClient(props: Props) {
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-2xl border-[#edf0fb] bg-[#fafbff] px-4 text-[15px] text-[#5b66ff]"
+              className="h-11 rounded-2xl border-[#edf0fb] bg-[#fafbff] px-4 text-[15px] text-[#5566f6]"
               onClick={() => setFinishOpen(true)}
             >
               Закончить журнал

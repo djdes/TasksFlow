@@ -610,7 +610,7 @@ export function CleaningVentilationChecklistDocumentClient({
         <DocumentBackLink href={`/journals/${routeCode}`} documentId={documentId} />
 
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <h1 className="max-w-[980px] text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="max-w-[980px] text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {docTitle}
           </h1>
           <div className="flex items-center gap-3">
@@ -619,7 +619,7 @@ export function CleaningVentilationChecklistDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[17px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[17px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Настройки журнала
               </Button>

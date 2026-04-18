@@ -182,7 +182,7 @@ function ComplaintRowDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : row ? "Сохранить" : "Добавить"}
             </Button>
@@ -259,7 +259,7 @@ function SettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -308,7 +308,7 @@ function FinishDialog({
             type="button"
             onClick={handleFinish}
             disabled={submitting}
-            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+            className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
           >
             {submitting ? "Завершение..." : "Закончить"}
           </Button>
@@ -416,7 +416,7 @@ export function ComplaintDocumentClient({
         <DocumentBackLink href="/journals/complaint_register" documentId={documentId} />
         {selectedRowIds.length > 0 && status === "active" && (
           <div className="flex items-center gap-4 rounded-[12px] bg-white px-2 py-2">
-            <div className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-[#fafbff] px-6 text-[18px] text-[#5b66ff]">
+            <div className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-[#fafbff] px-6 text-[18px] text-[#5566f6]">
               <button
                 type="button"
                 onClick={() => setSelectedRowIds([])}
@@ -443,7 +443,7 @@ export function ComplaintDocumentClient({
         )}
 
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {documentTitle}
           </h1>
         </div>
@@ -491,7 +491,7 @@ export function ComplaintDocumentClient({
                 setEditingRow(null);
                 setRowDialogOpen(true);
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-5" />
               Добавить
@@ -502,7 +502,7 @@ export function ComplaintDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Настройки журнала
               </Button>
@@ -510,7 +510,7 @@ export function ComplaintDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setFinishOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Закончить журнал
               </Button>

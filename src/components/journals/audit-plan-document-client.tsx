@@ -662,7 +662,7 @@ export function AuditPlanDocumentClient({
         {!readOnly && (
           <Button
             variant="outline"
-            className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+            className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]"
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 className="size-4" />
@@ -671,13 +671,13 @@ export function AuditPlanDocumentClient({
         )}
       </div>
 
-      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">
+      <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">
         {title}
       </h1>
 
       {selectedRowIds.length > 0 && !readOnly && (
         <div className="flex items-center gap-4 rounded-2xl bg-[#f3f4fe] px-6 py-3 print:hidden">
-          <button type="button" className="flex items-center gap-1 text-[16px] text-[#5b66ff]" onClick={() => setSelectedRowIds([])}>
+          <button type="button" className="flex items-center gap-1 text-[16px] text-[#5566f6]" onClick={() => setSelectedRowIds([])}>
             <X className="size-4" /> Выбрано: {selectedRowIds.length}
           </button>
           <button type="button" className="flex items-center gap-1 text-[16px] text-[#ff3b30]" onClick={deleteSelectedRows}>

@@ -709,10 +709,10 @@ export function GlassControlDocumentClient(props: Props) {
     <div className="space-y-6 text-black">
       <DocumentBackLink href="/journals/glass_control" documentId={props.documentId} />
       {selectedCount > 0 && !isClosed && (
-        <div className="sticky top-0 z-30 -mx-6 flex items-center gap-4 rounded-[20px] border-b border-[#eef0fb] bg-white/95 px-6 py-3 shadow-sm backdrop-blur">
+        <div className="sticky top-0 z-30 -mx-6 flex items-center gap-4 rounded-[20px] border-b border-[#dcdfed] bg-white/95 px-6 py-3 shadow-sm backdrop-blur">
           <button
             type="button"
-            className="rounded-xl px-4 py-2 text-[18px] text-[#5b66ff]"
+            className="rounded-xl px-4 py-2 text-[18px] text-[#5566f6]"
             onClick={() => setSelectedRowIds([])}
           >
             <X className="mr-2 inline size-5" />
@@ -735,7 +735,7 @@ export function GlassControlDocumentClient(props: Props) {
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setSettingsOpen(true)}
             disabled={isClosed}
           >
@@ -744,7 +744,7 @@ export function GlassControlDocumentClient(props: Props) {
           </Button>
         </div>
 
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {config.documentName || props.title || GLASS_CONTROL_DOCUMENT_TITLE}
         </h1>
 
@@ -820,7 +820,7 @@ export function GlassControlDocumentClient(props: Props) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 onClick={() => setCloseOpen(true)}
               >
                 Закончить журнал

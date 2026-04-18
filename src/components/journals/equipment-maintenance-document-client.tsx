@@ -259,7 +259,7 @@ export function EquipmentMaintenanceDocumentClient({
       {/* screen header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.03em]">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {title}
           </h1>
         </div>
@@ -352,7 +352,7 @@ export function EquipmentMaintenanceDocumentClient({
           <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
-              className="bg-[#5b66ff] hover:bg-[#4d58f5]"
+              className="bg-[#5566f6] hover:bg-[#4d58f5]"
               onClick={() => {
                 resetDraft();
                 setAddModalOpen(true);

@@ -220,7 +220,7 @@ function RoomDialog({
                 <Switch
                   checked={temperatureEnabled}
                   onCheckedChange={setTemperatureEnabled}
-                  className="h-8 w-14 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                  className="h-8 w-14 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
                 />
                 <div className="text-[15px] text-black">Температура (T)</div>
                 <Input
@@ -245,7 +245,7 @@ function RoomDialog({
                 <Switch
                   checked={humidityEnabled}
                   onCheckedChange={setHumidityEnabled}
-                  className="h-8 w-14 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                  className="h-8 w-14 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
                 />
                 <div className="text-[15px] text-black">Влажность воздуха (ВВ)</div>
                 <Input
@@ -288,7 +288,7 @@ function RoomDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || name.trim() === ""}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-5 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-5 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : initialRoom ? "Сохранить" : "Добавить"}
             </Button>
@@ -395,7 +395,7 @@ function ResponsibleDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !employeeId}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -516,7 +516,7 @@ function AddRowDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !date || !employeeId}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Создание..." : "Создать"}
             </Button>
@@ -698,7 +698,7 @@ function JournalSettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || name.trim() === ""}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -1157,7 +1157,7 @@ export function ClimateDocumentClient({
         <DocumentBackLink href="/journals/climate_control" documentId={documentId} />
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
-            <h1 className="mt-2 text-[48px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
           </div>
@@ -1169,7 +1169,7 @@ export function ClimateDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки документа
@@ -1178,7 +1178,7 @@ export function ClimateDocumentClient({
                 documentId={documentId}
                 title={documentTitle}
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               />
               </>
             )}
@@ -1192,7 +1192,7 @@ export function ClimateDocumentClient({
                 checked={checkedAutoFill}
                 onCheckedChange={handleAutoFillChange}
                 disabled={status !== "active" || isSwitching}
-                className="h-10 w-16 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                className="h-10 w-16 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
               />
               <span className="text-[20px] font-medium text-black">
                 Автоматически заполнять журнал
@@ -1202,7 +1202,7 @@ export function ClimateDocumentClient({
             <button
               type="button"
               onClick={() => setSummaryOpen((value) => !value)}
-              className="flex size-11 items-center justify-center rounded-full text-[#5b66ff] hover:bg-white/70"
+              className="flex size-11 items-center justify-center rounded-full text-[#5566f6] hover:bg-white/70"
             >
               {summaryOpen ? <ChevronUp className="size-7" /> : <ChevronDown className="size-7" />}
             </button>
@@ -1266,7 +1266,7 @@ export function ClimateDocumentClient({
                                           setEditingRoom(room);
                                           setRoomDialogOpen(true);
                                         }}
-                                        className="text-[#5b66ff] hover:text-[#3f49d8]"
+                                        className="text-[#5566f6] hover:text-[#3f49d8]"
                                       >
                                         <Pencil className="size-4" />
                                       </button>
@@ -1324,7 +1324,7 @@ export function ClimateDocumentClient({
             <Button
               type="button"
               onClick={() => setRowDialogOpen(true)}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-7" />
               Добавить строку

@@ -769,7 +769,7 @@ function SpecificationTable({ config, onEdit }: { config: UvRuntimeDocumentConfi
         <button
           type="button"
           onClick={onEdit}
-          className="text-[13px] text-[#5b66ff] underline hover:no-underline"
+          className="text-[13px] text-[#5566f6] underline hover:no-underline"
         >
           Настроить спецификацию
         </button>
@@ -1053,14 +1053,14 @@ export function UvLampRuntimeDocumentClient(props: Props) {
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
       <div className="flex items-start justify-between gap-4 print:hidden">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           Журнал учета работы УФ бактерицидной установки
         </h1>
         <Button
           type="button"
           variant="outline"
           onClick={() => setSettingsOpen(true)}
-          className="h-11 shrink-0 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          className="h-11 shrink-0 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
         >
           Настройки журнала
         </Button>
@@ -1077,12 +1077,12 @@ export function UvLampRuntimeDocumentClient(props: Props) {
       {/* Toolbar row */}
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         {selectedRowIds.length > 0 && (
-          <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+          <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
             <div className="flex items-center gap-2 text-[14px]">
               <button
                 type="button"
                 onClick={() => setSelectedRowIds([])}
-                className="text-[#7c7c93] hover:text-black"
+                className="text-[#6f7282] hover:text-black"
               >
                 <X className="size-4" />
               </button>
@@ -1134,7 +1134,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
           <Button
             type="button"
             onClick={() => setAddRowOpen(true)}
-            className="h-11 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
+            className="h-11 rounded-xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0]"
           >
             <Plus className="mr-1 size-4" />
             Добавить
@@ -1143,7 +1143,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
             type="button"
             variant="outline"
             onClick={handleCloseJournal}
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
           >
             Закончить журнал
           </Button>

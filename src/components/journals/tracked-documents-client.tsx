@@ -267,7 +267,7 @@ function EditTrackedDocumentDialog({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-6 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -316,11 +316,11 @@ function TrackedDocumentsClientImpl({
     <>
       <div className="space-y-10">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{heading}</h1>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               asChild
             >
               <Link href="/sanpin">
@@ -333,7 +333,7 @@ function TrackedDocumentsClientImpl({
                 templateCode={templateCode}
                 templateName={templateName}
                 users={users}
-                triggerClassName="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] font-medium text-white hover:bg-[#4c58ff]"
+                triggerClassName="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] font-medium text-white hover:bg-[#4a5bf0]"
                 triggerLabel="Создать документ"
                 triggerIcon={<Plus className="size-4" />}
               />
@@ -347,8 +347,8 @@ function TrackedDocumentsClientImpl({
               href={`/journals/${templateCode}`}
               className={`relative pb-4 ${
                 activeTab === "active"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Активные
@@ -357,8 +357,8 @@ function TrackedDocumentsClientImpl({
               href={`/journals/${templateCode}?tab=closed`}
               className={`relative pb-4 ${
                 activeTab === "closed"
-                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                  : "text-[#7c7c93]"
+                  ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                  : "text-[#6f7282]"
               }`}
             >
               Закрытые
@@ -400,7 +400,7 @@ function TrackedDocumentsClientImpl({
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex size-8 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]"
+                        className="flex size-8 items-center justify-center rounded-full text-[#5566f6] hover:bg-[#f5f6ff]"
                       >
                         <Ellipsis className="size-6" />
                       </button>

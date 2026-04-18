@@ -239,6 +239,16 @@ Relevant files:
 - `src/components/journals/hygiene-document-client.tsx`
 - `src/lib/hygiene-document.ts`
 
+## Skills and agents discovery
+
+At the start of every session, check what's available before acting:
+
+- **Skills** — all `.claude/skills/*` are auto-discovered by the Skill tool. Relevant namespaces in this project: `wesetup-design` (our design system; invoke before any UI edit), `karpathy-guidelines` (coding discipline), `anthropic-*` (claude-api, mcp-builder, skill-creator, webapp-testing, frontend-design), `everything-*` (backend/frontend-patterns, tdd-workflow, security-review, coding-standards, continuous-learning, strategic-compact, verification-loop).
+- **Agents** — all `.claude/agents/*.md` are available via the Agent tool. 140 VoltAgent specialists under bare names (`backend-developer`, `frontend-developer`, `api-designer`, `security-auditor`, etc.) plus 9 `everything-*` prefixed agents (code-reviewer, tdd-guide, refactor-cleaner, etc.) plus 4 `task-*` for the proof-loop.
+- **References** — `.claude/references/prompt-guide/` (ThamJiaHe prompt engineering reference), `.claude/references/awesome-claude-code/` (curated index).
+
+Rule: **invoke relevant skills before acting, not after.** `wesetup-design` before any `.tsx` change on a visible surface. `karpathy-guidelines` before a non-trivial refactor. For new features touching existing code, invoke `superpowers:brainstorming` first to lock scope. Don't name-check skills without using them — if the task matches a skill's description, call it.
+
 ## Conventions
 
 - UI text is Russian.

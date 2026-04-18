@@ -580,7 +580,7 @@ export function HygieneDocumentClient({
             </div>
 
             {isActive ? (
-              <div className="mt-6 text-[13px] text-[#7c7c93]">
+              <div className="mt-6 text-[13px] text-[#6f7282]">
                 Клик по ячейке со статусом переключает отметку:{" "}
                 {HYGIENE_STATUS_OPTIONS.map((item) => item.code).join(" / ")}. Клик по строке
                 температуры переключает значение между «нет» и «да».

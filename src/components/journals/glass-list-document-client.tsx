@@ -142,7 +142,7 @@ export function GlassListDocumentClient({
         <div className="flex items-center gap-4 rounded-[20px] bg-white px-6 py-4 shadow-sm">
           <button
             type="button"
-            className="rounded-xl px-4 py-2 text-[18px] text-[#5b66ff]"
+            className="rounded-xl px-4 py-2 text-[18px] text-[#5566f6]"
             onClick={() => setSelectedRows([])}
           >
             <X className="mr-2 inline size-5" />
@@ -165,7 +165,7 @@ export function GlassListDocumentClient({
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setSettingsOpen(true)}
             disabled={isClosed}
           >
@@ -179,14 +179,14 @@ export function GlassListDocumentClient({
               documentId={documentId}
               title={title}
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Закончить журнал
             </DocumentCloseButton>
           </div>
         ) : null}
 
-        <h1 className="mb-10 text-[48px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+        <h1 className="mb-10 text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{title}</h1>
 
         <div className="mx-auto max-w-[1300px] space-y-8">
           <table className="w-full border-collapse text-[16px]">
@@ -227,7 +227,7 @@ export function GlassListDocumentClient({
             <div className="flex items-center gap-4">
               <Button
                 type="button"
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
                 onClick={() =>
                   setRowDialog({
                     open: true,
@@ -381,7 +381,7 @@ export function GlassListDocumentClient({
                 type="button"
                 disabled={saving}
                 onClick={() => saveSettings().catch(() => undefined)}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {saving ? "Сохранение..." : "Сохранить"}
               </Button>
@@ -452,7 +452,7 @@ export function GlassListDocumentClient({
                 type="button"
                 disabled={saving}
                 onClick={() => saveRow().catch(() => undefined)}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {saving ? "Сохранение..." : rowDialog.rowIndex === null ? "Добавить" : "Сохранить"}
               </Button>

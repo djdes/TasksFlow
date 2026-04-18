@@ -407,7 +407,7 @@ function EditZonesDialog(props: {
                 <Checkbox
                   checked={selected.has(zone.id)}
                   onCheckedChange={() => toggleSelect(zone.id)}
-                  className="size-5 rounded border-[#dfe1ec] data-[state=checked]:border-[#5b66ff] data-[state=checked]:bg-[#5b66ff]"
+                  className="size-5 rounded border-[#dfe1ec] data-[state=checked]:border-[#5566f6] data-[state=checked]:bg-[#5566f6]"
                 />
                 {editingId === zone.id ? (
                   <div className="flex flex-1 items-center gap-2">
@@ -421,7 +421,7 @@ function EditZonesDialog(props: {
                     />
                     <button
                       type="button"
-                      className="rounded-md p-1 text-[#5b66ff] hover:bg-[#f3f4fb]"
+                      className="rounded-md p-1 text-[#5566f6] hover:bg-[#f3f4fb]"
                       onClick={confirmEdit}
                     >
                       <Check className="size-5" />
@@ -484,7 +484,7 @@ function EditZonesDialog(props: {
               size="icon"
               onClick={handleAddZone}
               disabled={!newName.trim()}
-              className="size-12 rounded-xl bg-[#5b66ff] text-white hover:bg-[#4b57ff]"
+              className="size-12 rounded-xl bg-[#5566f6] text-white hover:bg-[#4b57ff]"
             >
               <Plus className="size-5" />
             </Button>
@@ -532,7 +532,7 @@ function TimeCell({
     return (
       <button
         type="button"
-        className="w-full text-center text-[14px] text-[#b0b3c4] hover:text-[#5b66ff]"
+        className="w-full text-center text-[14px] text-[#b0b3c4] hover:text-[#5566f6]"
         onClick={() => setEditing(true)}
       >
         —
@@ -544,7 +544,7 @@ function TimeCell({
     return (
       <button
         type="button"
-        className="w-full text-center text-[14px] text-black hover:text-[#5b66ff]"
+        className="w-full text-center text-[14px] text-black hover:text-[#5566f6]"
         onClick={() => setEditing(true)}
       >
         {value}
@@ -824,7 +824,7 @@ export function SanitaryDayChecklistDocumentClient({
         {/* ─── Toolbar (screen only) ─── */}
         <div className="screen-only mb-10 space-y-8">
           <div className="flex items-start justify-between gap-6">
-            <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {title || getSanitaryDayChecklistTitle(routeCode)}
             </h1>
             {isActive && (
@@ -832,7 +832,7 @@ export function SanitaryDayChecklistDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 shrink-0 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 shrink-0 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Настройки журнала
               </Button>
@@ -844,14 +844,14 @@ export function SanitaryDayChecklistDocumentClient({
               <Button
                 type="button"
                 onClick={() => setAddItemOpen(true)}
-                className="h-[58px] rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-[58px] rounded-2xl bg-[#5566f6] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
               >
                 <Plus className="mr-2 size-5" />
                 Добавить
               </Button>
               <button
                 type="button"
-                className="text-[18px] font-medium text-[#5464ff] hover:underline"
+                className="text-[18px] font-medium text-[#3848c7] hover:underline"
                 onClick={() => setEditZonesOpen(true)}
               >
                 Редактировать списки
@@ -1055,7 +1055,7 @@ function ZoneBlock({
                 <Checkbox
                   checked={isChecked}
                   onCheckedChange={() => onToggleCheck(item.id)}
-                  className="size-5 rounded border-[#dfe1ec] data-[state=checked]:border-[#5b66ff] data-[state=checked]:bg-[#5b66ff]"
+                  className="size-5 rounded border-[#dfe1ec] data-[state=checked]:border-[#5566f6] data-[state=checked]:bg-[#5566f6]"
                 />
               )}
             </td>
@@ -1075,7 +1075,7 @@ function ZoneBlock({
                   <div className="screen-only flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
-                      className="rounded p-1 text-[#6f7282] hover:bg-[#f3f4fb] hover:text-[#5b66ff]"
+                      className="rounded p-1 text-[#6f7282] hover:bg-[#f3f4fb] hover:text-[#5566f6]"
                       onClick={() => onEditItem(item)}
                     >
                       <Pencil className="size-4" />

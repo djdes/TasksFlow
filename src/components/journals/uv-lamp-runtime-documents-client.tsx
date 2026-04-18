@@ -288,7 +288,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {props.activeTab === "closed"
             ? "Журнал учета работы УФ бактерицидной установки (Закрытые!!!)"
             : "Журнал учета работы УФ бактерицидной установки"}
@@ -296,7 +296,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="h-12 rounded-xl border-[#eef0fb] px-4 text-[14px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-12 rounded-xl border-[#dcdfed] px-4 text-[14px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             asChild
           >
             <Link href="/sanpin">
@@ -309,7 +309,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
               templateCode={props.templateCode}
               templateName={props.templateName}
               users={props.users}
-              triggerClassName="h-12 rounded-xl bg-[#5b66ff] px-5 text-[14px] font-medium text-white hover:bg-[#4c58ff]"
+              triggerClassName="h-12 rounded-xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0]"
               triggerLabel="Создать документ"
               triggerIcon={<Plus className="size-4" />}
             />
@@ -323,8 +323,8 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
             href={`/journals/${routeCode}`}
             className={`relative pb-4 ${
               props.activeTab === "active"
-                ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                : "text-[#7c7c93]"
+                ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                : "text-[#6f7282]"
             }`}
           >
             Активные
@@ -333,8 +333,8 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
             href={`/journals/${routeCode}?tab=closed`}
             className={`relative pb-4 ${
               props.activeTab === "closed"
-                ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5b66ff]"
-                : "text-[#7c7c93]"
+                ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5566f6]"
+                : "text-[#6f7282]"
             }`}
           >
             Закрытые
@@ -386,7 +386,7 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex size-11 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]"
+                      className="flex size-11 items-center justify-center rounded-full text-[#5566f6] hover:bg-[#f5f6ff]"
                     >
                       <Ellipsis className="size-6" />
                     </button>

@@ -131,7 +131,7 @@ function AddableSelectField(props: {
         <Button
           type="button"
           onClick={props.onAdd}
-          className="size-14 rounded-[14px] bg-[#5b66ff] p-0 text-white hover:bg-[#4b57ff]"
+          className="size-14 rounded-[14px] bg-[#5566f6] p-0 text-white hover:bg-[#4b57ff]"
         >
           <Plus className="size-5" />
         </Button>
@@ -400,7 +400,7 @@ function RowDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : row ? "Сохранить" : "Добавить"}
             </Button>
@@ -563,7 +563,7 @@ function SettingsDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -616,7 +616,7 @@ function ListEditorSection({
             <button
               type="button"
               onClick={() => onEditStart(item.id, item.name)}
-              className="rounded-md p-1 text-[#5b66ff]"
+              className="rounded-md p-1 text-[#5566f6]"
             >
               <Pencil className="size-4" />
             </button>
@@ -633,7 +633,7 @@ function ListEditorSection({
           <Button
             type="button"
             onClick={onAdd}
-            className="size-14 rounded-[14px] bg-[#5b66ff] p-0 text-white hover:bg-[#4b57ff]"
+            className="size-14 rounded-[14px] bg-[#5566f6] p-0 text-white hover:bg-[#4b57ff]"
           >
             <Plus className="size-5" />
           </Button>
@@ -669,7 +669,7 @@ function ListEditorSection({
                 const file = event.dataTransfer.files?.[0];
                 if (file) onImportFile(file);
               }}
-              className="flex min-h-[96px] cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-[#cfd4e9] bg-white text-center transition-colors hover:border-[#5b66ff] hover:bg-[#f8f9ff]"
+              className="flex min-h-[96px] cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-[#cfd4e9] bg-white text-center transition-colors hover:border-[#5566f6] hover:bg-[#f5f6ff]"
             >
               <div className="flex flex-col items-center gap-2 text-[#727890]">
                 <Paperclip className="size-5" />
@@ -857,7 +857,7 @@ function ListsDialog({
                   setSubmitting(false);
                 }
               }}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               {submitting ? "Сохранение..." : "Закрыть"}
             </Button>
@@ -1032,7 +1032,7 @@ export function MetalImpurityDocumentClient({
       <div className="space-y-8 bg-white text-black">
         {selectedRowIds.length > 0 && status === "active" && (
           <div className="flex items-center gap-4 rounded-[12px] bg-white px-2 py-2 print:hidden">
-            <div className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-[#fafbff] px-6 text-[18px] text-[#5b66ff]">
+            <div className="inline-flex h-14 items-center gap-3 rounded-[12px] bg-[#fafbff] px-6 text-[18px] text-[#5566f6]">
               <button
                 type="button"
                 onClick={() => setSelectedRowIds([])}
@@ -1062,7 +1062,7 @@ export function MetalImpurityDocumentClient({
         <DocumentBackLink href={`/journals/${METAL_IMPURITY_TEMPLATE_CODE}`} documentId={documentId} />
         <div className="flex items-start justify-between gap-6 print:hidden">
           <div>
-            <h1 className="mt-4 text-[48px] font-semibold tracking-[-0.04em] text-black">
+            <h1 className="mt-4 text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
           </div>
@@ -1071,7 +1071,7 @@ export function MetalImpurityDocumentClient({
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-6 text-[16px] text-[#5464ff] shadow-none"
+              className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[16px] text-[#3848c7] shadow-none"
             >
               Настройки журнала
             </Button>
@@ -1123,7 +1123,7 @@ export function MetalImpurityDocumentClient({
                   setEditingRow(null);
                   setRowDialogOpen(true);
                 }}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 <Plus className="size-5" />
                 Добавить
@@ -1132,7 +1132,7 @@ export function MetalImpurityDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setListsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Редактировать списки
               </Button>
@@ -1141,7 +1141,7 @@ export function MetalImpurityDocumentClient({
               type="button"
               variant="outline"
               onClick={() => setFinishOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Закончить журнал
             </Button>
@@ -1301,7 +1301,7 @@ export function MetalImpurityDocumentClient({
                   toast.error(error instanceof Error ? error.message : "Ошибка закрытия")
                 )
               }
-              className="h-11 rounded-2xl bg-[#5b66ff] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-8 text-[16px] text-white hover:bg-[#4b57ff]"
             >
               Закончить
             </Button>

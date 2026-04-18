@@ -30,7 +30,7 @@ export function ScanJournalDocumentClient({
       <DocumentBackLink href={`/journals/${templateCode}`} documentId={documentId} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {templateName}
           </h1>
           <div className="mt-2 text-sm text-[#7a7d8e]">

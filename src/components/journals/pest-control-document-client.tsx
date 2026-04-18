@@ -543,14 +543,14 @@ export function PestControlDocumentClient(props: Props) {
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {props.title || PEST_CONTROL_DOCUMENT_TITLE}
         </h1>
         {!readOnly && (
           <Button
             type="button"
             variant="outline"
-            className="h-12 rounded-xl border-[#eef0fb] px-5 text-[14px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-12 rounded-xl border-[#dcdfed] px-5 text-[14px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setSettingsOpen(true)}
           >
             Настройки журнала
@@ -573,7 +573,7 @@ export function PestControlDocumentClient(props: Props) {
         <div className="flex items-center gap-4 rounded-[16px] border border-[#eceef5] bg-white px-6 py-4">
           <button
             type="button"
-            className="flex items-center gap-2 text-[#5464ff]"
+            className="flex items-center gap-2 text-[#3848c7]"
             onClick={() => setSelectedIds([])}
           >
             <X className="size-5" />
@@ -606,7 +606,7 @@ export function PestControlDocumentClient(props: Props) {
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setCloseOpen(true)}
           >
             Закончить журнал
@@ -646,7 +646,7 @@ export function PestControlDocumentClient(props: Props) {
               return (
                 <tr
                   key={entry.id}
-                  className={!readOnly && !isPlaceholder ? "cursor-pointer hover:bg-[#f8f9ff]" : ""}
+                  className={!readOnly && !isPlaceholder ? "cursor-pointer hover:bg-[#f5f6ff]" : ""}
                   onClick={() => {
                     if (readOnly || isPlaceholder) return;
                     setEditing({ id: entry.id, data: entry.data });

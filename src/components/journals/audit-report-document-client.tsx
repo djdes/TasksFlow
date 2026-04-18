@@ -69,7 +69,7 @@ function FindingDialog({
             <Input type="date" value={draft.dueDateFact} onChange={(e) => setDraft({ ...draft, dueDateFact: e.target.value })} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
           </div>
           <div className="flex justify-end">
-            <Button type="button" onClick={async () => { await onSave(draft); onOpenChange(false); }} className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
+            <Button type="button" onClick={async () => { await onSave(draft); onOpenChange(false); }} className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
               Сохранить
             </Button>
           </div>
@@ -148,7 +148,7 @@ export function AuditReportDocumentClient({
           <div />
           {status === "active" && (
             <>
-            <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]" onClick={() => setSettingsOpen(true)}>
+            <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]" onClick={() => setSettingsOpen(true)}>
               <Settings2 className="size-4" />
               Настройки журнала
             </Button>
@@ -156,7 +156,7 @@ export function AuditReportDocumentClient({
               documentId={documentId}
               title={documentTitle}
               variant="outline"
-              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5b66ff]"
+              className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]"
             >
               Закончить журнал
             </DocumentCloseButton>
@@ -164,7 +164,7 @@ export function AuditReportDocumentClient({
           )}
         </div>
 
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black print:hidden">{documentTitle}</h1>
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">{documentTitle}</h1>
 
         <section className="space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
           <div className="grid grid-cols-[220px_1fr_120px] border border-black/70">
@@ -195,7 +195,7 @@ export function AuditReportDocumentClient({
 
           {status === "active" && (
             <div className="print:hidden">
-              <Button type="button" onClick={() => { setEditingFinding(null); setFindingOpen(true); }} className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
+              <Button type="button" onClick={() => { setEditingFinding(null); setFindingOpen(true); }} className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
                 <Plus className="size-5" />
                 Добавить несоответствие
               </Button>
@@ -305,7 +305,7 @@ export function AuditReportDocumentClient({
             <Input value={config.auditedObject} onChange={(e) => setConfig({ ...config, auditedObject: e.target.value })} placeholder="Объект аудита" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
             <Input value={config.auditors.join(", ")} onChange={(e) => setConfig({ ...config, auditors: e.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="Аудиторы через запятую" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" />
             <div className="flex justify-end">
-              <Button type="button" onClick={async () => { await persist(documentTitle.trim() || AUDIT_REPORT_DOCUMENT_TITLE, config); setSettingsOpen(false); }} className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
+              <Button type="button" onClick={async () => { await persist(documentTitle.trim() || AUDIT_REPORT_DOCUMENT_TITLE, config); setSettingsOpen(false); }} className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]">
                 Сохранить
               </Button>
             </div>

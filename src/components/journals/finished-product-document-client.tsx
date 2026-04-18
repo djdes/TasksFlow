@@ -155,7 +155,7 @@ export function FinishedProductDocumentClient({
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 onClick={() => setSettingsOpen(true)}
               >
                 <Settings2 className="size-4" />Настройки журнала
@@ -164,7 +164,7 @@ export function FinishedProductDocumentClient({
           }
         />
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{title}</h1>
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{title}</h1>
         </div>
       </div>
 
@@ -174,7 +174,7 @@ export function FinishedProductDocumentClient({
             documentId={documentId}
             title={title}
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
           >
             Закончить журнал
           </DocumentCloseButton>
@@ -201,7 +201,7 @@ export function FinishedProductDocumentClient({
         {!readOnly && <div className="flex flex-wrap gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] hover:bg-[#4d58f5]"><Plus className="size-5" />Добавить<ChevronDown className="ml-1 size-5" /></Button>
+              <Button type="button" className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] hover:bg-[#4d58f5]"><Plus className="size-5" />Добавить<ChevronDown className="ml-1 size-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-[300px] rounded-[24px] border-0 p-3 shadow-xl">
               <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px]" onSelect={() => setAddModalOpen(true)}>Добавить изделие</DropdownMenuItem>
@@ -209,7 +209,7 @@ export function FinishedProductDocumentClient({
               <DropdownMenuItem className="h-11 rounded-2xl px-4 text-[18px]" onSelect={() => { const text = window.prompt("Вставьте названия изделий, каждое с новой строки:"); if (!text) return; const items = text.split("\n").map((item) => item.trim()).filter(Boolean); setConfig((prev) => ({ ...prev, rows: [...prev.rows, ...items.map((item) => createDraft(users, item))] })); }}>Добавить из файла</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button type="button" variant="outline" className="h-11 rounded-2xl border-0 bg-[#f5f6ff] px-4 text-[15px] text-[#5464ff] hover:bg-[#eceeff]" onClick={() => setCatalogOpen(true)}>Редактировать список изделий</Button>
+          <Button type="button" variant="outline" className="h-11 rounded-2xl border-0 bg-[#f5f6ff] px-4 text-[15px] text-[#3848c7] hover:bg-[#eceeff]" onClick={() => setCatalogOpen(true)}>Редактировать список изделий</Button>
           <Button type="button" variant="outline" onClick={removeSelectedRows} disabled={selectedRows.length === 0}><Trash2 className="size-4" />Удалить выбранные</Button>
           <Button type="button" onClick={() => saveConfig()} disabled={isSaving || isPending}><Save className="size-4" />{isSaving ? "Сохранение..." : "Сохранить"}</Button>
         </div>}

@@ -693,7 +693,7 @@ export function ColdEquipmentDocumentClient({
         <DocumentBackLink href="/journals/cold_equipment_control" documentId={documentId} />
         <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-[1260px]">
-            <h1 className="text-[48px] font-semibold leading-[1.08] tracking-[-0.05em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
           </div>
@@ -705,7 +705,7 @@ export function ColdEquipmentDocumentClient({
               onClick={() => {
                 handlePrint().catch(() => undefined);
               }}
-              className="h-12 rounded-2xl border-[#eef0fb] px-5 text-[17px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+              className="h-12 rounded-2xl border-[#dcdfed] px-5 text-[17px] text-[#5566f6] shadow-none hover:bg-[#f5f6ff]"
             >
               <Printer className="size-5" />
               Печать
@@ -717,7 +717,7 @@ export function ColdEquipmentDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f5f6ff]"
               >
                 <Settings2 className="size-6" />
                 Настройки журнала
@@ -726,7 +726,7 @@ export function ColdEquipmentDocumentClient({
                 documentId={documentId}
                 title={documentTitle}
                 variant="outline"
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f5f6ff]"
               >
                 Закончить журнал
               </DocumentCloseButton>
@@ -815,7 +815,7 @@ export function ColdEquipmentDocumentClient({
         </div>
 
         {status === "active" ? (
-          <div className="sticky top-0 z-30 -mx-6 mb-6 flex flex-wrap items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+          <div className="sticky top-0 z-30 -mx-6 mb-6 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
             <Button
               type="button"
               onClick={() => {

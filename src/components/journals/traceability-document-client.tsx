@@ -264,7 +264,7 @@ function ListsDialog(props: {
                   <button type="button" className="rounded-xl p-2 text-[#6f7282] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => remove("raw", index)}><Trash2 className="size-5" /></button>
                 </div>
               ))}
-              {rawMaterials.length === 0 && <div className="rounded-2xl border border-dashed border-[#dfe1ec] px-4 py-4 text-[15px] text-[#7c7c93]">Список пуст</div>}
+              {rawMaterials.length === 0 && <div className="rounded-2xl border border-dashed border-[#dfe1ec] px-4 py-4 text-[15px] text-[#6f7282]">Список пуст</div>}
             </div>
             <div className="flex items-center gap-2"><Input value={newRaw} onChange={(e) => setNewRaw(e.target.value)} placeholder="Добавить новое сырье" className="h-12 rounded-2xl border-[#dfe1ec] px-4 text-[16px]" /><Button type="button" onClick={() => { const v = newRaw.trim(); if (!v) return; setRawMaterials((current) => [...current, v]); setNewRaw(""); }} className="h-12 rounded-2xl bg-[#5563ff] px-4 text-white hover:bg-[#4654ff]"><Plus className="size-5" /></Button></div>
           </section>
@@ -277,7 +277,7 @@ function ListsDialog(props: {
                   <button type="button" className="rounded-xl p-2 text-[#6f7282] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => remove("product", index)}><Trash2 className="size-5" /></button>
                 </div>
               ))}
-              {products.length === 0 && <div className="rounded-2xl border border-dashed border-[#dfe1ec] px-4 py-4 text-[15px] text-[#7c7c93]">Список пуст</div>}
+              {products.length === 0 && <div className="rounded-2xl border border-dashed border-[#dfe1ec] px-4 py-4 text-[15px] text-[#6f7282]">Список пуст</div>}
             </div>
             <div className="flex items-center gap-2"><Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="Добавить новую продукцию" className="h-12 rounded-2xl border-[#dfe1ec] px-4 text-[16px]" /><Button type="button" onClick={() => { const v = newProduct.trim(); if (!v) return; setProducts((current) => [...current, v]); setNewProduct(""); }} className="h-12 rounded-2xl bg-[#5563ff] px-4 text-white hover:bg-[#4654ff]"><Plus className="size-5" /></Button></div>
           </section>
@@ -458,7 +458,7 @@ function ImportDialog(props: {
         <DialogHeader className="border-b px-8 py-6"><div className="flex items-center justify-between gap-4"><DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">Добавление из Excel</DialogTitle><button type="button" className="rounded-xl p-2" onClick={() => props.onOpenChange(false)}><X className="size-7" /></button></div></DialogHeader>
         <div className="space-y-5 px-8 py-6">
           <div className="rounded-[24px] border border-[#e6e9f5] bg-[#fbfbff] px-5 py-4 text-[15px] leading-7 text-[#505469]"><p>Список должен быть в Excel-файле на первом листе и начинаться с первой строки.</p><p className="mt-3">Столбцы должны быть в фиксированном порядке:</p><ol className="mt-2 space-y-1 pl-5">{TRACEABILITY_IMPORT_COLUMNS.map((column, index) => <li key={column}>{index + 1}-й столбец - {column}</li>)}</ol></div>
-          <div className="space-y-2"><Button type="button" variant="outline" className="h-12 rounded-2xl border-[#dfe1ec] px-4 text-[16px]" onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Выберите файл</Button><div className="text-[15px] text-[#7c7c93]">{file ? file.name : "Файл не выбран"}</div><input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); e.currentTarget.value = ""; }} /></div>
+          <div className="space-y-2"><Button type="button" variant="outline" className="h-12 rounded-2xl border-[#dfe1ec] px-4 text-[16px]" onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Выберите файл</Button><div className="text-[15px] text-[#6f7282]">{file ? file.name : "Файл не выбран"}</div><input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); e.currentTarget.value = ""; }} /></div>
           <div className="flex justify-end pt-2"><Button type="button" onClick={save} disabled={!file || loading} className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4654ff]">{loading ? "Импорт..." : "Добавить"}</Button></div>
         </div>
       </DialogContent>
@@ -604,8 +604,8 @@ export function TraceabilityDocumentClient(props: Props) {
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{title || DEFAULT_TITLE}</h1>
-          <div className="mt-3 flex items-center gap-3"><span className={cn("inline-flex rounded-full px-3 py-1 text-[13px] font-medium", isClosed ? "bg-[#fff2f1] text-[#d2453d]" : "bg-[#eef1ff] text-[#5563ff]")}>{isClosed ? "Закрыт" : "Активен"}</span><span className="text-[15px] text-[#7c7c93]">Начат {formatDashDate(dateFrom)}</span></div>
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{title || DEFAULT_TITLE}</h1>
+          <div className="mt-3 flex items-center gap-3"><span className={cn("inline-flex rounded-full px-3 py-1 text-[13px] font-medium", isClosed ? "bg-[#fff2f1] text-[#d2453d]" : "bg-[#eef1ff] text-[#5563ff]")}>{isClosed ? "Закрыт" : "Активен"}</span><span className="text-[15px] text-[#6f7282]">Начат {formatDashDate(dateFrom)}</span></div>
         </div>
       </div>
 
@@ -623,7 +623,7 @@ export function TraceabilityDocumentClient(props: Props) {
           {!isClosed && <button type="button" onClick={() => setFinishOpen(true)} className="rounded-2xl bg-[#f7f8fd] px-5 py-4 text-[18px] font-medium text-[#5563ff]">Закончить журнал</button>}
         </div>
 
-        {selectedRowIds.length > 0 && !isClosed && <div className="sticky top-0 z-30 -mx-6 flex items-center gap-3 rounded-[18px] border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur print:hidden"><button type="button" className="text-[#7c7c93] hover:text-black" onClick={() => setSelectedRowIds([])}><X className="size-5" /></button><span className="text-[15px]">Выбрано: {selectedRowIds.length}</span><Button type="button" variant="outline" className="h-10 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => { deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось удалить строки")); }}><Trash2 className="size-4" />Удалить</Button></div>}
+        {selectedRowIds.length > 0 && !isClosed && <div className="sticky top-0 z-30 -mx-6 flex items-center gap-3 rounded-[18px] border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur print:hidden"><button type="button" className="text-[#6f7282] hover:text-black" onClick={() => setSelectedRowIds([])}><X className="size-5" /></button><span className="text-[15px]">Выбрано: {selectedRowIds.length}</span><Button type="button" variant="outline" className="h-10 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => { deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось удалить строки")); }}><Trash2 className="size-4" />Удалить</Button></div>}
 
         <div className="max-w-full overflow-x-auto rounded-[18px] border border-[#1f1f1f] bg-white">
           <table className="min-w-[980px] w-full border-collapse text-[14px] sm:min-w-[1480px]">
@@ -662,12 +662,12 @@ export function TraceabilityDocumentClient(props: Props) {
                     <td className="border border-black px-3 py-3 text-center">{row.responsibleEmployee || "—"}</td>
                   </tr>
                 );
-              }) : <tr><td colSpan={isClosed ? 8 : config.showShockTempField ? 9 : 8} className="border border-black px-4 py-10 text-center text-[15px] text-[#7c7c93]">Строк пока нет</td></tr>}
+              }) : <tr><td colSpan={isClosed ? 8 : config.showShockTempField ? 9 : 8} className="border border-black px-4 py-10 text-center text-[15px] text-[#6f7282]">Строк пока нет</td></tr>}
             </tbody>
           </table>
         </div>
 
-        {isClosed && <div className="rounded-[18px] border border-[#e6e9f5] bg-[#fbfbff] px-4 py-3 text-[15px] text-[#7c7c93] print:hidden">Журнал закрыт и доступен только для чтения.</div>}
+        {isClosed && <div className="rounded-[18px] border border-[#e6e9f5] bg-[#fbfbff] px-4 py-3 text-[15px] text-[#6f7282] print:hidden">Журнал закрыт и доступен только для чтения.</div>}
       </div>
 
       <SettingsDialog open={settingsOpen} title="Настройки документа" initial={headerSettings} onOpenChange={setSettingsOpen} onSave={saveSettings} />

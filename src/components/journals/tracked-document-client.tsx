@@ -301,7 +301,7 @@ function TrackedDocumentClientImpl({
   return (
     <div className="space-y-8">
       {status === "active" && selectedRowIds.length > 0 ? (
-        <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-30 -mx-6 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-2xl bg-[#fafbff] px-4 py-2 text-[15px] text-[#5563ff]"
@@ -329,7 +329,7 @@ function TrackedDocumentClientImpl({
       <div className="rounded-[32px] border border-[#eceef5] bg-white px-8 py-7 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <h1 className="text-[48px] font-semibold tracking-[-0.03em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {title}
             </h1>
             <div className="mt-2 text-[16px] text-[#84849a]">
@@ -344,7 +344,7 @@ function TrackedDocumentClientImpl({
                   <Button
                     type="button"
                     disabled={isCreating || employees.length === 0}
-                    className="h-12 rounded-2xl bg-[#5b66ff] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
+                    className="h-12 rounded-2xl bg-[#5566f6] px-5 text-[16px] text-white hover:bg-[#4d58f5]"
                   >
                     <Plus className="size-5" />
                     Добавить
@@ -356,13 +356,13 @@ function TrackedDocumentClientImpl({
                   className="min-w-[260px] rounded-2xl border-0 p-2 shadow-xl"
                 >
                   <DropdownMenuItem
-                    className="h-12 rounded-xl px-3 text-[15px] text-[#5464ff]"
+                    className="h-12 rounded-xl px-3 text-[15px] text-[#3848c7]"
                     onSelect={() => setAddRowOpen(true)}
                   >
                     Добавить строку
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="h-12 rounded-xl px-3 text-[15px] text-[#5464ff]"
+                    className="h-12 rounded-xl px-3 text-[15px] text-[#3848c7]"
                     onSelect={() => {
                       fillForToday().catch((error) =>
                         toast.error(
@@ -693,7 +693,7 @@ function TrackedDocumentClientImpl({
                   )
                 }
                 disabled={isCreating || !newDate || !newEmployeeId}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {isCreating ? "Создание..." : "Создать"}
               </Button>
@@ -767,7 +767,7 @@ function TrackedDocumentClientImpl({
                     )
                   )
                 }
-                className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 Сохранить
               </Button>

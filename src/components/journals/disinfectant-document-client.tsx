@@ -124,7 +124,7 @@ function AddSubdivisionDialog(props: {
               value={row.name}
               onChange={(e) => setRow({ ...row, name: e.target.value })}
               placeholder="Наименование подразделения / объекта"
-              className="min-h-[100px] w-full rounded-2xl border border-[#d8dae6] px-4 py-3 text-[18px] outline-none focus:border-[#5b66ff]"
+              className="min-h-[100px] w-full rounded-2xl border border-[#d8dae6] px-4 py-3 text-[18px] outline-none focus:border-[#5566f6]"
             />
           </div>
           <div className="space-y-2">
@@ -165,7 +165,7 @@ function AddSubdivisionDialog(props: {
                   onChange={() =>
                     setRow({ ...row, treatmentType: "current" })
                   }
-                  className="size-5 accent-[#5b66ff]"
+                  className="size-5 accent-[#5566f6]"
                 />
                 Текущая
               </label>
@@ -177,7 +177,7 @@ function AddSubdivisionDialog(props: {
                   onChange={() =>
                     setRow({ ...row, treatmentType: "general" })
                   }
-                  className="size-5 accent-[#5b66ff]"
+                  className="size-5 accent-[#5566f6]"
                 />
                 Генеральная
               </label>
@@ -269,7 +269,7 @@ function EditSubdivisionDialog(props: {
                 onChange={(e) =>
                   setRow({ ...active, name: e.target.value })
                 }
-                className="min-h-[80px] w-full rounded-2xl border border-[#d8dae6] px-4 py-3 text-[18px] outline-none focus:border-[#5b66ff]"
+                className="min-h-[80px] w-full rounded-2xl border border-[#d8dae6] px-4 py-3 text-[18px] outline-none focus:border-[#5566f6]"
               />
             </div>
             <div className="space-y-2">
@@ -315,7 +315,7 @@ function EditSubdivisionDialog(props: {
                     onChange={() =>
                       setRow({ ...active, treatmentType: "current" })
                     }
-                    className="size-5 accent-[#5b66ff]"
+                    className="size-5 accent-[#5566f6]"
                   />
                   Текущая
                 </label>
@@ -327,7 +327,7 @@ function EditSubdivisionDialog(props: {
                     onChange={() =>
                       setRow({ ...active, treatmentType: "general" })
                     }
-                    className="size-5 accent-[#5b66ff]"
+                    className="size-5 accent-[#5566f6]"
                   />
                   Генеральная
                 </label>
@@ -564,7 +564,7 @@ function ReceiptDialog(props: {
                       type="radio"
                       checked={active.unit === u}
                       onChange={() => setRow({ ...active, unit: u })}
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {MEASURE_UNIT_LABELS[u]}
                   </label>
@@ -753,7 +753,7 @@ function ConsumptionDialog(props: {
                       onChange={() =>
                         setRow({ ...active, totalReceivedUnit: u })
                       }
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {MEASURE_UNIT_LABELS[u]}
                   </label>
@@ -788,7 +788,7 @@ function ConsumptionDialog(props: {
                       onChange={() =>
                         setRow({ ...active, totalConsumedUnit: u })
                       }
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {MEASURE_UNIT_LABELS[u]}
                   </label>
@@ -823,7 +823,7 @@ function ConsumptionDialog(props: {
                       onChange={() =>
                         setRow({ ...active, remainderUnit: u })
                       }
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {MEASURE_UNIT_LABELS[u]}
                   </label>
@@ -1227,7 +1227,7 @@ export function DisinfectantDocumentClient({
           !readOnly ? (
             <Button
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               onClick={() => setSettingsOpen(true)}
             >
               <Settings2 className="size-4" /> Настройки журнала
@@ -1236,7 +1236,7 @@ export function DisinfectantDocumentClient({
         }
       />
 
-      <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+      <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
         {title}
       </h1>
 
@@ -1245,7 +1245,7 @@ export function DisinfectantDocumentClient({
         <div className="flex items-center gap-4 rounded-2xl bg-[#f3f4fe] px-6 py-3">
           <button
             type="button"
-            className="flex items-center gap-1 text-[16px] text-[#5b66ff]"
+            className="flex items-center gap-1 text-[16px] text-[#5566f6]"
             onClick={() => {
               setSelectedSubIds([]);
               setSelectedRecIds([]);
@@ -1399,7 +1399,7 @@ export function DisinfectantDocumentClient({
                 <tr
                   key={sub.id}
                   className={
-                    !readOnly ? "cursor-pointer hover:bg-[#f8f9ff]" : ""
+                    !readOnly ? "cursor-pointer hover:bg-[#f5f6ff]" : ""
                   }
                   onClick={() => !readOnly && setEditSubTarget(sub)}
                 >
@@ -1530,7 +1530,7 @@ export function DisinfectantDocumentClient({
                 <tr
                   key={rec.id}
                   className={
-                    !readOnly ? "cursor-pointer hover:bg-[#f8f9ff]" : ""
+                    !readOnly ? "cursor-pointer hover:bg-[#f5f6ff]" : ""
                   }
                   onClick={() => !readOnly && setEditRecTarget(rec)}
                 >
@@ -1646,7 +1646,7 @@ export function DisinfectantDocumentClient({
                 <tr
                   key={con.id}
                   className={
-                    !readOnly ? "cursor-pointer hover:bg-[#f8f9ff]" : ""
+                    !readOnly ? "cursor-pointer hover:bg-[#f5f6ff]" : ""
                   }
                   onClick={() => !readOnly && setEditConTarget(con)}
                 >

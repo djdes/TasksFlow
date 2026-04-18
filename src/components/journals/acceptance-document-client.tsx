@@ -626,7 +626,7 @@ function EditableListSection(props: {
           </div>
           <button
             type="button"
-            className="text-[#5b66ff] hover:text-[#4b57f3]"
+            className="text-[#5566f6] hover:text-[#4b57f3]"
             onClick={() => {
               setDraft(item);
               setEditingValue(item);
@@ -1356,7 +1356,7 @@ export function AcceptanceDocumentClient(props: Props) {
         {/* Selection bar */}
         {selectedRowIds.length > 0 && !isClosed && (
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setSelectedRowIds([])} className="text-[#7c7c93] hover:text-black"><X className="size-4" /></button>
+            <button type="button" onClick={() => setSelectedRowIds([])} className="text-[#6f7282] hover:text-black"><X className="size-4" /></button>
             <span className="text-[14px]">Выбрано: {selectedRowIds.length}</span>
             <Button type="button" variant="ghost" className="h-9 px-3 text-[13px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => setDeleteSelectedOpen(true)}>
               <span className="mr-1">🗑</span> Удалить
@@ -1374,7 +1374,7 @@ export function AcceptanceDocumentClient(props: Props) {
 
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-5">
-            <h1 className="text-[48px] font-semibold tracking-[-0.04em]">{documentTitle}</h1>
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em]">{documentTitle}</h1>
             <label className="flex items-center gap-4 rounded-[18px] bg-[#f3f4fe] px-5 py-4 text-[16px]">
               <Checkbox checked={sortByExpiry} onCheckedChange={(checked) => setSortByExpiry(checked === true)} />
               <span>Сортировать по сроку годности</span>
@@ -1385,7 +1385,7 @@ export function AcceptanceDocumentClient(props: Props) {
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Настройки журнала
             </Button>
@@ -1427,33 +1427,33 @@ export function AcceptanceDocumentClient(props: Props) {
           <div className="flex flex-wrap items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[16px]">
+                <Button type="button" className="h-11 rounded-2xl bg-[#5566f6] px-6 text-[16px]">
                   <Plus className="size-5" /> Добавить <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[300px] rounded-2xl border-0 p-2 shadow-xl">
-                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5b66ff]" onSelect={() => { setEditingRow(null); setRowDialogOpen(true); }}>
+                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5566f6]" onSelect={() => { setEditingRow(null); setRowDialogOpen(true); }}>
                   <Plus className="mr-2 size-4" /> Добавить
                 </DropdownMenuItem>
-                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5b66ff]" onSelect={() => setBulkAddOpen(true)}>
+                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5566f6]" onSelect={() => setBulkAddOpen(true)}>
                   <Plus className="mr-2 size-4" /> Добавить несколько строк
                 </DropdownMenuItem>
-                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5b66ff]" onSelect={() => setRowsImportOpen(true)}>
+                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5566f6]" onSelect={() => setRowsImportOpen(true)}>
                   <Upload className="mr-2 size-4" /> Добавить из файла
                 </DropdownMenuItem>
-                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5b66ff]" onSelect={() => setIikoOpen(true)}>
+                <DropdownMenuItem className="h-11 rounded-xl px-3 text-[15px] text-[#5566f6]" onSelect={() => setIikoOpen(true)}>
                   <span className="mr-2">📋</span> Добавить из Айко
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]" onClick={() => setEditListsOpen(true)}>
+            <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]" onClick={() => setEditListsOpen(true)}>
               Редактировать списки
             </Button>
 
             <div className="flex-1" />
 
-            <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]" onClick={() => setFinishOpen(true)}>
+            <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]" onClick={() => setFinishOpen(true)}>
               Закончить журнал
             </Button>
           </div>
@@ -1500,7 +1500,7 @@ export function AcceptanceDocumentClient(props: Props) {
                     {row.deliveryHour ? `\n${row.deliveryHour}:${row.deliveryMinute || "00"}` : ""}
                   </td>
                   <td className="border border-black p-2">
-                    <button type="button" className="text-left hover:text-[#5b66ff]" onClick={() => { if (isClosed) return; setEditingRow(row); setRowDialogOpen(true); }}>
+                    <button type="button" className="text-left hover:text-[#5566f6]" onClick={() => { if (isClosed) return; setEditingRow(row); setRowDialogOpen(true); }}>
                       {row.productName || "—"}
                     </button>
                   </td>

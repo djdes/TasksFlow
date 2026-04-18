@@ -235,7 +235,7 @@ export function ColdEquipmentDocumentsClient({
       <div className="space-y-14">
         <div className="flex flex-col gap-10 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-[1100px]">
-            <h1 className="text-[48px] font-semibold leading-[1.06] tracking-[-0.05em] text-black">
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {templateName}
             </h1>
           </div>
@@ -243,7 +243,7 @@ export function ColdEquipmentDocumentsClient({
           <div className="flex flex-wrap items-center gap-4">
             <Button
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f7f8ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#5566f6] shadow-none hover:bg-[#f7f8ff]"
               asChild
             >
               <Link href="/sanpin">

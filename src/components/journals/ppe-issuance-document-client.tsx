@@ -530,11 +530,11 @@ export function PpeIssuanceDocumentClient(props: Props) {
     <div className="bg-white text-black">
       <div className="mx-auto max-w-[1860px] space-y-6 px-6 py-6">
         {selectedRowIds.length > 0 && !isClosed && (
-          <div className="sticky top-0 z-30 -mx-6 flex items-center gap-3 border-b border-[#eef0fb] bg-white/95 px-6 py-3 backdrop-blur">
+          <div className="sticky top-0 z-30 -mx-6 flex items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur">
             <button
               type="button"
               onClick={() => setSelectedRowIds([])}
-              className="rounded-md p-1 text-[#7c7c93] hover:text-black"
+              className="rounded-md p-1 text-[#6f7282] hover:text-black"
             >
               <X className="size-4" />
             </button>
@@ -562,7 +562,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Настройки журнала
             </Button>
@@ -570,7 +570,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
         />
 
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {title}
           </h1>
         </div>
@@ -610,7 +610,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  className="h-11 rounded-2xl bg-[#5b66ff] px-6 text-[16px] text-white hover:bg-[#4b57ff]"
+                  className="h-11 rounded-2xl bg-[#5566f6] px-6 text-[16px] text-white hover:bg-[#4b57ff]"
                 >
                   <Plus className="mr-2 size-5" />
                   Добавить
@@ -622,7 +622,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
                 className="w-[220px] rounded-2xl border-0 p-2 shadow-xl"
               >
                 <DropdownMenuItem
-                  className="h-11 rounded-xl px-3 text-[15px] text-[#5b66ff]"
+                  className="h-11 rounded-xl px-3 text-[15px] text-[#5566f6]"
                   onSelect={() => {
                     setEditingRow(null);
                     setRowDialogOpen(true);
@@ -638,7 +638,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
             <button
               type="button"
               onClick={() => setCloseDialogOpen(true)}
-              className="rounded-[20px] bg-[#f5f6ff] px-8 py-5 text-[14px] text-[#5b66ff]"
+              className="rounded-[20px] bg-[#f5f6ff] px-8 py-5 text-[14px] text-[#5566f6]"
             >
               Закончить журнал
             </button>
@@ -696,7 +696,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
                         setEditingRow(row);
                         setRowDialogOpen(true);
                       }}
-                      className="w-full text-center hover:text-[#5464ff]"
+                      className="w-full text-center hover:text-[#3848c7]"
                     >
                       {formatPpeIssuanceDate(row.issueDate)}
                     </button>

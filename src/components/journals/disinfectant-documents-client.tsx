@@ -327,13 +327,13 @@ export function DisinfectantDocumentsClient({
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {DISINFECTANT_HEADING}
         </h1>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="h-12 rounded-2xl border-[#e8ebf7] px-6 text-[16px] text-[#5b66ff] shadow-none"
+            className="h-12 rounded-2xl border-[#e8ebf7] px-6 text-[16px] text-[#5566f6] shadow-none"
             asChild
           >
             <Link href="/sanpin">
@@ -357,7 +357,7 @@ export function DisinfectantDocumentsClient({
             href={`/journals/${routeCode}`}
             className={`relative pb-6 ${
               activeTab === "active"
-                ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
                 : "text-[#8a8ea4]"
             }`}
           >
@@ -367,7 +367,7 @@ export function DisinfectantDocumentsClient({
             href={`/journals/${routeCode}?tab=closed`}
             className={`relative pb-6 ${
               activeTab === "closed"
-                ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5b66ff]"
+                ? "font-semibold text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[3px] after:w-full after:bg-[#5566f6]"
                 : "text-[#8a8ea4]"
             }`}
           >
@@ -410,7 +410,7 @@ export function DisinfectantDocumentsClient({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex size-10 items-center justify-center rounded-full text-[#5b66ff] hover:bg-[#f5f6ff]"
+                      className="flex size-10 items-center justify-center rounded-full text-[#5566f6] hover:bg-[#f5f6ff]"
                     >
                       <Ellipsis className="size-8" />
                     </button>

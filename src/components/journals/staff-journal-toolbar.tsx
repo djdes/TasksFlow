@@ -146,7 +146,7 @@ function AddEmployeeDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !pick.userId}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Добавление..." : "Добавить"}
             </Button>
@@ -260,7 +260,7 @@ function FillFromStaffDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || remainingCount === 0}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Добавление..." : "Добавить"}
             </Button>
@@ -360,7 +360,7 @@ function JournalSettingsDialog({
               type="button"
               onClick={handleSave}
               disabled={isSubmitting}
-              className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
+              className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4b57ff]"
             >
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -459,7 +459,7 @@ export function StaffJournalToolbar({
                       setSettingsOpen(true);
                     }
                   }}
-                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 >
                   Настройки журнала
                 </Button>
@@ -467,7 +467,7 @@ export function StaffJournalToolbar({
                   documentId={documentId}
                   title={title}
                   variant="outline"
-                  className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
                 >
                   Закончить журнал
                 </DocumentCloseButton>
@@ -479,7 +479,7 @@ export function StaffJournalToolbar({
 
         <div className="flex items-start justify-between gap-6">
           {!hideHeading ? (
-            <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">{heading}</h1>
+            <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">{heading}</h1>
           ) : (
             <div />
           )}
@@ -489,7 +489,7 @@ export function StaffJournalToolbar({
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Настройки журнала
             </Button>
@@ -497,7 +497,7 @@ export function StaffJournalToolbar({
               documentId={documentId}
               title={title}
               variant="outline"
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               Закончить журнал
             </DocumentCloseButton>
@@ -514,7 +514,7 @@ export function StaffJournalToolbar({
                     checked={checked}
                     onCheckedChange={handleAutoFill}
                     disabled={isSwitching}
-                    className="h-10 w-16 data-[state=checked]:bg-[#5b66ff] data-[state=unchecked]:bg-[#d6d9ee]"
+                    className="h-10 w-16 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
                   />
                   <span className="text-[20px] font-medium text-black">
                     Автоматически заполнять журнал
@@ -525,7 +525,7 @@ export function StaffJournalToolbar({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="h-[58px] w-fit rounded-2xl bg-[#5b66ff] px-8 text-[18px] text-white hover:bg-[#4b57ff]">
+                <Button className="h-[58px] w-fit rounded-2xl bg-[#5566f6] px-8 text-[18px] text-white hover:bg-[#4b57ff]">
                   <Plus className="size-7" />
                   Добавить
                   <ChevronDown className="size-6" />
@@ -533,17 +533,17 @@ export function StaffJournalToolbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[360px] rounded-[24px] border-0 p-4 shadow-xl">
                 <DropdownMenuItem
-                  className="h-11 rounded-2xl px-4 text-[18px] text-[#5464ff]"
+                  className="h-11 rounded-2xl px-4 text-[18px] text-[#3848c7]"
                   onSelect={() => setAddOpen(true)}
                 >
-                  <UserPlus className="mr-4 size-6 text-[#5464ff]" />
+                  <UserPlus className="mr-4 size-6 text-[#3848c7]" />
                   Добавить сотрудника
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="h-11 rounded-2xl px-4 text-[18px] text-[#5464ff]"
+                  className="h-11 rounded-2xl px-4 text-[18px] text-[#3848c7]"
                   onSelect={() => setFillOpen(true)}
                 >
-                  <Users className="mr-4 size-6 text-[#5464ff]" />
+                  <Users className="mr-4 size-6 text-[#3848c7]" />
                   Заполнить из списка сотрудников
                 </DropdownMenuItem>
               </DropdownMenuContent>

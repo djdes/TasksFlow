@@ -187,7 +187,7 @@ export function MedBookDocumentsClient({
     <div className="space-y-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             Медицинские книжки
           </h1>
         </div>
@@ -220,7 +220,7 @@ export function MedBookDocumentsClient({
           className={`relative pb-4 text-[18px] ${
             activeTab === "active"
               ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5863f8]"
-              : "text-[#7c7c93]"
+              : "text-[#6f7282]"
           }`}
           onClick={() => router.push(`/journals/${templateCode}`)}
         >
@@ -231,7 +231,7 @@ export function MedBookDocumentsClient({
           className={`relative pb-4 text-[18px] ${
             activeTab === "closed"
               ? "font-medium text-black after:absolute after:bottom-[-1px] after:left-0 after:h-[2px] after:w-full after:bg-[#5863f8]"
-              : "text-[#7c7c93]"
+              : "text-[#6f7282]"
           }`}
           onClick={() => router.push(`/journals/${templateCode}?tab=closed`)}
         >

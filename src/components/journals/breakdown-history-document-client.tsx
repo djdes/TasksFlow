@@ -445,7 +445,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
         <DocumentBackLink href="/journals/breakdown_history" documentId={props.documentId} />
         {/* Page heading */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em]">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em]">
             {title || BREAKDOWN_HISTORY_HEADING}
           </h1>
           <div className="flex flex-wrap items-center gap-3">
@@ -453,7 +453,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
             >
               <Settings2 className="size-4" />
               Настройки журнала
@@ -463,7 +463,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
                 type="button"
                 variant="outline"
                 onClick={() => setFinishOpen(true)}
-                className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
               >
                 Закончить журнал
               </Button>

@@ -352,7 +352,7 @@ export function MedBookDocumentClient({
       <DocumentBackLink href="/journals/med_books" documentId={documentId} />
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-3">
-          <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {docTitle}
           </h1>
         </div>
@@ -360,7 +360,7 @@ export function MedBookDocumentClient({
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-2xl border-[#eef0fb] bg-[#fafbff] px-4 text-[15px] text-[#5863f8] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] bg-[#fafbff] px-4 text-[15px] text-[#5863f8] shadow-none hover:bg-[#f5f6ff]"
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 className="size-4" />

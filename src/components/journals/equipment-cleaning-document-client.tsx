@@ -289,7 +289,7 @@ export function EquipmentCleaningDocumentClient({
         <div className="flex items-center gap-3 rounded-[18px] bg-white px-5 py-4 shadow-sm">
           <button
             type="button"
-            className="flex items-center gap-2 text-[18px] text-[#5b66ff]"
+            className="flex items-center gap-2 text-[18px] text-[#5566f6]"
             onClick={() => setSelectedIds([])}
           >
             <X className="size-6" />
@@ -312,14 +312,14 @@ export function EquipmentCleaningDocumentClient({
 
       <DocumentBackLink href={`/journals/${journalRouteCode}`} documentId={documentId} />
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[48px] font-semibold tracking-[-0.04em] text-black">
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {title}
         </h1>
         <Button
           type="button"
           variant="outline"
           onClick={() => setSettingsOpen(true)}
-          className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+          className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
         >
           Настройки журнала
         </Button>
@@ -362,7 +362,7 @@ export function EquipmentCleaningDocumentClient({
             type="button"
             onClick={openCreateRow}
             disabled={status !== "active"}
-            className="h-11 rounded-2xl bg-[#5b66ff] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
+            className="h-11 rounded-2xl bg-[#5566f6] px-4 text-[15px] text-white hover:bg-[#4d58f5]"
           >
             <Plus className="size-5" />
             Добавить
@@ -372,7 +372,7 @@ export function EquipmentCleaningDocumentClient({
             variant="outline"
             onClick={() => setCloseOpen(true)}
             disabled={status !== "active"}
-            className="h-11 rounded-2xl border-[#eef0fb] px-4 text-[15px] text-[#5464ff] shadow-none hover:bg-[#f8f9ff]"
+            className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
           >
             Закончить журнал
           </Button>
@@ -587,7 +587,7 @@ export function EquipmentCleaningDocumentClient({
                       type="radio"
                       checked={draft.data.rinseResult !== "non_compliant"}
                       onChange={() => updateDraft({ rinseResult: "compliant" })}
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     Соответствует
                   </label>
@@ -596,7 +596,7 @@ export function EquipmentCleaningDocumentClient({
                       type="radio"
                       checked={draft.data.rinseResult === "non_compliant"}
                       onChange={() => updateDraft({ rinseResult: "non_compliant" })}
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     Не соответствует
                   </label>
@@ -715,7 +715,7 @@ export function EquipmentCleaningDocumentClient({
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={saveRow} disabled={isSaving} className="bg-[#5b66ff] text-white hover:bg-[#4d58f5]">
+              <Button onClick={saveRow} disabled={isSaving} className="bg-[#5566f6] text-white hover:bg-[#4d58f5]">
                 {isSaving ? "Сохранение..." : draft.id ? "Сохранить" : "Добавить"}
               </Button>
             </div>
@@ -752,7 +752,7 @@ export function EquipmentCleaningDocumentClient({
                       type="radio"
                       checked={fieldVariant === variant}
                       onChange={() => setFieldVariant(variant)}
-                      className="size-5 accent-[#5b66ff]"
+                      className="size-5 accent-[#5566f6]"
                     />
                     {EQUIPMENT_CLEANING_VARIANT_LABELS[variant]}
                   </label>
@@ -760,7 +760,7 @@ export function EquipmentCleaningDocumentClient({
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={saveSettings} disabled={isSaving} className="bg-[#5b66ff] text-white hover:bg-[#4d58f5]">
+              <Button onClick={saveSettings} disabled={isSaving} className="bg-[#5566f6] text-white hover:bg-[#4d58f5]">
                 {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
@@ -776,7 +776,7 @@ export function EquipmentCleaningDocumentClient({
             </DialogTitle>
           </DialogHeader>
           <div className="flex justify-end px-6 py-6">
-            <Button onClick={closeDocument} disabled={isClosing} className="bg-[#5b66ff] text-white hover:bg-[#4d58f5]">
+            <Button onClick={closeDocument} disabled={isClosing} className="bg-[#5566f6] text-white hover:bg-[#4d58f5]">
               {isClosing ? "Завершение..." : "Закончить"}
             </Button>
           </div>

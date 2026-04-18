@@ -509,7 +509,7 @@ export function HealthDocumentClient(props: Props) {
                 type="button"
                 onClick={handleSaveSettings}
                 disabled={isSavingSettings}
-                className="h-11 rounded-2xl bg-[#5b66ff] px-5 text-[15px] text-white hover:bg-[#4b57ff]"
+                className="h-11 rounded-2xl bg-[#5566f6] px-5 text-[15px] text-white hover:bg-[#4b57ff]"
               >
                 {isSavingSettings ? "Сохранение..." : "Сохранить"}
               </Button>
