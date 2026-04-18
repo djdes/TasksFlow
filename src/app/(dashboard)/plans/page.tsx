@@ -2,16 +2,13 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card, CardContent, CardHeader, CardTitle,
-} from "@/components/ui/card";
 
-// NOTE: detail page /plans/[id] is not yet implemented — render plan cards
-// without a <Link> wrapper so clicks don't land on a 404.
-
-type PlanItem = { sku: string; targetQuantity: number; actualQuantity?: number; priority?: string };
+type PlanItem = {
+  sku: string;
+  targetQuantity: number;
+  actualQuantity?: number;
+  priority?: string;
+};
 
 function getPlanItems(items: unknown): PlanItem[] {
   if (Array.isArray(items)) return items as PlanItem[];
@@ -24,10 +21,17 @@ const SHIFT_LABELS: Record<string, string> = {
   night: "Ночь",
 };
 
+const STATUS_INFO: Record<string, { label: string; bg: string; fg: string }> = {
+  draft: { label: "Черновик", bg: "#fafbff", fg: "#6f7282" },
+  active: { label: "Активен", bg: "#eef1ff", fg: "#3848c7" },
+  completed: { label: "Выполнен", bg: "#ecfdf5", fg: "#116b2a" },
+};
+
 export default async function PlansPage() {
   const session = await requireAuth();
 
-  const weekStart = new Date();
+  const today = new Date();
+  const weekStart = new Date(today);
   weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   weekStart.setHours(0, 0, 0, 0);
   const weekEnd = new Date(weekStart);
@@ -42,7 +46,6 @@ export default async function PlansPage() {
     orderBy: { date: "asc" },
   });
 
-  // Build week days
   const days: { date: Date; label: string; plans: typeof plans }[] = [];
   const dayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   for (let i = 0; i < 7; i++) {
@@ -59,74 +62,124 @@ export default async function PlansPage() {
     });
   }
 
-  const todayStr = new Date().toDateString();
+  const todayStr = today.toDateString();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Производственный план</h1>
-          <p className="mt-1 text-muted-foreground">Неделя: {weekStart.toLocaleDateString("ru-RU")} — {weekEnd.toLocaleDateString("ru-RU")}</p>
+          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+            Производственный план
+          </h1>
+          <p className="mt-1.5 text-[14px] text-[#6f7282]">
+            Неделя: {weekStart.toLocaleDateString("ru-RU")} —{" "}
+            {weekEnd.toLocaleDateString("ru-RU")}
+          </p>
         </div>
-        <Button asChild>
-          <Link href="/plans/new">
-            <Plus className="size-4" />
-            Новый план
-          </Link>
-        </Button>
+        <Link
+          href="/plans/new"
+          className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-2xl bg-[#5566f6] px-4 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+        >
+          <Plus className="size-4" />
+          Новый план
+        </Link>
       </div>
 
-      {/* Weekly grid */}
-      <div className="grid gap-3 lg:grid-cols-7">
-        {days.map((day) => {
-          const isToday = day.date.toDateString() === todayStr;
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="grid min-w-[980px] grid-cols-7 gap-3 lg:min-w-0">
+          {days.map((day) => {
+            const isToday = day.date.toDateString() === todayStr;
 
-          return (
-            <Card key={day.label} className={isToday ? "border-primary ring-1 ring-primary" : ""}>
-              <CardHeader className="pb-2">
-                <CardTitle className={`text-sm ${isToday ? "text-primary" : ""}`}>
+            return (
+              <div
+                key={day.label}
+                className={`rounded-2xl border bg-white p-3 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] ${
+                  isToday
+                    ? "border-[#5566f6]/60 ring-1 ring-[#5566f6]/25"
+                    : "border-[#ececf4]"
+                }`}
+              >
+                <div
+                  className={`text-[13px] font-semibold ${
+                    isToday ? "text-[#3848c7]" : "text-[#0b1024]"
+                  }`}
+                >
                   {day.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {day.plans.map((plan) => {
-                  const items = getPlanItems(plan.items);
-                  const totalTarget = items.reduce((s, i) => s + i.targetQuantity, 0);
-                  const totalActual = items.reduce((s, i) => s + (i.actualQuantity || 0), 0);
-                  const completion = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+                </div>
+                <div className="mt-3 space-y-2">
+                  {day.plans.map((plan) => {
+                    const items = getPlanItems(plan.items);
+                    const totalTarget = items.reduce(
+                      (s, i) => s + i.targetQuantity,
+                      0
+                    );
+                    const totalActual = items.reduce(
+                      (s, i) => s + (i.actualQuantity || 0),
+                      0
+                    );
+                    const completion =
+                      totalTarget > 0
+                        ? Math.round((totalActual / totalTarget) * 100)
+                        : 0;
+                    const statusInfo =
+                      STATUS_INFO[plan.status] ?? STATUS_INFO.draft;
 
-                  return (
-                    <div key={plan.id} className="rounded-md border p-2 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-[10px]">
-                          {SHIFT_LABELS[plan.shift] || plan.shift}
-                        </Badge>
-                        <Badge variant={plan.status === "completed" ? "default" : "secondary"} className="text-[10px]">
-                          {plan.status === "draft" ? "Черновик" : plan.status === "active" ? "Активен" : "Выполнен"}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{items.length} SKU</p>
-                      {plan.status !== "draft" && totalTarget > 0 && (
-                        <div className="space-y-0.5">
-                          <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${completion >= 100 ? "bg-green-500" : completion >= 70 ? "bg-yellow-500" : "bg-red-500"}`}
-                              style={{ width: `${Math.min(completion, 100)}%` }}
-                            />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">{completion}%</p>
+                    return (
+                      <div
+                        key={plan.id}
+                        className="space-y-1.5 rounded-xl border border-[#ececf4] bg-[#fafbff] p-2"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="inline-flex items-center rounded-full border border-[#ececf4] bg-white px-2 py-0.5 text-[10px] text-[#3c4053]">
+                            {SHIFT_LABELS[plan.shift] || plan.shift}
+                          </span>
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{
+                              backgroundColor: statusInfo.bg,
+                              color: statusInfo.fg,
+                            }}
+                          >
+                            {statusInfo.label}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {day.plans.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">—</p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                        <p className="text-[11px] text-[#6f7282]">
+                          {items.length} SKU
+                        </p>
+                        {plan.status !== "draft" && totalTarget > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="h-1.5 overflow-hidden rounded-full bg-[#ececf4]">
+                              <div
+                                className={`h-full rounded-full ${
+                                  completion >= 100
+                                    ? "bg-[#5fc88a]"
+                                    : completion >= 70
+                                    ? "bg-[#d9a02a]"
+                                    : "bg-[#d95f2a]"
+                                }`}
+                                style={{
+                                  width: `${Math.min(completion, 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-[#9b9fb3] tabular-nums">
+                              {completion}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {day.plans.length === 0 && (
+                    <p className="py-2 text-center text-[11px] text-[#9b9fb3]">
+                      —
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

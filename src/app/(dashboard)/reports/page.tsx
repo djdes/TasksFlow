@@ -20,8 +20,17 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Отчёты</h1>
-      <ReportForm templates={templates} areas={areas} />
+      <div>
+        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+          Отчёты
+        </h1>
+        <p className="mt-1.5 text-[14px] text-[#6f7282]">
+          Выгрузки журналов за период — PDF и Excel для проверок
+        </p>
+      </div>
+      <div className="rounded-3xl border border-[#ececf4] bg-white p-6 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:p-7">
+        <ReportForm templates={templates} areas={areas} />
+      </div>
     </div>
   );
 }
