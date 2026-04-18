@@ -1,12 +1,10 @@
-name: Capture screenshots
+name: Capture screenshots (DISABLED)
 
+# Disabled per operator request 2026-04-18 — no auto schedule, no auto fire
+# after deploy. `workflow_dispatch` kept so the workflow can still be run
+# manually from the Actions tab when explicitly needed. To fully re-enable,
+# restore the original `on:` block from git history.
 on:
-  schedule:
-    # Every day at 03:17 UTC (06:17 MSK) — after nightly seed-cron window.
-    - cron: "17 3 * * *"
-  workflow_run:
-    workflows: ["Deploy to production"]
-    types: [completed]
   workflow_dispatch:
 
 env:
@@ -17,7 +15,9 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    # Belt-and-braces guard: even if someone accidentally re-adds an `on:`
+    # trigger above, the job won't run until this line is flipped.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout code
