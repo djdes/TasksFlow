@@ -135,7 +135,7 @@ function LoginForm() {
             </div>
           </div>
 
-          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024]">
+          <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
             Вход в личный кабинет
           </h2>
           <p className="mt-2 text-[14px] text-[#6f7282]">

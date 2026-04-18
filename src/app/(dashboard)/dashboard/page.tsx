@@ -217,7 +217,7 @@ export default async function DashboardPage() {
                 <Hand className="size-6" />
               </div>
               <div>
-                <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.02em]">
+                <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px]">
                   {greeting}
                   {greetingName ? `, ${greetingName}` : ""}
                 </h1>

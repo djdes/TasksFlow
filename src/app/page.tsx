@@ -404,7 +404,7 @@ export default async function LandingPage() {
           <div className="mb-3 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
             Что внутри
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Всё, что нужно, чтобы журналы действительно вели — а не «для галочки»
           </h2>
         </div>
@@ -442,7 +442,7 @@ export default async function LandingPage() {
           </div>
           <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-[560px]">
-              <h3 className="text-[32px] font-semibold leading-tight tracking-[-0.02em]">
+              <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px]">
                 Бесплатно навсегда. Без карты.
               </h3>
               <p className="mt-3 text-[15px] text-white/70">
@@ -469,7 +469,7 @@ export default async function LandingPage() {
             <div className="mb-3 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
               35 журналов
             </div>
-            <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+            <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
               Какие журналы уже внутри
             </h2>
             <p className="mt-4 text-[15px] text-[#6f7282]">
@@ -512,7 +512,7 @@ export default async function LandingPage() {
             <Gift className="size-4" />
             Тарифы
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Все журналы бесплатно. Платите за автоматизацию.
           </h2>
           <p className="mt-4 text-[15px] text-[#6f7282]">
@@ -589,7 +589,7 @@ export default async function LandingPage() {
           <div className="mb-3 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
             Как подключиться
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Переход на электронный журнал — полдня работы
           </h2>
         </div>
@@ -621,7 +621,7 @@ export default async function LandingPage() {
           <div className="mb-3 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
             Кому полезно
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             WeSetup подойдёт, если у вас…
           </h2>
         </div>
@@ -686,7 +686,7 @@ export default async function LandingPage() {
             <Smartphone className="size-4" />
             Мобильный доступ
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Журналы с планшета повара и бота в Telegram
           </h2>
           <p className="mt-4 text-[15px] text-[#6f7282]">
@@ -765,7 +765,7 @@ export default async function LandingPage() {
             <Quote className="size-4" />
             Отзывы
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Что говорят клиенты
           </h2>
           <p className="mt-3 text-[14px] text-[#9b9fb3]">
@@ -810,7 +810,7 @@ export default async function LandingPage() {
                 <NotebookText className="size-4" />
                 Блог
               </div>
-              <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+              <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
                 Как вести журналы и проходить проверки
               </h2>
               <p className="mt-4 text-[15px] text-[#6f7282]">
@@ -869,7 +869,7 @@ export default async function LandingPage() {
             <HelpCircle className="size-4" />
             Вопросы и ответы
           </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
+          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[36px]">
             Быстрая справка перед регистрацией
           </h2>
         </div>
@@ -906,7 +906,7 @@ export default async function LandingPage() {
           <div className="mx-auto mb-5 inline-flex size-14 items-center justify-center rounded-2xl bg-[#5566f6] text-white shadow-[0_14px_36px_-14px_rgba(85,102,246,0.6)]">
             <Sparkles className="size-7" />
           </div>
-          <h3 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024]">
+          <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
             Готовы избавиться от бумаги?
           </h3>
           <p className="mx-auto mt-3 max-w-[480px] text-[15px] leading-[1.55] text-[#6f7282]">

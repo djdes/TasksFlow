@@ -57,7 +57,7 @@ export default async function UserJournalAccessPage({ params }: PageProps) {
       </Link>
 
       <div>
-        <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-black">
+        <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-black sm:text-[32px]">
           Доступ к журналам
         </h1>
         <p className="mt-2 text-[15px] text-[#6f7282]">
