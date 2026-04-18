@@ -1,15 +1,52 @@
 import type { Composer, Context } from "grammy";
-import { db } from "@/lib/db";
 import {
   hashBotInviteToken,
   stripBotInvitePrefix,
 } from "@/lib/bot-invite-tokens";
-import { getBotMiniAppLabel } from "@/lib/role-access";
+import {
+  buildTelegramLinkedStartReply,
+  buildTelegramUnlinkedStartReply,
+  type TelegramStartActor,
+} from "@/lib/bot/start-response";
+import { db } from "@/lib/db";
+
+function getMiniAppBaseUrl(): string | null {
+  return (
+    process.env.MINI_APP_BASE_URL ||
+    (process.env.NEXTAUTH_URL
+      ? `${process.env.NEXTAUTH_URL.replace(/\/+$/, "")}/mini`
+      : null)
+  );
+}
+
+async function replyWithLinkedStart(
+  ctx: Context,
+  actor: TelegramStartActor
+): Promise<void> {
+  const reply = buildTelegramLinkedStartReply(actor, getMiniAppBaseUrl());
+  await ctx.reply(
+    reply.text,
+    reply.buttonLabel && reply.buttonUrl
+      ? {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: reply.buttonLabel,
+                  web_app: { url: reply.buttonUrl },
+                },
+              ],
+            ],
+          },
+        }
+      : undefined
+  );
+}
 
 /**
  * Handle `/start <payload>` messages.
  *
- * The only payload shape Stage 1 recognises is `inv_<raw>` — a TG-first
+ * The only payload shape Stage 1 recognises is `inv_<raw>`: a TG-first
  * invite. When a match is found we bind the caller's TG user id to the
  * pending `User`, flip `isActive`, mark the token consumed, then reply
  * with a Mini App Web App button.
@@ -22,9 +59,31 @@ export function registerStartHandler(composer: Composer<Context>): void {
   composer.command("start", async (ctx) => {
     const payload = ctx.match?.trim();
     if (!payload) {
-      await ctx.reply(
-        "Этот бот работает только по персональной ссылке-приглашению от вашего руководителя."
-      );
+      const fromId = ctx.from?.id;
+      if (!fromId) {
+        await ctx.reply("Не удалось определить ваш Telegram-аккаунт.");
+        return;
+      }
+
+      const linkedUser = await db.user.findFirst({
+        where: {
+          telegramChatId: String(fromId),
+          isActive: true,
+          archivedAt: null,
+        },
+        select: {
+          name: true,
+          role: true,
+          isRoot: true,
+        },
+      });
+
+      if (!linkedUser) {
+        await ctx.reply(buildTelegramUnlinkedStartReply().text);
+        return;
+      }
+
+      await replyWithLinkedStart(ctx, linkedUser);
       return;
     }
 
@@ -58,13 +117,13 @@ export function registerStartHandler(composer: Composer<Context>): void {
       return;
     }
     if (token.expiresAt.getTime() < Date.now()) {
-      await ctx.reply("Срок действия приглашения истёк. Попросите новую ссылку.");
+      await ctx.reply("Срок действия приглашения истек. Попросите новую ссылку.");
       return;
     }
 
     const chatIdStr = String(fromId);
 
-    // Forbid reusing a TG account that's already tied to a different user —
+    // Forbid reusing a TG account that's already tied to a different user:
     // otherwise two physical employees could share one Telegram, and our
     // `User.telegramChatId` lookup would silently route Mini App sessions
     // to whichever row is found first.
@@ -96,36 +155,10 @@ export function registerStartHandler(composer: Composer<Context>): void {
       }),
     ]);
 
-    const miniBase =
-      process.env.MINI_APP_BASE_URL ||
-      (process.env.NEXTAUTH_URL
-        ? `${process.env.NEXTAUTH_URL.replace(/\/+$/, "")}/mini`
-        : null);
-
-    if (!miniBase) {
-      await ctx.reply(
-        `Готово, ${token.user.name}. Свяжитесь с руководителем — кабинет не настроен.`
-      );
-      return;
-    }
-
-    await ctx.reply(
-      `Готово, ${token.user.name}! Откройте рабочий кабинет кнопкой ниже.`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: getBotMiniAppLabel({
-                  role: token.user.role,
-                  isRoot: false,
-                }),
-                web_app: { url: miniBase },
-              },
-            ],
-          ],
-        },
-      }
-    );
+    await replyWithLinkedStart(ctx, {
+      name: token.user.name,
+      role: token.user.role,
+      isRoot: token.user.isRoot,
+    });
   });
 }

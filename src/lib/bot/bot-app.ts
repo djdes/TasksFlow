@@ -1,6 +1,7 @@
 import { Bot, Composer, type Context } from "grammy";
 import { Agent, fetch as undiciFetch, setGlobalDispatcher } from "undici";
 import { registerStartHandler } from "./handlers/start";
+import { TELEGRAM_COMMANDS } from "./start-response";
 
 /**
  * Grammy bot app singleton.
@@ -60,6 +61,7 @@ const tgFetch = forceIp
 
 let cachedBot: Bot | null = null;
 let initPromise: Promise<void> | null = null;
+let commandsPromise: Promise<void> | null = null;
 
 export function getInboundBot(): Bot | null {
   if (!token) return null;
@@ -88,5 +90,17 @@ export async function ensureBotInit(bot: Bot): Promise<void> {
       throw err;
     });
   }
-  return initPromise;
+  await initPromise;
+
+  if (!commandsPromise) {
+    commandsPromise = bot.api
+      .setMyCommands([...TELEGRAM_COMMANDS])
+      .then(() => undefined)
+      .catch((err) => {
+        commandsPromise = null;
+        console.error("Telegram setMyCommands error:", err);
+      });
+  }
+
+  await commandsPromise;
 }

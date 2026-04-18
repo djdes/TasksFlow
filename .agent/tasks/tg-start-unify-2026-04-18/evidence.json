@@ -1,0 +1,51 @@
+{
+  "taskId": "tg-start-unify-2026-04-18",
+  "status": "PASS",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "evidence": "Plain /start now looks up the linked Telegram user and replies with the shared CTA instead of the legacy invite-only text."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "evidence": "Invite-token binding reuses the same linked-start reply helper as plain /start."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "evidence": "Unlinked /start now returns a short guidance message from the shared start-response helper."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "evidence": "Telegram command metadata is exported once and synced through setMyCommands after bot init."
+    }
+  ],
+  "verification": [
+    {
+      "command": "node --import tsx --test src/lib/bot/start-response.test.ts",
+      "status": "PASS",
+      "artifact": ".agent/tasks/tg-start-unify-2026-04-18/raw/test-start-response.txt"
+    },
+    {
+      "command": "npm run lint -- src/lib/bot/handlers/start.ts src/lib/bot/bot-app.ts src/lib/bot/start-response.ts src/lib/bot/start-response.test.ts",
+      "status": "PASS",
+      "artifact": ".agent/tasks/tg-start-unify-2026-04-18/raw/lint-start.txt"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "status": "PASS",
+      "artifact": ".agent/tasks/tg-start-unify-2026-04-18/raw/tsc.txt"
+    },
+    {
+      "command": "npm run build",
+      "status": "PASS",
+      "artifact": ".agent/tasks/tg-start-unify-2026-04-18/raw/build.txt",
+      "notes": [
+        "Build emits the existing Next.js middleware deprecation warning, but completes successfully."
+      ]
+    }
+  ]
+}
