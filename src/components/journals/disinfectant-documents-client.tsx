@@ -111,7 +111,7 @@ function SettingsDialog(props: {
         props.onOpenChange(v);
       }}
     >
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[760px] rounded-[28px] border-0 p-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">
@@ -521,7 +521,7 @@ export function DisinfectantDocumentsClient({
           if (!v) setArchiveTarget(null);
         }}
       >
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[660px] rounded-[28px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[660px]">
           <DialogHeader className="border-b px-8 py-6">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-[22px] font-semibold text-black">

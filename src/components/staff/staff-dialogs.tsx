@@ -114,7 +114,7 @@ export function StaffAddPositionDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           "Добавление должности",
           floatingLabel({
@@ -192,7 +192,7 @@ export function StaffEditPositionDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           "Редактирование должности",
           <div className="space-y-4">
@@ -350,7 +350,7 @@ export function StaffAddEmployeeDialog(props: {
   if (step.kind === "tg-ready") {
     return (
       <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
-        <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+        <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
           {shell(
             `Приглашение для ${step.userName}`,
             <div className="space-y-4">
@@ -398,7 +398,7 @@ export function StaffAddEmployeeDialog(props: {
   if (step.kind === "created") {
     return (
       <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
-        <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+        <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
           {shell(
             "Сотрудник добавлен",
             <div className="space-y-3 text-[14px] leading-5 text-[#0b1024]">
@@ -440,7 +440,7 @@ export function StaffAddEmployeeDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && closeAll()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           "Добавление сотрудника",
           <div className="space-y-4">
@@ -557,7 +557,7 @@ export function StaffTelegramInviteDialog(props: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           title,
           pending ? (
@@ -651,7 +651,7 @@ export function StaffArchiveDialog(props: {
 } & Close) {
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           `Архивирование сотрудника "${props.employee.name}"`,
           <p className="text-[13px] text-[#6f7282]">
@@ -670,7 +670,7 @@ export function StaffDeleteBlockedDialog(props: {
 } & Close) {
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[480px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[480px]">
         {shell(
           `Удаление сотрудника "${props.employee.name}"`,
           <div className="space-y-2 text-[13px] text-[#6f7282]">
@@ -686,7 +686,7 @@ export function StaffDeleteBlockedDialog(props: {
 export function StaffIikoDialog(props: Close) {
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           "Заполнение выходных дней из iiko",
           <p className="text-[13px] text-[#6f7282]">
@@ -701,7 +701,7 @@ export function StaffIikoDialog(props: Close) {
 export function StaffInstructionDialog(props: Close) {
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[560px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[560px]">
         {shell(
           "Инструкция по странице «Сотрудники»",
           <div className="space-y-3 text-[13px] leading-[1.55] text-[#3c4053]">
@@ -806,7 +806,7 @@ export function StaffAddPeriodDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           title,
           <div className="space-y-4">

@@ -68,7 +68,7 @@ export function StaffTelegramInviteDialog(props: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           title,
           pending ? (
@@ -163,7 +163,7 @@ export function StaffUnlinkTelegramDialog(props: {
 } & Close) {
   return (
     <Dialog open={props.open} onOpenChange={(v) => !v && props.onClose()}>
-      <DialogContent className="max-w-[460px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
         {shell(
           `Отвязать TG у "${props.employee.name}"`,
           <div className="space-y-3 text-[13px] leading-5 text-[#3c4053]">

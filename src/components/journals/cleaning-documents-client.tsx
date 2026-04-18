@@ -126,7 +126,7 @@ function ConfirmDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-start justify-between gap-6">
             <DialogTitle className="text-[22px] font-semibold leading-[1.2] text-black">
@@ -181,7 +181,7 @@ function CreateDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[720px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[22px] font-semibold text-black">
@@ -281,7 +281,7 @@ function SettingsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-[22px] font-semibold text-black">

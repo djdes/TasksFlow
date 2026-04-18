@@ -91,7 +91,7 @@ function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[28px] border-0 p-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="border-b border-[#e5e7f0] px-8 py-6">
           <DialogTitle className="text-[20px] font-medium text-black">
             Настройки документа

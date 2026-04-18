@@ -89,7 +89,7 @@ function RowDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[560px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="border-b px-8 py-6">
           <DialogTitle className="text-[30px] font-medium text-black">
             {props.initialRow ? "Редактирование строки" : "Добавление новой строки"}
@@ -260,7 +260,7 @@ function SettingsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[560px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="border-b px-8 py-6">
           <DialogTitle className="text-[30px] font-medium text-black">
             Настройки документа
@@ -331,7 +331,7 @@ function FinishDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[480px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[480px]">
         <DialogHeader className="border-b px-8 py-6">
           <DialogTitle className="text-[24px] font-medium text-black">
             Закончить журнал &laquo;{props.title}&raquo;

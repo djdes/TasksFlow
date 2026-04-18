@@ -51,7 +51,7 @@ function SectionDialog({
   const [value, setValue] = useState("");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[620px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[620px]">
         <DialogHeader className="border-b px-8 py-6">
           <DialogTitle className="text-[22px] font-semibold text-black">Добавить новый раздел</DialogTitle>
         </DialogHeader>
@@ -90,7 +90,7 @@ function RowDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[700px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[700px]">
         <DialogHeader className="border-b px-8 py-6">
           <DialogTitle className="text-[22px] font-semibold text-black">
             {row ? "Редактирование строки" : "Добавление новой строки"}
@@ -362,7 +362,7 @@ export function AuditProtocolDocumentClient({
       </div>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-[760px] rounded-[28px] border-0 p-0">
+        <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[22px] font-semibold text-black">Настройки документа</DialogTitle>
           </DialogHeader>

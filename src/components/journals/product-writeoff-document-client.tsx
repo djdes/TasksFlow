@@ -383,7 +383,7 @@ export function ProductWriteoffDocumentClient({
       </div>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[720px] rounded-[28px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[24px] font-medium text-black">Настройки документа</DialogTitle>
           </DialogHeader>
@@ -418,7 +418,7 @@ export function ProductWriteoffDocumentClient({
         setRowDialog({ open: false, index: null, row: emptyRow(), newProductName: "" });
         setRowDialogProductOptions([]);
       }}>
-        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[720px] overflow-y-auto rounded-[28px] border-0 p-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[720px]">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[24px] font-medium text-black">{rowDialog.index === null ? "Добавление новой строки" : "Редактирование строки"}</DialogTitle>
           </DialogHeader>
@@ -477,7 +477,7 @@ export function ProductWriteoffDocumentClient({
       </Dialog>
 
       <Dialog open={commissionDialog.open} onOpenChange={(open) => !open && setCommissionDialog({ open: false, index: null, member: emptyCommissionMember() })}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[620px] rounded-[28px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[620px]">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[24px] font-medium text-black">Редактирование строки</DialogTitle>
           </DialogHeader>
@@ -518,7 +518,7 @@ export function ProductWriteoffDocumentClient({
       </Dialog>
 
       <Dialog open={listsOpen} onOpenChange={setListsOpen}>
-        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[720px] overflow-y-auto rounded-[28px] border-0 p-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[720px]">
           <DialogHeader className="border-b px-8 py-6">
             <DialogTitle className="text-[24px] font-medium text-black">Редактировать список продукции</DialogTitle>
           </DialogHeader>

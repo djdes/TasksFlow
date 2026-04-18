@@ -191,7 +191,7 @@ function RoomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[640px] rounded-[24px] border-0 p-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[640px]">
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-[24px] font-medium text-black">
             {initialRoom ? "Редактирование помещения" : "Добавление нового помещения"}
@@ -354,7 +354,7 @@ function ResponsibleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[32px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-12 py-10">
           <DialogTitle className="text-[22px] font-medium text-black">
             Редактирование ответственного лица
@@ -462,7 +462,7 @@ function AddRowDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[32px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-12 py-10">
           <DialogTitle className="text-[22px] font-medium text-black">
             Добавление новой строки
@@ -604,7 +604,7 @@ function JournalSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[860px] rounded-[32px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[32px] border-0 p-0 sm:max-w-[860px]">
         <DialogHeader className="border-b px-14 py-12">
           <DialogTitle className="text-[22px] font-medium text-black">
             Настройки документа

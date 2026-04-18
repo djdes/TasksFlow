@@ -122,7 +122,7 @@ function EditDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[970px] rounded-[38px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)]">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[38px] border-0 p-0 shadow-[0_40px_140px_rgba(40,45,86,0.18)] sm:max-w-[970px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b border-[#d7dbe8] px-18 py-12">
           <DialogTitle className="text-[22px] font-medium text-black">
             Настройки документа

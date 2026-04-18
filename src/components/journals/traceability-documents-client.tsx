@@ -125,7 +125,7 @@ function TraceabilitySettingsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[720px] rounded-[28px] border-0 p-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]">
         <DialogHeader className="border-b px-10 py-8">
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">
@@ -451,7 +451,7 @@ export function TraceabilityDocumentsClient({
       />
 
       <Dialog open={!!archiveTarget} onOpenChange={(open) => !open && setArchiveTarget(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[620px] rounded-[28px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[620px]">
           <DialogHeader className="border-b px-10 py-8">
             <div className="flex items-center justify-between gap-4">
               <DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">
@@ -487,7 +487,7 @@ export function TraceabilityDocumentsClient({
       </Dialog>
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[620px] rounded-[28px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[620px]">
           <DialogHeader className="border-b px-10 py-8">
             <div className="flex items-center justify-between gap-4">
               <DialogTitle className="text-[22px] font-semibold tracking-[-0.03em] text-black">

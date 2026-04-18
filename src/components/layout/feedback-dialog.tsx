@@ -86,7 +86,7 @@ export function FeedbackDialog({
           <span className="hidden sm:inline">Обратная связь</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[520px] gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[520px]">
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-[18px] font-semibold text-[#0b1024]">
             Оставить обратную связь

@@ -88,7 +88,7 @@ function EntryDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[620px] overflow-y-auto rounded-[24px] border-0 p-0">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[24px] border-0 p-0 sm:max-w-[620px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
           <DialogTitle className="text-[22px] font-semibold">
             {props.initialEntry ? "Редактирование записи" : "Добавление новой строки"}
@@ -165,7 +165,7 @@ function ListsDialog(props: { open: boolean; onOpenChange: (open: boolean) => vo
   const tabs: Array<[keyof FryerOilSelectLists, string]> = [["fatTypes", "Вид жира"], ["equipmentTypes", "Оборудование"], ["productTypes", "Вид продукции"]];
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[620px] rounded-[24px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[620px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
           <DialogTitle className="text-[22px] font-semibold">Редактировать списки</DialogTitle>
           <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
@@ -198,7 +198,7 @@ function SettingsDialog(props: { open: boolean; onOpenChange: (open: boolean) =>
   const [status, setStatus] = useState<"active" | "closed">(props.status);
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[560px] rounded-[24px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
           <DialogTitle className="text-[22px] font-semibold">Настройки журнала</DialogTitle>
           <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>

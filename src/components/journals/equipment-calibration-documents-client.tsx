@@ -228,7 +228,7 @@ export function EquipmentCalibrationDocumentsClient({
 
       {/* Settings dialog */}
       <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
+        <DialogContent className="max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[560px]">
           <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
             <DialogTitle className="text-[22px] font-semibold text-black">Настройки документа</DialogTitle>
             <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={() => setEditingDoc(null)}>
@@ -294,7 +294,7 @@ export function EquipmentCalibrationDocumentsClient({
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteDoc} onOpenChange={(open) => !open && setDeleteDoc(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[560px]">
           <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
             <DialogTitle className="text-[20px] font-semibold text-black">
               Удаление документа &quot;{deleteDoc?.title}&quot;
@@ -316,7 +316,7 @@ export function EquipmentCalibrationDocumentsClient({
 
       {/* Archive confirmation dialog */}
       <Dialog open={!!archiveDoc} onOpenChange={(open) => !open && setArchiveDoc(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] rounded-[24px] border-0 p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[560px]">
           <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
             <DialogTitle className="text-[20px] font-semibold text-black">
               Перенести в архив документ &quot;{archiveDoc?.title}&quot;

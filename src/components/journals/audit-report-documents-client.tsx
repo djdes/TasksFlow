@@ -72,7 +72,7 @@ function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] rounded-[32px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[32px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b px-12 py-10">
           <DialogTitle className="text-[22px] font-medium text-black">{dialogTitle}</DialogTitle>
         </DialogHeader>
@@ -252,7 +252,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
         onSubmit={async (value) => { if (!settingsDocument) return; await saveDocument(settingsDocument, value); }}
       />
       <Dialog open={!!deleteDocument} onOpenChange={(open) => !open && setDeleteDocument(null)}>
-        <DialogContent className="max-w-[680px] rounded-[32px] border-0 p-0">
+        <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[32px] border-0 p-0 sm:max-w-[680px]">
           <DialogHeader className="border-b px-12 py-10">
             <DialogTitle className="pr-10 text-[22px] font-medium text-black">{`Удалить документ "${deleteDocument?.title || AUDIT_REPORT_DOCUMENT_TITLE}"`}</DialogTitle>
           </DialogHeader>

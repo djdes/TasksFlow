@@ -284,7 +284,7 @@ function ArticleEditor({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-[900px] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-w-[900px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-[#e2e5ef] px-6 py-4">

@@ -173,7 +173,7 @@ export function NotificationsBell() {
           onClick={closePanel}
         >
           <div
-            className="flex max-h-[80vh] w-full max-w-[640px] flex-col overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_30px_80px_-20px_rgba(11,16,36,0.35)]"
+            className="flex max-h-[80vh] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_30px_80px_-20px_rgba(11,16,36,0.35)] sm:max-w-[640px]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* HEADER */}

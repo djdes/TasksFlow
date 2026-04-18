@@ -250,7 +250,7 @@ function RowDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[560px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="text-[24px] font-semibold text-black">
             {isEdit ? "Редактирование строки" : "Добавление новой строки"}
@@ -502,7 +502,7 @@ function EditListsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(open) => { if (!open) handleClose(); else props.onOpenChange(true); }}>
-      <DialogContent className="max-h-[92vh] max-w-[560px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="text-[24px] font-semibold text-black">Редактировать список</DialogTitle>
           <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={handleClose}><X className="size-6" /></button>
@@ -735,7 +735,7 @@ function IncomingControlEditListsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={(open) => { if (!open) handleClose(); else props.onOpenChange(true); }}>
-      <DialogContent className="max-h-[92vh] max-w-[900px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[900px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="text-[24px] font-semibold text-black">Редактировать список изделий</DialogTitle>
           <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={handleClose}><X className="size-6" /></button>
@@ -816,7 +816,7 @@ function SettingsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[560px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="text-[24px] font-semibold text-black">Настройки документа</DialogTitle>
           <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
@@ -896,7 +896,7 @@ function ConfirmDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[640px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[640px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="pr-10 text-[24px] font-semibold text-black">
             {props.title}
@@ -967,7 +967,7 @@ function ImportRowsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[760px] overflow-y-auto rounded-[28px] border-0 p-0">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[760px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="pr-10 text-[24px] font-semibold text-black">
             Добавление списка изделий из файла в формате Excel
@@ -1114,7 +1114,7 @@ function AddMultipleRowsDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[520px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[520px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="pr-10 text-[24px] font-semibold text-black">
             Добавить несколько строк
@@ -1163,7 +1163,7 @@ function AddMultipleRowsDialog(props: {
 function IikoDialog(props: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-[560px] rounded-[28px] border-0 p-0">
+      <DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[560px]">
         <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
           <DialogTitle className="text-[20px] font-semibold text-black">Добавление списка из Iiko (Приходные накладные)</DialogTitle>
           <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={() => props.onOpenChange(false)}><X className="size-6" /></button>
