@@ -367,7 +367,8 @@ export function HygieneDocumentClient({
         }
       `}</style>
 
-      <div className="hygiene-sheet mx-auto max-w-[1720px] px-8 py-6">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
+        <div className="hygiene-sheet mx-auto min-w-[1100px] max-w-[1720px] px-8 py-6 sm:min-w-0">
         <div className="screen-only mb-10 space-y-8">
           <StaffJournalToolbar
             documentId={documentId}
@@ -588,6 +589,7 @@ export function HygieneDocumentClient({
             ) : null}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

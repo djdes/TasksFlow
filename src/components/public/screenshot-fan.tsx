@@ -30,7 +30,7 @@ export function ScreenshotFan() {
 
       {/* Mobile variant — only one phone, centred; smaller width so it
           fits under the hero chips on 320px devices */}
-      <div className="absolute left-1/2 top-0 block w-[min(200px,72vw)] -translate-x-1/2 sm:hidden">
+      <div className="absolute left-1/2 top-0 block w-[min(180px,65vw)] -translate-x-1/2 sm:hidden">
         <TelegramMockup />
       </div>
 

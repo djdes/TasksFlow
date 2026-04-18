@@ -142,7 +142,7 @@ export function PricingCalculator() {
                   }
                   aria-pressed={active}
                   aria-label={`Переключить ${d.title}`}
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                  className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors ${
                     active
                       ? "border-[#5566f6] bg-[#5566f6] text-white"
                       : "border-[#dcdfed] bg-white"

@@ -338,7 +338,7 @@ export default async function LandingPage() {
           </div>
 
           {/* Headline */}
-          <h1 className="mx-auto mt-8 max-w-[920px] text-[40px] font-semibold leading-[1.02] tracking-[-0.025em] text-[#0b1024] sm:text-[56px] md:text-[72px]">
+          <h1 className="mx-auto mt-8 max-w-[920px] text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-[#0b1024] sm:text-[56px] md:text-[72px]">
             Электронные журналы
             <br />
             <span className="relative inline-block">
@@ -361,7 +361,7 @@ export default async function LandingPage() {
           <div className="mt-10 flex flex-col items-center gap-3">
             <Link
               href="/register"
-              className="group inline-flex h-[56px] items-center gap-2 rounded-2xl bg-[#5566f6] px-8 text-[16px] font-semibold text-white shadow-[0_20px_50px_-20px_rgba(85,102,246,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#4a5bf0] hover:shadow-[0_24px_55px_-18px_rgba(85,102,246,0.65)]"
+              className="group inline-flex h-12 items-center gap-2 rounded-2xl bg-[#5566f6] px-6 text-[15px] font-semibold text-white shadow-[0_20px_50px_-20px_rgba(85,102,246,0.55)] transition-all hover:-translate-y-0.5 hover:bg-[#4a5bf0] hover:shadow-[0_24px_55px_-18px_rgba(85,102,246,0.65)] sm:h-[56px] sm:px-8 sm:text-[16px]"
             >
               Начать
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -435,7 +435,7 @@ export default async function LandingPage() {
 
       {/* TRIAL BANNER */}
       <section className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-20">
-        <div className="relative overflow-hidden rounded-3xl bg-[#0b1024] px-8 py-14 text-white md:px-16">
+        <div className="relative overflow-hidden rounded-3xl bg-[#0b1024] px-5 py-10 text-white sm:px-8 sm:py-14 md:px-16">
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -top-24 right-0 size-[400px] rounded-full bg-[#7cf5c0] opacity-20 blur-[120px]" />
             <div className="absolute -bottom-24 -left-10 size-[420px] rounded-full bg-[#5566f6] opacity-30 blur-[120px]" />
@@ -649,7 +649,7 @@ export default async function LandingPage() {
 
       {/* PARTNERSHIP */}
       <section className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-20">
-        <div className="relative overflow-hidden rounded-3xl border border-[#ececf4] bg-white px-8 py-10 md:px-12">
+        <div className="relative overflow-hidden rounded-3xl border border-[#ececf4] bg-white px-5 py-8 sm:px-8 sm:py-10 md:px-12">
           <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-5">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#5566f6]">
@@ -902,7 +902,7 @@ export default async function LandingPage() {
 
       {/* FINAL CTA */}
       <section className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-20">
-        <div className="rounded-3xl border border-[#ececf4] bg-[#f5f6ff] p-10 text-center md:p-14">
+        <div className="rounded-3xl border border-[#ececf4] bg-[#f5f6ff] p-6 text-center sm:p-10 md:p-14">
           <div className="mx-auto mb-5 inline-flex size-14 items-center justify-center rounded-2xl bg-[#5566f6] text-white shadow-[0_14px_36px_-14px_rgba(85,102,246,0.6)]">
             <Sparkles className="size-7" />
           </div>
