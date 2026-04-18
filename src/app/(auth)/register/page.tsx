@@ -147,7 +147,7 @@ export default function RegisterPage() {
         <div className="relative z-10 mt-auto max-w-[520px]">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.18em] text-white/70 backdrop-blur">
             <Sparkles className="size-3.5 text-[#7cf5c0]" />
-            14 дней пробного периода
+            Бесплатно навсегда · без карты
           </div>
           <h1 className="text-[46px] font-semibold leading-[1.05] tracking-[-0.03em]">
             Зарегистрируйте компанию за 2 минуты

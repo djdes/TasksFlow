@@ -110,7 +110,7 @@ export default async function BlogArticlePage({
             Попробуйте WeSetup бесплатно
           </div>
           <p className="mx-auto mt-2 max-w-[420px] text-[14px] text-[#6f7282]">
-            14 дней демо-доступа со всеми журналами. Без привязки карты.
+            Бесплатный тариф — навсегда, без ограничений по времени. Карта не нужна.
           </p>
           <Link
             href="/register"

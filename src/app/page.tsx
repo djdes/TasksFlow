@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   Cloud,
-  Gauge,
   Gift,
   Handshake,
   HelpCircle,
@@ -15,7 +14,6 @@ import {
   Leaf,
   Network,
   NotebookText,
-  Package,
   Plug,
   Quote,
   Rocket,
@@ -25,13 +23,14 @@ import {
   Sparkles,
   Star,
   Store,
-  Thermometer,
   Timer,
   UserCheck,
   Users,
   Wand2,
+  Wrench,
 } from "lucide-react";
 import { db } from "@/lib/db";
+import { PricingCalculator } from "@/components/public/pricing-calculator";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -112,49 +111,12 @@ const STEPS = [
     text: "Покажем систему, ответим на вопросы, обсудим тариф и план перехода.",
   },
   {
-    title: "Демо-доступ",
-    text: "14 дней бесплатно — реальные журналы на ваших сотрудниках и помещениях, без рисков.",
+    title: "Бесплатный старт",
+    text: "Регистрируетесь и сразу ведёте настоящие журналы — без пробного периода и карты. До 5 сотрудников всё бесплатно навсегда.",
   },
   {
     title: "Ведение журналов",
     text: "Смена за сменой — сервис напоминает, подставляет автозначения, хранит историю для проверок.",
-  },
-];
-
-const DEVICES: Array<{
-  icon: typeof Thermometer;
-  title: string;
-  text: string;
-  price: string;
-  unit: string;
-}> = [
-  {
-    icon: Thermometer,
-    title: "Датчик температуры",
-    text: "Для холодильных и морозильных камер. Пишет температуру каждые 5 минут, журнал заполняется сам.",
-    price: "3 490 ₽",
-    unit: "за датчик",
-  },
-  {
-    icon: Gauge,
-    title: "Термогигрометр",
-    text: "Для зала и цеха. Температура + влажность на одном экране, связан с журналом климата.",
-    price: "2 890 ₽",
-    unit: "за устройство",
-  },
-  {
-    icon: Smartphone,
-    title: "Планшет для кухни",
-    text: "10 дюймов, защитный чехол, стартовый профиль уже настроен. Клеится к стене в цехе.",
-    price: "12 900 ₽",
-    unit: "за планшет",
-  },
-  {
-    icon: UserCheck,
-    title: "NFC-брелоки для смены",
-    text: "Вход в журналы в один тап — не нужно вводить пароль на кухне мокрыми руками.",
-    price: "490 ₽",
-    unit: "за брелок",
   },
 ];
 
@@ -205,7 +167,7 @@ const FAQ = [
   },
   {
     q: "Можно попробовать бесплатно?",
-    a: "Да — 14 дней демо-доступа со всеми функциями, без привязки карты. Если не подойдёт, просто не оформляете подписку.",
+    a: "Да — бесплатный тариф действует навсегда: до 5 сотрудников все 34 журнала включены без ограничений по времени и без привязки карты. Подписку оформляете, только если нужно больше рабочих мест или автоматизация с датчиками.",
   },
 ];
 
@@ -306,7 +268,7 @@ export default async function LandingPage() {
                 href="/register"
                 className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#5566f6] px-6 text-[15px] font-medium text-white shadow-[0_12px_36px_-12px_rgba(85,102,246,0.65)] transition-colors hover:bg-[#4a5bf0]"
               >
-                Попробовать 14 дней бесплатно
+                Начать бесплатно навсегда
                 <ArrowRight className="size-4" />
               </Link>
               <a
@@ -382,12 +344,12 @@ export default async function LandingPage() {
           <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-[560px]">
               <h3 className="text-[32px] font-semibold leading-tight tracking-[-0.02em]">
-                14 дней бесплатно. Без карты.
+                Бесплатно навсегда. Без карты.
               </h3>
               <p className="mt-3 text-[15px] text-white/70">
-                Поднимете свою организацию за 10 минут, добавите сотрудников и
-                начнёте вести журналы прямо сегодня. Не подойдёт — ничего не
-                платите.
+                Поднимете свою организацию за 10 минут и начнёте вести
+                журналы прямо сегодня. Платите, только если нужно больше
+                рабочих мест или автоматизация.
               </p>
             </div>
             <Link
@@ -452,131 +414,73 @@ export default async function LandingPage() {
             Тарифы
           </div>
           <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
-            Платите только за сотрудников. Журналы — бесплатно.
+            Все журналы бесплатно. Платите за автоматизацию.
           </h2>
           <p className="mt-4 text-[15px] text-[#6f7282]">
-            Функционал одинаковый на всех планах — разница только в
-            количестве рабочих мест. Устройства покупаются отдельно и
-            навсегда: монтируете датчик один раз, подписку на него не
-            платите.
+            Софт-подписка — одна и та же цена. Отличаются только услуги:
+            приехать, подключить датчики к холодильникам, настроить
+            профили и обучить смену. Всё железо — разовая покупка.
           </p>
         </div>
-        <div className="grid gap-5 md:grid-cols-3">
+
+        <div className="grid gap-5 lg:grid-cols-3">
+          {/* Free tier */}
           <PricingCard
             kind="free"
-            name="Старт"
+            name="Бесплатный"
             from="0 ₽"
             period="навсегда"
-            description="Для одного заведения с небольшой сменой. Все журналы, все напоминания, бот и PDF — без оплаты."
+            description="Доступ ко всем журналам без ограничений по времени. Для заведения с небольшой сменой."
             points={[
               "До 5 сотрудников",
               "Все 34 журнала СанПиН + ХАССП",
               "Telegram-бот с wizard заполнения",
-              "PDF для проверок Роспотребнадзора",
+              "PDF для проверок, без привязки карты",
             ]}
             ctaLabel="Начать бесплатно"
             ctaHref="/register"
           />
+
+          {/* Subscription tier (user brings own equipment) */}
           <PricingCard
             kind="team"
-            name="Команда"
-            from="990 ₽"
+            name="Подписка"
+            from="1 990 ₽"
             period="в месяц"
-            description="Полноценная смена: официанты, повара, кондитеры, управляющий — всё под контролем."
+            description="Если датчики, планшеты и брелоки уже есть — подключаем их к WeSetup и снимаем все ограничения."
             points={[
-              "До 15 сотрудников",
-              "Всё из тарифа «Старт»",
+              "Без лимита по сотрудникам",
+              "Подключение своих IoT-датчиков",
+              "Автозаполнение температур и гигиены",
               "Приоритетная поддержка в Telegram",
-              "Синхронизация с iiko / 1С",
             ]}
-            ctaLabel="Попробовать 14 дней"
+            ctaLabel="Оформить подписку"
             ctaHref="/register"
             highlighted
             badge="Популярный"
           />
-          <PricingCard
-            kind="network"
-            name="Сеть"
-            from="2 990 ₽"
-            period="в месяц"
-            description="Для сетей и крупных цехов: неограниченно сотрудников и точек, персональный технолог на запуск."
-            points={[
-              "Неограниченно сотрудников и точек",
-              "Всё из тарифа «Команда»",
-              "Персональный технолог на запуск",
-              "Корпоративный API + SLA по аварийности",
-            ]}
-            ctaLabel="Записаться на демо"
-            ctaHref="https://t.me/wesetupbot"
-          />
+
+          {/* Subscription + equipment bundle with live calculator */}
+          <div className="relative overflow-hidden rounded-3xl border border-[#ececf4] bg-white p-6 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:p-7">
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#5566f6]">
+                <Wrench className="size-5" />
+              </span>
+              <div className="text-[20px] font-semibold tracking-[-0.01em] text-[#0b1024]">
+                Подписка + оборудование
+              </div>
+            </div>
+            <p className="mt-4 text-[14px] leading-[1.55] text-[#6f7282]">
+              Выберите, что нужно — цена пересчитается. Уже есть планшет
+              или датчики — снимите галочку, и останется только подписка.
+            </p>
+            <div className="mt-5">
+              <PricingCalculator />
+            </div>
+          </div>
         </div>
         <div className="mt-4 text-center text-[13px] text-[#9b9fb3]">
-          Годовая оплата — −20% на любом платном тарифе.
-        </div>
-      </section>
-
-      {/* DEVICES */}
-      <section className="mx-auto max-w-[1200px] px-6 pb-20">
-        <div className="mb-10 max-w-[720px]">
-          <div className="mb-3 inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.18em] text-[#5566f6]">
-            <Package className="size-4" />
-            Устройства
-          </div>
-          <h2 className="text-[36px] font-semibold leading-tight tracking-[-0.02em]">
-            Железо — разовая покупка, без подписки
-          </h2>
-          <p className="mt-4 text-[15px] text-[#6f7282]">
-            Работает всё и без датчиков — журналы заполняются руками или
-            через Telegram-бот. Но с датчиками смена экономит по 20 минут в
-            день: температура пишется сама, бракераж собирается за секунду.
-          </p>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {DEVICES.map((d) => (
-            <div
-              key={d.title}
-              className="flex flex-col rounded-3xl border border-[#ececf4] bg-white p-6 shadow-[0_0_0_1px_rgba(240,240,250,0.45)]"
-            >
-              <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#5566f6]">
-                <d.icon className="size-6" />
-              </div>
-              <div className="text-[16px] font-semibold text-[#0b1024]">
-                {d.title}
-              </div>
-              <p className="mt-1.5 flex-1 text-[13px] leading-[1.55] text-[#6f7282]">
-                {d.text}
-              </p>
-              <div className="mt-5 flex items-baseline gap-1.5">
-                <span className="text-[22px] font-semibold tracking-[-0.01em] text-[#0b1024]">
-                  {d.price}
-                </span>
-                <span className="text-[12px] text-[#9b9fb3]">{d.unit}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 rounded-3xl border border-[#ececf4] bg-[#fafbff] p-6 md:p-7">
-          <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-[520px]">
-              <div className="text-[15px] font-semibold text-[#0b1024]">
-                Не уверены, что нужно?
-              </div>
-              <p className="mt-1 text-[13px] leading-[1.55] text-[#6f7282]">
-                Напишите, сколько у вас холодильников и типов заведения —
-                соберём минимальный набор под ваш формат, без «продадим
-                побольше».
-              </p>
-            </div>
-            <a
-              href="https://t.me/wesetupbot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
-            >
-              Подобрать комплект
-              <ArrowRight className="size-4" />
-            </a>
-          </div>
+          Годовая оплата подписки — −20%. Железо — один раз.
         </div>
       </section>
 
@@ -908,7 +812,7 @@ export default async function LandingPage() {
           </h3>
           <p className="mx-auto mt-3 max-w-[480px] text-[15px] leading-[1.55] text-[#6f7282]">
             Зарегистрируйте организацию за 3 шага и начните заполнять журналы
-            уже сегодня. Демо-период — 14 дней, без карты.
+            уже сегодня. Бесплатный тариф — без срока, без карты.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link

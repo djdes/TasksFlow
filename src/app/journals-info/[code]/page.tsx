@@ -152,7 +152,8 @@ export default async function JournalInfoDetailPage({
                 <ArrowRight className="size-4" />
               </Link>
               <p className="mt-3 text-[12px] leading-[1.5] text-[#6f7282]">
-                14 дней демо, все журналы включены, без привязки карты.
+                Все журналы доступны на бесплатном тарифе — без
+                ограничений по времени и без карты.
               </p>
             </div>
 
