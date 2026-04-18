@@ -40,15 +40,16 @@ export function ImpersonationBanner({ organizationName }: Props) {
   }
 
   return (
-    <div className="sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-[#ff3b30] bg-[#fff4f2] px-6 py-3 text-[14px] text-[#d2453d]">
-      <div className="font-medium">
-        ROOT · Просмотр организации: <span className="font-semibold">{organizationName}</span>
+    <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-2 border-b border-[#ff3b30] bg-[#fff4f2] px-4 py-3 text-[13px] text-[#d2453d] sm:gap-4 sm:px-6 sm:text-[14px]">
+      <div className="min-w-0 flex-1 font-medium">
+        ROOT · Просмотр организации:{" "}
+        <span className="font-semibold">{organizationName}</span>
       </div>
       <button
         type="button"
         onClick={stop}
         disabled={busy}
-        className="inline-flex h-9 items-center rounded-xl bg-[#ff3b30] px-4 text-white hover:bg-[#e0342a] disabled:opacity-60"
+        className="inline-flex h-9 shrink-0 items-center rounded-xl bg-[#ff3b30] px-4 text-white hover:bg-[#e0342a] disabled:opacity-60"
       >
         {busy ? "..." : "Выйти"}
       </button>

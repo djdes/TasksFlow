@@ -55,8 +55,8 @@ export default async function AreasSettingsPage() {
       {areas.length === 0 ? (
         <EmptyState canManage={canManage} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-          <table className="w-full text-[15px]">
+        <div className="overflow-x-auto rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+          <table className="w-full min-w-[560px] text-[15px]">
             <thead className="bg-[#f8f9fc] text-[13px] text-[#6f7282]">
               <tr>
                 <th className="px-6 py-3 text-left font-medium">Название</th>

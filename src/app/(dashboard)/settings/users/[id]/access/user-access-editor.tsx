@@ -126,8 +126,8 @@ export function UserAccessEditor({ userId, catalog, initialAccess }: Props) {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <table className="w-full text-[15px]">
+      <div className="overflow-x-auto rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+        <table className="w-full min-w-[620px] text-[15px]">
           <thead className="bg-[#f6f7fb] text-[14px] text-[#6f7282]">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Журнал</th>
