@@ -39,7 +39,7 @@ export default async function ChangesPage() {
               Change control
             </span>
           </div>
-          <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+          <h1 className="mt-2 text-[26px] font-semibold tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
             Управление изменениями
           </h1>
           <p className="mt-1.5 text-[14px] text-[#6f7282]">
@@ -48,16 +48,17 @@ export default async function ChangesPage() {
         </div>
         <Link
           href="/changes/new"
-          className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-2xl bg-[#5566f6] px-4 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#5566f6] px-4 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0] sm:w-auto sm:justify-start sm:self-start"
         >
           <Plus className="size-4" />
           Новое изменение
         </Link>
       </div>
 
+      <div className="-mx-4 sm:mx-0">
       <div className="overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[14px]">
+          <table className="w-full min-w-[560px] border-collapse text-[14px]">
             <thead>
               <tr className="border-b border-[#ececf4] bg-[#fafbff] text-left text-[12px] uppercase tracking-wider text-[#6f7282]">
                 <th className="px-5 py-3 font-medium">v.</th>
@@ -117,6 +118,7 @@ export default async function ChangesPage() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

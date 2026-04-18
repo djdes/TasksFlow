@@ -440,7 +440,7 @@ export function StaffPageClient(props: StaffPageProps) {
                 <UsersIcon className="size-6" />
               </div>
               <div>
-                <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.02em]">
+                <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px]">
                   Сотрудники
                 </h1>
                 <p className="mt-1 max-w-[540px] text-[15px] text-white/70">
@@ -617,7 +617,8 @@ export function StaffPageClient(props: StaffPageProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-6 border-b border-[#ececf4]">
+      <div className="overflow-x-auto pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-max items-center gap-6 border-b border-[#ececf4]">
         {[
           { key: "work-off" as TabKey, label: "График выходных дней" },
           { key: "vacations" as TabKey, label: "График отпусков" },
@@ -644,6 +645,7 @@ export function StaffPageClient(props: StaffPageProps) {
             </button>
           );
         })}
+      </div>
       </div>
 
       {/* Tab content */}
@@ -1262,8 +1264,10 @@ function PeriodsTable(props: {
         Добавить
       </Button>
 
+      <div className="-mx-4 sm:mx-0">
       <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <table className="w-full text-[13px]">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[540px] text-[13px]">
           <thead>
             <tr className="bg-[#f5f6ff]">
               <th className="w-[44px] px-3 py-2" />
@@ -1334,6 +1338,8 @@ function PeriodsTable(props: {
             )}
           </tbody>
         </table>
+        </div>
+      </div>
       </div>
     </div>
   );

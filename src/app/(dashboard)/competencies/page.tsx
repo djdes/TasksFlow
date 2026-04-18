@@ -50,7 +50,7 @@ export default async function CompetenciesPage() {
             Матрица компетенций
           </span>
         </div>
-        <h1 className="mt-2 text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+        <h1 className="mt-2 text-[26px] font-semibold tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
           Обучение персонала
         </h1>
         <p className="mt-1.5 text-[14px] text-[#6f7282]">
@@ -68,6 +68,7 @@ export default async function CompetenciesPage() {
         ))}
       </div>
 
+      <div className="-mx-4 sm:mx-0">
       <div className="overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-[14px]">
@@ -114,6 +115,7 @@ export default async function CompetenciesPage() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

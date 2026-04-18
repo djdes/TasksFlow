@@ -21,7 +21,7 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
           Отчёты
         </h1>
         <p className="mt-1.5 text-[14px] text-[#6f7282]">

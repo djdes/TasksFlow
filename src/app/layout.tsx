@@ -67,7 +67,7 @@ export default function RootLayout({
         />
         <meta name="apple-mobile-web-app-title" content="WeSetup" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased overflow-x-hidden">
         {children}
         <ServiceWorkerRegister />
         <YandexMetrika />

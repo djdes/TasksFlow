@@ -71,7 +71,7 @@ export default async function CapaPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+          <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
             CAPA
           </h1>
           <p className="mt-1.5 text-[14px] text-[#6f7282]">
@@ -80,7 +80,7 @@ export default async function CapaPage() {
         </div>
         <Link
           href="/capa/new"
-          className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-2xl bg-[#5566f6] px-4 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#5566f6] px-4 text-[14px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0] sm:w-auto sm:justify-start sm:self-start"
         >
           <Plus className="size-4" />
           Новый CAPA

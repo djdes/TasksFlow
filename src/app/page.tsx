@@ -491,12 +491,12 @@ export default async function LandingPage() {
             <Link
               key={j.code}
               href={`/journals-info/${j.code}`}
-              className="group flex items-center gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-3 text-[14px] font-medium text-[#0b1024] shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#5566f6]/40 hover:shadow-[0_12px_28px_-16px_rgba(85,102,246,0.22)]"
+              className="group flex w-full min-w-0 items-center gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-3 text-[14px] font-medium text-[#0b1024] shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#5566f6]/40 hover:shadow-[0_12px_28px_-16px_rgba(85,102,246,0.22)]"
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f5f6ff] text-[12px] font-semibold text-[#5566f6]">
                 {String(idx + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 truncate group-hover:text-[#3848c7]">
+              <span className="min-w-0 flex-1 truncate group-hover:text-[#3848c7]">
                 {j.name}
               </span>
               <ArrowRight className="size-4 shrink-0 text-[#5566f6] opacity-0 transition-opacity group-hover:opacity-100" />
