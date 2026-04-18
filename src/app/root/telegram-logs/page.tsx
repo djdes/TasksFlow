@@ -49,8 +49,8 @@ export default async function RootTelegramLogsPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white">
-        <table className="w-full text-[14px]">
+      <div className="overflow-x-auto rounded-2xl border border-[#ececf4] bg-white">
+        <table className="w-full min-w-[900px] text-[14px]">
           <thead className="bg-[#f6f7fb] text-[13px] text-[#6f7282]">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Время</th>

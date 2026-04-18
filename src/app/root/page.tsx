@@ -41,8 +41,8 @@ export default async function RootOrganizationsPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white">
-        <table className="w-full text-[15px]">
+      <div className="overflow-x-auto rounded-2xl border border-[#ececf4] bg-white">
+        <table className="w-full min-w-[820px] text-[15px]">
           <thead className="bg-[#f6f7fb] text-[14px] text-[#6f7282]">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Название</th>

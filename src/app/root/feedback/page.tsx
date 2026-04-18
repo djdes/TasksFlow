@@ -116,7 +116,7 @@ export default async function RootFeedbackPage({
               id="type"
               name="type"
               defaultValue={typeFilter ?? ""}
-              className="h-10 min-w-[180px] rounded-xl border border-[#dcdfed] bg-white px-3 text-[14px] text-[#0b1024] focus:border-[#5566f6] focus:outline-none focus:ring-4 focus:ring-[#5566f6]/15"
+              className="h-10 w-full rounded-xl border border-[#dcdfed] bg-white px-3 text-[14px] text-[#0b1024] focus:border-[#5566f6] focus:outline-none focus:ring-4 focus:ring-[#5566f6]/15 sm:w-auto sm:min-w-[180px]"
             >
               <option value="">Все типы</option>
               <option value="bug">Ошибка ({totalBugs})</option>
@@ -135,7 +135,7 @@ export default async function RootFeedbackPage({
               id="org"
               name="org"
               defaultValue={orgFilter ?? ""}
-              className="h-10 min-w-[280px] rounded-xl border border-[#dcdfed] bg-white px-3 text-[14px] text-[#0b1024] focus:border-[#5566f6] focus:outline-none focus:ring-4 focus:ring-[#5566f6]/15"
+              className="h-10 w-full rounded-xl border border-[#dcdfed] bg-white px-3 text-[14px] text-[#0b1024] focus:border-[#5566f6] focus:outline-none focus:ring-4 focus:ring-[#5566f6]/15 sm:w-auto sm:min-w-[280px]"
             >
               <option value="">Все организации</option>
               {orgOptions.map((o) => (

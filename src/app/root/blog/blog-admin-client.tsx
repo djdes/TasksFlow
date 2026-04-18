@@ -85,8 +85,8 @@ export function BlogAdminClient({ articles }: { articles: ArticleRow[] }) {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#e2e5ef] bg-white">
-        <table className="w-full border-collapse text-[14px]">
+      <div className="overflow-x-auto rounded-2xl border border-[#e2e5ef] bg-white">
+        <table className="w-full min-w-[720px] border-collapse text-[14px]">
           <thead>
             <tr className="bg-[#f4f5fb] text-left text-[12px] uppercase tracking-wider text-[#6f7282]">
               <th className="px-4 py-3">Заголовок</th>
