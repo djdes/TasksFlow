@@ -32,6 +32,15 @@ import {
   type EquipmentCleaningRowData,
 } from "@/lib/equipment-cleaning-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { PositionSelectItems } from "@/components/shared/position-select";
@@ -139,6 +148,42 @@ export function EquipmentCleaningDocumentClient({
   );
 
   const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+  const { mobileView, switchMobileView } = useMobileView("equipment_cleaning");
+
+  const cardItems: RecordCardItem[] = sortedRows.map((row, index) => ({
+    id: row.id,
+    title: `№${index + 1} · ${row.data.equipmentName || "—"}`,
+    subtitle: `${formatEquipmentCleaningDate(row.data.washDate)} ${row.data.washTime || ""}`.trim() || undefined,
+    leading: status === "active" ? (
+      <Checkbox
+        checked={selectedIds.includes(row.id)}
+        onCheckedChange={(checked) =>
+          setSelectedIds((current) =>
+            checked === true
+              ? [...new Set([...current, row.id])]
+              : current.filter((id) => id !== row.id)
+          )
+        }
+        className="size-5"
+      />
+    ) : null,
+    fields: [
+      { label: "Моющий раствор", value: row.data.detergentName, hideIfEmpty: true },
+      { label: "Концентрация моющего, %", value: row.data.detergentConcentration, hideIfEmpty: true },
+      { label: "Дезинфицирующий раствор", value: row.data.disinfectantName, hideIfEmpty: true },
+      { label: "Концентрация дез. ср-ва, %", value: row.data.disinfectantConcentration, hideIfEmpty: true },
+      {
+        label: fieldVariant === "rinse_temperature" ? "Ополаскивание, °C" : "pH-нейтральность",
+        value: fieldVariant === "rinse_temperature"
+          ? row.data.rinseTemperature
+          : getEquipmentCleaningResultLabel(row.data.rinseResult),
+        hideIfEmpty: true,
+      },
+      { label: "Мойщик", value: row.data.washerName, hideIfEmpty: true },
+      { label: "Контроль", value: `${row.data.controllerPosition || ""}, ${row.data.controllerName || ""}`.trim().replace(/^,\s*|\s*,\s*$/g, ""), hideIfEmpty: true },
+    ],
+    onClick: status === "active" ? () => openEditRow(row) : undefined,
+  }));
 
   function openCreateRow() {
     const washer = users[0] || null;
@@ -380,7 +425,15 @@ export function EquipmentCleaningDocumentClient({
           </Button>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView items={cardItems} emptyLabel="Записей по мойке оборудования нет." />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[1380px] border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#f7f7fb]">
@@ -460,7 +513,7 @@ export function EquipmentCleaningDocumentClient({
               ) : null}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <Dialog open={rowModalOpen} onOpenChange={setRowModalOpen}>

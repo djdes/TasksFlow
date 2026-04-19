@@ -54,6 +54,15 @@ import {
   type AcceptanceRow,
 } from "@/lib/acceptance-document";
 import { PositionSelectItems } from "@/components/shared/position-select";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 type User = { id: string; name: string; role: string };
 
@@ -1211,6 +1220,68 @@ export function AcceptanceDocumentClient(props: Props) {
     if (!sortByExpiry) return rows;
     return [...rows].sort((a, b) => (a.expiryDate || "").localeCompare(b.expiryDate || ""));
   }, [rows, sortByExpiry]);
+  const { mobileView, switchMobileView } = useMobileView(routeCode);
+
+  const cardItems: RecordCardItem[] = displayedRows.map((row, index) => ({
+    id: row.id,
+    title: `№${index + 1} · ${row.productName || "—"}`,
+    subtitle:
+      [
+        formatAcceptanceDateDash(row.deliveryDate),
+        row.deliveryHour ? `${row.deliveryHour}:${row.deliveryMinute || "00"}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined,
+    leading: !isClosed ? (
+      <Checkbox
+        checked={selectedRowIds.includes(row.id)}
+        onCheckedChange={(c) =>
+          setSelectedRowIds((cur) =>
+            c === true
+              ? [...new Set([...cur, row.id])]
+              : cur.filter((id) => id !== row.id)
+          )
+        }
+        className="size-5"
+      />
+    ) : null,
+    fields: [
+      { label: "Производитель", value: row.manufacturer, hideIfEmpty: true },
+      { label: "Поставщик", value: row.supplier, hideIfEmpty: true },
+      {
+        label: "Транспортировка",
+        value: TRANSPORT_LABELS[row.transportCondition],
+        hideIfEmpty: true,
+      },
+      {
+        label: "Упаковка/маркировка",
+        value: COMPLIANCE_LABELS[row.packagingCompliance],
+        hideIfEmpty: true,
+      },
+      {
+        label: "Органолептика",
+        value: ORGANOLEPTIC_LABELS[row.organolepticResult],
+        hideIfEmpty: true,
+      },
+      {
+        label: getExpiryFieldDisplayLabel(config.expiryFieldLabel),
+        value: `${formatAcceptanceDateDash(row.expiryDate)}${row.expiryHour ? ` ${row.expiryHour}:${row.expiryMinute || "00"}` : ""}`,
+        hideIfEmpty: true,
+      },
+      { label: "Примечания", value: row.note, hideIfEmpty: true },
+      {
+        label: "Ответственный",
+        value: getResponsibleLabel(row, props.users),
+        hideIfEmpty: true,
+      },
+    ],
+    onClick: !isClosed
+      ? () => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }
+      : undefined,
+  }));
 
   async function persist(nextTitle: string, nextDateFrom: string, nextConfig: AcceptanceDocumentConfig) {
     const response = await fetch(`/api/journal-documents/${props.documentId}`, {
@@ -1461,8 +1532,16 @@ export function AcceptanceDocumentClient(props: Props) {
           </div>
         )}
 
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView items={cardItems} emptyLabel="Поставок пока не зарегистрировано." />
+        ) : null}
+
         {/* Data table */}
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[960px] w-full border-collapse text-[13px] sm:min-w-[1400px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
@@ -1526,7 +1605,7 @@ export function AcceptanceDocumentClient(props: Props) {
               <tr><td className="border border-black p-2 text-center"><Checkbox disabled /></td><td colSpan={10} className="border border-black p-2" /></tr>
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} title={title} dateFrom={dateFrom} users={props.users} config={config} onSave={async (params) => { await persist(params.title, params.dateFrom, params.config); }} />
