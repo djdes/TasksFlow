@@ -307,12 +307,9 @@ export function ColdEquipmentDocumentsClient({
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-1 gap-3 rounded-[30px] border border-[#e7eaf3] bg-white sm:grid-cols-[minmax(0,1.6fr)_340px_260px_84px] sm:items-center sm:gap-0"
+                className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.6fr)_340px_260px_84px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
               >
-                <Link
-                  href={href}
-                  className={`${JOURNAL_CARD_TITLE_CLASS} px-8 py-6`}
-                >
+                <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title}
                 </Link>
 
