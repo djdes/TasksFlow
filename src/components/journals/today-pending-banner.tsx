@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { DAILY_JOURNAL_CODES } from "@/lib/today-compliance";
+import { DAILY_JOURNAL_CODES } from "@/lib/daily-journal-codes";
 
 /**
  * Top-of-page banner for a journal's documents list. Tells staff at a

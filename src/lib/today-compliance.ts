@@ -1,4 +1,7 @@
 import { db } from "@/lib/db";
+import { DAILY_JOURNAL_CODES } from "@/lib/daily-journal-codes";
+
+export { DAILY_JOURNAL_CODES };
 
 /**
  * "Filled today" check for a journal template. Not every mandatory
@@ -35,25 +38,6 @@ import { db } from "@/lib/db";
  * stay on the simpler "at least one entry today" rule.
  */
 
-/**
- * Templates that legitimately expect a row for today every working
- * day. Everything else is aperiodic and shouldn't contribute red
- * pills to the dashboard. Keep this list in sync with the product
- * definition — when a journal's cadence changes, update here.
- */
-export const DAILY_JOURNAL_CODES = new Set<string>([
-  "hygiene",
-  "health_check",
-  "climate_control",
-  "cold_equipment_control",
-  "cleaning",
-  "general_cleaning",
-  "cleaning_ventilation_checklist",
-  "uv_lamp_runtime",
-  "fryer_oil",
-  "finished_product",
-  "perishable_rejection",
-]);
 
 type DayRollup = {
   date: Date;

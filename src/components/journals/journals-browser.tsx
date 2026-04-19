@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DAILY_JOURNAL_CODES } from "@/lib/today-compliance";
+import { DAILY_JOURNAL_CODES } from "@/lib/daily-journal-codes";
 import {
   AlertCircle,
   ArrowRight,
