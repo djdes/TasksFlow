@@ -863,7 +863,7 @@ export function CleaningVentilationChecklistDocumentClient({
           ) : null}
         </div>
 
-        <div className="overflow-x-auto rounded-[28px] border border-[#d9dceb]">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#d9dceb]">
           <table className="min-w-full border-collapse">
             <thead>
               <tr className="bg-[#f8f9fc]">

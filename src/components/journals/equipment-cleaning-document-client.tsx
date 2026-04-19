@@ -378,7 +378,7 @@ export function EquipmentCleaningDocumentClient({
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[1380px] border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#f7f7fb]">

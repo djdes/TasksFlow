@@ -448,7 +448,7 @@ export function ComplaintDocumentClient({
           </h1>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="mx-auto min-w-[1200px] max-w-[1520px] border-collapse">
             <tbody>
               <tr>
@@ -518,7 +518,7 @@ export function ComplaintDocumentClient({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1520px] w-full border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

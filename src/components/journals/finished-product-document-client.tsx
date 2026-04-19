@@ -214,7 +214,7 @@ export function FinishedProductDocumentClient({
           <Button type="button" onClick={() => saveConfig()} disabled={isSaving || isPending}><Save className="size-4" />{isSaving ? "Сохранение..." : "Сохранить"}</Button>
         </div>}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1650px] w-full border-collapse text-sm">
             <thead><tr>
               <th className="w-10 border p-2" /><th className="border p-2">Дата, время изготовления</th><th className="border p-2">Время снятия бракеража</th><th className="border p-2">{config.fieldNameMode === "semi" ? "Наименование полуфабриката" : "Наименование блюд (изделий)"}</th><th className="border p-2">Органолептическая оценка</th>
@@ -247,7 +247,7 @@ export function FinishedProductDocumentClient({
       <section className="space-y-4 rounded-[20px] border bg-white p-6">
         <h3 className="text-[24px] font-semibold">Рекомендации по организации контроля за доброкачественностью готовой пищи</h3>
         {QUALITY_GUIDELINES.map((item) => <p key={item} className="text-[18px] leading-8">{item}</p>)}
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[900px] w-full border-collapse text-[18px]"><thead><tr><th className="border border-black p-3">Группа</th><th className="border border-black p-3">Наименование продукта</th><th className="border border-black p-3">°C</th></tr></thead><tbody>{TEMPERATURE_GUIDELINES.map(([group, name, temperature]) => <tr key={group}><td className="border border-black p-3 text-center font-semibold">{group}</td><td className="border border-black p-3">{name}</td><td className="border border-black p-3 text-center font-semibold">{temperature}</td></tr>)}</tbody></table>
         </div>
       </section>

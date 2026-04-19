@@ -282,7 +282,7 @@ export function FryerOilDocumentClient(props: Props) {
           </div>
         ) : null}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <div className="min-w-[1400px]">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[240px_1fr_280px] border border-black">
               <div className="flex min-h-[110px] items-center justify-center border-r border-black px-6 text-center text-[15px]">{props.organizationName}</div>

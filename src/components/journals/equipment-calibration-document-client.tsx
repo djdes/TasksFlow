@@ -367,7 +367,7 @@ export function EquipmentCalibrationDocumentClient({
         )}
 
         {/* Main table */}
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[1100px] border-collapse text-sm">
             <thead>
               <tr className="bg-[#f2f2f2]">

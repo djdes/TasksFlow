@@ -26,7 +26,7 @@ export const JOURNAL_DOCUMENT_ACTIONS_CLASS =
   "flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3";
 
 export const JOURNAL_TABLE_VIEWPORT_CLASS =
-  "max-w-full overflow-x-auto rounded-[22px] border border-[#eceef5] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]";
+  "-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[22px] border border-[#eceef5] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]";
 
 export const JOURNAL_DIALOG_HEADER_CLASS =
   "border-b px-5 py-5 sm:px-8 sm:py-7 lg:px-12 lg:py-10";

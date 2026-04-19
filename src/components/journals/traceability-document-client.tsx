@@ -625,7 +625,7 @@ export function TraceabilityDocumentClient(props: Props) {
 
         {selectedRowIds.length > 0 && !isClosed && <div className="sticky top-0 z-30 -mx-6 flex items-center gap-3 rounded-[18px] border-b border-[#dcdfed] bg-white/95 px-6 py-3 backdrop-blur print:hidden"><button type="button" className="text-[#6f7282] hover:text-black" onClick={() => setSelectedRowIds([])}><X className="size-5" /></button><span className="text-[15px]">Выбрано: {selectedRowIds.length}</span><Button type="button" variant="outline" className="h-10 rounded-2xl border-[#ffd7d3] px-4 text-[15px] text-[#ff3b30] hover:bg-[#fff2f1] hover:text-[#ff3b30]" onClick={() => { deleteSelected().catch((error) => toast.error(error instanceof Error ? error.message : "Не удалось удалить строки")); }}><Trash2 className="size-4" />Удалить</Button></div>}
 
-        <div className="max-w-full overflow-x-auto rounded-[18px] border border-[#1f1f1f] bg-white">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[18px] border border-[#1f1f1f] bg-white">
           <table className="min-w-[980px] w-full border-collapse text-[14px] sm:min-w-[1480px]">
             <thead>
               <tr className="bg-[#efefef]">

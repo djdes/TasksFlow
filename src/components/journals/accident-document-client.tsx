@@ -549,7 +549,7 @@ export function AccidentDocumentClient(props: Props) {
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="mx-auto min-w-[1040px] border-collapse text-[16px]">
             <tbody>
               <tr>
@@ -618,7 +618,7 @@ export function AccidentDocumentClient(props: Props) {
           ) : null}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1650px] w-full border-collapse text-[14px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

@@ -343,7 +343,7 @@ export function StaffTrainingDocumentClient({
         )}
 
         {/* main table */}
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1600px] w-full border-collapse text-sm">
             <thead>
               <tr>

@@ -1078,7 +1078,7 @@ export function MetalImpurityDocumentClient({
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="mx-auto min-w-[1040px] max-w-[1250px] border-collapse">
             <tbody>
               <tr>
@@ -1148,7 +1148,7 @@ export function MetalImpurityDocumentClient({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1540px] w-full border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

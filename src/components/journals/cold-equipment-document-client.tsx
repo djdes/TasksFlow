@@ -843,7 +843,7 @@ export function ColdEquipmentDocumentClient({
           </div>
         ) : null}
 
-        <div className="overflow-x-auto rounded-[28px] border border-[#d9dce6] bg-white">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#d9dce6] bg-white">
           <table className="min-w-[1900px] border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

@@ -472,7 +472,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
         </div>
 
         {/* HACCP Header table */}
-        <div className="overflow-x-auto rounded-[18px] border border-[#dadde9]">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[18px] border border-[#dadde9]">
           <table className="w-full border-collapse text-[15px]">
             <tbody>
               <tr>
@@ -553,7 +553,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
         )}
 
         {/* Data table */}
-        <div className="overflow-x-auto rounded-[18px] border border-[#dadde9]">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[18px] border border-[#dadde9]">
           <table className="min-w-[1600px] w-full border-collapse text-[14px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

@@ -1151,7 +1151,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
       )}
 
       {/* Data table */}
-      <div className="max-w-full overflow-x-auto rounded-[12px] border border-[#eceef5] bg-white print:rounded-none print:border-[#ccc]">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[12px] border border-[#eceef5] bg-white print:rounded-none print:border-[#ccc]">
         <table className="w-full min-w-[720px] border-collapse text-[13px] sm:min-w-[900px]">
           <thead>
             <tr className="bg-[#f6f7fb] print:bg-[#f0f0f0]">

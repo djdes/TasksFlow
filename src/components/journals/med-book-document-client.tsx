@@ -417,10 +417,10 @@ export function MedBookDocumentClient({
       ) : null}
 
       <div className="space-y-2">
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <div className="h-6 min-w-[1320px] bg-[#ececec]" />
         </div>
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1320px] border-collapse text-[14px] text-black">
             <thead>
               <tr>
@@ -517,7 +517,7 @@ export function MedBookDocumentClient({
             </tbody>
           </table>
         </div>
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <div className="h-6 min-w-[1320px] bg-[#ececec]" />
         </div>
       </div>
@@ -526,7 +526,7 @@ export function MedBookDocumentClient({
         <h2 className="text-[20px] font-semibold underline">
           Список специалистов и исследований
         </h2>
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[980px] w-full border-collapse text-[14px] text-black">
             <thead>
               <tr>
@@ -561,7 +561,7 @@ export function MedBookDocumentClient({
             </tbody>
           </table>
         </div>
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[980px] w-full border-collapse text-[14px] text-black">
             <thead>
               <tr>
@@ -601,10 +601,10 @@ export function MedBookDocumentClient({
             Прививки
           </h2>
           <div className="space-y-2">
-            <div className="overflow-x-auto">
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               <div className="h-6 min-w-[1320px] bg-[#ececec]" />
             </div>
-            <div className="overflow-x-auto">
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               <table className="min-w-[1320px] border-collapse text-[14px] text-black">
                 <thead>
                   <tr>
@@ -702,7 +702,7 @@ export function MedBookDocumentClient({
                 </tbody>
               </table>
             </div>
-            <div className="overflow-x-auto">
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               <div className="h-6 min-w-[1320px] bg-[#ececec]" />
             </div>
           </div>
@@ -713,7 +713,7 @@ export function MedBookDocumentClient({
             Вакцинация всех сотрудников проводится в соответствии с Приказом
             Минздрава России от 06.12.2021 N 1122н.
           </p>
-          <div className="overflow-x-auto">
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <table className="min-w-[980px] w-full border-collapse text-[14px] text-black">
               <thead>
                 <tr>

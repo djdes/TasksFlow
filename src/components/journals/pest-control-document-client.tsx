@@ -69,7 +69,7 @@ function HeaderTable(props: {
   dateTo: string;
 }) {
   return (
-    <div className="mx-auto w-full max-w-[1040px] overflow-x-auto">
+    <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 w-full max-w-[1040px]">
       <table className="w-full border-collapse text-[13px] text-black">
         <tbody>
           <tr>
@@ -614,7 +614,7 @@ export function PestControlDocumentClient(props: Props) {
         )}
       </div>
 
-      <div className="max-w-full overflow-x-auto">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <table className="min-w-full border-collapse border border-black bg-white text-[14px]">
           <thead>
             <tr className="bg-[#fafafa]">

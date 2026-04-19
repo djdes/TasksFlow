@@ -1460,7 +1460,7 @@ export function AcceptanceDocumentClient(props: Props) {
         )}
 
         {/* Data table */}
-        <div className="max-w-full overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[960px] w-full border-collapse text-[13px] sm:min-w-[1400px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

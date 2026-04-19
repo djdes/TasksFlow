@@ -645,7 +645,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1450px] w-full border-collapse text-[13px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

@@ -1223,7 +1223,7 @@ export function ClimateDocumentClient({
                 </Label>
               </div>
 
-              <div className="overflow-x-auto rounded-[18px] bg-white p-6">
+              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[18px] bg-white p-6">
                 <table className="min-w-[1080px] w-full border-collapse text-[16px]">
                   <tbody>
                     <tr>
@@ -1344,7 +1344,7 @@ export function ClimateDocumentClient({
           </StickyActionBar>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1280px] border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

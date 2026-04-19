@@ -588,7 +588,7 @@ export function TrainingPlanDocumentClient({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-full border-collapse border border-black/70 bg-white text-[14px]">
             <thead>
               <tr>

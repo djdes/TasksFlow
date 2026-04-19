@@ -577,7 +577,7 @@ export function IntensiveCoolingDocumentClient(props: Props) {
           </h1>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="mx-auto min-w-[1180px] border-collapse text-[16px]">
             <tbody>
               <tr>
@@ -646,7 +646,7 @@ export function IntensiveCoolingDocumentClient(props: Props) {
           ) : null}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[1650px] border-collapse text-[14px]">
             <thead>
               <tr className="bg-[#f2f2f2]">

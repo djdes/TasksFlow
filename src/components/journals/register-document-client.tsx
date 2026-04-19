@@ -645,7 +645,7 @@ export function RegisterDocumentClient({
           </StickyActionBar>
         )}
 
-        <div className="overflow-x-auto rounded-[28px] border border-[#ececf4] bg-white">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#ececf4] bg-white">
           <table className="min-w-[1400px] w-full border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
