@@ -119,7 +119,7 @@ export default async function JournalInfoDetailPage({
 
       {seo?.seoIntro ? (
         <section className="mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 sm:pt-10">
-          <div className="rounded-3xl border border-[#ececf4] bg-[#fafbff] p-7 md:p-8">
+          <div className="rounded-3xl border border-[#ececf4] bg-[#fafbff] p-5 sm:p-7 md:p-8">
             <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[#6f7282]">
               Что это за журнал
             </div>
@@ -145,7 +145,7 @@ export default async function JournalInfoDetailPage({
           {/* MAIN */}
           <div className="space-y-8">
             {/* WHAT TO FILL */}
-            <div className="rounded-3xl border border-[#ececf4] bg-white p-7">
+            <div className="rounded-3xl border border-[#ececf4] bg-white p-5 sm:p-7">
               <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#3848c7]">
                 <CheckCircle2 className="size-4" />
                 Что заполняется
@@ -161,7 +161,7 @@ export default async function JournalInfoDetailPage({
             </div>
 
             {/* NORMATIVE */}
-            <div className="rounded-3xl border border-[#ececf4] bg-white p-7">
+            <div className="rounded-3xl border border-[#ececf4] bg-white p-5 sm:p-7">
               <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#3848c7]">
                 <ScrollText className="size-4" />
                 На основании
@@ -182,7 +182,7 @@ export default async function JournalInfoDetailPage({
 
             {/* TIPS */}
             {info.tips.length > 0 && (
-              <div className="rounded-3xl border border-[#c8f0d5] bg-[#ecfdf5] p-7">
+              <div className="rounded-3xl border border-[#c8f0d5] bg-[#ecfdf5] p-5 sm:p-7">
                 <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#116b2a]">
                   <Lightbulb className="size-4" />
                   Как помогает WeSetup
@@ -205,7 +205,7 @@ export default async function JournalInfoDetailPage({
               <div className="text-[13px] font-medium text-[#6f7282]">
                 Код журнала
               </div>
-              <div className="mt-1 font-mono text-[15px] font-semibold text-[#0b1024]">
+              <div className="mt-1 break-all font-mono text-[15px] font-semibold text-[#0b1024]">
                 {info.code}
               </div>
               <Link
@@ -236,7 +236,7 @@ export default async function JournalInfoDetailPage({
                         <span className="text-[14px] font-medium text-[#0b1024] group-hover:text-[#3848c7]">
                           {r.tagline}
                         </span>
-                        <span className="font-mono text-[11px] text-[#6f7282]">
+                        <span className="break-all font-mono text-[11px] text-[#6f7282]">
                           {r.code}
                         </span>
                       </Link>
