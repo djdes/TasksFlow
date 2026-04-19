@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DAILY_JOURNAL_CODES } from "@/lib/today-compliance";
 import {
   AlertCircle,
   ArrowRight,
@@ -125,10 +126,18 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
     (t) => t.isMandatorySanpin || t.isMandatoryHaccp
   );
   const mandatoryCount = mandatoryTemplates.length;
-  const filledTodayCount = mandatoryTemplates.filter((t) => t.filledToday).length;
-  const pendingTodayCount = mandatoryCount - filledTodayCount;
-  const compliancePercent = mandatoryCount
-    ? Math.round((filledTodayCount / mandatoryCount) * 100)
+  // Only daily journals contribute to «нужно заполнить сегодня». Aperiodic
+  // mandatory journals (complaints, accidents, audits, …) don't have a
+  // daily obligation and should neither tug the progress bar nor show up
+  // as «pending today».
+  const dailyMandatoryTemplates = mandatoryTemplates.filter((t) =>
+    DAILY_JOURNAL_CODES.has(t.code)
+  );
+  const dailyMandatoryCount = dailyMandatoryTemplates.length;
+  const filledTodayCount = dailyMandatoryTemplates.filter((t) => t.filledToday).length;
+  const pendingTodayCount = dailyMandatoryCount - filledTodayCount;
+  const compliancePercent = dailyMandatoryCount
+    ? Math.round((filledTodayCount / dailyMandatoryCount) * 100)
     : 100;
 
   const hasResults = filteredTemplates.length > 0;
@@ -196,9 +205,9 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
               label="Заполнено сегодня"
               value={filledTodayCount}
               hint={
-                mandatoryCount === 0
+                dailyMandatoryCount === 0
                   ? undefined
-                  : `из ${mandatoryCount}`
+                  : `из ${dailyMandatoryCount}`
               }
             />
             <StatPill
@@ -292,7 +301,9 @@ function StatPill({
 function TemplateCard({ template }: { template: JournalTemplateListItem }) {
   const Icon = JOURNAL_ICONS[template.code] ?? NotebookPen;
   const isMandatory = template.isMandatorySanpin || template.isMandatoryHaccp;
-  const needsAttentionToday = isMandatory && !template.filledToday;
+  const isDaily = DAILY_JOURNAL_CODES.has(template.code);
+  const needsAttentionToday = isMandatory && isDaily && !template.filledToday;
+  const readyToday = isMandatory && isDaily && template.filledToday;
 
   return (
     <Link href={`/journals/${template.code}`} className="group block focus:outline-none">
@@ -301,7 +312,7 @@ function TemplateCard({ template }: { template: JournalTemplateListItem }) {
           "flex h-full items-start gap-4 rounded-2xl border bg-white px-5 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:shadow-[0_8px_24px_-12px_rgba(85,102,246,0.18)] group-focus-visible:border-[#5566f6] group-focus-visible:ring-4 group-focus-visible:ring-[#5566f6]/15",
           needsAttentionToday
             ? "border-[#ffd2cd] hover:border-[#ff8d7d]"
-            : isMandatory && template.filledToday
+            : readyToday
               ? "border-[#c8f0d5] hover:border-[#7cf5c0]"
               : "border-[#ececf4] hover:border-[#d6d9ee]"
         )}
@@ -324,18 +335,16 @@ function TemplateCard({ template }: { template: JournalTemplateListItem }) {
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {isMandatory ? (
-              needsAttentionToday ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-medium text-[#d2453d]">
-                  <AlertCircle className="size-3" />
-                  Заполнить сегодня
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[11px] font-medium text-[#136b2a]">
-                  <CheckCircle2 className="size-3" />
-                  Сегодня готово
-                </span>
-              )
+            {needsAttentionToday ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-medium text-[#d2453d]">
+                <AlertCircle className="size-3" />
+                Заполнить сегодня
+              </span>
+            ) : readyToday ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[11px] font-medium text-[#136b2a]">
+                <CheckCircle2 className="size-3" />
+                Сегодня готово
+              </span>
             ) : null}
             {template.isMandatorySanpin ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-medium text-[#d2453d]">

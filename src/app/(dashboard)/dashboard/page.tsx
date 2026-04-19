@@ -23,7 +23,10 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
-import { getTemplatesFilledToday } from "@/lib/today-compliance";
+import {
+  DAILY_JOURNAL_CODES,
+  getTemplatesFilledToday,
+} from "@/lib/today-compliance";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -113,7 +116,6 @@ export default async function DashboardPage() {
     expiringBatches,
     iotEquipment,
     templates,
-    filledTodayIds,
   ] = await Promise.all([
     db.journalEntry.count({
       where: { organizationId, createdAt: { gte: todayStart } },
@@ -166,15 +168,26 @@ export default async function DashboardPage() {
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
-    getTemplatesFilledToday(organizationId, now),
   ]);
+
+  const filledTodayIds = await getTemplatesFilledToday(
+    organizationId,
+    now,
+    templates.map((t) => ({ id: t.id, code: t.code }))
+  );
 
   const totalTodayEntries = todayEntries + todayDocumentEntries;
 
-  const mandatoryTemplates = templates.filter(
-    (t) => t.isMandatorySanpin || t.isMandatoryHaccp
+  // Only DAILY mandatory journals count toward today's compliance ring.
+  // Aperiodic journals (accidents, complaints, audits…) have no daily
+  // obligation — flagging them as «not filled today» every day would be
+  // false alarms.
+  const mandatoryDailyTemplates = templates.filter(
+    (t) =>
+      (t.isMandatorySanpin || t.isMandatoryHaccp) &&
+      DAILY_JOURNAL_CODES.has(t.code)
   );
-  const complianceItems = mandatoryTemplates.map((t) => ({
+  const complianceItems = mandatoryDailyTemplates.map((t) => ({
     id: t.id,
     name: t.name,
     code: t.code,

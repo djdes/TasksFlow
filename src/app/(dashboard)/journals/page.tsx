@@ -11,16 +11,19 @@ export default async function JournalsPage() {
     aclActorFromSession(session)
   );
 
-  const [templates, filledTodayIds] = await Promise.all([
-    db.journalTemplate.findMany({
-      where: {
-        isActive: true,
-        ...(allowedCodes ? { code: { in: allowedCodes } } : {}),
-      },
-      orderBy: { sortOrder: "asc" },
-    }),
-    getTemplatesFilledToday(session.user.organizationId),
-  ]);
+  const templates = await db.journalTemplate.findMany({
+    where: {
+      isActive: true,
+      ...(allowedCodes ? { code: { in: allowedCodes } } : {}),
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const filledTodayIds = await getTemplatesFilledToday(
+    session.user.organizationId,
+    new Date(),
+    templates.map((t) => ({ id: t.id, code: t.code }))
+  );
 
   const items = templates.map((template) => ({
     id: template.id,

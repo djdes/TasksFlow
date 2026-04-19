@@ -1,20 +1,28 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { DAILY_JOURNAL_CODES } from "@/lib/today-compliance";
 
 /**
  * Top-of-page banner for a journal's documents list. Tells staff at a
  * glance whether the day's record has been entered yet. Read-only —
  * the page/list is the action surface; this is just a status reminder.
+ *
+ * Shown only for daily journals (hygiene, temperatures, cleaning,
+ * etc.). Aperiodic journals (accidents, complaints, audits…) don't
+ * have daily obligations, so no banner — nothing to remind anyone of.
  */
 export function TodayPendingBanner({
   filled,
   isMandatory,
+  templateCode,
   templateName,
 }: {
   filled: boolean;
   isMandatory: boolean;
+  templateCode: string;
   templateName: string;
 }) {
   if (!isMandatory) return null;
+  if (!DAILY_JOURNAL_CODES.has(templateCode)) return null;
 
   if (filled) {
     return (

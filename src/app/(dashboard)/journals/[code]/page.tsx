@@ -1324,7 +1324,8 @@ export default async function JournalDocumentsPage({
   });
   const isFilledToday = await isTemplateFilledToday(
     session.user.organizationId,
-    template.id
+    template.id,
+    template.code
   );
   const isMandatoryTemplate =
     template.isMandatorySanpin || template.isMandatoryHaccp;
@@ -1332,6 +1333,7 @@ export default async function JournalDocumentsPage({
     <TodayPendingBanner
       filled={isFilledToday}
       isMandatory={isMandatoryTemplate}
+      templateCode={template.code}
       templateName={template.name}
     />
   );
