@@ -32,6 +32,7 @@ import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -486,7 +487,7 @@ export function IncomingControlDocumentsClient({
                 </Link>
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
-                  className="border-l border-[#eef0f6] px-6"
+                  className={JOURNAL_CARD_SECTION_CLASS}
                 >
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
@@ -496,7 +497,7 @@ export function IncomingControlDocumentsClient({
                 </Link>
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
-                  className="border-l border-[#eef0f6] px-6 text-right"
+                  className={JOURNAL_CARD_SECTION_CLASS}
                 >
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>

@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -209,11 +210,11 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
             return (
               <div key={document.id} className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_280px_170px_56px] sm:items-center sm:gap-0 sm:px-6 sm:py-5">
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_TITLE_CLASS}>{document.title || AUDIT_REPORT_DOCUMENT_TITLE}</Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Объект аудита</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>{config.auditedObject}</div>
                 </Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-l border-[#eef0f6] px-6 text-right">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Дата аудита</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>{config.documentDate}</div>
                 </Link>

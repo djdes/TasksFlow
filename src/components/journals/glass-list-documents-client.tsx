@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -452,13 +453,13 @@ export function GlassListDocumentsClient(props: Props) {
                 <Link href={href} className={`${JOURNAL_CARD_TITLE_CLASS} min-w-0`}>
                   {config.documentName || document.title || props.templateName}
                 </Link>
-                <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Место расположения</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {config.location || "—"}
                   </div>
                 </Link>
-                <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Должность</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {responsibleUser
@@ -466,7 +467,7 @@ export function GlassListDocumentsClient(props: Props) {
                       : responsibleTitle}
                   </div>
                 </Link>
-                <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {formatGlassListDate(config.documentDate || document.dateFrom)}

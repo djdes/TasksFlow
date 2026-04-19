@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -315,7 +316,7 @@ export function ColdEquipmentDocumentsClient({
                   {document.title}
                 </Link>
 
-                <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {document.responsibleTitle && document.responsibleUserName
@@ -324,7 +325,7 @@ export function ColdEquipmentDocumentsClient({
                   </div>
                 </Link>
 
-                <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {document.periodLabel}

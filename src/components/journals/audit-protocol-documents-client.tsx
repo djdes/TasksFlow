@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -288,11 +289,11 @@ export function AuditProtocolDocumentsClient({
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title || AUDIT_PROTOCOL_DOCUMENT_TITLE}
                 </Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 sm:border-l sm:border-t-0 sm:px-6 sm:pt-0">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Основание проверки</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>{config.basisTitle}</div>
                 </Link>
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 text-left sm:border-l sm:border-t-0 sm:px-6 sm:pt-0 sm:text-right">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>{config.documentDate}</div>
                 </Link>

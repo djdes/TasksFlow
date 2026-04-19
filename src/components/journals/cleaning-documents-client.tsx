@@ -46,6 +46,7 @@ import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -654,7 +655,7 @@ export function CleaningDocumentsClient(props: Props) {
                 <Link href={href} className={`${JOURNAL_CARD_TITLE_CLASS} min-w-0`}>
                   {document.title || CLEANING_DOCUMENT_TITLE}
                 </Link>
-                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный за уборку</div>
                   <div className={`${JOURNAL_CARD_VALUE_CLASS} space-y-1`}>
                     {cleaningLines.map((line) => (
@@ -662,13 +663,13 @@ export function CleaningDocumentsClient(props: Props) {
                     ))}
                   </div>
                 </Link>
-                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный за контроль</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {controlLine}
                   </div>
                 </Link>
-                <Link href={href} className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {getCleaningPeriodLabel(document.dateFrom, document.dateTo)}

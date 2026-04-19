@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -451,19 +452,19 @@ export function TrainingPlanDocumentsClient({
               <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                 {document.title || TRAINING_PLAN_DOCUMENT_TITLE}
               </Link>
-              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+              <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getTrainingPlanYearLabel(config.year)}
                 </div>
               </Link>
-              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+              <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Должность &quot;Утверждаю&quot;</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getTrainingPlanApproveLabel(config.approveRole, config.approveEmployee)}
                 </div>
               </Link>
-              <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
+              <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getTrainingPlanDocumentDateLabel(config.documentDate)}

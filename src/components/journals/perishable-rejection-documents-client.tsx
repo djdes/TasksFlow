@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -105,7 +106,7 @@ export function PerishableRejectionDocumentsClient({
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
               <div className={JOURNAL_CARD_TITLE_CLASS}>{document.title}</div>
             </Link>
-            <Link href={`/journals/${templateCode}/documents/${document.id}`} className="justify-self-end pr-2">
+            <Link href={`/journals/${templateCode}/documents/${document.id}`} className={`${JOURNAL_CARD_SECTION_CLASS} justify-self-end`}>
               <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
               <div className={JOURNAL_CARD_VALUE_CLASS}>{document.startedAtLabel}</div>
             </Link>

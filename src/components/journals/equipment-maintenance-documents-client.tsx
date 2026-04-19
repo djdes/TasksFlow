@@ -37,6 +37,7 @@ import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { toast } from "sonner";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -186,19 +187,19 @@ export function EquipmentMaintenanceDocumentsClient({
               <Link href={`/journals/${templateCode}/documents/${doc.id}`} className="min-w-0">
                 <div className={JOURNAL_CARD_TITLE_CLASS}>{doc.title}</div>
               </Link>
-              <div className="text-center">
+              <div className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.year}</div>
               </div>
-              <div className="px-3">
+              <div className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Должность &quot;Утверждаю&quot;</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.approveRole}: {cfg.approveEmployee}</div>
               </div>
-              <div className="px-3">
+              <div className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.responsibleRole}: {cfg.responsibleEmployee}</div>
               </div>
-              <div className="px-3">
+              <div className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>{formatMaintenanceDate(cfg.documentDate)}</div>
               </div>

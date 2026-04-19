@@ -48,6 +48,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -400,7 +401,7 @@ export function DisinfectantDocumentsClient({
                 {document.title || DISINFECTANT_DOCUMENT_TITLE}
               </Link>
               <div className="flex items-center gap-6">
-                <div className="text-right">
+                <div className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>
                     Ответственный за получение
                   </div>

@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -372,14 +373,14 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
                 {resolvedTitle}
               </Link>
 
-              <Link href={href} className="flex flex-col justify-center border-l border-[#e7eaf2] px-8">
+              <Link href={href} className={`${JOURNAL_CARD_SECTION_CLASS} flex flex-col justify-center`}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {responsibleLabel}
                 </div>
               </Link>
 
-              <Link href={href} className="flex flex-col justify-center border-l border-[#e7eaf2] px-8">
+              <Link href={href} className={`${JOURNAL_CARD_SECTION_CLASS} flex flex-col justify-center`}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatRuDateDash(document.dateFrom)}

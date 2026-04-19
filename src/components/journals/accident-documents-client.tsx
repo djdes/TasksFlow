@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -344,7 +345,7 @@ export function AccidentDocumentsClient({
               <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                 {document.title || ACCIDENT_DOCUMENT_TITLE}
               </Link>
-              <Link href={href} className="px-8 text-right">
+              <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatDateDMY(document.dateFrom)}

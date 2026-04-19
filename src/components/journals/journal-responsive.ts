@@ -26,6 +26,14 @@ export const JOURNAL_CARD_LABEL_CLASS = "text-[14px] text-[#84849a]";
 export const JOURNAL_CARD_VALUE_CLASS =
   "mt-2 text-[14px] font-semibold text-black";
 
+/**
+ * Shared section divider used between title → label/value blocks in the
+ * document list card. Horizontal line + top padding on mobile, vertical
+ * line + left padding on desktop. Matches the climate_control reference.
+ */
+export const JOURNAL_CARD_SECTION_CLASS =
+  "border-t border-[#e6e6f0] pt-3 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0";
+
 export const JOURNAL_DOCUMENT_SELECTION_BAR_CLASS =
   "sticky top-0 z-30 -mx-4 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
 

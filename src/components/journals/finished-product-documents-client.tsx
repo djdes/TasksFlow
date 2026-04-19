@@ -19,6 +19,7 @@ import { normalizeFinishedProductDocumentConfig } from "@/lib/finished-product-d
 import { toast } from "sonner";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -155,7 +156,7 @@ export function FinishedProductDocumentsClient({
             </Link>
             <Link
               href={`/journals/${templateCode}/documents/${document.id}`}
-              className="justify-self-end pr-2 text-right"
+              className={`${JOURNAL_CARD_SECTION_CLASS} justify-self-end`}
             >
               <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
               <div className={JOURNAL_CARD_VALUE_CLASS}>{document.startedAtLabel}</div>

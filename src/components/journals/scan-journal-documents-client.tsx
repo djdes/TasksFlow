@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -149,7 +150,7 @@ export function ScanJournalDocumentsClient({
                   {document.title}
                 </Link>
                 {document.responsibleValue ? (
-                  <Link href={href} className="md:border-l md:border-[#e6e6f0] md:px-10">
+                  <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                     <div className={JOURNAL_CARD_LABEL_CLASS}>
                       {document.responsibleLabel || "Ответственный"}
                     </div>
@@ -160,7 +161,7 @@ export function ScanJournalDocumentsClient({
                 ) : (
                   <div className="hidden md:block md:border-l md:border-[#e6e6f0]" />
                 )}
-                <Link href={href} className="md:border-l md:border-[#e6e6f0] md:px-10">
+                <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
                   <div className={JOURNAL_CARD_LABEL_CLASS}>{document.dateLabel}</div>
                   <div className={JOURNAL_CARD_VALUE_CLASS}>{document.dateValue}</div>
                 </Link>

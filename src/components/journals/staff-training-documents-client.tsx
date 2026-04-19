@@ -19,6 +19,7 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { toast } from "sonner";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -117,7 +118,7 @@ export function StaffTrainingDocumentsClient({
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
               <div className={JOURNAL_CARD_TITLE_CLASS}>{document.title}</div>
             </Link>
-            <Link href={`/journals/${templateCode}/documents/${document.id}`} className="border-t border-[#eceef5] pt-3 sm:justify-self-end sm:border-t-0 sm:pr-2 sm:pt-0">
+            <Link href={`/journals/${templateCode}/documents/${document.id}`} className={`${JOURNAL_CARD_SECTION_CLASS} sm:justify-self-end`}>
               <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
               <div className={JOURNAL_CARD_VALUE_CLASS}>{document.startedAtLabel}</div>
             </Link>

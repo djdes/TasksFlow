@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -161,7 +162,7 @@ function HealthDocumentRow(props: {
           {props.document.title}
         </div>
       </Link>
-      <Link href={href} className="min-w-0 border-l border-[#e6e6f0] pl-6">
+      <Link href={href} className={`${JOURNAL_CARD_SECTION_CLASS} min-w-0`}>
         <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
         <div className={`${JOURNAL_CARD_VALUE_CLASS} truncate`}>
           {props.document.periodLabel}

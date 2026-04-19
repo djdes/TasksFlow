@@ -41,6 +41,7 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { toast } from "sonner";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -197,11 +198,11 @@ function DocumentRow({
       <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
         {document.title}
       </Link>
-      <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
+      <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
         <div className={JOURNAL_CARD_LABEL_CLASS}>Должность ответственного</div>
         <div className={JOURNAL_CARD_VALUE_CLASS}>{document.responsibleTitle || ""}</div>
       </Link>
-      <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
+      <Link href={href} className={JOURNAL_CARD_SECTION_CLASS}>
         <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
         <div className={JOURNAL_CARD_VALUE_CLASS}>{document.periodLabel}</div>
       </Link>

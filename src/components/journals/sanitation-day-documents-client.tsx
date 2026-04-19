@@ -54,6 +54,7 @@ import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
   JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_SECTION_CLASS,
   JOURNAL_CARD_TITLE_CLASS,
   JOURNAL_CARD_VALUE_CLASS,
 } from "@/components/journals/journal-responsive";
@@ -656,7 +657,7 @@ export function SanitationDayDocumentsClient({
 
               <Link
                 href={href}
-                className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
+                className={JOURNAL_CARD_SECTION_CLASS}
               >
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
@@ -666,7 +667,7 @@ export function SanitationDayDocumentsClient({
 
               <Link
                 href={href}
-                className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
+                className={JOURNAL_CARD_SECTION_CLASS}
               >
                 <div className={JOURNAL_CARD_LABEL_CLASS}>
                   Должность &quot;Утверждаю&quot;
@@ -681,7 +682,7 @@ export function SanitationDayDocumentsClient({
 
               <Link
                 href={href}
-                className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
+                className={JOURNAL_CARD_SECTION_CLASS}
               >
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
@@ -694,7 +695,7 @@ export function SanitationDayDocumentsClient({
 
               <Link
                 href={href}
-                className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
+                className={JOURNAL_CARD_SECTION_CLASS}
               >
                 <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
                 <div className={JOURNAL_CARD_VALUE_CLASS}>
