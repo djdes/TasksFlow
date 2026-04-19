@@ -157,7 +157,7 @@ function HealthDocumentRow(props: {
   const canManage = props.document.status === "active";
 
   return (
-    <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_240px_40px] sm:items-center sm:gap-0 sm:px-6 sm:py-5">
+    <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5">
       <Link href={href} className="min-w-0 pr-4">
         <div className={`${JOURNAL_CARD_TITLE_CLASS} truncate`}>
           {props.document.title}

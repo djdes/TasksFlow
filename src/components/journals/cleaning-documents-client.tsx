@@ -652,7 +652,7 @@ export function CleaningDocumentsClient(props: Props) {
             return (
               <div
                 key={document.id}
-                className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.5fr)_360px_360px_240px_56px] sm:items-center sm:gap-0 sm:px-7"
+                className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_48px] sm:items-center sm:gap-0 sm:px-6"
               >
                 <Link href={href} className={`${JOURNAL_CARD_TITLE_CLASS} min-w-0`}>
                   {document.title || CLEANING_DOCUMENT_TITLE}

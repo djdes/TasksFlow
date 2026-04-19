@@ -11,7 +11,7 @@ export const JOURNAL_TAB_RAIL_CLASS =
   "flex min-w-max gap-8 text-[15px] sm:gap-12 sm:text-[16px]";
 
 export const JOURNAL_LIST_CARD_CLASS =
-  "grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_320px_290px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5";
+  "grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5";
 
 /**
  * Shared card typography (list of documents inside a journal). Normalized

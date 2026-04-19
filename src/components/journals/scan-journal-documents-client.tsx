@@ -146,7 +146,7 @@ export function ScanJournalDocumentsClient({
             return (
               <div
                 key={document.id}
-                className="grid gap-3 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:grid-cols-[1.8fr_320px_290px_48px] md:items-center md:gap-0"
+                className="grid gap-3 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)_48px] md:items-center md:gap-0"
               >
                 <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title}
