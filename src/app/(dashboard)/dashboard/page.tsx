@@ -23,6 +23,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
+import { getTemplatesFilledToday } from "@/lib/today-compliance";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,7 @@ export default async function DashboardPage() {
 
   const [
     todayEntries,
+    todayDocumentEntries,
     pendingApproval,
     activeUsers,
     activeTemplates,
@@ -111,10 +113,16 @@ export default async function DashboardPage() {
     expiringBatches,
     iotEquipment,
     templates,
-    todayFilledEntries,
+    filledTodayIds,
   ] = await Promise.all([
     db.journalEntry.count({
       where: { organizationId, createdAt: { gte: todayStart } },
+    }),
+    db.journalDocumentEntry.count({
+      where: {
+        date: { gte: todayStart },
+        document: { organizationId },
+      },
     }),
     db.journalEntry.count({
       where: { organizationId, status: "submitted" },
@@ -158,17 +166,14 @@ export default async function DashboardPage() {
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
-    db.journalEntry.findMany({
-      where: { organizationId, createdAt: { gte: todayStart } },
-      select: { templateId: true },
-      distinct: ["templateId"],
-    }),
+    getTemplatesFilledToday(organizationId, now),
   ]);
+
+  const totalTodayEntries = todayEntries + todayDocumentEntries;
 
   const mandatoryTemplates = templates.filter(
     (t) => t.isMandatorySanpin || t.isMandatoryHaccp
   );
-  const filledTodayIds = new Set(todayFilledEntries.map((e) => e.templateId));
   const complianceItems = mandatoryTemplates.map((t) => ({
     id: t.id,
     name: t.name,
@@ -245,8 +250,8 @@ export default async function DashboardPage() {
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             <StatPill
               label="Записей сегодня"
-              value={todayEntries}
-              hint={todayEntries === 0 ? "пока пусто" : undefined}
+              value={totalTodayEntries}
+              hint={totalTodayEntries === 0 ? "пока пусто" : undefined}
             />
             <StatPill
               label="На проверке"

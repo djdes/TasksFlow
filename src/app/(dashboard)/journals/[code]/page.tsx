@@ -1,3 +1,4 @@
+import type React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -7,6 +8,8 @@ import { aclActorFromSession, hasJournalAccess } from "@/lib/journal-acl";
 import { db } from "@/lib/db";
 import { HygieneDocumentsClient } from "@/components/journals/hygiene-documents-client";
 import { HealthDocumentsClient } from "@/components/journals/health-documents-client";
+import { TodayPendingBanner } from "@/components/journals/today-pending-banner";
+import { isTemplateFilledToday } from "@/lib/today-compliance";
 import {
   buildDateKeys,
   buildExampleHygieneEntryMap,
@@ -1319,6 +1322,27 @@ export default async function JournalDocumentsPage({
     select: { id: true, name: true, role: true, email: true, positionTitle: true, jobPosition: { select: { name: true, categoryKey: true } } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
+  const isFilledToday = await isTemplateFilledToday(
+    session.user.organizationId,
+    template.id
+  );
+  const isMandatoryTemplate =
+    template.isMandatorySanpin || template.isMandatoryHaccp;
+  const todayBanner = (
+    <TodayPendingBanner
+      filled={isFilledToday}
+      isMandatory={isMandatoryTemplate}
+      templateName={template.name}
+    />
+  );
+  function withBanner(children: React.ReactNode) {
+    return (
+      <div className="space-y-5">
+        {todayBanner}
+        {children}
+      </div>
+    );
+  }
   const shouldNormalizeDemoSamples = isDemoSeedOrganization(orgUsers);
 
   await normalizeDemoJournalSampleCorpus({
@@ -1364,7 +1388,7 @@ export default async function JournalDocumentsPage({
     });
 
     if (resolvedCode === "health_check") {
-      return (
+      return withBanner(
         <HealthDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
@@ -1375,7 +1399,7 @@ export default async function JournalDocumentsPage({
       );
     }
 
-    return (
+    return withBanner(
       <HygieneDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -1411,7 +1435,7 @@ export default async function JournalDocumentsPage({
       orderBy: { createdAt: "desc" },
     });
 
-    return (
+    return withBanner(
       <ScanJournalDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -1551,7 +1575,7 @@ export default async function JournalDocumentsPage({
       orderBy: { createdAt: "asc" },
     });
 
-    return (
+    return withBanner(
       <MedBookDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -1632,7 +1656,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "asc" },
     });
 
-    return (
+    return withBanner(
       <PerishableRejectionDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -1777,7 +1801,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "desc" },
     });
 
-    return (
+    return withBanner(
       <GlassListDocumentsClient
         activeTab={activeTab}
         routeCode={code}
@@ -1819,7 +1843,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "asc" },
     });
 
-    return (
+    return withBanner(
       <GlassControlDocumentsClient
         activeTab={activeTab}
         routeCode={code === glassControlDocument.GLASS_CONTROL_SOURCE_SLUG ? code : resolvedCode}
@@ -1916,7 +1940,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "asc" },
     });
 
-    return (
+    return withBanner(
       <StaffTrainingDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -2075,7 +2099,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "desc" },
     });
 
-    return (
+    return withBanner(
       <EquipmentMaintenanceDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -2153,7 +2177,7 @@ export default async function JournalDocumentsPage({
       orderBy: { dateFrom: "desc" },
     });
 
-    return (
+    return withBanner(
       <EquipmentCalibrationDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -2543,7 +2567,7 @@ export default async function JournalDocumentsPage({
         take: 20,
       });
 
-      return (
+      return withBanner(
         <IntensiveCoolingDocumentsClient
           activeTab={activeTab}
           routeCode={code === INTENSIVE_COOLING_SOURCE_SLUG ? code : resolvedCode}
@@ -2561,7 +2585,7 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === PRODUCT_WRITEOFF_TEMPLATE_CODE) {
-      return (
+      return withBanner(
         <ProductWriteoffDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
@@ -2579,7 +2603,7 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === FINISHED_PRODUCT_DOCUMENT_TEMPLATE_CODE) {
-      return (
+      return withBanner(
         <FinishedProductDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
@@ -2617,7 +2641,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <SanitationDayDocumentsClient
           routeCode={code === SANITATION_DAY_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -2711,7 +2735,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <DisinfectantDocumentsClient
           routeCode={code === DISINFECTANT_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -2787,7 +2811,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <TrainingPlanDocumentsClient
           routeCode={code === TRAINING_PLAN_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -2859,7 +2883,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <AuditPlanDocumentsClient
           routeCode={code === AUDIT_PLAN_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -2925,7 +2949,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <EquipmentCleaningDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
@@ -3059,7 +3083,7 @@ export default async function JournalDocumentsPage({
             orderBy: { createdAt: "asc" },
           });
 
-      return (
+      return withBanner(
         <MetalImpurityDocumentsClient
           routeCode={code === METAL_IMPURITY_SOURCE_SLUG ? code : resolvedCode}
           activeTab={activeTab}
@@ -3193,7 +3217,7 @@ export default async function JournalDocumentsPage({
               orderBy: { createdAt: "asc" },
             });
 
-      return (
+      return withBanner(
         <IncomingControlDocumentsClient
           templateCode={resolvedCode}
           routeCode={code === ACCEPTANCE_DOCUMENT_TEMPLATE_CODE ? code : resolvedCode}
@@ -3257,7 +3281,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <BreakdownHistoryDocumentsClient
           routeCode={code === BREAKDOWN_HISTORY_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -3340,7 +3364,7 @@ export default async function JournalDocumentsPage({
         orderBy: { createdAt: "asc" },
       });
 
-      return (
+      return withBanner(
         <AccidentDocumentsClient
           routeCode={code === ACCIDENT_DOCUMENT_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -3374,7 +3398,7 @@ export default async function JournalDocumentsPage({
         orderBy: { dateFrom: "asc" },
       });
 
-      return (
+      return withBanner(
         <PpeIssuanceDocumentsClient
           routeCode={code === PPE_ISSUANCE_SOURCE_SLUG ? code : resolvedCode}
           templateCode={resolvedCode}
@@ -3443,7 +3467,7 @@ export default async function JournalDocumentsPage({
         orderBy: { dateFrom: "desc" },
       });
 
-      return (
+      return withBanner(
         <CleaningVentilationChecklistDocumentsClient
           routeCode={code}
           templateCode={resolvedCode}
@@ -3511,7 +3535,7 @@ export default async function JournalDocumentsPage({
         orderBy: { dateFrom: "desc" },
       });
 
-      return (
+      return withBanner(
         <SanitaryDayChecklistDocumentsClient
           routeCode={code}
           templateCode={resolvedCode}
@@ -3532,7 +3556,7 @@ export default async function JournalDocumentsPage({
     }
 
     if (resolvedCode === TRACEABILITY_DOCUMENT_TEMPLATE_CODE) {
-      return (
+      return withBanner(
         <TraceabilityDocumentsClient
           activeTab={activeTab}
           routeCode={code === TRACEABILITY_DOCUMENT_SOURCE_SLUG ? code : resolvedCode}
@@ -3559,7 +3583,7 @@ export default async function JournalDocumentsPage({
       isTrackedDocumentTemplate(resolvedCode)
     ) {
       if (resolvedCode === CLEANING_DOCUMENT_TEMPLATE_CODE) {
-        return (
+        return withBanner(
           <CleaningDocumentsClient
             activeTab={activeTab}
             routeCode={code}
@@ -3578,7 +3602,7 @@ export default async function JournalDocumentsPage({
       }
 
       if (shouldNormalizeDemoSamples && resolvedCode === FRYER_OIL_TEMPLATE_CODE) {
-        return (
+        return withBanner(
           <FryerOilDocumentsClient
             activeTab={activeTab}
             routeCode={code}
@@ -3597,7 +3621,7 @@ export default async function JournalDocumentsPage({
       }
 
       if (resolvedCode === COLD_EQUIPMENT_DOCUMENT_TEMPLATE_CODE) {
-        return (
+        return withBanner(
           <ColdEquipmentDocumentsClient
             activeTab={activeTab}
             routeCode={code}
@@ -3625,7 +3649,7 @@ export default async function JournalDocumentsPage({
       }
 
       if (shouldNormalizeDemoSamples && resolvedCode === UV_LAMP_RUNTIME_TEMPLATE_CODE) {
-        return (
+        return withBanner(
           <UvLampRuntimeDocumentsClient
             activeTab={activeTab}
             routeCode={code}
@@ -3657,7 +3681,7 @@ export default async function JournalDocumentsPage({
           ? "Журнал приемки и входного контроля продукции"
           : template.name;
 
-      return (
+      return withBanner(
         <TrackedDocumentsClient
           activeTab={activeTab}
           templateCode={resolvedCode}
@@ -3685,7 +3709,7 @@ export default async function JournalDocumentsPage({
       );
     }
 
-    return (
+    return withBanner(
       <HygieneDocumentsClient
         activeTab={activeTab}
         templateCode={resolvedCode}
@@ -3712,7 +3736,7 @@ export default async function JournalDocumentsPage({
       orderBy: { createdAt: "asc" },
     });
 
-    return (
+    return withBanner(
       <ComplaintDocumentsClient
         activeTab={activeTab}
         routeCode={code}
@@ -3737,7 +3761,7 @@ export default async function JournalDocumentsPage({
       orderBy: { createdAt: "asc" },
     });
 
-    return (
+    return withBanner(
       <AuditProtocolDocumentsClient
         activeTab={activeTab}
         routeCode={code}
@@ -3762,7 +3786,7 @@ export default async function JournalDocumentsPage({
       orderBy: { createdAt: "asc" },
     });
 
-    return (
+    return withBanner(
       <AuditReportDocumentsClient
         activeTab={activeTab}
         routeCode={code}
@@ -3792,7 +3816,7 @@ export default async function JournalDocumentsPage({
     },
   });
 
-  return (
+  return withBanner(
     <div className="space-y-8">
       {/* Hero — mirrors /journals index styling for a consistent journey */}
       <section className="relative overflow-hidden rounded-3xl border border-[#ececf4] bg-[#0b1024] text-white shadow-[0_20px_60px_-30px_rgba(11,16,36,0.55)]">

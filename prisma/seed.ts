@@ -317,8 +317,8 @@ const journalTemplates = [
     name: "Бланк контроля температуры и влажности",
     description: "Документный журнал контроля температуры и влажности воздуха по помещениям",
     sortOrder: 19,
-    isMandatorySanpin: false,
-    isMandatoryHaccp: false,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [],
   },
   {
@@ -458,8 +458,8 @@ const journalTemplates = [
     name: "График профилактического обслуживания оборудования",
     description: "Планово-предупредительное обслуживание и техническое состояние оборудования",
     sortOrder: 17,
-    isMandatorySanpin: false,
-    isMandatoryHaccp: false,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [
       { key: "equipmentId", label: "Оборудование", type: "equipment", required: true },
       { key: "maintenanceType", label: "Вид обслуживания", type: "select", required: true, options: [
@@ -570,8 +570,8 @@ const additionalJournalTemplates = [
     name: "Журнал регистрации жалоб",
     description: "Журнал регистрации и обработки жалоб заявителей",
     sortOrder: 38,
-    isMandatorySanpin: false,
-    isMandatoryHaccp: false,
+    isMandatorySanpin: true,
+    isMandatoryHaccp: true,
     fields: [
       { key: "receiptDate", label: "Дата поступления", type: "date", required: true },
       { key: "applicantName", label: "ФИО заявителя", type: "text", required: true },

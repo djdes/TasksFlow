@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
+  AlertCircle,
   ArrowRight,
   BookHeart,
   Brush,
   Bug,
   CalendarCheck,
   CalendarClock,
+  CheckCircle2,
   ClipboardCheck,
   ClipboardList,
   Droplets,
@@ -53,6 +56,7 @@ type JournalTemplateListItem = {
   description: string | null;
   isMandatorySanpin: boolean;
   isMandatoryHaccp: boolean;
+  filledToday: boolean;
 };
 
 type JournalsBrowserProps = {
@@ -117,11 +121,15 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
   }, [templates, normalizedQuery]);
 
   const totalCount = templates.length;
-  const mandatoryCount = templates.filter(
+  const mandatoryTemplates = templates.filter(
     (t) => t.isMandatorySanpin || t.isMandatoryHaccp
-  ).length;
-  const sanpinCount = templates.filter((t) => t.isMandatorySanpin).length;
-  const haccpCount = templates.filter((t) => t.isMandatoryHaccp).length;
+  );
+  const mandatoryCount = mandatoryTemplates.length;
+  const filledTodayCount = mandatoryTemplates.filter((t) => t.filledToday).length;
+  const pendingTodayCount = mandatoryCount - filledTodayCount;
+  const compliancePercent = mandatoryCount
+    ? Math.round((filledTodayCount / mandatoryCount) * 100)
+    : 100;
 
   const hasResults = filteredTemplates.length > 0;
 
@@ -160,17 +168,45 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-2 self-start rounded-full border border-[#7cf5c0]/40 bg-[#7cf5c0]/10 px-3 py-1.5 text-[12px] uppercase tracking-[0.18em] text-[#7cf5c0] backdrop-blur">
-              <Gift className="size-3.5" />
-              Все журналы бесплатно
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#7cf5c0]/40 bg-[#7cf5c0]/10 px-3 py-1.5 text-[12px] uppercase tracking-[0.18em] text-[#7cf5c0] backdrop-blur">
+                <Gift className="size-3.5" />
+                Все журналы бесплатно
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] uppercase tracking-[0.18em] text-white/80 backdrop-blur">
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    compliancePercent >= 90
+                      ? "bg-[#7cf5c0]"
+                      : compliancePercent >= 60
+                        ? "bg-[#ffd466]"
+                        : "bg-[#ffb0a6]"
+                  )}
+                />
+                Готовность сегодня: {compliancePercent}%
+              </div>
             </div>
           </div>
 
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             <StatPill label="Всего" value={totalCount} />
             <StatPill label="Обязательных" value={mandatoryCount} />
-            <StatPill label="СанПиН" value={sanpinCount} />
-            <StatPill label="ХАССП" value={haccpCount} />
+            <StatPill
+              label="Заполнено сегодня"
+              value={filledTodayCount}
+              hint={
+                mandatoryCount === 0
+                  ? undefined
+                  : `из ${mandatoryCount}`
+              }
+            />
+            <StatPill
+              label="Надо заполнить"
+              value={pendingTodayCount}
+              hint={pendingTodayCount === 0 ? "всё готово" : "журналов"}
+              alert={pendingTodayCount > 0}
+            />
           </div>
         </div>
       </section>
@@ -217,23 +253,59 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
   );
 }
 
-function StatPill({ label, value }: { label: string; value: number }) {
+function StatPill({
+  label,
+  value,
+  hint,
+  alert,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  alert?: boolean;
+}) {
   return (
-    <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/10">
+    <div
+      className={cn(
+        "rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/10",
+        alert && "bg-white/15 ring-white/30"
+      )}
+    >
       <div className="text-[26px] font-semibold leading-none tabular-nums">
         {value}
       </div>
       <div className="mt-1.5 text-[12px] text-white/60">{label}</div>
+      {hint ? (
+        <div
+          className={cn(
+            "mt-0.5 text-[11px]",
+            alert ? "text-[#ffd466]" : "text-white/40"
+          )}
+        >
+          {hint}
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function TemplateCard({ template }: { template: JournalTemplateListItem }) {
   const Icon = JOURNAL_ICONS[template.code] ?? NotebookPen;
+  const isMandatory = template.isMandatorySanpin || template.isMandatoryHaccp;
+  const needsAttentionToday = isMandatory && !template.filledToday;
 
   return (
     <Link href={`/journals/${template.code}`} className="group block focus:outline-none">
-      <div className="flex h-full items-start gap-4 rounded-2xl border border-[#ececf4] bg-white px-5 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:border-[#d6d9ee] hover:shadow-[0_8px_24px_-12px_rgba(85,102,246,0.18)] group-focus-visible:border-[#5566f6] group-focus-visible:ring-4 group-focus-visible:ring-[#5566f6]/15">
+      <div
+        className={cn(
+          "flex h-full items-start gap-4 rounded-2xl border bg-white px-5 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] transition-all hover:shadow-[0_8px_24px_-12px_rgba(85,102,246,0.18)] group-focus-visible:border-[#5566f6] group-focus-visible:ring-4 group-focus-visible:ring-[#5566f6]/15",
+          needsAttentionToday
+            ? "border-[#ffd2cd] hover:border-[#ff8d7d]"
+            : isMandatory && template.filledToday
+              ? "border-[#c8f0d5] hover:border-[#7cf5c0]"
+              : "border-[#ececf4] hover:border-[#d6d9ee]"
+        )}
+      >
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#f5f6ff] text-[#5566f6] transition-transform group-hover:scale-105">
           <Icon className="size-5" />
         </div>
@@ -252,6 +324,19 @@ function TemplateCard({ template }: { template: JournalTemplateListItem }) {
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {isMandatory ? (
+              needsAttentionToday ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-medium text-[#d2453d]">
+                  <AlertCircle className="size-3" />
+                  Заполнить сегодня
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[11px] font-medium text-[#136b2a]">
+                  <CheckCircle2 className="size-3" />
+                  Сегодня готово
+                </span>
+              )
+            ) : null}
             {template.isMandatorySanpin ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-medium text-[#d2453d]">
                 <ShieldCheck className="size-3" />
