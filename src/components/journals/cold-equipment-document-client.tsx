@@ -8,9 +8,11 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  LayoutGrid,
   Pencil,
   Plus,
   Printer,
+  Rows3,
   Settings2,
   Trash2,
   X,
@@ -450,6 +452,30 @@ export function ColdEquipmentDocumentClient({
   const [editingEquipment, setEditingEquipment] = useState<ColdEquipmentConfigItem | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Mobile-only view preference. The 1900-px table behind horizontal
+  // scroll is unusable on a 320-px phone, so by default we render a card
+  // per equipment with a per-day temperature input accordion. See
+  // hygiene-document-client.tsx for the original pattern.
+  const [mobileView, setMobileView] = useState<"cards" | "table">("cards");
+  const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(
+    null
+  );
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("cold-equipment-mobile-view");
+      if (saved === "table" || saved === "cards") setMobileView(saved);
+    } catch {
+      /* localStorage blocked — fall back to 'cards' */
+    }
+  }, []);
+  function switchMobileView(next: "cards" | "table") {
+    setMobileView(next);
+    try {
+      window.localStorage.setItem("cold-equipment-mobile-view", next);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const dateKeys = useMemo(() => buildDateKeys(dateFrom, dateTo), [dateFrom, dateTo]);
   const rowByDate = useMemo(
@@ -843,6 +869,165 @@ export function ColdEquipmentDocumentClient({
           </div>
         ) : null}
 
+        {/* Mobile-only view toggle. Cards = accordion per equipment with
+            per-day temperature inputs, vastly more usable on a phone than
+            a 1900-px grid. Hidden on sm+ and in print. */}
+        <div
+          role="tablist"
+          aria-label="Режим отображения"
+          className="flex w-full rounded-2xl border border-[#ececf4] bg-white p-1 text-[13px] font-medium sm:hidden"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileView === "cards"}
+            onClick={() => switchMobileView("cards")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition-colors ${
+              mobileView === "cards"
+                ? "bg-[#f5f6ff] text-[#5566f6]"
+                : "text-[#6f7282]"
+            }`}
+          >
+            <LayoutGrid className="size-4" />
+            Карточки
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileView === "table"}
+            onClick={() => switchMobileView("table")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition-colors ${
+              mobileView === "table"
+                ? "bg-[#f5f6ff] text-[#5566f6]"
+                : "text-[#6f7282]"
+            }`}
+          >
+            <Rows3 className="size-4" />
+            Таблица
+          </button>
+        </div>
+
+        {/* Mobile Cards view — accordion per equipment with per-day
+            temperature inputs. `handleTemperatureBlur` is the same save
+            path as the table, so the two views stay in lockstep. */}
+        {mobileView === "cards" ? (
+          <div className="space-y-2 sm:hidden print:hidden">
+            {config.equipment.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#dcdfed] bg-[#fafbff] p-5 text-center text-[13px] text-[#6f7282]">
+                Добавьте единицу холодильного оборудования через кнопку
+                «Добавить ХО» сверху.
+              </div>
+            ) : null}
+            {config.equipment.map((item) => {
+              const expanded = expandedEquipmentId === item.id;
+              const filledCount = dateKeys.reduce((acc, dk) => {
+                const val = rowByDate[dk]?.data.temperatures[item.id];
+                return acc + (val != null ? 1 : 0);
+              }, 0);
+              const isSelected = selectedEquipmentIds.includes(item.id);
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-[#ececf4] bg-white"
+                >
+                  <div className="flex items-center gap-3 px-3 py-3">
+                    <span
+                      onClick={(event) => event.stopPropagation()}
+                      className="shrink-0"
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) =>
+                          setSelectedEquipmentIds((current) =>
+                            checked === true
+                              ? [...current, item.id]
+                              : current.filter((value) => value !== item.id)
+                          )
+                        }
+                        disabled={status !== "active"}
+                        className="size-5"
+                      />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedEquipmentId(expanded ? null : item.id)
+                      }
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[14px] font-medium text-[#0b1024]">
+                          {item.name}
+                        </div>
+                        <div className="truncate text-[12px] text-[#6f7282]">
+                          {formatRange(item.min, item.max)}
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[11px] font-semibold text-[#5566f6]">
+                        {filledCount}/{dateKeys.length}
+                      </span>
+                      <ChevronDown
+                        className={`size-4 shrink-0 text-[#6f7282] transition-transform ${
+                          expanded ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {expanded ? (
+                    <div className="space-y-1.5 border-t border-[#ececf4] p-3">
+                      {dateKeys.map((dateKey) => {
+                        const row = rowByDate[dateKey];
+                        const value = row?.data.temperatures[item.id];
+                        const weekend = isWeekend(dateKey);
+                        return (
+                          <div
+                            key={`${item.id}:${dateKey}`}
+                            className={`flex items-center gap-2 rounded-xl px-1 py-1 ${
+                              weekend ? "bg-[#fafbff]" : ""
+                            }`}
+                          >
+                            <span className="w-14 shrink-0 text-center text-[13px] font-medium text-[#6f7282]">
+                              {getDayNumber(dateKey)}{" "}
+                              {getWeekdayShort(dateKey)}.
+                            </span>
+                            {status === "active" ? (
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                step="0.1"
+                                defaultValue={value ?? ""}
+                                onBlur={(event) =>
+                                  handleTemperatureBlur(
+                                    dateKey,
+                                    item.id,
+                                    event.target.value
+                                  )
+                                }
+                                placeholder="°C"
+                                className="h-10 min-w-0 flex-1 rounded-lg border-[#dcdfed] px-3 text-[14px]"
+                              />
+                            ) : (
+                              <span className="flex-1 rounded-lg bg-[#fafbff] px-3 py-2 text-[14px] text-[#0b1024]">
+                                {value ?? "—"}
+                              </span>
+                            )}
+                            <span className="w-12 shrink-0 text-right text-[11px] text-[#9b9fb3]">
+                              {responsibleCodes.codeMap[
+                                row?.employeeId || responsibleUserId || ""
+                              ] || ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className={mobileView === "cards" ? "hidden sm:block print:block" : ""}>
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#d9dce6] bg-white">
           <table className="min-w-[1900px] border-collapse text-[16px]">
             <thead>
@@ -983,6 +1168,7 @@ export function ColdEquipmentDocumentClient({
               </tr>
             </tbody>
           </table>
+        </div>
         </div>
       </div>
 
