@@ -24,15 +24,15 @@ type Close = { onClose: () => void; open: boolean };
 function shell(title: string, body: React.ReactNode, footer?: React.ReactNode) {
   return (
     <>
-      <DialogHeader className="border-b px-6 py-5">
+      <DialogHeader className="border-b px-4 py-5 sm:px-6">
         <DialogTitle className="text-[18px] font-semibold text-[#0b1024]">
           {title}
         </DialogTitle>
         <DialogDescription className="sr-only">{title}</DialogDescription>
       </DialogHeader>
-      <div className="px-6 py-6">{body}</div>
+      <div className="px-4 py-5 sm:px-6 sm:py-6">{body}</div>
       {footer ? (
-        <DialogFooter className="flex-row justify-end gap-2 border-t px-6 py-4">
+        <DialogFooter className="flex-row justify-end gap-2 border-t px-4 py-4 sm:px-6">
           {footer}
         </DialogFooter>
       ) : null}
