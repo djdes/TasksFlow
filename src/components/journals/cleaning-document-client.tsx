@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { ChevronDown, LayoutGrid, Pencil, Plus, Rows3, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -116,6 +116,28 @@ export function CleaningDocumentClient(props: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsState, setSettingsState] = useState(buildSettingsState(normalized));
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Mobile-only preference — Cards default. See hygiene-document-client.tsx
+  // for the full rationale; the 920-px grid behind horizontal scroll is
+  // unusable on a 320-px phone, so we collapse it into a per-row accordion
+  // with tap-to-cycle day buttons. Desktop / print always use the table.
+  const [mobileView, setMobileView] = useState<"cards" | "table">("cards");
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("cleaning-mobile-view");
+      if (saved === "table" || saved === "cards") setMobileView(saved);
+    } catch {
+      /* localStorage blocked — fall back to 'cards' */
+    }
+  }, []);
+  function switchMobileView(next: "cards" | "table") {
+    setMobileView(next);
+    try {
+      window.localStorage.setItem("cleaning-mobile-view", next);
+    } catch {
+      /* ignore */
+    }
+  }
   const roleOptions = useMemo(() => getDistinctRoleLabels(props.users), [props.users]);
   const dayKeys = useMemo(() => buildDateKeys(props.dateFrom, props.dateTo), [props.dateFrom, props.dateTo]);
   const rows = useMemo<RowDescriptor[]>(() => [
@@ -297,6 +319,83 @@ export function CleaningDocumentClient(props: Props) {
           </div>
         ) : null}
 
+        {!printMode ? (
+          <div role="tablist" aria-label="Режим отображения" className="flex w-full rounded-2xl border border-[#ececf4] bg-white p-1 text-[13px] font-medium sm:hidden">
+            <button type="button" role="tab" aria-selected={mobileView === "cards"} onClick={() => switchMobileView("cards")} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition-colors ${mobileView === "cards" ? "bg-[#f5f6ff] text-[#5566f6]" : "text-[#6f7282]"}`}>
+              <LayoutGrid className="size-4" />Карточки
+            </button>
+            <button type="button" role="tab" aria-selected={mobileView === "table"} onClick={() => switchMobileView("table")} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 transition-colors ${mobileView === "table" ? "bg-[#f5f6ff] text-[#5566f6]" : "text-[#6f7282]"}`}>
+              <Rows3 className="size-4" />Таблица
+            </button>
+          </div>
+        ) : null}
+
+        {/* Mobile Cards view — hidden on sm+ and print. Each row (room or
+            responsible) is an accordion with per-day tap-to-cycle cells. */}
+        {!printMode && mobileView === "cards" ? (
+          <div className="space-y-2 sm:hidden print:hidden">
+            {rows.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#dcdfed] bg-[#fafbff] p-5 text-center text-[13px] text-[#6f7282]">
+                Добавьте помещение или ответственного через меню «Добавить».
+              </div>
+            ) : null}
+            {rows.map((row) => {
+              const expanded = expandedRowId === row.id;
+              const title = row.kind === "room" ? row.room.name : row.kind === "cleaning" ? "Ответственный за уборку" : "Ответственный за контроль";
+              const subtitle = row.kind === "room" ? row.room.detergent : `${row.responsible.code} · ${row.responsible.userName || "—"}`;
+              const filledCount = dayKeys.reduce((acc, dk) => acc + (config.matrix[row.id]?.[dk] ? 1 : 0), 0);
+              const isSelected = selection.includes(row.id);
+              return (
+                <div key={row.id} className="rounded-2xl border border-[#ececf4] bg-white">
+                  <div className="flex items-center gap-3 px-3 py-3">
+                    <span onClick={(event) => event.stopPropagation()} className="shrink-0">
+                      <Checkbox checked={isSelected} onCheckedChange={(checked) => setSelection((current) => Boolean(checked) ? [...current, row.id].filter((value, index, list) => list.indexOf(value) === index) : current.filter((id) => id !== row.id))} disabled={props.status !== "active"} className="size-5" />
+                    </span>
+                    <button type="button" onClick={() => setExpandedRowId(expanded ? null : row.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[14px] font-medium text-[#0b1024]">{title}</div>
+                        {subtitle ? <div className="truncate text-[12px] text-[#6f7282]">{subtitle}</div> : null}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[11px] font-semibold text-[#5566f6]">{filledCount}/{dayKeys.length}</span>
+                      <ChevronDown className={`size-4 shrink-0 text-[#6f7282] transition-transform ${expanded ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+                  {expanded ? (
+                    <div className="border-t border-[#ececf4] p-3">
+                      <div className="grid grid-cols-[repeat(auto-fill,minmax(56px,1fr))] gap-1.5">
+                        {dayKeys.map((dateKey) => {
+                          const cellValue = config.matrix[row.id]?.[dateKey] || "";
+                          const weekend = isWeekend(dateKey);
+                          return (
+                            <button key={dateKey} type="button" onClick={() => { updateCell(row, dateKey).catch(() => {}); }} disabled={props.status !== "active"} className={`flex h-11 flex-col items-center justify-center rounded-lg border text-[11px] font-medium transition-colors disabled:opacity-60 ${cellValue ? "border-[#5566f6] bg-[#f5f6ff] text-[#5566f6]" : weekend ? "border-[#ececf4] bg-[#fafbff] text-[#9b9fb3]" : "border-[#ececf4] bg-white text-[#3c4053] hover:bg-[#f5f6ff]"}`}>
+                              <span className="text-[12px] font-semibold tabular-nums">{Number(dateKey.slice(-2))}</span>
+                              <span className="text-[11px] leading-none">{cellValue || "—"}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {props.status === "active" ? (
+                        <div className="mt-3 text-[11px] text-[#6f7282]">
+                          {row.kind === "room" ? "Тап по дню перебирает Т / Г / пусто." : "Тап по дню переключает отметку ответственного."}
+                        </div>
+                      ) : null}
+                      {row.kind === "room" ? (
+                        <div className="mt-3 space-y-1 rounded-xl border border-[#ececf4] bg-[#fafbff] p-3 text-[12px] leading-5 text-[#3c4053]">
+                          <div className="font-semibold text-[#0b1024]">Текущая:</div>
+                          <div>{row.room.currentScope.join(", ") || "—"}</div>
+                          <div className="mt-2 font-semibold text-[#0b1024]">Генеральная:</div>
+                          <div>{row.room.generalScope.join(", ") || "—"}</div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className={mobileView === "cards" && !printMode ? "hidden sm:block print:block" : ""}>
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"><div className="min-w-[920px] space-y-8 sm:min-w-[1200px]">
           <table className="w-full border-collapse text-center"><thead><tr><th className="border border-black p-5 text-[24px] font-semibold">{props.organizationName}</th><th className="border border-black p-3 text-[22px] font-medium" colSpan={dayKeys.length + 1}>СИСТЕМА ХАССП<div className="mt-3 border-t border-black pt-3 italic">ЖУРНАЛ УБОРКИ</div></th><th className="border border-black p-5 text-[20px] font-medium">СТР. 1 ИЗ 1</th></tr></thead></table>
           <h2 className="text-center text-[28px] font-semibold uppercase">Журнал уборки</h2>
@@ -315,6 +414,7 @@ export function CleaningDocumentClient(props: Props) {
           <div className="space-y-2 text-[18px] italic">{config.legend.map((item) => <div key={item}>{item}</div>)}</div>
           <table className="w-full border-collapse text-[16px]"><thead><tr><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Наименование помещения</th><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Текущая уборка</th><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Генеральная уборка</th></tr></thead><tbody>{config.rooms.map((room) => <tr key={room.id}><td className="border border-black p-3">{room.name}</td><td className="border border-black p-3">{room.currentScope.join(", ")}</td><td className="border border-black p-3">{room.generalScope.join(", ")}</td></tr>)}</tbody></table>
         </div></div>
+        </div>
       </div>
 
       <Dialog open={!!roomDialog} onOpenChange={(open) => !open && setRoomDialog(null)}><DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]"><DialogHeader className="border-b px-5 py-6 sm:px-10 sm:py-8"><div className="flex items-center justify-between"><DialogTitle className="text-[22px] font-semibold text-black">{roomDialog?.id ? "Редактирование помещения" : "Добавление нового помещения"}</DialogTitle><button type="button" className="rounded-xl p-2 hover:bg-black/5" onClick={() => setRoomDialog(null)}><X className="size-7" /></button></div></DialogHeader>{roomDialog ? <div className="space-y-4 px-10 py-8"><Input value={roomDialog.name} onChange={(event) => setRoomDialog((current) => current ? { ...current, name: event.target.value } : current)} placeholder="Введите название помещения" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" /><Textarea value={roomDialog.detergent} onChange={(event) => setRoomDialog((current) => current ? { ...current, detergent: event.target.value } : current)} placeholder="Моющие и дезинфицирующие средства" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><Textarea value={roomDialog.currentScope} onChange={(event) => setRoomDialog((current) => current ? { ...current, currentScope: event.target.value } : current)} placeholder="Предмет текущей уборки" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><Textarea value={roomDialog.generalScope} onChange={(event) => setRoomDialog((current) => current ? { ...current, generalScope: event.target.value } : current)} placeholder="Предмет генеральной уборки" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><div className="flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={submitRoom}>Сохранить</Button></div></div> : null}</DialogContent></Dialog>
