@@ -39,6 +39,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type DocumentItem = {
   id: string;
   title: string;
@@ -363,20 +368,20 @@ export function UvLampRuntimeDocumentsClient(props: Props) {
               key={document.id}
               className="grid grid-cols-1 gap-3 rounded-[18px] border border-[#e8ebf3] bg-white px-4 py-4 shadow-[0_2px_10px_rgba(46,55,89,0.04)] sm:grid-cols-[minmax(0,1.9fr)_320px_220px_56px] sm:items-stretch sm:gap-0 sm:px-6 sm:py-6"
             >
-              <Link href={href} className="flex items-center pr-6 text-[17px] font-semibold leading-[1.25] tracking-[-0.03em] text-black">
+              <Link href={href} className={`${JOURNAL_CARD_TITLE_CLASS} flex items-center pr-6`}>
                 {resolvedTitle}
               </Link>
 
               <Link href={href} className="flex flex-col justify-center border-l border-[#e7eaf2] px-8">
-                <div className="text-[16px] text-[#8b8fa3]">Ответственный</div>
-                <div className="mt-3 text-[18px] font-semibold leading-[1.3] text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {responsibleLabel}
                 </div>
               </Link>
 
               <Link href={href} className="flex flex-col justify-center border-l border-[#e7eaf2] px-8">
-                <div className="text-[16px] text-[#8b8fa3]">Дата начала</div>
-                <div className="mt-3 text-[18px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatRuDateDash(document.dateFrom)}
                 </div>
               </Link>

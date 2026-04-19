@@ -43,6 +43,11 @@ import { getUsersForRoleLabel, pickPrimaryManager } from "@/lib/user-roles";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 type DocumentItem = {
   id: string;
@@ -494,7 +499,7 @@ export function MetalImpurityDocumentsClient({
               >
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
-                  className="text-[16px] font-semibold text-black"
+                  className={JOURNAL_CARD_TITLE_CLASS}
                 >
                   {document.title || METAL_IMPURITY_DOCUMENT_TITLE}
                 </Link>
@@ -502,8 +507,8 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {`${config.responsiblePosition}: ${config.responsibleEmployee}`}
                   </div>
                 </Link>
@@ -511,8 +516,8 @@ export function MetalImpurityDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[14px] text-[#84849a]">Дата начала</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {formatRuDate(config.startDate)}
                   </div>
                 </Link>

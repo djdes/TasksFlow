@@ -37,6 +37,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionNativeOptions } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
@@ -444,26 +449,26 @@ export function GlassListDocumentsClient(props: Props) {
                 key={document.id}
                 className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.4fr)_270px_270px_220px_56px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
               >
-                <Link href={href} className="min-w-0 text-[17px] font-semibold text-black">
+                <Link href={href} className={`${JOURNAL_CARD_TITLE_CLASS} min-w-0`}>
                   {config.documentName || document.title || props.templateName}
                 </Link>
                 <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
-                  <div className="text-[14px] text-[#84849a]">Место расположения</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Место расположения</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {config.location || "—"}
                   </div>
                 </Link>
                 <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
-                  <div className="text-[14px] text-[#84849a]">Должность</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Должность</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {responsibleUser
                       ? `${responsibleTitle}: ${responsibleUser.name}`
                       : responsibleTitle}
                   </div>
                 </Link>
                 <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-8">
-                  <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {formatGlassListDate(config.documentDate || document.dateFrom)}
                   </div>
                 </Link>

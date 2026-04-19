@@ -30,6 +30,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -236,14 +241,14 @@ export function ProductWriteoffDocumentsClient({
               className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1.8fr)_280px_280px_56px] sm:items-center sm:gap-0 sm:px-7"
             >
               <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-                <div className="text-[17px] font-semibold tracking-[-0.02em] text-black">{document.listTitle}</div>
+                <div className={JOURNAL_CARD_TITLE_CLASS}>{document.listTitle}</div>
               </Link>
               <Link
                 href={`/journals/${templateCode}/documents/${document.id}`}
                 className="min-w-0 border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">Комментарий</div>
-                <div className="mt-1 truncate text-[15px] leading-none text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Комментарий</div>
+                <div className={`${JOURNAL_CARD_VALUE_CLASS} truncate`}>
                   {document.config.comment || "—"}
                 </div>
               </Link>
@@ -251,8 +256,8 @@ export function ProductWriteoffDocumentsClient({
                 href={`/journals/${templateCode}/documents/${document.id}`}
                 className="border-t border-[#eceef5] pt-4 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatProductWriteoffDate(document.config.documentDate || document.dateFrom)}
                 </div>
               </Link>

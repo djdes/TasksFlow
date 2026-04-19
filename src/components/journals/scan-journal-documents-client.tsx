@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type JournalDocumentRow = {
   id: string;
   title: string;
@@ -140,15 +145,15 @@ export function ScanJournalDocumentsClient({
                 key={document.id}
                 className="grid gap-3 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:grid-cols-[1.8fr_320px_290px_48px] md:items-center md:gap-0"
               >
-                <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title}
                 </Link>
                 {document.responsibleValue ? (
                   <Link href={href} className="md:border-l md:border-[#e6e6f0] md:px-10">
-                    <div className="text-[14px] text-[#84849a]">
+                    <div className={JOURNAL_CARD_LABEL_CLASS}>
                       {document.responsibleLabel || "Ответственный"}
                     </div>
-                    <div className="mt-2 text-[14px] font-semibold text-black">
+                    <div className={JOURNAL_CARD_VALUE_CLASS}>
                       {document.responsibleValue}
                     </div>
                   </Link>
@@ -156,8 +161,8 @@ export function ScanJournalDocumentsClient({
                   <div className="hidden md:block md:border-l md:border-[#e6e6f0]" />
                 )}
                 <Link href={href} className="md:border-l md:border-[#e6e6f0] md:px-10">
-                  <div className="text-[14px] text-[#84849a]">{document.dateLabel}</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">{document.dateValue}</div>
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>{document.dateLabel}</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>{document.dateValue}</div>
                 </Link>
                 <div className="flex justify-center">
                   {document.status === "active" && (

@@ -39,6 +39,11 @@ import {
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 type JournalListDocument = {
   id: string;
@@ -189,16 +194,16 @@ function DocumentRow({
 
   return (
     <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_320px_290px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5">
-      <Link href={href} className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+      <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
         {document.title}
       </Link>
       <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
-        <div className="text-[14px] text-[#84849a]">Должность ответственного</div>
-        <div className="mt-2 text-[14px] font-semibold text-black">{document.responsibleTitle || ""}</div>
+        <div className={JOURNAL_CARD_LABEL_CLASS}>Должность ответственного</div>
+        <div className={JOURNAL_CARD_VALUE_CLASS}>{document.responsibleTitle || ""}</div>
       </Link>
       <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
-        <div className="text-[14px] text-[#84849a]">Период</div>
-        <div className="mt-2 text-[14px] font-semibold text-black">{document.periodLabel}</div>
+        <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
+        <div className={JOURNAL_CARD_VALUE_CLASS}>{document.periodLabel}</div>
       </Link>
       <div className="flex items-center justify-center text-[#5566f6]">
         <DropdownMenu>

@@ -30,6 +30,11 @@ import {
 } from "@/lib/acceptance-document";
 import { USER_ROLE_LABEL_VALUES, getUserRoleLabel } from "@/lib/user-roles";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 
 type User = { id: string; name: string; role: string };
@@ -475,7 +480,7 @@ export function IncomingControlDocumentsClient({
               >
                 <Link
                   href={`/journals/${routeCode}/documents/${document.id}`}
-                  className="text-[16px] font-semibold text-black"
+                  className={JOURNAL_CARD_TITLE_CLASS}
                 >
                   {document.title || defaultDocumentTitle}
                 </Link>
@@ -483,8 +488,8 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6"
                 >
-                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {(config.defaultResponsibleTitle || "Управляющий") +
                       (responsibleUser?.name ? `: ${responsibleUser.name}` : "")}
                   </div>
@@ -493,8 +498,8 @@ export function IncomingControlDocumentsClient({
                   href={`/journals/${routeCode}/documents/${document.id}`}
                   className="border-l border-[#eef0f6] px-6 text-right"
                 >
-                  <div className="text-[14px] text-[#84849a]">Дата начала</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {formatRuDate(document.dateFrom)}
                   </div>
                 </Link>

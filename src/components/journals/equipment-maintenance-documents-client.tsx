@@ -35,6 +35,11 @@ import {
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 
 import { toast } from "sonner";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 const POSITION_OPTIONS = USER_ROLE_LABEL_VALUES;
 
@@ -179,23 +184,23 @@ export function EquipmentMaintenanceDocumentsClient({
               className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1fr_80px_200px_200px_160px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
             >
               <Link href={`/journals/${templateCode}/documents/${doc.id}`} className="min-w-0">
-                <div className="text-[17px] font-semibold text-black">{doc.title}</div>
+                <div className={JOURNAL_CARD_TITLE_CLASS}>{doc.title}</div>
               </Link>
               <div className="text-center">
-                <div className="text-[14px] text-[#84849a]">Год</div>
-                <div className="text-[15px] font-semibold">{cfg.year}</div>
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.year}</div>
               </div>
               <div className="px-3">
-                <div className="text-[14px] text-[#84849a]">Должность &quot;Утверждаю&quot;</div>
-                <div className="text-[14px] font-semibold">{cfg.approveRole}: {cfg.approveEmployee}</div>
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Должность &quot;Утверждаю&quot;</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.approveRole}: {cfg.approveEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                <div className="text-[14px] font-semibold">{cfg.responsibleRole}: {cfg.responsibleEmployee}</div>
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.responsibleRole}: {cfg.responsibleEmployee}</div>
               </div>
               <div className="px-3">
-                <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                <div className="text-[15px] font-semibold">{formatMaintenanceDate(cfg.documentDate)}</div>
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>{formatMaintenanceDate(cfg.documentDate)}</div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

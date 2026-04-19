@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import { JOURNAL_CARD_TITLE_CLASS } from "@/components/journals/journal-responsive";
 type MedBookListDocument = {
   id: string;
   title: string;
@@ -253,7 +254,7 @@ export function MedBookDocumentsClient({
               >
                 <Link
                   href={`/journals/${templateCode}/documents/${document.id}`}
-                  className="min-w-0 flex-1 truncate text-[22px] font-medium text-black transition hover:text-[#5863f8]"
+                  className={`${JOURNAL_CARD_TITLE_CLASS} min-w-0 flex-1 truncate transition hover:text-[#5863f8]`}
                 >
                   {document.title}
                 </Link>

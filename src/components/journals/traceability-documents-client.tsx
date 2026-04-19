@@ -29,6 +29,11 @@ import { cn } from "@/lib/utils";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type TraceabilityDocumentItem = {
   id: string;
   title: string;
@@ -410,13 +415,13 @@ export function TraceabilityDocumentsClient({
               className="grid grid-cols-1 gap-3 rounded-[18px] border border-[#eceef5] bg-white px-4 py-4 shadow-[0_1px_0_rgba(17,24,39,0.02)] sm:grid-cols-[minmax(0,1fr)_220px_48px] sm:items-center sm:gap-0 sm:px-5"
             >
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="min-w-0">
-                <div className="truncate text-[17px] font-semibold tracking-[-0.03em] text-black">
+                <div className={`${JOURNAL_CARD_TITLE_CLASS} truncate`}>
                   {document.title || DEFAULT_TITLE}
                 </div>
               </Link>
               <Link href={`/journals/${routeCode}/documents/${document.id}`} className="justify-self-end pr-2">
-                <div className="text-[14px] text-[#84849a]">Дата начала</div>
-                <div className="text-[15px] font-medium leading-none tracking-[-0.03em] text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatDateLabel(document.dateFrom)}
                 </div>
               </Link>

@@ -42,6 +42,9 @@ import {
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
 import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
   JOURNAL_LIST_ACTIONS_CLASS,
   JOURNAL_LIST_CARD_CLASS,
   JOURNAL_LIST_HEADING_CLASS,
@@ -388,20 +391,20 @@ function TrackedDocumentsClientImpl({
                 key={document.id}
                 className={JOURNAL_LIST_CARD_CLASS}
               >
-                <Link href={href} className="text-[16px] font-semibold tracking-[-0.02em] text-black sm:text-[17px]">
+                <Link href={href} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title}
                 </Link>
 
                 <Link href={href} className="border-t border-[#e6e6f0] pt-3 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0">
-                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {getResponsibleCardValue(document)}
                   </div>
                 </Link>
 
                 <Link href={href} className="border-t border-[#e6e6f0] pt-3 sm:border-l sm:border-t-0 sm:px-10 sm:pt-0">
-                  <div className="text-[14px] text-[#84849a]">{document.metaLabel}</div>
-                  <div className="mt-2 text-[14px] font-semibold text-black">{document.metaValue}</div>
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>{document.metaLabel}</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>{document.metaValue}</div>
                 </Link>
 
                 <div className="flex justify-end pt-1 sm:justify-center sm:pt-0">

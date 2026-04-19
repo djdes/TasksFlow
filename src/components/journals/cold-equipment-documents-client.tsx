@@ -32,6 +32,11 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
@@ -305,14 +310,14 @@ export function ColdEquipmentDocumentsClient({
               >
                 <Link
                   href={href}
-                  className="px-8 py-6 text-[17px] font-medium leading-[1.35] text-black"
+                  className={`${JOURNAL_CARD_TITLE_CLASS} px-8 py-6`}
                 >
                   {document.title}
                 </Link>
 
                 <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
-                  <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                  <div className="mt-1 text-[14px] font-medium text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {document.responsibleTitle && document.responsibleUserName
                       ? `${document.responsibleTitle}: ${document.responsibleUserName}`
                       : document.responsibleTitle || document.responsibleUserName || "Не назначен"}
@@ -320,8 +325,8 @@ export function ColdEquipmentDocumentsClient({
                 </Link>
 
                 <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-10">
-                  <div className="text-[14px] text-[#84849a]">Период</div>
-                  <div className="mt-1 text-[14px] font-medium text-black">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {document.periodLabel}
                   </div>
                 </Link>

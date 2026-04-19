@@ -15,6 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -98,11 +103,11 @@ export function PerishableRejectionDocumentsClient({
             className="grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_220px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-              <div className="text-[17px] font-semibold leading-none tracking-tight text-black">{document.title}</div>
+              <div className={JOURNAL_CARD_TITLE_CLASS}>{document.title}</div>
             </Link>
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="justify-self-end pr-2">
-              <div className="text-[14px] text-[#84849a]">Дата начала</div>
-              <div className="text-[15px] leading-none text-black">{document.startedAtLabel}</div>
+              <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+              <div className={JOURNAL_CARD_VALUE_CLASS}>{document.startedAtLabel}</div>
             </Link>
             <DocumentActionsMenu
               size="sm"

@@ -51,6 +51,11 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = { id: string; name: string; role: string };
 
@@ -469,23 +474,23 @@ export function AuditPlanDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
+                className={JOURNAL_CARD_TITLE_CLASS}
               >
                 {document.title || AUDIT_PLAN_DOCUMENT_TITLE}
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#84849a]">Год</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">{cfg.year}</div>
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>{cfg.year}</div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#84849a]">Должность &quot;Утверждаю&quot;</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Должность &quot;Утверждаю&quot;</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getAuditPlanApproveLabel(cfg.approveRole, cfg.approveEmployee)}
                 </div>
               </Link>
               <Link href={href} className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0">
-                <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getAuditPlanDocumentDateLabel(cfg.documentDate)}
                 </div>
               </Link>

@@ -46,6 +46,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type UserItem = { id: string; name: string; role: string };
 
 type DisinfectantDocumentItem = {
@@ -390,16 +395,16 @@ export function DisinfectantDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
+                className={JOURNAL_CARD_TITLE_CLASS}
               >
                 {document.title || DISINFECTANT_DOCUMENT_TITLE}
               </Link>
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <div className="text-[14px] text-[#84849a]">
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>
                     Ответственный за получение
                   </div>
-                  <div className="mt-1 text-[16px] font-semibold text-black">
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>
                     {cfg.responsibleRole}
                     {cfg.responsibleEmployee
                       ? `: ${cfg.responsibleEmployee}`

@@ -34,6 +34,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type DocumentItem = {
   id: string;
   title: string;
@@ -298,21 +303,21 @@ export function CleaningVentilationChecklistDocumentsClient({
               className="grid grid-cols-1 gap-3 rounded-[22px] border border-[#eaedf7] bg-white px-5 py-4 sm:grid-cols-[1fr_240px_220px_72px] sm:items-center sm:gap-0 sm:px-8 sm:py-5"
             >
               <Link href={href} className="min-w-0 pr-6">
-                <div className="truncate text-[22px] font-semibold tracking-[-0.02em] text-black">
+                <div className={`${JOURNAL_CARD_TITLE_CLASS} truncate`}>
                   {document.title || CLEANING_VENTILATION_CHECKLIST_TITLE}
                 </div>
               </Link>
 
               <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-6">
-                <div className="text-[14px] text-[#84849a]">Дата начала</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatDateLabel(document.dateFrom)}
                 </div>
               </Link>
 
               <Link href={href} className="sm:border-l sm:border-[#e6e6f0] sm:px-6">
-                <div className="text-[14px] text-[#84849a]">Статус</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Статус</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {document.status === "active" ? "Активный" : "Закрытый"}
                 </div>
               </Link>

@@ -24,6 +24,11 @@ import { openDocumentPdf } from "@/lib/open-document-pdf";
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type DocumentItem = {
   id: string;
   title: string;
@@ -280,16 +285,16 @@ export function AuditProtocolDocumentsClient({
             const config = normalizeAuditProtocolConfig(document.config);
             return (
               <div key={document.id} className="grid grid-cols-1 gap-4 rounded-2xl border border-[#ececf4] bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_280px_170px_56px] sm:items-center sm:gap-0 sm:px-7">
-                <Link href={`/journals/${routeCode}/documents/${document.id}`} className="text-[16px] font-semibold text-black">
+                <Link href={`/journals/${routeCode}/documents/${document.id}`} className={JOURNAL_CARD_TITLE_CLASS}>
                   {document.title || AUDIT_PROTOCOL_DOCUMENT_TITLE}
                 </Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 sm:border-l sm:border-t-0 sm:px-6 sm:pt-0">
-                  <div className="text-[14px] text-[#84849a]">Основание проверки</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">{config.basisTitle}</div>
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Основание проверки</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>{config.basisTitle}</div>
                 </Link>
                 <Link href={`/journals/${routeCode}/documents/${document.id}`} className="border-t border-[#eef0f6] pt-4 text-left sm:border-l sm:border-t-0 sm:px-6 sm:pt-0 sm:text-right">
-                  <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                  <div className="mt-1 text-[13px] font-semibold text-black">{config.documentDate}</div>
+                  <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                  <div className={JOURNAL_CARD_VALUE_CLASS}>{config.documentDate}</div>
                 </Link>
                 <div className="justify-self-start sm:justify-self-end">
                   <DropdownMenu>

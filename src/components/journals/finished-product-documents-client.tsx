@@ -17,6 +17,11 @@ import { Label } from "@/components/ui/label";
 import { normalizeFinishedProductDocumentConfig } from "@/lib/finished-product-document";
 
 import { toast } from "sonner";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type JournalListDocument = {
   id: string;
   title: string;
@@ -144,7 +149,7 @@ export function FinishedProductDocumentsClient({
             className="grid grid-cols-1 gap-3 rounded-[16px] border border-[#e7eaf3] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(33,43,54,0.04)] sm:grid-cols-[minmax(0,1fr)_180px_48px] sm:items-center sm:gap-0 sm:px-5"
           >
             <Link href={`/journals/${templateCode}/documents/${document.id}`} className="min-w-0">
-              <div className="truncate text-[22px] font-medium tracking-[-0.02em] text-black">
+              <div className={`${JOURNAL_CARD_TITLE_CLASS} truncate`}>
                 {document.title}
               </div>
             </Link>
@@ -152,8 +157,8 @@ export function FinishedProductDocumentsClient({
               href={`/journals/${templateCode}/documents/${document.id}`}
               className="justify-self-end pr-2 text-right"
             >
-              <div className="text-[14px] text-[#84849a]">Дата начала</div>
-              <div className="text-[16px] font-semibold text-black">{document.startedAtLabel}</div>
+              <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+              <div className={JOURNAL_CARD_VALUE_CLASS}>{document.startedAtLabel}</div>
             </Link>
             <DocumentActionsMenu
               size="sm"

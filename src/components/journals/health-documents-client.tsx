@@ -23,6 +23,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type HealthListDocument = {
   id: string;
   title: string;
@@ -152,13 +157,13 @@ function HealthDocumentRow(props: {
   return (
     <div className="grid grid-cols-1 gap-3 rounded-[18px] border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[minmax(0,1fr)_240px_40px] sm:items-center sm:gap-0 sm:px-5">
       <Link href={href} className="min-w-0 pr-4">
-        <div className="truncate text-[17px] font-semibold tracking-[-0.02em] text-black">
+        <div className={`${JOURNAL_CARD_TITLE_CLASS} truncate`}>
           {props.document.title}
         </div>
       </Link>
       <Link href={href} className="min-w-0 border-l border-[#e6e6f0] pl-6">
-        <div className="text-[14px] text-[#84849a]">Период</div>
-        <div className="mt-1 truncate text-[18px] font-semibold text-black">
+        <div className={JOURNAL_CARD_LABEL_CLASS}>Период</div>
+        <div className={`${JOURNAL_CARD_VALUE_CLASS} truncate`}>
           {props.document.periodLabel}
         </div>
       </Link>

@@ -13,6 +13,19 @@ export const JOURNAL_TAB_RAIL_CLASS =
 export const JOURNAL_LIST_CARD_CLASS =
   "grid grid-cols-1 gap-3 rounded-2xl border border-[#ececf4] bg-white px-4 py-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:grid-cols-[1.8fr_320px_290px_48px] sm:items-center sm:gap-0 sm:px-6 sm:py-5";
 
+/**
+ * Shared card typography (list of documents inside a journal). Normalized
+ * across every *-documents-client.tsx so every journal card looks the same
+ * as the climate_control card used as the reference.
+ */
+export const JOURNAL_CARD_TITLE_CLASS =
+  "text-[17px] font-semibold tracking-[-0.02em] text-black";
+
+export const JOURNAL_CARD_LABEL_CLASS = "text-[14px] text-[#84849a]";
+
+export const JOURNAL_CARD_VALUE_CLASS =
+  "mt-2 text-[14px] font-semibold text-black";
+
 export const JOURNAL_DOCUMENT_SELECTION_BAR_CLASS =
   "sticky top-0 z-30 -mx-4 flex flex-wrap items-center gap-3 border-b border-[#dcdfed] bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
 

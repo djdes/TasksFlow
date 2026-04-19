@@ -52,6 +52,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 import { PositionSelectItems } from "@/components/shared/position-select";
 type UserItem = {
   id: string;
@@ -644,7 +649,7 @@ export function SanitationDayDocumentsClient({
             >
               <Link
                 href={href}
-                className="text-[17px] font-semibold tracking-[-0.02em] text-black"
+                className={JOURNAL_CARD_TITLE_CLASS}
               >
                 {document.title || SANITATION_DAY_DOCUMENT_TITLE}
               </Link>
@@ -653,8 +658,8 @@ export function SanitationDayDocumentsClient({
                 href={href}
                 className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">Год</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Год</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getSanitationYearLabel(cfg.year)}
                 </div>
               </Link>
@@ -663,10 +668,10 @@ export function SanitationDayDocumentsClient({
                 href={href}
                 className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>
                   Должность &quot;Утверждаю&quot;
                 </div>
-                <div className="mt-2 text-[18px] font-semibold leading-tight text-black">
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getSanitationApproveLabel(
                     cfg.approveRole,
                     cfg.approveEmployee,
@@ -678,8 +683,8 @@ export function SanitationDayDocumentsClient({
                 href={href}
                 className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">Ответственный</div>
-                <div className="mt-2 text-[18px] font-semibold leading-tight text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Ответственный</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getSanitationApproveLabel(
                     cfg.responsibleRole,
                     cfg.responsibleEmployee,
@@ -691,8 +696,8 @@ export function SanitationDayDocumentsClient({
                 href={href}
                 className="border-t border-[#e8ebf5] pt-4 sm:border-l sm:border-t-0 sm:px-8 sm:pt-0"
               >
-                <div className="text-[14px] text-[#84849a]">Дата документа</div>
-                <div className="mt-2 text-[14px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата документа</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {getSanitationDocumentDateLabel(cfg.documentDate)}
                 </div>
               </Link>

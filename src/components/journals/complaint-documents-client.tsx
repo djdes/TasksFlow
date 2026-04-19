@@ -23,6 +23,11 @@ import {
 
 import { toast } from "sonner";
 import { EmptyDocumentsState } from "@/components/journals/document-list-ui";
+import {
+  JOURNAL_CARD_LABEL_CLASS,
+  JOURNAL_CARD_TITLE_CLASS,
+  JOURNAL_CARD_VALUE_CLASS,
+} from "@/components/journals/journal-responsive";
 type ComplaintListDocument = {
   id: string;
   title: string;
@@ -366,7 +371,7 @@ export function ComplaintDocumentsClient({
             >
               <Link
                 href={`/journals/${routeCode}/documents/${document.id}`}
-                className="text-[16px] font-semibold text-black"
+                className={JOURNAL_CARD_TITLE_CLASS}
               >
                 {document.title}
               </Link>
@@ -374,8 +379,8 @@ export function ComplaintDocumentsClient({
                 href={`/journals/${routeCode}/documents/${document.id}`}
                 className="justify-self-end text-right"
               >
-                <div className="text-[14px] text-[#84849a]">Дата начала</div>
-                <div className="mt-1 text-[13px] font-semibold text-black">
+                <div className={JOURNAL_CARD_LABEL_CLASS}>Дата начала</div>
+                <div className={JOURNAL_CARD_VALUE_CLASS}>
                   {formatComplaintDate(document.dateFrom)}
                 </div>
               </Link>
