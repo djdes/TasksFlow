@@ -33,6 +33,15 @@ import {
   type AuditPlanSection,
 } from "@/lib/audit-plan-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { PositionSelectItems } from "@/components/shared/position-select";
@@ -653,6 +662,43 @@ export function AuditPlanDocumentClient({
 
   const allSelected =
     normalized.rows.length > 0 && selectedRowIds.length === normalized.rows.length;
+  const { mobileView, switchMobileView } = useMobileView("audit_plan");
+
+  const cardItems: RecordCardItem[] = normalized.rows.map((row, index) => {
+    const section = normalized.sections.find((s) => s.id === row.sectionId);
+    return {
+      id: row.id,
+      title: `№${index + 1} · ${row.text || "—"}`,
+      subtitle: section?.title || undefined,
+      leading: !readOnly ? (
+        <Checkbox
+          checked={selectedRowIds.includes(row.id)}
+          onCheckedChange={(checked) =>
+            setSelectedRowIds((current) =>
+              checked === true
+                ? [...new Set([...current, row.id])]
+                : current.filter((id) => id !== row.id)
+            )
+          }
+          className="size-5"
+        />
+      ) : null,
+      fields: normalized.columns.map((column) => ({
+        label: `${column.title}${column.auditorName ? ` — ${column.auditorName}` : ""}`,
+        value: row.values[column.id] || "",
+        hideIfEmpty: false,
+        onClick: !readOnly
+          ? () =>
+              setCellEditor({
+                rowId: row.id,
+                columnId: column.id,
+                title: `${row.text} / ${column.title}`,
+                value: row.values[column.id] || "",
+              })
+          : undefined,
+      })),
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -718,7 +764,15 @@ export function AuditPlanDocumentClient({
           </div>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView items={cardItems} emptyLabel="Требований пока не добавлено." />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-full border-collapse border border-black/70 bg-white text-[14px]">
             <thead>
               <tr>
@@ -791,7 +845,7 @@ export function AuditPlanDocumentClient({
               ))}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </section>
 
       <DocumentSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} users={users} initial={settingsState} onSubmit={async (value) => {

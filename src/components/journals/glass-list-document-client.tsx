@@ -19,6 +19,15 @@ import {
   type GlassListRow,
 } from "@/lib/glass-list-document";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { PositionNativeOptions } from "@/components/shared/position-select";
@@ -59,6 +68,7 @@ export function GlassListDocumentClient({
 }: Props) {
   const router = useRouter();
   const isClosed = status === "closed";
+  const { mobileView, switchMobileView } = useMobileView("glass_items_list");
   const [config, setConfig] = useState(() => normalizeGlassListConfig(initialConfig));
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -243,6 +253,42 @@ export function GlassListDocumentClient({
             </div>
           )}
 
+          <div className="sm:hidden print:hidden">
+            <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+          </div>
+
+          {mobileView === "cards" ? (
+            <RecordCardsView
+              items={config.rows.map((row, index) => ({
+                id: row.id,
+                title: `№${index + 1} · ${row.itemName || "—"}`,
+                subtitle: row.location || undefined,
+                leading: !isClosed ? (
+                  <Checkbox
+                    checked={selectedRows.includes(row.id)}
+                    onCheckedChange={(checked) =>
+                      setSelectedRows((prev) =>
+                        checked === true
+                          ? [...new Set([...prev, row.id])]
+                          : prev.filter((id) => id !== row.id)
+                      )
+                    }
+                    className="size-5"
+                  />
+                ) : null,
+                fields: [
+                  { label: "Участок", value: row.location, hideIfEmpty: true },
+                  { label: "Кол-во", value: row.quantity, hideIfEmpty: true },
+                ],
+                onClick: !isClosed
+                  ? () => setRowDialog({ open: true, rowIndex: index, row })
+                  : undefined,
+              }))}
+              emptyLabel="Предметов из стекла ещё не внесено."
+            />
+          ) : null}
+
+          <MobileViewTableWrapper mobileView={mobileView}>
           <table className="w-full border-collapse text-[16px]">
             <thead>
               <tr className="bg-[#efefef]">
@@ -288,6 +334,7 @@ export function GlassListDocumentClient({
               </tr>
             </tbody>
           </table>
+          </MobileViewTableWrapper>
         </div>
         </div>
       </div>

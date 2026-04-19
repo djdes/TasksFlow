@@ -40,6 +40,15 @@ import {
 } from "@/lib/metal-impurity-document";
 import { buildStaffOptionLabel } from "@/lib/journal-staff-binding";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { PositionSelectItems } from "@/components/shared/position-select";
@@ -918,6 +927,60 @@ export function MetalImpurityDocumentClient({
   }, [title]);
 
   const allSelected = config.rows.length > 0 && selectedRowIds.length === config.rows.length;
+  const { mobileView, switchMobileView } = useMobileView("metal_impurity");
+
+  const supplierNameById = useMemo(
+    () => new Map(config.suppliers.map((s) => [s.id, s.name])),
+    [config.suppliers]
+  );
+  const materialNameById = useMemo(
+    () => new Map(config.materials.map((m) => [m.id, m.name])),
+    [config.materials]
+  );
+
+  const cardItems: RecordCardItem[] = config.rows.map((row, index) => ({
+    id: row.id,
+    title: `№${index + 1} · ${formatRuDate(row.date) || "—"}`,
+    subtitle: supplierNameById.get(row.supplierId) || undefined,
+    leading: status === "active" ? (
+      <Checkbox
+        checked={selectedRowIds.includes(row.id)}
+        onCheckedChange={(checked) =>
+          setSelectedRowIds((current) =>
+            checked === true
+              ? [...new Set([...current, row.id])]
+              : current.filter((id) => id !== row.id)
+          )
+        }
+        className="size-5"
+      />
+    ) : null,
+    fields: [
+      { label: "Наименование сырья", value: materialNameById.get(row.materialId) || "", hideIfEmpty: true },
+      { label: "Количество сырья, кг", value: row.consumedQuantityKg, hideIfEmpty: true },
+      { label: "Количество примеси, г", value: row.impurityQuantityG, hideIfEmpty: true },
+      { label: "Характеристика примеси", value: row.impurityCharacteristic, hideIfEmpty: true },
+      { label: "Ответственный", value: row.responsibleName, hideIfEmpty: true },
+    ],
+    onClick: status === "active"
+      ? () => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }
+      : undefined,
+    actions: status === "active" ? (
+      <button
+        type="button"
+        onClick={() => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }}
+        className="inline-flex h-10 items-center justify-center rounded-2xl bg-[#5563ff] px-4 text-[14px] font-medium text-white hover:bg-[#4452ee]"
+      >
+        Редактировать
+      </button>
+    ) : null,
+  }));
   const employeeOptions = useMemo(
     () =>
       getMetalImpurityEmployeeOptions(
@@ -1148,7 +1211,15 @@ export function MetalImpurityDocumentClient({
           </div>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView items={cardItems} emptyLabel="Записей пока нет." />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1540px] w-full border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
@@ -1246,7 +1317,7 @@ export function MetalImpurityDocumentClient({
               )}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <RowDialog
