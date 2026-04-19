@@ -251,7 +251,7 @@ export default function RegisterPage() {
                 placeholder="ООО «Вкусный дом»"
                 required
               />
-              <div className="grid grid-cols-[1.2fr_1fr] gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.2fr_1fr]">
                 <SelectField
                   id="organizationType"
                   label="Тип организации"
@@ -276,7 +276,7 @@ export default function RegisterPage() {
                 placeholder="Иван Петров"
                 required
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field
                   id="email"
                   label="Email"

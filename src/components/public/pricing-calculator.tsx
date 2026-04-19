@@ -152,9 +152,9 @@ export function PricingCalculator() {
                 </button>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <d.icon className="size-4 text-[#5566f6]" />
-                    <span className="text-[14px] font-medium text-[#0b1024]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <d.icon className="size-4 shrink-0 text-[#5566f6]" />
+                    <span className="min-w-0 text-[14px] font-medium text-[#0b1024]">
                       {d.title}
                     </span>
                     <span className="ml-auto whitespace-nowrap text-[13px] font-semibold text-[#0b1024]">
