@@ -50,7 +50,7 @@ export default async function CompetenciesPage() {
             Матрица компетенций
           </span>
         </div>
-        <h1 className="mt-2 text-[26px] font-semibold tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
+        <h1 className="mt-2 text-[clamp(1.625rem,1.5vw+1.2rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           Обучение персонала
         </h1>
         <p className="mt-1.5 text-[14px] text-[#6f7282]">

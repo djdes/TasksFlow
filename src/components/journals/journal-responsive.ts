@@ -1,5 +1,5 @@
 export const JOURNAL_LIST_HEADING_CLASS =
-  "w-full text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:max-w-[70%] sm:text-[32px]";
+  "w-full text-[clamp(1.625rem,1.5vw+1.2rem,2rem)] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:max-w-[70%]";
 
 export const JOURNAL_LIST_ACTIONS_CLASS =
   "flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center";

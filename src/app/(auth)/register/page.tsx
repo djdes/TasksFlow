@@ -213,7 +213,7 @@ export default function RegisterPage() {
 
           <StepIndicator activeIndex={activeIndex} />
 
-          <h2 className="mt-8 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
+          <h2 className="mt-8 text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024]">
             {step === "details" && "Создание компании"}
             {step === "verify" && "Подтверждение email"}
             {step === "plan" && "Выбор тарифа"}

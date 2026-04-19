@@ -542,8 +542,8 @@ export function PestControlDocumentClient(props: Props) {
     <div className="space-y-8">
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {props.title || PEST_CONTROL_DOCUMENT_TITLE}
         </h1>
         {!readOnly && (
@@ -565,7 +565,7 @@ export function PestControlDocumentClient(props: Props) {
         dateTo={props.dateTo}
       />
 
-      <div className="text-center text-[26px] font-semibold uppercase tracking-[-0.02em]">
+      <div className="text-center text-[18px] font-semibold uppercase leading-tight tracking-[-0.02em] sm:text-[26px]">
         {PEST_CONTROL_PAGE_TITLE}
       </div>
 
@@ -590,7 +590,7 @@ export function PestControlDocumentClient(props: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {!readOnly ? (
           <Button
             type="button"

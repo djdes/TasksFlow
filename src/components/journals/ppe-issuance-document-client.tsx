@@ -570,12 +570,13 @@ export function PpeIssuanceDocumentClient(props: Props) {
         />
 
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+          <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {title}
           </h1>
         </div>
 
-        <table className="w-full border-collapse text-[15px]">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <table className="w-full min-w-[640px] border-collapse text-[15px] sm:min-w-0">
           <tbody>
             <tr>
               <td
@@ -599,8 +600,9 @@ export function PpeIssuanceDocumentClient(props: Props) {
             </tr>
           </tbody>
         </table>
+        </div>
 
-        <div className="text-center text-[20px] font-semibold">
+        <div className="text-center text-[16px] font-semibold leading-tight sm:text-[20px]">
           ЖУРНАЛ УЧЕТА ВЫДАЧИ СИЗ
         </div>
 

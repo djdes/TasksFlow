@@ -135,7 +135,7 @@ export default async function SettingsPage() {
               <Settings2 className="size-6" />
             </div>
             <div>
-              <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px]">
+              <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold leading-tight tracking-[-0.02em]">
                 Настройки
               </h1>
               <p className="mt-1 text-[15px] text-white/70">

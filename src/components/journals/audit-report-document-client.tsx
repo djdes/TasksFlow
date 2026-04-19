@@ -144,8 +144,7 @@ export function AuditReportDocumentClient({
     <>
       <div className="space-y-8">
         <DocumentBackLink href="/journals/audit_report" documentId={documentId} />
-        <div className="flex items-center justify-between print:hidden">
-          <div />
+        <div className="flex flex-wrap items-center justify-end gap-3 print:hidden">
           {status === "active" && (
             <>
             <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]" onClick={() => setSettingsOpen(true)}>
@@ -164,10 +163,10 @@ export function AuditReportDocumentClient({
           )}
         </div>
 
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024] print:hidden">{documentTitle}</h1>
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">{documentTitle}</h1>
 
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
-        <section className="min-w-[1100px] space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0 sm:min-w-0">
+        <section className="min-w-[1100px] space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-4 print:border-0 sm:p-8 print:p-0 sm:min-w-0">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_120px] border border-black/70">
             <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">{organizationName}</div>
             <div className="grid grid-rows-2">

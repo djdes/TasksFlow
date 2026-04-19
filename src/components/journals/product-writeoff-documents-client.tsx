@@ -175,7 +175,7 @@ export function ProductWriteoffDocumentsClient({
     <div className="space-y-8">
       <div className="space-y-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <h1 className="max-w-[70%] text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">Акт забраковки</h1>
+          <h1 className="max-w-[70%] text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">Акт забраковки</h1>
           <div className="flex shrink-0 items-center gap-3">
             <Button
               variant="outline"

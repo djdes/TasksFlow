@@ -1153,16 +1153,16 @@ export function ClimateDocumentClient({
 
   return (
     <div className="bg-white text-black">
-      <div className="mx-auto max-w-[1840px] px-6 py-8">
+      <div className="mx-auto max-w-[1840px] px-4 py-4 sm:px-6 sm:py-8">
         <DocumentBackLink href="/journals/climate_control" documentId={documentId} />
-        <div className="mb-8 flex items-start justify-between gap-6">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div>
-            <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+            <h1 className="mt-2 text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {status === "active" && (
               <>
               <Button
@@ -1185,16 +1185,16 @@ export function ClimateDocumentClient({
           </div>
         </div>
 
-        <div className="mb-10 rounded-[24px] bg-[#f3f4fe] px-6 py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="mb-10 rounded-[24px] bg-[#f3f4fe] px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <Switch
                 checked={checkedAutoFill}
                 onCheckedChange={handleAutoFillChange}
                 disabled={status !== "active" || isSwitching}
                 className="h-10 w-16 data-[state=checked]:bg-[#5566f6] data-[state=unchecked]:bg-[#d6d9ee]"
               />
-              <span className="text-[20px] font-medium text-black">
+              <span className="min-w-0 text-[14px] font-medium leading-tight text-black sm:text-[20px]">
                 Автоматически заполнять журнал
               </span>
             </div>
@@ -1223,7 +1223,7 @@ export function ClimateDocumentClient({
                 </Label>
               </div>
 
-              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[18px] bg-white p-6">
+              <div className="-mx-4 overflow-x-auto rounded-[18px] bg-white p-4 sm:mx-0 sm:p-6">
                 <table className="min-w-[1080px] w-full border-collapse text-[16px]">
                   <tbody>
                     <tr>

@@ -500,7 +500,7 @@ export function TrainingPlanDocumentClient({
       <DocumentBackLink href="/journals/training_plan" documentId={documentId} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div />
-        <div className="flex items-center gap-3 self-start lg:self-auto">
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
           {!readOnly && (
             <Button
               type="button"
@@ -526,7 +526,7 @@ export function TrainingPlanDocumentClient({
         </div>
       </div>
 
-      <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">{title}</h1>
+      <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">{title}</h1>
 
       {selectedRowIds.length > 0 && !readOnly && (
         <div className="sticky top-0 z-30 -mx-4 flex items-center gap-4 rounded-2xl border-b border-[#dcdfed] bg-white/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
@@ -543,7 +543,7 @@ export function TrainingPlanDocumentClient({
         </div>
       )}
 
-      <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8">
+      <section className="space-y-4 overflow-hidden rounded-[18px] border border-[#dadde9] bg-white p-4 sm:p-8">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_220px] border border-black/70">
           <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">
             {organizationName}
@@ -559,7 +559,7 @@ export function TrainingPlanDocumentClient({
           <div className="flex items-center justify-center border-l border-black/70 text-[14px]">СТР. 1 ИЗ 1</div>
         </div>
 
-        <div className="ml-auto flex w-[420px] flex-col items-end gap-1 text-right text-[14px] leading-tight">
+        <div className="ml-auto flex w-full max-w-[420px] flex-col items-end gap-1 text-right text-[14px] leading-tight">
           <div className="font-semibold">УТВЕРЖДАЮ</div>
           <div>{normalized.approveRole}</div>
           <div>{normalized.approveEmployee}</div>
@@ -567,7 +567,7 @@ export function TrainingPlanDocumentClient({
           <div>{toViewDateLabel(normalized.documentDate)}</div>
         </div>
 
-        <div className="py-4 text-center text-[24px] font-semibold">
+        <div className="py-4 text-center text-[18px] font-semibold leading-tight sm:text-[24px]">
           ПЛАН ОБУЧЕНИЯ ПЕРСОНАЛА НА {normalized.year} Г.
         </div>
 

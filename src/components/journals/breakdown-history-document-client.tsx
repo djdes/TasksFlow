@@ -445,7 +445,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
         <DocumentBackLink href="/journals/breakdown_history" documentId={props.documentId} />
         {/* Page heading */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px]">
+          <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em]">
             {title || BREAKDOWN_HISTORY_HEADING}
           </h1>
           <div className="flex flex-wrap items-center gap-3">

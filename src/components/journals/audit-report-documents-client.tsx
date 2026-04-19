@@ -175,7 +175,7 @@ export function AuditReportDocumentsClient({ activeTab, routeCode, documents }: 
     <>
       <div className="space-y-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+          <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {activeTab === "closed" ? `${AUDIT_REPORT_DOCUMENT_TITLE} (закрытые)` : AUDIT_REPORT_DOCUMENT_TITLE}
           </h1>
           <div className="flex items-center gap-3">

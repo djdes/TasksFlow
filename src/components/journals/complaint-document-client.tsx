@@ -443,7 +443,7 @@ export function ComplaintDocumentClient({
         )}
 
         <div>
-          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+          <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {documentTitle}
           </h1>
         </div>
@@ -484,7 +484,7 @@ export function ComplaintDocumentClient({
         </div>
 
         {status === "active" && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               type="button"
               onClick={() => {
@@ -497,7 +497,7 @@ export function ComplaintDocumentClient({
               Добавить
             </Button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
                 variant="outline"

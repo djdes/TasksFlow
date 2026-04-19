@@ -339,7 +339,7 @@ function TrackedDocumentClientImpl({
       <div className={JOURNAL_DOCUMENT_SHELL_CLASS}>
         <div className={JOURNAL_DOCUMENT_HEADER_CLASS}>
           <div>
-            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
+            <h1 className="text-[clamp(1.625rem,1.5vw+1.2rem,2rem)] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024]">
               {title}
             </h1>
             <div className="mt-2 text-[14px] text-[#84849a] sm:text-[16px]">

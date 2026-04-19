@@ -3806,7 +3806,7 @@ export default async function JournalDocumentsPage({
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.18em] text-white/80 backdrop-blur">
               Журнал
             </div>
-            <h1 className="mt-4 text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[32px]">
+            <h1 className="mt-4 text-[clamp(1.625rem,1.5vw+1.2rem,2rem)] font-semibold leading-tight tracking-[-0.02em]">
               {template.name}
             </h1>
             {template.description ? (

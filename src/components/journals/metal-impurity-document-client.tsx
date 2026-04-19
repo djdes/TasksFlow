@@ -1060,9 +1060,9 @@ export function MetalImpurityDocumentClient({
         )}
 
         <DocumentBackLink href={`/journals/${METAL_IMPURITY_TEMPLATE_CODE}`} documentId={documentId} />
-        <div className="flex items-start justify-between gap-6 print:hidden">
+        <div className="flex flex-col gap-4 print:hidden sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div>
-            <h1 className="mt-4 text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+            <h1 className="mt-4 text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
           </div>
@@ -1071,7 +1071,7 @@ export function MetalImpurityDocumentClient({
               type="button"
               variant="outline"
               onClick={() => setSettingsOpen(true)}
-              className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[16px] text-[#3848c7] shadow-none"
+              className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[16px] text-[#3848c7] shadow-none self-start sm:self-auto"
             >
               Настройки журнала
             </Button>
@@ -1115,8 +1115,8 @@ export function MetalImpurityDocumentClient({
         </div>
 
         {status === "active" && (
-          <div className="flex items-center justify-between gap-4 print:hidden">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
                 onClick={() => {

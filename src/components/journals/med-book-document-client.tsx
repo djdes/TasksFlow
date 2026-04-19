@@ -352,7 +352,7 @@ export function MedBookDocumentClient({
       <DocumentBackLink href="/journals/med_books" documentId={documentId} />
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-3">
-          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+          <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {docTitle}
           </h1>
         </div>

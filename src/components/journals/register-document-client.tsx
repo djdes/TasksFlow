@@ -535,7 +535,7 @@ export function RegisterDocumentClient({
         {templateCode ? <DocumentBackLink href={`/journals/${templateCode}`} documentId={documentId} /> : null}
         <div className={REGISTER_DOCUMENT_HEADER_CLASS}>
           <div>
-            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024] sm:text-[32px]">
+            <h1 className="text-[clamp(1.625rem,1.5vw+1.2rem,2rem)] font-semibold leading-tight tracking-[-0.02em] text-[#0b1024]">
               {documentTitle}
             </h1>
             <div className="mt-2 text-[14px] text-[#63667a] sm:mt-3 sm:text-[18px]">

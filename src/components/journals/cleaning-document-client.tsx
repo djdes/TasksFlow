@@ -287,7 +287,7 @@ export function CleaningDocumentClient(props: Props) {
         ) : null}
 
         <div className="flex items-start justify-between gap-6">
-          <div><h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">{config.documentTitle || CLEANING_PAGE_TITLE}</h1><p className="mt-2 text-[18px] text-[#6d7285]">{getCleaningPeriodLabel(props.dateFrom, props.dateTo)}</p></div>
+          <div><h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">{config.documentTitle || CLEANING_PAGE_TITLE}</h1><p className="mt-2 text-[18px] text-[#6d7285]">{getCleaningPeriodLabel(props.dateFrom, props.dateTo)}</p></div>
           {!printMode && saving ? <div className="text-[16px] text-[#6d7285]">Сохранение...</div> : null}
         </div>
 

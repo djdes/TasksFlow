@@ -382,7 +382,7 @@ export function PestControlDocumentsClient(props: Props) {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {PEST_CONTROL_PAGE_TITLE}
         </h1>
         <div className="flex items-center gap-3">

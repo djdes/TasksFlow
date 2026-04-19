@@ -311,8 +311,8 @@ export function EquipmentCleaningDocumentClient({
       ) : null}
 
       <DocumentBackLink href={`/journals/${journalRouteCode}`} documentId={documentId} />
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {title}
         </h1>
         <Button
@@ -326,16 +326,17 @@ export function EquipmentCleaningDocumentClient({
       </div>
 
       <div className="space-y-6 overflow-hidden rounded-[20px] border bg-white p-4 sm:p-6">
-        <table className="w-full border-collapse">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <table className="w-full min-w-[640px] border-collapse sm:min-w-0">
           <tbody>
             <tr>
-              <td rowSpan={2} className="w-[18%] border border-black p-3 text-center text-[26px] font-semibold">
+              <td rowSpan={2} className="w-[18%] border border-black p-3 text-center text-[18px] font-semibold sm:text-[26px]">
                 {organizationName}
               </td>
               <td className="border border-black p-2 text-center text-[15px]">
                 СИСТЕМА ХАССП
               </td>
-              <td className="w-[22%] border border-black p-2 text-[20px] font-semibold">
+              <td className="w-[22%] border border-black p-2 text-[14px] font-semibold sm:text-[20px]">
                 Начат&nbsp;&nbsp;{formatEquipmentCleaningDate(settingsDateFrom)}
                 <div className="mt-2 font-normal">
                   Окончен&nbsp;__________
@@ -343,15 +344,16 @@ export function EquipmentCleaningDocumentClient({
               </td>
             </tr>
             <tr>
-              <td className="border border-black p-2 text-center text-[18px] uppercase italic">
+              <td className="border border-black p-2 text-center text-[14px] uppercase italic sm:text-[18px]">
                 Журнал мойки и дезинфекции оборудования
               </td>
-              <td className="border border-black p-2 text-center text-[18px]">
+              <td className="border border-black p-2 text-center text-[14px] sm:text-[18px]">
                 СТР. 1 ИЗ 1
               </td>
             </tr>
           </tbody>
         </table>
+        </div>
 
         <h2 className="text-center text-[18px] font-semibold uppercase leading-tight sm:text-[28px]">
           Журнал мойки и дезинфекции оборудования

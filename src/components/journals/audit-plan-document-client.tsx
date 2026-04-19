@@ -671,7 +671,7 @@ export function AuditPlanDocumentClient({
         )}
       </div>
 
-      <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024] print:hidden">
+      <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">
         {title}
       </h1>
 
@@ -686,7 +686,7 @@ export function AuditPlanDocumentClient({
         </div>
       )}
 
-      <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
+      <section className="space-y-4 overflow-hidden rounded-[18px] border border-[#dadde9] bg-white p-4 print:overflow-visible print:border-0 sm:p-8 print:p-0">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_120px] border border-black/70">
           <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">{organizationName}</div>
           <div className="grid grid-rows-2">
@@ -696,7 +696,7 @@ export function AuditPlanDocumentClient({
           <div className="flex items-center justify-center border-l border-black/70 text-[14px]">СТР. 1 ИЗ 1</div>
         </div>
 
-        <div className="ml-auto w-[420px] text-right text-[14px] leading-tight">
+        <div className="ml-auto w-full max-w-[420px] text-right text-[14px] leading-tight">
           <div className="font-semibold">УТВЕРЖДАЮ</div>
           <div>{normalized.approveRole}</div>
           <div>{normalized.approveEmployee}</div>

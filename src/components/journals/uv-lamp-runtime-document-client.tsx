@@ -705,7 +705,8 @@ function SpecificationTable({ config, onEdit }: { config: UvRuntimeDocumentConfi
       <div className="mb-3 text-center text-[14px] font-bold">
         Спецификация ультрафиолетовой бактерицидной установки
       </div>
-      <table className="w-full border-collapse text-[12px]">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+      <table className="w-full min-w-[640px] border-collapse text-[12px] sm:min-w-0">
         <tbody>
           <tr>
             <td className="border border-[#ccc] bg-[#f9f9f9] px-3 py-2 font-medium">
@@ -765,6 +766,7 @@ function SpecificationTable({ config, onEdit }: { config: UvRuntimeDocumentConfi
           </tr>
         </tbody>
       </table>
+      </div>
       <div className="mt-2 flex justify-end print:hidden">
         <button
           type="button"
@@ -789,10 +791,11 @@ function MonthlySummaryTable({ monthlyData }: { monthlyData: { month: string; ho
 
   return (
     <div className="uv-monthly-section">
-      <div className="mb-3 text-center text-[14px] font-bold">
+      <div className="mb-3 text-center text-[14px] font-bold leading-tight">
         Суммарное количество отработанных часов бактерицидной установкой по месяцам
       </div>
-      <table className="w-full border-collapse text-[12px]">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+      <table className="w-full min-w-[720px] border-collapse text-[12px] sm:min-w-0">
         <thead>
           <tr className="bg-[#f0f0f0]">
             <th className="border border-[#ccc] px-3 py-2 text-left font-semibold">Месяц, год</th>
@@ -829,6 +832,7 @@ function MonthlySummaryTable({ monthlyData }: { monthlyData: { month: string; ho
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -1052,8 +1056,8 @@ export function UvLampRuntimeDocumentClient(props: Props) {
     <div className="space-y-4">
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
-      <div className="flex items-start justify-between gap-4 print:hidden">
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:hidden">
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           Журнал учета работы УФ бактерицидной установки
         </h1>
         <Button

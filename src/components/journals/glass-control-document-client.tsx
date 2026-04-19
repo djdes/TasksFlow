@@ -744,7 +744,7 @@ export function GlassControlDocumentClient(props: Props) {
           </Button>
         </div>
 
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
           {config.documentName || props.title || GLASS_CONTROL_DOCUMENT_TITLE}
         </h1>
 

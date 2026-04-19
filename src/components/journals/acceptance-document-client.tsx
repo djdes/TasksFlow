@@ -1372,15 +1372,15 @@ export function AcceptanceDocumentClient(props: Props) {
 
         <DocumentBackLink href={`/journals/${routeCode}`} documentId={props.documentId} />
 
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-5">
-            <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px]">{documentTitle}</h1>
+            <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em]">{documentTitle}</h1>
             <label className="flex items-center gap-4 rounded-[18px] bg-[#f3f4fe] px-5 py-4 text-[16px]">
               <Checkbox checked={sortByExpiry} onCheckedChange={(checked) => setSortByExpiry(checked === true)} />
               <span>Сортировать по сроку годности</span>
             </label>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               variant="outline"
@@ -1393,7 +1393,8 @@ export function AcceptanceDocumentClient(props: Props) {
         </div>
 
         {/* HACCP header */}
-        <table className="w-full border-collapse text-[15px]">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <table className="w-full min-w-[640px] border-collapse text-[15px] sm:min-w-0">
           <tbody>
             <tr>
               <td
@@ -1419,8 +1420,9 @@ export function AcceptanceDocumentClient(props: Props) {
             </tr>
           </tbody>
         </table>
+        </div>
 
-        <div className="text-center text-[20px] font-semibold">{journalHeaderTitle}</div>
+        <div className="text-center text-[16px] font-semibold leading-tight sm:text-[20px]">{journalHeaderTitle}</div>
 
         {/* Toolbar */}
         {!isClosed && (

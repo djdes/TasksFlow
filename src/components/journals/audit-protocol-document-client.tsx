@@ -229,8 +229,7 @@ export function AuditProtocolDocumentClient({
         )}
 
         <DocumentBackLink href="/journals/audit_protocol" documentId={documentId} />
-        <div className="flex items-center justify-between print:hidden">
-          <div />
+        <div className="flex flex-wrap items-center justify-end gap-3 print:hidden">
           {status === "active" && (
             <>
             <Button variant="outline" className="h-12 rounded-xl border-[#e8ebf7] px-5 text-[14px] text-[#5566f6]" onClick={() => setSettingsOpen(true)}>
@@ -249,9 +248,9 @@ export function AuditProtocolDocumentClient({
           )}
         </div>
 
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024] print:hidden">{documentTitle}</h1>
+        <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">{documentTitle}</h1>
 
-        <section className="space-y-4 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
+        <section className="space-y-4 overflow-hidden rounded-[18px] border border-[#dadde9] bg-white p-4 print:overflow-visible print:border-0 sm:p-8 print:p-0">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[220px_1fr_120px] border border-black/70">
             <div className="flex items-center justify-center border-r border-black/70 py-10 text-[16px] font-semibold">{organizationName}</div>
             <div className="grid grid-rows-2">
@@ -268,7 +267,7 @@ export function AuditProtocolDocumentClient({
           </div>
 
           {status === "active" && (
-            <div className="flex gap-3 print:hidden">
+            <div className="flex flex-wrap gap-3 print:hidden">
               <Button className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={() => { setEditingRow(null); setRowOpen(true); }}>
                 <Plus className="size-5" /> Добавить строку
               </Button>

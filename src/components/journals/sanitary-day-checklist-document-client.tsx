@@ -820,11 +820,11 @@ export function SanitaryDayChecklistDocumentClient({
         }
       `}</style>
 
-      <div className="sdc-sheet mx-auto max-w-[960px] px-8 py-6">
+      <div className="sdc-sheet mx-auto max-w-[960px] px-4 py-4 sm:px-8 sm:py-6">
         {/* ─── Toolbar (screen only) ─── */}
-        <div className="screen-only mb-10 space-y-8">
-          <div className="flex items-start justify-between gap-6">
-            <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024]">
+        <div className="screen-only mb-6 space-y-4 sm:mb-10 sm:space-y-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">
               {title || getSanitaryDayChecklistTitle(routeCode)}
             </h1>
             {isActive && (
@@ -832,7 +832,7 @@ export function SanitaryDayChecklistDocumentClient({
                 type="button"
                 variant="outline"
                 onClick={() => setSettingsOpen(true)}
-                className="h-11 shrink-0 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
+                className="h-11 shrink-0 rounded-2xl border-[#dcdfed] px-4 text-[15px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff] self-start sm:self-auto"
               >
                 Настройки журнала
               </Button>
@@ -840,18 +840,18 @@ export function SanitaryDayChecklistDocumentClient({
           </div>
 
           {isActive && (
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               <Button
                 type="button"
                 onClick={() => setAddItemOpen(true)}
-                className="h-[58px] rounded-2xl bg-[#5566f6] px-8 text-[18px] text-white hover:bg-[#4b57ff]"
+                className="h-[58px] rounded-2xl bg-[#5566f6] px-6 text-[16px] text-white hover:bg-[#4b57ff] sm:px-8 sm:text-[18px]"
               >
                 <Plus className="mr-2 size-5" />
                 Добавить
               </Button>
               <button
                 type="button"
-                className="text-[18px] font-medium text-[#3848c7] hover:underline"
+                className="text-[16px] font-medium text-[#3848c7] hover:underline sm:text-[18px]"
                 onClick={() => setEditZonesOpen(true)}
               >
                 Редактировать списки

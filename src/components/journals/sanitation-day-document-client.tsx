@@ -645,9 +645,8 @@ export function SanitationDayDocumentClient({
   return (
     <div className="space-y-8">
       <DocumentBackLink href={journalHref} documentId={documentId} />
-      <div className="flex items-center justify-between gap-4 print:hidden">
-        <div />
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3 print:hidden">
+        <div className="flex flex-wrap items-center gap-3">
           {!readOnly && (
             <Button
               type="button"
@@ -662,12 +661,13 @@ export function SanitationDayDocumentClient({
         </div>
       </div>
 
-      <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[32px] text-[#0b1024] print:hidden">
+      <h1 className="text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024] print:hidden">
         {title}
       </h1>
 
-      <section className="space-y-6 rounded-[18px] border border-[#dadde9] bg-white p-8 print:border-0 print:p-0">
-        <table className="w-full border-collapse">
+      <section className="space-y-6 overflow-hidden rounded-[18px] border border-[#dadde9] bg-white p-4 print:overflow-visible print:border-0 sm:p-8 print:p-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <table className="w-full min-w-[560px] border-collapse sm:min-w-0">
           <tbody>
             <tr>
               <td
@@ -693,9 +693,10 @@ export function SanitationDayDocumentClient({
             </tr>
           </tbody>
         </table>
+        </div>
 
         <div className="flex justify-end">
-          <div className="w-[320px] pr-2 text-right text-[13px] leading-snug">
+          <div className="w-full max-w-[320px] pr-2 text-right text-[13px] leading-snug">
             <div className="font-semibold">УТВЕРЖДАЮ</div>
             <div>{normalized.approveRole}</div>
             <div className="border-b border-black pb-1">
