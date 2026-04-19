@@ -3,6 +3,11 @@ name: Deploy to production
 on:
   push:
     branches: [master]
+  # Fallback trigger — run the same workflow manually from the Actions
+  # UI when the `push` hook silently doesn't fire (e.g. GitHub Actions
+  # minutes exhausted, workflow auto-paused after inactivity, or runner
+  # outage). Use "Run workflow" on the Deploy to production page.
+  workflow_dispatch: {}
 
 env:
   APP_DIR: /var/www/wesetupru/data/www/wesetup.ru/app

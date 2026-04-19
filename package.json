@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:bot": "tsx scripts/test-bot-wizard.ts",
+    "deploy:manual": "bash scripts/deploy.sh",
     "backfill:journal-staff": "tsx scripts/backfill-journal-staff-bindings.ts",
     "audit:source:parity": "tsx scripts/audit-source-local-parity.ts",
     "seed:haccp-demo": "tsx prisma/seed-haccp-demo.ts",
