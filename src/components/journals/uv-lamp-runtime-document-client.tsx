@@ -44,6 +44,15 @@ import {
 } from "@/lib/uv-lamp-runtime-document";
 import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 type UserItem = {
@@ -862,6 +871,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
   const userMap = useMemo(() => Object.fromEntries(props.users.map((user) => [user.id, user.name])), [props.users]);
 
   const allSelected = rows.length > 0 && selectedRowIds.length === rows.length;
+  const { mobileView, switchMobileView } = useMobileView("uv_lamp_runtime");
 
   const monthlyData = useMemo(() => {
     const entriesWithData = rows
@@ -1154,8 +1164,66 @@ export function UvLampRuntimeDocumentClient(props: Props) {
         </div>
       )}
 
+      <div className="sm:hidden print:hidden">
+        <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+      </div>
+
+      {mobileView === "cards" ? (
+        <RecordCardsView
+          items={rows.map((row, index) => {
+            const duration = calculateDurationMinutes(row.data.startTime, row.data.endTime);
+            return {
+              id: row.id,
+              title: `№${index + 1} · ${formatRuDateDash(row.date)}`,
+              subtitle: userMap[row.employeeId || fallbackEmployeeId] || undefined,
+              badge: duration !== null ? (
+                <span className="rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[11px] font-semibold text-[#5566f6]">
+                  {duration} мин
+                </span>
+              ) : undefined,
+              leading: props.status === "active" ? (
+                <Checkbox
+                  checked={selectedRowIds.includes(row.id)}
+                  onCheckedChange={(checked) =>
+                    setSelectedRowIds((current) =>
+                      checked === true
+                        ? [...new Set([...current, row.id])]
+                        : current.filter((id) => id !== row.id)
+                    )
+                  }
+                  className="size-5"
+                />
+              ) : null,
+              fields: [
+                {
+                  label: "Время ВКЛ",
+                  value: row.data.startTime || "",
+                  warnIfEmpty: props.status === "active",
+                },
+                {
+                  label: "Время ВЫКЛ",
+                  value: row.data.endTime || "",
+                  warnIfEmpty: props.status === "active",
+                },
+                {
+                  label: "Продолжительность",
+                  value: duration !== null ? `${duration} минут` : "",
+                  hideIfEmpty: true,
+                },
+                {
+                  label: "Ответственный",
+                  value: userMap[row.employeeId || fallbackEmployeeId] || "",
+                  hideIfEmpty: true,
+                },
+              ],
+            };
+          })}
+          emptyLabel="Записей не найдено."
+        />
+      ) : null}
+
       {/* Data table */}
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[12px] border border-[#eceef5] bg-white print:rounded-none print:border-[#ccc]">
+      <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[12px] border border-[#eceef5] bg-white print:rounded-none print:border-[#ccc]">
         <table className="w-full min-w-[720px] border-collapse text-[13px] sm:min-w-[900px]">
           <thead>
             <tr className="bg-[#f6f7fb] print:bg-[#f0f0f0]">
@@ -1284,7 +1352,7 @@ export function UvLampRuntimeDocumentClient(props: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </MobileViewTableWrapper>
 
       {/* Settings / Print buttons */}
       <div className="flex items-center justify-end gap-2 print:hidden">

@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { Plus, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 import { getUsersForRoleLabel } from "@/lib/user-roles";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -541,6 +550,7 @@ export function GlassControlDocumentClient(props: Props) {
   const isClosed = props.status === "closed";
   const selectedCount = selectedRowIds.length;
   const allSelected = rows.length > 0 && selectedCount === rows.length && !isClosed;
+  const { mobileView, switchMobileView } = useMobileView("glass_control");
   const itemSuggestions = useMemo(
     () => [...new Set(props.itemSuggestions || [])].filter(Boolean),
     [props.itemSuggestions]
@@ -829,6 +839,53 @@ export function GlassControlDocumentClient(props: Props) {
             )}
           </div>
 
+          <div className="sm:hidden print:hidden">
+            <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+          </div>
+
+          {mobileView === "cards" ? (
+            <RecordCardsView
+              items={rows.map((row, index) => {
+                const userName = props.users.find((user) => user.id === row.employeeId)?.name || "";
+                return {
+                  id: row.id,
+                  title: `№${index + 1} · ${formatRuDateDash(row.date)}`,
+                  subtitle: userName || undefined,
+                  badge: row.data.damagesDetected ? (
+                    <span className="rounded-full bg-[#fff2f1] px-2 py-0.5 text-[11px] font-semibold text-[#d2453d]">
+                      Повреждения
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-[#e6f8ec] px-2 py-0.5 text-[11px] font-semibold text-[#1f7a3c]">
+                      Без повреждений
+                    </span>
+                  ),
+                  leading: !isClosed ? (
+                    <Checkbox
+                      checked={selectedRowIds.includes(row.id)}
+                      onCheckedChange={(checked) =>
+                        setSelectedRowIds((current) =>
+                          checked === true
+                            ? [...new Set([...current, row.id])]
+                            : current.filter((id) => id !== row.id)
+                        )
+                      }
+                      className="size-5"
+                    />
+                  ) : null,
+                  fields: [
+                    { label: "Наименование предмета", value: row.data.itemName, hideIfEmpty: true },
+                    { label: "Количество", value: row.data.quantity, hideIfEmpty: true },
+                    { label: "Информация о повреждениях", value: row.data.damageInfo, hideIfEmpty: true },
+                  ],
+                  onClick: !isClosed ? () => setRowDialog({ open: true, row, originalRow: row }) : undefined,
+                };
+              })}
+              emptyLabel="Контролей пока не проведено."
+            />
+          ) : null}
+
+          <MobileViewTableWrapper mobileView={mobileView}>
           <table className="w-full border-collapse text-[16px]">
             <thead>
               <tr>
@@ -911,6 +968,7 @@ export function GlassControlDocumentClient(props: Props) {
               </tr>
             </tbody>
           </table>
+          </MobileViewTableWrapper>
         </div>
         </div>
       </div>

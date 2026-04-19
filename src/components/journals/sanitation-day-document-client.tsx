@@ -44,6 +44,15 @@ import {
   type SanitationMonthKey,
 } from "@/lib/sanitation-day-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { PositionSelectItems } from "@/components/shared/position-select";
@@ -548,6 +557,7 @@ export function SanitationDayDocumentClient({
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const normalized = normalizeSanitationDayConfig(config);
   const readOnly = status === "closed";
+  const { mobileView, switchMobileView } = useMobileView("general_cleaning");
 
   const allSelected =
     normalized.rows.length > 0 &&
@@ -779,6 +789,48 @@ export function SanitationDayDocumentClient({
         ) : null}
 
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <div className="sm:hidden print:hidden">
+            <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+          </div>
+
+          {mobileView === "cards" ? (
+            <RecordCardsView
+              items={normalized.rows.map((row, index) => {
+                const planSummary = SANITATION_MONTHS.map((m) => {
+                  const v = row.plan[m.key];
+                  return v ? `${MONTH_FIELD_LABELS[m.key]}:${v}` : null;
+                }).filter(Boolean).join(" · ");
+                const factSummary = SANITATION_MONTHS.map((m) => {
+                  const v = row.fact[m.key];
+                  return v ? `${MONTH_FIELD_LABELS[m.key]}:${v}` : null;
+                }).filter(Boolean).join(" · ");
+                return {
+                  id: row.id,
+                  title: `№${index + 1} · ${row.roomName || "—"}`,
+                  leading: !readOnly ? (
+                    <Checkbox
+                      checked={selectedRowIds.includes(row.id)}
+                      onCheckedChange={(checked) =>
+                        setSelectedRowIds((current) =>
+                          checked
+                            ? [...new Set([...current, row.id])]
+                            : current.filter((id) => id !== row.id),
+                        )
+                      }
+                      className="size-5"
+                    />
+                  ) : null,
+                  fields: [
+                    { label: "План по месяцам", value: planSummary, hideIfEmpty: true },
+                    { label: "Факт по месяцам", value: factSummary, hideIfEmpty: true },
+                  ],
+                };
+              })}
+              emptyLabel="Помещений пока не внесено."
+            />
+          ) : null}
+
+          <MobileViewTableWrapper mobileView={mobileView}>
           <table className="min-w-full border-collapse border border-black bg-white text-[14px]">
             <thead>
               <tr>
@@ -938,6 +990,7 @@ export function SanitationDayDocumentClient({
               </tr>
             </tbody>
           </table>
+          </MobileViewTableWrapper>
         </div>
       </section>
 
