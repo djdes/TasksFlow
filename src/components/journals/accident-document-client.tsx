@@ -38,6 +38,15 @@ import {
   type AccidentDocumentConfig,
   type AccidentRow,
 } from "@/lib/accident-document";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 type Props = {
@@ -447,6 +456,56 @@ export function AccidentDocumentClient(props: Props) {
   const rows = useMemo(() => config.rows, [config.rows]);
   const isActive = props.status === "active";
   const allSelected = rows.length > 0 && selectedRowIds.length === rows.length;
+  const { mobileView, switchMobileView } = useMobileView("accident_journal");
+
+  const cardItems: RecordCardItem[] = rows.map((row, index) => ({
+    id: row.id,
+    title: `№${index + 1} · ${formatDateTime(
+      row.accidentDate,
+      row.accidentHour,
+      row.accidentMinute
+    ).replace("\n", " ")}`,
+    subtitle: row.locationName || "—",
+    leading: (
+      <Checkbox
+        checked={selectedRowIds.includes(row.id)}
+        onCheckedChange={(checked) =>
+          setSelectedRowIds((current) =>
+            checked === true
+              ? [...new Set([...current, row.id])]
+              : current.filter((item) => item !== row.id)
+          )
+        }
+        disabled={!isActive}
+        className="size-5"
+      />
+    ),
+    fields: [
+      { label: "Описание аварии", value: row.accidentDescription, hideIfEmpty: true },
+      { label: "Небезопасная продукция", value: row.affectedProducts, hideIfEmpty: true },
+      {
+        label: "Ликвидирована",
+        value: formatDateTime(row.resolvedDate, row.resolvedHour, row.resolvedMinute).replace(
+          "\n",
+          " "
+        ),
+      },
+      { label: "Ответственные", value: row.responsiblePeople, hideIfEmpty: true },
+      { label: "Корректирующие действия", value: row.correctiveActions, hideIfEmpty: true },
+    ],
+    actions: isActive ? (
+      <button
+        type="button"
+        onClick={() => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }}
+        className="inline-flex h-10 items-center justify-center rounded-2xl bg-[#5563ff] px-4 text-[14px] font-medium text-white hover:bg-[#4452ee]"
+      >
+        Редактировать
+      </button>
+    ) : null,
+  }));
 
   async function persist(
     nextTitle: string,
@@ -618,7 +677,15 @@ export function AccidentDocumentClient(props: Props) {
           ) : null}
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="mb-4 sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView items={cardItems} emptyLabel="Аварий пока не зафиксировано." />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1650px] w-full border-collapse text-[14px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
@@ -713,7 +780,7 @@ export function AccidentDocumentClient(props: Props) {
               </tr>
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <SettingsDialog
