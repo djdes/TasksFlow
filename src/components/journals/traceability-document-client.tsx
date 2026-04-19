@@ -542,6 +542,12 @@ export function TraceabilityDocumentClient(props: Props) {
           : null,
         { label: "Ответственный", value: [row.responsibleRole, row.responsibleEmployee].filter(Boolean).join(", "), hideIfEmpty: true },
       ].filter((f): f is { label: string; value: string; hideIfEmpty: boolean } => f !== null),
+      onClick: !isClosed
+        ? () => {
+            setEditingRow(row);
+            setRowOpen(true);
+          }
+        : undefined,
       actions: !isClosed ? (
         <button
           type="button"

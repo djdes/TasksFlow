@@ -427,6 +427,12 @@ export function BreakdownHistoryDocumentClient(props: Props) {
       { label: "Часы простоя", value: row.downtimeHours, hideIfEmpty: true },
       { label: "Ответственный", value: row.responsiblePerson, hideIfEmpty: true },
     ],
+    onClick: isActive
+      ? () => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }
+      : undefined,
     actions: isActive ? (
       <button
         type="button"

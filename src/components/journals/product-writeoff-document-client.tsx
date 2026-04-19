@@ -264,6 +264,12 @@ export function ProductWriteoffDocumentClient({
       { label: "Несоответствие", value: row.discrepancyDescription, hideIfEmpty: true },
       { label: "Действия с ТМЦ", value: row.action, hideIfEmpty: true },
     ],
+    onClick: !isClosed
+      ? () => {
+          setRowDialog({ open: true, index, row, newProductName: "" });
+          setRowDialogProductOptions(productOptions);
+        }
+      : undefined,
     actions: !isClosed ? (
       <button
         type="button"

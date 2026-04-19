@@ -694,6 +694,12 @@ export function PpeIssuanceDocumentClient(props: Props) {
                   hideIfEmpty: true,
                 },
               ],
+              onClick: !isClosed
+                ? () => {
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }
+                : undefined,
               actions: !isClosed ? (
                 <button
                   type="button"

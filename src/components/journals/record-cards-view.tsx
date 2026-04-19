@@ -19,6 +19,16 @@ export type RecordCardField = {
   header?: boolean;
   /** Hide if empty — useful for optional columns. */
   hideIfEmpty?: boolean;
+  /** If set, the field renders as a tappable button that invokes this handler.
+   *  Used for per-cell editing journals (staff_training etc.) so a card
+   *  field matches its table cell's "click to edit" behaviour. */
+  onClick?: () => void;
+  /** Optional hint under the value explaining what a tap will do,
+   *  e.g. "нажмите, чтобы выбрать". */
+  hint?: string;
+  /** Tint the value red to flag empty required fields (mirrors
+   *  `emptyCellClass` red-background used in several journal tables). */
+  warnIfEmpty?: boolean;
 };
 
 export type RecordCardItem = {
@@ -68,6 +78,11 @@ export function RecordCardsView({
         const bodyFields = item.fields.filter(
           (f) => !f.header && !(f.hideIfEmpty && isEmpty(f.value))
         );
+        // Show expand/collapse behaviour only when:
+        //   - there are body fields to reveal, AND
+        //   - item.onClick is NOT set (if it is, tapping the card fires
+        //     the edit dialog directly, mirroring table row-click)
+        const canExpand = !item.onClick && bodyFields.length > 0;
 
         return (
           <div
@@ -86,8 +101,16 @@ export function RecordCardsView({
               <button
                 type="button"
                 onClick={() => {
-                  setExpanded(isExpanded ? null : item.id);
-                  item.onClick?.();
+                  // Row-dialog journals (accident, complaint, etc.) pass
+                  // item.onClick — tapping the card opens the edit form
+                  // directly, matching table row-click behaviour. Per-cell
+                  // journals (staff_training) leave onClick undefined and
+                  // rely on expand → per-field taps instead.
+                  if (item.onClick) {
+                    item.onClick();
+                  } else {
+                    setExpanded(isExpanded ? null : item.id);
+                  }
                 }}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
@@ -114,32 +137,83 @@ export function RecordCardsView({
                 {item.badge ? (
                   <span className="shrink-0">{item.badge}</span>
                 ) : null}
-                <ChevronDown
-                  className={`size-4 shrink-0 text-[#6f7282] transition-transform ${
-                    isExpanded ? "rotate-180" : ""
-                  }`}
-                />
+                {canExpand ? (
+                  <ChevronDown
+                    className={`size-4 shrink-0 text-[#6f7282] transition-transform ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                  />
+                ) : item.onClick ? (
+                  <span className="shrink-0 rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[10px] font-semibold text-[#5566f6]">
+                    изменить
+                  </span>
+                ) : null}
               </button>
             </div>
-            {isExpanded ? (
+            {isExpanded && canExpand ? (
               <div className="space-y-2 border-t border-[#ececf4] p-3 text-[13px]">
-                {bodyFields.map((f, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col gap-0.5 rounded-xl bg-[#fafbff] px-3 py-2"
-                  >
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6f7282]">
-                      {f.label}
-                    </span>
-                    <span className="text-[13px] leading-[1.45] text-[#0b1024]">
-                      {isEmpty(f.value) ? (
-                        <span className="text-[#9b9fb3]">—</span>
-                      ) : (
-                        f.value
-                      )}
-                    </span>
-                  </div>
-                ))}
+                {bodyFields.map((f, i) => {
+                  const empty = isEmpty(f.value);
+                  const warn = empty && f.warnIfEmpty;
+                  const tappable = Boolean(f.onClick);
+                  const cls = `flex flex-col gap-0.5 rounded-xl px-3 py-2 ${
+                    warn ? "bg-[#fff2f1]" : "bg-[#fafbff]"
+                  } ${
+                    tappable
+                      ? "cursor-pointer border border-[#e7e9f4] hover:border-[#5566f6]/50 hover:bg-[#f5f6ff] active:bg-[#eef1ff]"
+                      : ""
+                  }`;
+                  const content = (
+                    <>
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                          warn ? "text-[#d2453d]" : "text-[#6f7282]"
+                        }`}
+                      >
+                        {f.label}
+                        {tappable ? (
+                          <span className="ml-1 text-[10px] font-medium normal-case tracking-normal text-[#5566f6]">
+                            · изменить
+                          </span>
+                        ) : null}
+                      </span>
+                      <span
+                        className={`text-[13px] leading-[1.45] ${
+                          warn ? "text-[#d2453d]" : "text-[#0b1024]"
+                        }`}
+                      >
+                        {empty ? (
+                          <span className="text-[#9b9fb3]">—</span>
+                        ) : (
+                          f.value
+                        )}
+                      </span>
+                      {f.hint ? (
+                        <span className="text-[11px] text-[#9b9fb3]">{f.hint}</span>
+                      ) : null}
+                    </>
+                  );
+                  if (tappable) {
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`${cls} text-left`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          f.onClick?.();
+                        }}
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+                  return (
+                    <div key={i} className={cls}>
+                      {content}
+                    </div>
+                  );
+                })}
                 {item.actions ? (
                   <div className="pt-2">{item.actions}</div>
                 ) : null}

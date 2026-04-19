@@ -148,6 +148,7 @@ export function EquipmentCalibrationDocumentClient({
         { label: "Очередная поверка", value: formatCalibrationDate(nextDate) },
         { label: "Примечание", value: row.note, hideIfEmpty: true },
       ],
+      onClick: !isClosed ? () => openEditRow(row.id) : undefined,
       actions: !isClosed ? (
         <button
           type="button"

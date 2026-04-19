@@ -482,6 +482,9 @@ export function PestControlDocumentClient(props: Props) {
           hideIfEmpty: true,
         },
       ],
+      onClick: !readOnly
+        ? () => setEditing({ id: entry.id, data: entry.data })
+        : undefined,
       actions: !readOnly ? (
         <button
           type="button"

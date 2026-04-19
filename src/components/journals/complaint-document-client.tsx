@@ -381,6 +381,12 @@ export function ComplaintDocumentClient({
       { label: "Содержание жалобы", value: row.values.complaintContent, hideIfEmpty: true },
       { label: "Решение", value: getComplaintDecisionCell(row), hideIfEmpty: true },
     ],
+    onClick: status === "active"
+      ? () => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }
+      : undefined,
     actions: status === "active" ? (
       <button
         type="button"

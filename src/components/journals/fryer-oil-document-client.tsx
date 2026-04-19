@@ -296,6 +296,12 @@ export function FryerOilDocumentClient(props: Props) {
       },
       { label: "Контролер", value: entry.data.controllerName, hideIfEmpty: true },
     ],
+    onClick: isActive
+      ? () => {
+          setEntryItem(entry);
+          setEntryOpen(true);
+        }
+      : undefined,
     actions: isActive ? (
       <button
         type="button"

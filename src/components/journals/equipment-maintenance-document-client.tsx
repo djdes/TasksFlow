@@ -148,6 +148,7 @@ export function EquipmentMaintenanceDocumentClient({
         { label: "План по месяцам", value: planSummary, hideIfEmpty: true },
         { label: "Факт по месяцам", value: factSummary, hideIfEmpty: true },
       ],
+      onClick: !isClosed ? () => openEditRow(row.id) : undefined,
       actions: !isClosed ? (
         <button
           type="button"

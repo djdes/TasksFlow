@@ -128,15 +128,31 @@ export function StaffTrainingDocumentClient({
         />
       ) : null,
       fields: [
-        { label: "Тема обучения", value: row.topic, hideIfEmpty: true },
-        { label: "Вид инструктажа", value: trainingLabel, hideIfEmpty: true },
+        { label: "Тема обучения", value: row.topic },
+        {
+          label: "Вид инструктажа",
+          value: trainingLabel,
+          warnIfEmpty: true,
+          onClick: !isClosed ? () => openCellEdit(row.id, "trainingType") : undefined,
+        },
         {
           label: "Причина (внеплановый)",
           value: row.unscheduledReason,
-          hideIfEmpty: true,
+          hideIfEmpty: !isClosed ? false : true,
+          onClick: !isClosed ? () => openCellEdit(row.id, "unscheduledReason") : undefined,
         },
-        { label: "Инструктирующий", value: row.instructorName, hideIfEmpty: true },
-        { label: "Результат аттестации", value: attestLabel, hideIfEmpty: true },
+        {
+          label: "Инструктирующий",
+          value: row.instructorName,
+          warnIfEmpty: true,
+          onClick: !isClosed ? () => openCellEdit(row.id, "instructorName") : undefined,
+        },
+        {
+          label: "Результат аттестации",
+          value: attestLabel,
+          warnIfEmpty: true,
+          onClick: !isClosed ? () => openCellEdit(row.id, "attestationResult") : undefined,
+        },
       ],
     };
   });

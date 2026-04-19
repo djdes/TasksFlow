@@ -493,6 +493,12 @@ export function AccidentDocumentClient(props: Props) {
       { label: "Ответственные", value: row.responsiblePeople, hideIfEmpty: true },
       { label: "Корректирующие действия", value: row.correctiveActions, hideIfEmpty: true },
     ],
+    onClick: isActive
+      ? () => {
+          setEditingRow(row);
+          setRowDialogOpen(true);
+        }
+      : undefined,
     actions: isActive ? (
       <button
         type="button"

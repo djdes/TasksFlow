@@ -686,6 +686,12 @@ export function IntensiveCoolingDocumentClient(props: Props) {
                 { label: "Комментарий", value: row.comment, hideIfEmpty: true },
                 { label: "Контроль осуществлял", value: getResponsibleLabel(row, props.users), hideIfEmpty: true },
               ],
+              onClick: isActive
+                ? () => {
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }
+                : undefined,
               actions: isActive ? (
                 <button
                   type="button"
