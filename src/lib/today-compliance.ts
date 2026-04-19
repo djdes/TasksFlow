@@ -141,6 +141,8 @@ export async function getTemplatesFilledToday(
   const todayStart = utcDayStart(now);
   const todayEnd = new Date(todayStart);
   todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+  const lookbackStart = new Date(todayStart);
+  lookbackStart.setUTCDate(lookbackStart.getUTCDate() - 30);
 
   const [legacyEntries, activeDocuments] = await Promise.all([
     db.journalEntry.findMany({
@@ -176,6 +178,50 @@ export async function getTemplatesFilledToday(
   const dailyDocs = activeDocuments.filter((doc) =>
     DAILY_JOURNAL_CODES.has(doc.template.code)
   );
+  if (dailyDocs.length === 0) return filled;
+
+  // Single grouped query instead of N per-document queries. Pulls all
+  // 30-day rollup counts at once so the dashboard stays snappy even
+  // with many daily documents.
+  const dailyDocIds = dailyDocs.map((d) => d.id);
+  const rollupRows = await db.journalDocumentEntry.groupBy({
+    by: ["documentId", "date"],
+    where: {
+      documentId: { in: dailyDocIds },
+      date: { gte: lookbackStart, lt: todayEnd },
+    },
+    _count: { _all: true },
+  });
+
+  // Group by documentId → Map<dayKey, count>
+  const byDocument = new Map<string, Map<string, number>>();
+  for (const row of rollupRows) {
+    const dayKey = row.date.toISOString().slice(0, 10);
+    let docMap = byDocument.get(row.documentId);
+    if (!docMap) {
+      docMap = new Map();
+      byDocument.set(row.documentId, docMap);
+    }
+    docMap.set(dayKey, row._count._all);
+  }
+
+  const todayKey = todayStart.toISOString().slice(0, 10);
+
+  function documentFilled(documentId: string): boolean {
+    const byDay = byDocument.get(documentId) ?? new Map();
+    const todayCount = byDay.get(todayKey) ?? 0;
+    if (todayCount === 0) return false;
+
+    const priorDayKeys = [...byDay.keys()]
+      .filter((k) => k !== todayKey)
+      .sort();
+    for (let i = priorDayKeys.length - 1; i >= 0; i--) {
+      const count = byDay.get(priorDayKeys[i]) ?? 0;
+      if (count > 0) return todayCount >= count;
+    }
+    return true; // no history → any entry counts
+  }
+
   const documentsByTemplate = new Map<string, string[]>();
   for (const doc of dailyDocs) {
     const list = documentsByTemplate.get(doc.templateId) ?? [];
@@ -183,16 +229,11 @@ export async function getTemplatesFilledToday(
     documentsByTemplate.set(doc.templateId, list);
   }
 
-  await Promise.all(
-    [...documentsByTemplate.entries()].map(async ([templateId, docIds]) => {
-      const checks = await Promise.all(
-        docIds.map((id) => isDocumentFilledForDay(id, todayStart, todayEnd))
-      );
-      if (checks.length > 0 && checks.every((ok) => ok)) {
-        filled.add(templateId);
-      }
-    })
-  );
+  for (const [templateId, docIds] of documentsByTemplate.entries()) {
+    if (docIds.length > 0 && docIds.every(documentFilled)) {
+      filled.add(templateId);
+    }
+  }
 
   return filled;
 }
