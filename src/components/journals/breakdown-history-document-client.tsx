@@ -655,8 +655,19 @@ export function BreakdownHistoryDocumentClient(props: Props) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="border border-black p-2 text-center">
+                <tr
+                  key={row.id}
+                  className={isActive ? "cursor-pointer hover:bg-[#f5f6ff]" : undefined}
+                  onClick={() => {
+                    if (!isActive) return;
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }}
+                >
+                  <td
+                    className="border border-black p-2 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={selectedRowIds.includes(row.id)}
                       onCheckedChange={(checked) =>
@@ -673,7 +684,8 @@ export function BreakdownHistoryDocumentClient(props: Props) {
                     <button
                       type="button"
                       className="text-left hover:text-[#5563ff]"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (!isActive) return;
                         setEditingRow(row);
                         setRowDialogOpen(true);

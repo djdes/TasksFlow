@@ -474,8 +474,18 @@ export function EquipmentCalibrationDocumentClient({
                 const overdue = isCalibrationOverdue(row.lastCalibrationDate, row.calibrationInterval);
 
                 return (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="border border-black p-1 text-center">
+                  <tr
+                    key={row.id}
+                    className={`hover:bg-gray-50 ${!isClosed ? "cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (isClosed) return;
+                      openEditRow(row.id);
+                    }}
+                  >
+                    <td
+                      className="border border-black p-1 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {!isClosed && (
                         <Checkbox
                           checked={selectedRows.includes(row.id)}
@@ -488,10 +498,7 @@ export function EquipmentCalibrationDocumentClient({
                     <td className="border border-black p-1 text-center">
                       {index + 1}
                     </td>
-                    <td
-                      className="border border-black p-2 cursor-pointer"
-                      onClick={() => !isClosed && openEditRow(row.id)}
-                    >
+                    <td className="border border-black p-2">
                       <div>
                         {row.equipmentName}
                         {row.equipmentNumber ? `, ${row.equipmentNumber}` : ""}

@@ -476,13 +476,20 @@ export function EquipmentMaintenanceDocumentClient({
               </tr>
             </thead>
             <tbody>
-              {config.rows.map((row, index) => (
+              {config.rows.map((row, index) => {
+                const rowClickHandler = () => {
+                  if (isClosed) return;
+                  openEditRow(row.id);
+                };
+                const rowClassName = !isClosed ? "cursor-pointer hover:bg-gray-50" : undefined;
+                return (
                 <Fragment key={row.id}>
                   {/* Sub-row 1: Тип */}
-                  <tr>
+                  <tr className={rowClassName} onClick={rowClickHandler}>
                     <td
                       rowSpan={3}
                       className="border border-black p-1 text-center align-middle"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {!isClosed && (
                         <Checkbox
@@ -501,8 +508,7 @@ export function EquipmentMaintenanceDocumentClient({
                     </td>
                     <td
                       rowSpan={3}
-                      className="border border-black p-2 align-top cursor-pointer hover:bg-gray-50"
-                      onClick={() => !isClosed && openEditRow(row.id)}
+                      className="border border-black p-2 align-top"
                     >
                       <div className="font-medium">{row.equipmentName}</div>
                       {row.workType && (
@@ -525,7 +531,7 @@ export function EquipmentMaintenanceDocumentClient({
                   </tr>
 
                   {/* Sub-row 2: План */}
-                  <tr>
+                  <tr className={rowClassName} onClick={rowClickHandler}>
                     <td className="border border-black p-1 text-center text-[13px] font-medium">
                       План
                     </td>
@@ -540,7 +546,7 @@ export function EquipmentMaintenanceDocumentClient({
                   </tr>
 
                   {/* Sub-row 3: Факт */}
-                  <tr>
+                  <tr className={rowClassName} onClick={rowClickHandler}>
                     <td className="border border-black p-1 text-center text-[13px] font-medium">
                       Факт
                     </td>
@@ -548,6 +554,7 @@ export function EquipmentMaintenanceDocumentClient({
                       <td
                         key={`fact-${key}`}
                         className="border border-black p-1 text-center"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {isClosed ? (
                           row.fact[key] || ""
@@ -571,7 +578,8 @@ export function EquipmentMaintenanceDocumentClient({
                     ))}
                   </tr>
                 </Fragment>
-              ))}
+                );
+              })}
 
               {config.rows.length === 0 && (
                 <tr>

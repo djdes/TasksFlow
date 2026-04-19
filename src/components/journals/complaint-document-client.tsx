@@ -610,8 +610,19 @@ export function ComplaintDocumentClient({
             </thead>
             <tbody>
               {config.rows.map((row, index) => (
-                <tr key={row.id}>
-                  <td className="border border-black p-2 text-center align-top">
+                <tr
+                  key={row.id}
+                  className={status === "active" ? "cursor-pointer hover:bg-[#f5f6ff]" : undefined}
+                  onClick={() => {
+                    if (status !== "active") return;
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }}
+                >
+                  <td
+                    className="border border-black p-2 text-center align-top"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={selectedRowIds.includes(row.id)}
                       onCheckedChange={(checked) =>
@@ -629,7 +640,8 @@ export function ComplaintDocumentClient({
                     <button
                       type="button"
                       disabled={status !== "active"}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (status !== "active") return;
                         setEditingRow(row);
                         setRowDialogOpen(true);

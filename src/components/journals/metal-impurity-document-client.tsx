@@ -1260,8 +1260,19 @@ export function MetalImpurityDocumentClient({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="border border-black p-2 text-center align-top print:hidden">
+                <tr
+                  key={row.id}
+                  className={status === "active" ? "cursor-pointer hover:bg-[#f5f6ff]" : undefined}
+                  onClick={() => {
+                    if (status !== "active") return;
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }}
+                >
+                  <td
+                    className="border border-black p-2 text-center align-top print:hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={selectedRowIds.includes(row.id)}
                       onCheckedChange={(checked) =>
@@ -1278,7 +1289,8 @@ export function MetalImpurityDocumentClient({
                     <button
                       type="button"
                       disabled={status !== "active"}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (status !== "active") return;
                         setEditingRow(row);
                         setRowDialogOpen(true);

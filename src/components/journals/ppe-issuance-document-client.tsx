@@ -746,8 +746,19 @@ export function PpeIssuanceDocumentClient(props: Props) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="border border-black p-2 text-center">
+                <tr
+                  key={row.id}
+                  className={!isClosed ? "cursor-pointer hover:bg-[#f5f6ff]" : undefined}
+                  onClick={() => {
+                    if (isClosed) return;
+                    setEditingRow(row);
+                    setRowDialogOpen(true);
+                  }}
+                >
+                  <td
+                    className="border border-black p-2 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={selectedRowIds.includes(row.id)}
                       onCheckedChange={(value) =>
@@ -763,7 +774,8 @@ export function PpeIssuanceDocumentClient(props: Props) {
                   <td className="border border-black p-2 text-center">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (isClosed) return;
                         setEditingRow(row);
                         setRowDialogOpen(true);
