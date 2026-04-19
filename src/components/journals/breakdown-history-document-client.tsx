@@ -507,7 +507,7 @@ export function BreakdownHistoryDocumentClient(props: Props) {
         </div>
 
         {/* Title */}
-        <div className="text-center text-[34px] font-semibold">
+        <div className="text-center text-[20px] font-semibold leading-tight sm:text-[34px]">
           КАРТОЧКА ИСТОРИИ ПОЛОМОК
         </div>
 

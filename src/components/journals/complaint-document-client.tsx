@@ -479,7 +479,7 @@ export function ComplaintDocumentClient({
           </table>
         </div>
 
-        <div className="pt-2 text-center text-[28px] font-semibold uppercase">
+        <div className="pt-2 text-center text-[18px] font-semibold uppercase leading-tight sm:text-[28px]">
           Журнал регистрации жалоб
         </div>
 

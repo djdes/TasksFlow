@@ -353,7 +353,7 @@ export function EquipmentCleaningDocumentClient({
           </tbody>
         </table>
 
-        <h2 className="text-center text-[28px] font-semibold uppercase">
+        <h2 className="text-center text-[18px] font-semibold uppercase leading-tight sm:text-[28px]">
           Журнал мойки и дезинфекции оборудования
         </h2>
 
