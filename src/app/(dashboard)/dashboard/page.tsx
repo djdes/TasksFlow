@@ -315,7 +315,7 @@ export default async function DashboardPage() {
                 key={item.id}
                 href={`/journals/${item.code}`}
                 className={cn(
-                  "group flex items-center gap-3 rounded-2xl border px-4 py-3 text-[14px] transition-all",
+                  "group flex w-full min-w-0 items-center gap-3 rounded-2xl border px-4 py-3 text-[14px] transition-all",
                   item.filled
                     ? "border-[#c8f0d5] bg-[#effaf1] hover:border-[#7cf5c0] hover:shadow-[0_6px_20px_-12px_rgba(19,107,42,0.25)]"
                     : "border-[#ffd2cd] bg-[#fff4f2] hover:border-[#ff8d7d] hover:shadow-[0_6px_20px_-12px_rgba(210,69,61,0.25)]"
@@ -335,7 +335,7 @@ export default async function DashboardPage() {
                 </span>
                 <span
                   className={cn(
-                    "flex-1 truncate font-medium",
+                    "min-w-0 flex-1 truncate font-medium",
                     item.filled ? "text-[#136b2a]" : "text-[#d2453d]"
                   )}
                 >
