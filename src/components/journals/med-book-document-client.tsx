@@ -4,6 +4,15 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 import {
   Archive,
   ChevronLeft,
@@ -113,6 +122,7 @@ export function MedBookDocumentClient({
 }: Props) {
   const router = useRouter();
   const isClosed = status === "closed";
+  const { mobileView, switchMobileView } = useMobileView("med_books");
   const [rows, setRows] = useState(initialRows);
   const [docTitle, setDocTitle] = useState(title);
   const [settingsTitle, setSettingsTitle] = useState(title);
@@ -417,10 +427,65 @@ export function MedBookDocumentClient({
       ) : null}
 
       <div className="space-y-2">
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <div className="h-6 min-w-[1320px] bg-[#ececec]" />
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
         </div>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+
+        {mobileView === "cards" ? (
+          <RecordCardsView
+            items={rows.map((row, index) => {
+              const expiredCount = examColumns.filter((col) => {
+                const exam = row.data.examinations[col];
+                return exam?.date && isExaminationExpired(exam);
+              }).length;
+              const soonCount = examColumns.filter((col) => {
+                const exam = row.data.examinations[col];
+                return exam?.date && !isExaminationExpired(exam) && isExaminationExpiringSoon(exam);
+              }).length;
+              return {
+                id: row.id,
+                title: `№${index + 1} · ${row.name || "—"}`,
+                subtitle: row.data.positionTitle || undefined,
+                badge:
+                  expiredCount > 0 ? (
+                    <span className="rounded-full bg-[#fff2f1] px-2 py-0.5 text-[11px] font-semibold text-[#d2453d]">
+                      {`Просрочено: ${expiredCount}`}
+                    </span>
+                  ) : soonCount > 0 ? (
+                    <span className="rounded-full bg-[#fff9eb] px-2 py-0.5 text-[11px] font-semibold text-[#a16a13]">
+                      {`Скоро: ${soonCount}`}
+                    </span>
+                  ) : undefined,
+                fields: examColumns.map((column) => {
+                  const exam = row.data.examinations[column];
+                  const expired = exam ? isExaminationExpired(exam) : false;
+                  const soon = exam ? isExaminationExpiringSoon(exam) : false;
+                  const parts: string[] = [];
+                  if (exam?.date) parts.push(formatMedBookDate(exam.date));
+                  if (exam?.expiryDate) parts.push(`до ${formatMedBookDate(exam.expiryDate)}`);
+                  return {
+                    label: column,
+                    value: parts.join(" · "),
+                    warnIfEmpty: true,
+                    hint: exam && (expired || soon)
+                      ? expired
+                        ? "Осмотр просрочен"
+                        : "Скоро истечёт"
+                      : undefined,
+                    onClick: !isClosed ? () => editExam(row.id, column) : undefined,
+                  };
+                }),
+                onClick: !isClosed ? () => setEditId(row.id) : undefined,
+              };
+            })}
+            emptyLabel="Сотрудников пока нет."
+          />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <div className="h-6 min-w-[1320px] bg-[#ececec]" />
+        </MobileViewTableWrapper>
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1320px] border-collapse text-[14px] text-black">
             <thead>
               <tr>
@@ -516,10 +581,10 @@ export function MedBookDocumentClient({
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        </MobileViewTableWrapper>
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <div className="h-6 min-w-[1320px] bg-[#ececec]" />
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <div id="med-book-reference" className="space-y-5">
