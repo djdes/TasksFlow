@@ -105,7 +105,7 @@ export default async function BlogArticlePage({
           <ArticleRenderer blocks={body} />
         </div>
 
-        <div className="mt-14 rounded-3xl border border-[#ececf4] bg-[#fafbff] p-8 text-center">
+        <div className="mt-10 rounded-3xl border border-[#ececf4] bg-[#fafbff] p-5 text-center sm:mt-14 sm:p-8">
           <div className="text-[22px] font-semibold tracking-tight">
             Попробуйте WeSetup бесплатно
           </div>

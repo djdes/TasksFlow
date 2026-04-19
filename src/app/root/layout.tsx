@@ -23,16 +23,16 @@ export default async function RootAreaLayout({
   return (
     <div className="min-h-screen bg-[#f4f5fb]">
       <header className="border-b border-[#dddfe8] bg-[#11142b] text-white">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-8 py-5">
-          <div>
-            <div className="text-[12px] uppercase tracking-[0.18em] text-white/60">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-8 sm:py-5">
+          <div className="min-w-0">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-white/60 sm:text-[12px]">
               HACCP-Online · Platform
             </div>
-            <div className="mt-1 text-[20px] font-semibold tracking-tight">
+            <div className="mt-1 truncate text-[16px] font-semibold tracking-tight sm:text-[20px]">
               {session.user.name || session.user.email}
             </div>
           </div>
-          <nav className="flex items-center gap-6 text-[14px]">
+          <nav className="-mx-4 flex items-center gap-4 overflow-x-auto px-4 text-[13px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:gap-6 sm:overflow-visible sm:px-0 sm:text-[14px]">
             <Link
               href="/root"
               className="inline-flex items-center gap-2 hover:text-white"
@@ -72,7 +72,7 @@ export default async function RootAreaLayout({
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-8 py-8">{children}</main>
+      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">{children}</main>
     </div>
   );
 }
