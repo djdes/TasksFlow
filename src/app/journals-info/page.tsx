@@ -99,9 +99,9 @@ export default function JournalsInfoListPage() {
       </section>
 
       {/* CTA */}
-      <section className="mx-auto max-w-[1200px] px-6 pb-16">
-        <div className="rounded-3xl border border-[#ececf4] bg-[#fafbff] px-8 py-12 text-center">
-          <div className="text-[26px] font-semibold tracking-tight">
+      <section className="mx-auto max-w-[1200px] px-4 pb-12 sm:px-6 sm:pb-16">
+        <div className="rounded-3xl border border-[#ececf4] bg-[#fafbff] px-5 py-8 text-center sm:px-8 sm:py-12">
+          <div className="text-[22px] font-semibold tracking-tight sm:text-[26px]">
             Попробуйте все журналы бесплатно
           </div>
           <p className="mx-auto mt-2 max-w-[520px] text-[14px] text-[#6f7282]">
