@@ -43,6 +43,15 @@ import {
 } from "@/lib/cleaning-ventilation-checklist-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 import { isManagementRole } from "@/lib/user-roles";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 /**
  * The Должность select for this journal is a hardcoded "Управляющий / Сотрудник"
@@ -413,6 +422,7 @@ export function CleaningVentilationChecklistDocumentClient({
   const [panelOpen, setPanelOpen] = useState(true);
   const [selection, setSelection] = useState<string[]>([]);
   const isActive = status === "active";
+  const { mobileView, switchMobileView } = useMobileView("cleaning_ventilation_checklist");
   const docTitle = title || CLEANING_VENTILATION_CHECKLIST_TITLE;
 
   const activeProcedures = useMemo(
@@ -863,7 +873,53 @@ export function CleaningVentilationChecklistDocumentClient({
           ) : null}
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#d9dceb]">
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView
+            items={rows.map((row, index) => ({
+              id: row.dateKey,
+              title: `№${index + 1} · ${formatRuDate(row.dateKey)}`,
+              subtitle: `${row.procedures.length} процедур`,
+              leading: isActive ? (
+                <Checkbox
+                  checked={selection.includes(row.dateKey)}
+                  onCheckedChange={(checked) =>
+                    setSelection((current) =>
+                      checked === true
+                        ? [...new Set([...current, row.dateKey])]
+                        : current.filter((item) => item !== row.dateKey)
+                    )
+                  }
+                  className="size-5"
+                />
+              ) : null,
+              fields: row.procedures.map((procedure) => {
+                const responsibleName = userMap[procedure.responsibleUserId]?.name || "";
+                const times = procedure.times.filter(Boolean).join(" · ") || "—";
+                return {
+                  label: procedure.label,
+                  value: (
+                    <div className="space-y-1">
+                      <div>{times}</div>
+                      {responsibleName ? (
+                        <div className="text-[12px] text-[#6f7282]">{responsibleName}</div>
+                      ) : null}
+                    </div>
+                  ),
+                  hint: isActive && config.autoFillEnabled
+                    ? "Для редактирования откройте вкладку Таблица"
+                    : undefined,
+                };
+              }),
+            }))}
+            emptyLabel="Журнал пока пуст."
+          />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 rounded-[28px] border border-[#d9dceb]">
           <table className="min-w-full border-collapse">
             <thead>
               <tr className="bg-[#f8f9fc]">
@@ -968,7 +1024,7 @@ export function CleaningVentilationChecklistDocumentClient({
               )}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <DocumentSettingsDialog

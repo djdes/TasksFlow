@@ -43,6 +43,15 @@ import {
   type ConsumptionRow,
   type MeasureUnit,
 } from "@/lib/disinfectant-document";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 type UserItem = { id: string; name: string; role: string };
@@ -1064,6 +1073,7 @@ export function DisinfectantDocumentClient({
   const router = useRouter();
   const normalized = normalizeDisinfectantConfig(config);
   const readOnly = status === "closed";
+  const { mobileView, switchMobileView } = useMobileView("disinfectant_usage");
 
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([]);
@@ -1291,8 +1301,12 @@ export function DisinfectantDocumentClient({
           </div>
         </div>
 
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
         {/* === Section 1: Needs Calculation === */}
-        <h2 className="pt-4 text-center text-[20px] font-semibold uppercase">
+        <h2 className="pt-4 text-center text-[18px] font-semibold uppercase leading-tight sm:text-[20px]">
           РАСЧЕТ ПОТРЕБНОСТИ В ДЕЗИНФИЦИРУЮЩИХ СРЕДСТВАХ
         </h2>
 
@@ -1305,7 +1319,10 @@ export function DisinfectantDocumentClient({
           </Button>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <MobileViewTableWrapper
+          mobileView={mobileView}
+          className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+        >
           <table className="min-w-full border-collapse border border-black/70 bg-white text-[13px]">
             <thead>
               <tr>
@@ -1474,7 +1491,13 @@ export function DisinfectantDocumentClient({
               </tr>
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
+
+        {mobileView === "cards" && (
+          <div className="rounded-2xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-4 py-6 text-center text-[13px] text-[#6f7282] sm:hidden print:hidden">
+            Таблица расчёта потребности слишком широкая для карточного вида. Переключитесь на «Таблица» для просмотра и редактирования.
+          </div>
+        )}
 
         {/* === Section 2: Receipts === */}
         <h2 className="pt-8 text-center text-[20px] font-semibold uppercase">
@@ -1490,7 +1513,38 @@ export function DisinfectantDocumentClient({
           </Button>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        {mobileView === "cards" && (
+          <div className="sm:hidden print:hidden">
+          <RecordCardsView
+            emptyLabel="Нет записей о поступлении"
+            items={normalized.receipts.map<RecordCardItem>((rec) => ({
+              id: rec.id,
+              title: formatDateRu(rec.date) || "Без даты",
+              subtitle: rec.disinfectantName || undefined,
+              onClick: readOnly ? undefined : () => setEditRecTarget(rec),
+              fields: [
+                {
+                  label: "Количество",
+                  value: formatQuantityWithUnit(rec.quantity, rec.unit) || "—",
+                },
+                {
+                  label: "Срок годности",
+                  value: formatDateRu(rec.expiryDate) || "—",
+                },
+                {
+                  label: "Ответственный",
+                  value: rec.responsibleEmployee || "—",
+                },
+              ],
+            }))}
+          />
+          </div>
+        )}
+
+        <MobileViewTableWrapper
+          mobileView={mobileView}
+          className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+        >
           <table className="min-w-full border-collapse border border-black/70 bg-white text-[13px]">
             <thead>
               <tr>
@@ -1585,7 +1639,7 @@ export function DisinfectantDocumentClient({
               </tr>
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
 
         {/* === Section 3: Consumption === */}
         <h2 className="pt-8 text-center text-[20px] font-semibold uppercase">
@@ -1601,7 +1655,52 @@ export function DisinfectantDocumentClient({
           </Button>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        {mobileView === "cards" && (
+          <div className="sm:hidden print:hidden">
+          <RecordCardsView
+            emptyLabel="Нет записей о расходовании"
+            items={normalized.consumptions.map<RecordCardItem>((con) => ({
+              id: con.id,
+              title: `${formatDateRu(con.periodFrom) || "—"} — ${formatDateRu(con.periodTo) || "—"}`,
+              subtitle: con.disinfectantName || undefined,
+              onClick: readOnly ? undefined : () => setEditConTarget(con),
+              fields: [
+                {
+                  label: "Получено",
+                  value:
+                    formatQuantityWithUnit(
+                      con.totalReceived,
+                      con.totalReceivedUnit
+                    ) || "—",
+                },
+                {
+                  label: "Израсходовано",
+                  value:
+                    formatQuantityWithUnit(
+                      con.totalConsumed,
+                      con.totalConsumedUnit
+                    ) || "—",
+                },
+                {
+                  label: "Остаток",
+                  value:
+                    formatQuantityWithUnit(con.remainder, con.remainderUnit) ||
+                    "—",
+                },
+                {
+                  label: "Ответственный",
+                  value: con.responsibleEmployee || "—",
+                },
+              ],
+            }))}
+          />
+          </div>
+        )}
+
+        <MobileViewTableWrapper
+          mobileView={mobileView}
+          className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+        >
           <table className="min-w-full border-collapse border border-black/70 bg-white text-[13px]">
             <thead>
               <tr>
@@ -1697,7 +1796,7 @@ export function DisinfectantDocumentClient({
               ))}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </section>
 
       {/* Dialogs */}

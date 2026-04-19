@@ -32,6 +32,11 @@ import {
   type SdcItem,
 } from "@/lib/sanitary-day-checklist-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
 
 import { toast } from "sonner";
 /* ─── Types ─── */
@@ -658,6 +663,7 @@ export function SanitaryDayChecklistDocumentClient({
   const [saving, setSaving] = useState(false);
 
   const isActive = status === "active";
+  const { mobileView, switchMobileView } = useMobileView("sanitary_day_control");
   const organizationLabel = organizationName || 'ООО "Тест"';
   const documentTitle = title || getSanitaryDayChecklistTitle(routeCode);
   const entryDate = dateFrom;
@@ -877,6 +883,74 @@ export function SanitaryDayChecklistDocumentClient({
           <span>{formatRuDate(entryDate)}</span>
         </div>
 
+        <div className="sm:hidden print:hidden mb-6">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <div className="space-y-4 sm:hidden print:hidden">
+            {zoneGroups.map(({ zone, items }, zoneIndex) => (
+              <div
+                key={zone.id}
+                className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-[#ececf4] bg-[#fafbff] px-4 py-3">
+                  <span className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[#0b1024]">
+                    {zoneIndex + 1}. {zone.name}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[#6f7282]">
+                    {items.filter((it) => checked.has(it.id)).length}/{items.length}
+                  </span>
+                </div>
+                <ul className="divide-y divide-[#ececf4]">
+                  {items.map((item) => {
+                    const isChecked = checked.has(item.id);
+                    const time = marks[item.id];
+                    return (
+                      <li key={item.id} className="flex items-start gap-3 px-4 py-3">
+                        <button
+                          type="button"
+                          disabled={!isActive}
+                          onClick={() => handleToggleCheck(item.id)}
+                          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-60 ${
+                            isChecked
+                              ? "border-[#5566f6] bg-[#5566f6] text-white"
+                              : "border-[#dcdfed] bg-white"
+                          }`}
+                          aria-label={isChecked ? "Снять отметку" : "Отметить выполненным"}
+                        >
+                          {isChecked ? "✓" : ""}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <button
+                            type="button"
+                            disabled={!isActive}
+                            onClick={() => openEditItem(item)}
+                            className="text-left text-[14px] text-[#0b1024] hover:text-[#5566f6] disabled:cursor-default disabled:text-[#0b1024]"
+                          >
+                            {item.text}
+                          </button>
+                          {time ? (
+                            <div className="mt-1 text-[12px] text-[#6f7282]">
+                              Отмечено: {time}
+                            </div>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {items.length === 0 ? (
+                    <li className="px-4 py-4 text-center text-[13px] text-[#9b9fb3]">
+                      В зоне пока нет пунктов.
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView}>
         {/* ─── Checklist Table ─── */}
         <table className="sdc-table w-full border-collapse text-[15px]">
           <thead>
@@ -924,6 +998,7 @@ export function SanitaryDayChecklistDocumentClient({
             </tr>
           </tbody>
         </table>
+        </MobileViewTableWrapper>
 
         {/* ─── Signatures ─── */}
         <div className="mt-10 space-y-6 text-[16px]">

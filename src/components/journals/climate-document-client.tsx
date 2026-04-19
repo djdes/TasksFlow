@@ -43,6 +43,15 @@ import {
 import { getHygienePositionLabel } from "@/lib/hygiene-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
+import { useMobileView } from "@/lib/use-mobile-view";
+import {
+  MobileViewToggle,
+  MobileViewTableWrapper,
+} from "@/components/journals/mobile-view-toggle";
+import {
+  RecordCardsView,
+  type RecordCardItem,
+} from "@/components/journals/record-cards-view";
 
 import { toast } from "sonner";
 import { StickyActionBar } from "@/components/journals/sticky-action-bar";
@@ -793,6 +802,7 @@ export function ClimateDocumentClient({
 
   const allSelected =
     rows.length > 0 && selectedRowIds.length > 0 && selectedRowIds.length === rows.length;
+  const { mobileView, switchMobileView } = useMobileView("climate_control");
 
   async function persistDocument(params: {
     title?: string;
@@ -1344,7 +1354,62 @@ export function ClimateDocumentClient({
           </StickyActionBar>
         )}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="sm:hidden print:hidden">
+          <MobileViewToggle mobileView={mobileView} onChange={switchMobileView} />
+        </div>
+
+        {mobileView === "cards" ? (
+          <RecordCardsView
+            items={rows.map((row, index) => {
+              const employee = employeeMap[row.employeeId];
+              return {
+                id: row.id,
+                title: `№${index + 1} · ${getClimateDateLabel(row.date)}`,
+                subtitle: employee?.name || undefined,
+                leading: status === "active" ? (
+                  <Checkbox
+                    checked={selectedRowIds.includes(row.id)}
+                    onCheckedChange={(checked) =>
+                      setSelectedRowIds((current) =>
+                        checked === true
+                          ? [...new Set([...current, row.id])]
+                          : current.filter((value) => value !== row.id)
+                      )
+                    }
+                    className="size-5"
+                  />
+                ) : null,
+                fields: visibleRooms.map((room) => {
+                  const measurements = row.data.measurements[room.id] || {};
+                  const lines = config.controlTimes
+                    .map((time) => {
+                      const m = measurements[time] || {};
+                      const parts: string[] = [];
+                      if (room.temperature.enabled && m.temperature != null) {
+                        parts.push(`T ${m.temperature}°`);
+                      }
+                      if (room.humidity.enabled && m.humidity != null) {
+                        parts.push(`ВВ ${m.humidity}%`);
+                      }
+                      return parts.length > 0 ? `${time}: ${parts.join(" / ")}` : null;
+                    })
+                    .filter((s): s is string => s !== null);
+                  return {
+                    label: room.name,
+                    value: lines.length > 0 ? lines.join(" · ") : "",
+                    hideIfEmpty: false,
+                    hint: status === "active"
+                      ? "Редактирование — во вкладке Таблица"
+                      : undefined,
+                  };
+                }),
+              };
+            })}
+            emptyLabel="Записей по микроклимату нет."
+          />
+        ) : null}
+
+        <MobileViewTableWrapper mobileView={mobileView} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="min-w-[1280px] border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#f2f2f2]">
@@ -1541,7 +1606,7 @@ export function ClimateDocumentClient({
               )}
             </tbody>
           </table>
-        </div>
+        </MobileViewTableWrapper>
       </div>
 
       <JournalSettingsDialog
