@@ -34,3 +34,10 @@ test("buildMiniObligationEntryUrl appends the obligation path to the mini base u
     "https://wesetup.ru/mini/o/ob-123"
   );
 });
+
+test("buildMiniObligationEntryUrl trims trailing slashes from the mini base url", () => {
+  assert.equal(
+    buildMiniObligationEntryUrl("https://wesetup.ru/mini/", "ob-123"),
+    "https://wesetup.ru/mini/o/ob-123"
+  );
+});

@@ -7,8 +7,11 @@ export type TargetArgs = {
 export function resolveJournalObligationTargetPath(
   args: TargetArgs
 ): string {
-  const basePath = `/mini/journals/${args.journalCode}`;
-  return args.isDocument ? basePath : `${basePath}/new`;
+  const { journalCode, isDocument, activeDocumentId } = args;
+  void activeDocumentId;
+
+  const basePath = `/mini/journals/${journalCode}`;
+  return isDocument ? basePath : `${basePath}/new`;
 }
 
 export function buildMiniObligationEntryUrl(
