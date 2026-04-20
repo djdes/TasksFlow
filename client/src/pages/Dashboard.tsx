@@ -599,7 +599,10 @@ export default function Dashboard() {
             if (!v) setJournalTaskId(null);
           }}
           onCompleted={() => {
-            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            // Same key useTasks() subscribes to — was using wrong key
+            // before, dashboard didn't refetch after journal submit
+            // and task card stayed «не выполнено» visually.
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
           }}
         />
       ) : null}
