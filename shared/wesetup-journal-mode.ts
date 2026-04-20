@@ -37,12 +37,69 @@ export type CatalogJournalUi = {
   reviewFreeHint?: string;
 };
 
+export type TaskFormFieldOption = {
+  value: string;
+  label: string;
+  code?: string;
+};
+
+export type TaskFormField =
+  | {
+      type: "text";
+      key: string;
+      label: string;
+      required?: boolean;
+      placeholder?: string;
+      multiline?: boolean;
+      maxLength?: number;
+    }
+  | {
+      type: "number";
+      key: string;
+      label: string;
+      required?: boolean;
+      unit?: string;
+      min?: number;
+      max?: number;
+      step?: number;
+    }
+  | {
+      type: "boolean";
+      key: string;
+      label: string;
+      defaultValue?: boolean;
+    }
+  | {
+      type: "select";
+      key: string;
+      label: string;
+      required?: boolean;
+      options: TaskFormFieldOption[];
+      defaultValue?: string;
+    }
+  | {
+      type: "date";
+      key: string;
+      label: string;
+      required?: boolean;
+    };
+
+export type TaskFormSchema = {
+  intro?: string;
+  fields: TaskFormField[];
+  submitLabel?: string;
+};
+
 export type CatalogJournal = {
   templateCode: string;
   label: string;
   description: string | null;
   iconName: string | null;
   hasAdapter?: boolean;
+  /** Declarative form the employee fills on completion. Null when the
+   *  journal has no adapter or no structured form — employee sees a
+   *  plain «Выполнено» button. */
+  taskForm?: TaskFormSchema | null;
   ui?: CatalogJournalUi;
   documents: CatalogDocument[];
 };

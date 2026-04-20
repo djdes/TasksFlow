@@ -1155,6 +1155,115 @@ export async function registerRoutes(
     }
   });
 
+  // Прокси для task-form: фронт задачи зовёт сюда,
+  // когда сотруднику нужно показать форму заполнения перед
+  // «Выполнено». Возвращает TaskFormSchema или null.
+  app.get("/api/wesetup/task-form", requireAuth, async (req, res) => {
+    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY;
+    if (!baseUrl || !key) {
+      return res.status(503).json({
+        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
+      });
+    }
+    const taskId = req.query.taskId;
+    if (!taskId) {
+      return res.status(400).json({ message: "taskId required" });
+    }
+    try {
+      const upstream = await fetch(
+        `${baseUrl}/api/integrations/tasksflow/task-form?taskId=${encodeURIComponent(String(taskId))}`,
+        {
+          headers: { Authorization: `Bearer ${key}` },
+          cache: "no-store",
+        }
+      );
+      const text = await upstream.text();
+      res.status(upstream.status);
+      res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
+      res.send(text);
+    } catch (err: any) {
+      console.error("[wesetup-proxy] task-form failed", err);
+      res.status(502).json({ message: err?.message || "Network error" });
+    }
+  });
+
+  // Прокси для «выполнить с данными формы». Отличие от обычного
+  // /api/tasks/:id/complete в том, что здесь летят structured values,
+  // которые WeSetup разложит по колонкам журнала. После успеха тут же
+  // отмечаем задачу выполненной локально.
+  app.post("/api/wesetup/complete-with-values", requireAuth, async (req, res) => {
+    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY;
+    if (!baseUrl || !key) {
+      return res.status(503).json({
+        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
+      });
+    }
+    const { taskId, values, isCompleted } = req.body || {};
+    if (typeof taskId !== "number") {
+      return res.status(400).json({ message: "taskId должен быть числом" });
+    }
+
+    // Проверим, что сотрудник — исполнитель этой задачи (или админ).
+    try {
+      const task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      const user = req.session?.userId
+        ? await storage.getUserById(req.session.userId)
+        : null;
+      const isAllowed =
+        user?.isAdmin || (task.workerId && user?.id === task.workerId);
+      if (!isAllowed) {
+        return res.status(403).json({
+          message: "Вы не являетесь исполнителем этой задачи",
+        });
+      }
+    } catch (err: any) {
+      console.error("[wesetup-proxy] complete auth check failed", err);
+      return res.status(500).json({ message: "Ошибка проверки прав" });
+    }
+
+    try {
+      const upstream = await fetch(
+        `${baseUrl}/api/integrations/tasksflow/complete`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            taskId,
+            isCompleted: Boolean(isCompleted ?? true),
+            values: values ?? {},
+          }),
+          cache: "no-store",
+        }
+      );
+      const text = await upstream.text();
+      if (upstream.ok) {
+        // Also mark the local TF task as completed so dashboard's 1/4
+        // counter updates without waiting for the pull sync.
+        try {
+          await storage.updateTask(taskId, {
+            isCompleted: Boolean(isCompleted ?? true),
+          });
+        } catch (err) {
+          console.error("[wesetup-proxy] local complete mirror failed", err);
+        }
+      }
+      res.status(upstream.status);
+      res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
+      res.send(text);
+    } catch (err: any) {
+      console.error("[wesetup-proxy] complete failed", err);
+      res.status(502).json({ message: err?.message || "Network error" });
+    }
+  });
+
   // Прокси для bind-row: фронт CreateTask в журнальном режиме шлёт сюда
   // {documentId, rowKey, title?}. WeSetup создаёт задачу у себя через
   // свою же сохранённую интеграцию + регистрирует TaskLink, и возвращает

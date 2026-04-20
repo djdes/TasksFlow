@@ -5,6 +5,7 @@ import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
+import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import type { Task } from "@shared/schema";
 import {
@@ -63,6 +64,9 @@ export default function Dashboard() {
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  // Separate dialog for journal-bound tasks — employee sees the
+  // WeSetup-defined form instead of the plain «Выполнено» button.
+  const [journalTaskId, setJournalTaskId] = useState<number | null>(null);
   const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
   const [duplicateTask, setDuplicateTask] = useState<Task | null>(null);
@@ -179,6 +183,16 @@ export default function Dashboard() {
 
     if (task.isCompleted) {
       uncompleteTask.mutate(taskId);
+      return;
+    }
+
+    // Journal-bound tasks: open the WeSetup form filler instead of
+    // marking complete immediately. The dialog's own «Подтвердить»
+    // button does both the completion and posts structured values.
+    // We detect via category prefix for now (fast client-side check).
+    const category = (task as { category?: string | null }).category ?? "";
+    if (category.startsWith("WeSetup · ")) {
+      setJournalTaskId(taskId);
       return;
     }
 
@@ -577,6 +591,18 @@ export default function Dashboard() {
           onTaskUpdate={handleTaskUpdate}
         />
       )}
+      {journalTaskId !== null ? (
+        <TaskFormFiller
+          taskId={journalTaskId}
+          open={journalTaskId !== null}
+          onOpenChange={(v) => {
+            if (!v) setJournalTaskId(null);
+          }}
+          onCompleted={() => {
+            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          }}
+        />
+      ) : null}
 
       {user?.isAdmin && (
         <DuplicateTaskDialog
