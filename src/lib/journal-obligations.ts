@@ -134,6 +134,10 @@ function buildDedupeKey(dateKey: Date, templateCode: string): string {
   return `daily:${dateStamp(dateKey)}:${templateCode}`;
 }
 
+function normalizeObligationStatus(status: string): "pending" | "done" {
+  return status === "done" ? "done" : "pending";
+}
+
 function getPhaseOneJournalRule(templateCode: string) {
   return PHASE_ONE_JOURNAL_RULES[templateCode];
 }
@@ -183,7 +187,7 @@ function createDefaultDeps(): ObligationDeps {
     },
     getTemplateTodaySummary: loadTemplateTodaySummary,
     async listExistingDailyObligations({ userId, dateKey, source }) {
-      return db.journalObligation.findMany({
+      const rows = await db.journalObligation.findMany({
         where: {
           userId,
           dateKey,
@@ -196,6 +200,11 @@ function createDefaultDeps(): ObligationDeps {
           completedAt: true,
         },
       });
+
+      return rows.map((row) => ({
+        ...row,
+        status: normalizeObligationStatus(row.status),
+      }));
     },
     async deleteStaleDailyObligations(ids) {
       if (ids.length === 0) return;
@@ -307,7 +316,7 @@ function createDefaultDeps(): ObligationDeps {
         }));
     },
     async listSummaryRows({ organizationId, dateKey }) {
-      return db.journalObligation.findMany({
+      const rows = await db.journalObligation.findMany({
         where: {
           organizationId,
           dateKey,
@@ -317,6 +326,11 @@ function createDefaultDeps(): ObligationDeps {
           status: true,
         },
       });
+
+      return rows.map((row) => ({
+        ...row,
+        status: normalizeObligationStatus(row.status),
+      }));
     },
   };
 }
@@ -382,6 +396,17 @@ export async function syncDailyJournalObligationsForUser(
         : summary.filled
           ? now
           : null;
+    const targetPath = isDocumentTarget
+      ? resolveJournalObligationTargetPath({
+          journalCode: template.code,
+          isDocument: true,
+          activeDocumentId: summary.activeDocumentId,
+        })
+      : resolveJournalObligationTargetPath({
+          journalCode: template.code,
+          isDocument: false,
+          activeDocumentId: null,
+        });
 
     rows.push({
       organizationId: args.organizationId,
@@ -391,11 +416,7 @@ export async function syncDailyJournalObligationsForUser(
       kind: "daily-journal",
       dateKey,
       status: summary.filled ? "done" : "pending",
-      targetPath: resolveJournalObligationTargetPath({
-        journalCode: template.code,
-        isDocument: isDocumentTarget,
-        activeDocumentId: isDocumentTarget ? summary.activeDocumentId : null,
-      }),
+      targetPath,
       source: DAILY_OBLIGATION_SOURCE,
       dedupeKey,
       completedAt,
