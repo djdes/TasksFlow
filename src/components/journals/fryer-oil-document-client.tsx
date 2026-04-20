@@ -98,69 +98,123 @@ function EntryDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[24px] border-0 p-0 sm:max-w-[620px]">
-        <DialogHeader className="flex flex-row items-center justify-between border-b px-7 py-5">
-          <DialogTitle className="text-[22px] font-semibold">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {props.initialEntry ? "Редактирование записи" : "Добавление новой строки"}
           </DialogTitle>
-          <button type="button" className="rounded-md p-1 hover:bg-black/5" onClick={() => props.onOpenChange(false)}>
-            <X className="size-6" />
-          </button>
         </DialogHeader>
-        <div className="space-y-4 px-7 py-6">
-          <Input type="date" value={data.startDate} onChange={(e) => setData((v) => ({ ...v, startDate: e.target.value }))} className="h-11 rounded-2xl" />
-          <div className="grid gap-3 md:grid-cols-2">
-            <Select value={String(data.startHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startHour: Number(v) }))}>
-              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Часы" /></SelectTrigger>
-              <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={String(data.startMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, startMinute: Number(v) }))}>
-              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Минуты" /></SelectTrigger>
-              <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-            </Select>
+
+        <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Дата и время начала</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <Input type="date" value={data.startDate} onChange={(e) => setData((v) => ({ ...v, startDate: e.target.value }))} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.startHour).padStart(2, "0")} onChange={(e) => setData((d) => ({ ...d, startHour: Number(e.target.value) }))}>
+                {HOURS.map((v) => <option key={v} value={v}>{v} ч</option>)}
+              </select>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.startMinute).padStart(2, "0")} onChange={(e) => setData((d) => ({ ...d, startMinute: Number(e.target.value) }))}>
+                {MINUTES.map((v) => <option key={v} value={v}>{v} мин</option>)}
+              </select>
+            </div>
           </div>
-          <Select value={data.fatType} onValueChange={(v) => setData((d) => ({ ...d, fatType: v }))}>
-            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Вид фритюрного жира" /></SelectTrigger>
-            <SelectContent>{props.lists.fatTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-          </Select>
-          <Select value={String(data.qualityStart)} onValueChange={(v) => setData((d) => ({ ...d, qualityStart: Number(v) }))}>
-            <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
-            <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
-          </Select>
-          <Select value={data.equipmentType} onValueChange={(v) => setData((d) => ({ ...d, equipmentType: v }))}>
-            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Тип жарочного оборудования" /></SelectTrigger>
-            <SelectContent>{props.lists.equipmentTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-          </Select>
-          <Select value={data.productType} onValueChange={(v) => setData((d) => ({ ...d, productType: v }))}>
-            <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Вид продукции" /></SelectTrigger>
-            <SelectContent>{props.lists.productTypes.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-          </Select>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Select value={String(data.endHour).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endHour: Number(v) }))}>
-              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Часы окончания" /></SelectTrigger>
-              <SelectContent>{HOURS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={String(data.endMinute).padStart(2, "0")} onValueChange={(v) => setData((d) => ({ ...d, endMinute: Number(v) }))}>
-              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="Минуты окончания" /></SelectTrigger>
-              <SelectContent>{MINUTES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-            </Select>
+
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Вид фритюрного жира</Label>
+            <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={data.fatType} onChange={(e) => setData((d) => ({ ...d, fatType: e.target.value }))}>
+              <option value="">— выберите —</option>
+              {props.lists.fatTypes.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
           </div>
-          <Select value={String(data.qualityEnd)} onValueChange={(v) => setData((d) => ({ ...d, qualityEnd: Number(v) }))}>
-            <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
-            <SelectContent>{QUALITY_OPTIONS.map((v) => <SelectItem key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</SelectItem>)}</SelectContent>
-          </Select>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input type="number" min="0" step="0.01" value={String(data.carryoverKg)} onChange={(e) => setData((d) => ({ ...d, carryoverKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl" placeholder="Переходящий остаток, кг" />
-            <Input type="number" min="0" step="0.01" value={String(data.disposedKg)} onChange={(e) => setData((d) => ({ ...d, disposedKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl" placeholder="Утилизированный, кг" />
+
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Качество на начало</Label>
+            <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.qualityStart)} onChange={(e) => setData((d) => ({ ...d, qualityStart: Number(e.target.value) }))}>
+              {QUALITY_OPTIONS.map((v) => <option key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</option>)}
+            </select>
           </div>
-          <Input value={data.controllerName} onChange={(e) => setData((d) => ({ ...d, controllerName: e.target.value }))} className="h-11 rounded-2xl" placeholder="Должность, ФИО контролера" />
-          <div className={`flex ${props.initialEntry && props.onDelete ? "justify-between" : "justify-end"} gap-3 pt-2`}>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Тип жарочного оборудования</Label>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={data.equipmentType} onChange={(e) => setData((d) => ({ ...d, equipmentType: e.target.value }))}>
+                <option value="">— выберите —</option>
+                {props.lists.equipmentTypes.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Вид продукции</Label>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={data.productType} onChange={(e) => setData((d) => ({ ...d, productType: e.target.value }))}>
+                <option value="">— выберите —</option>
+                {props.lists.productTypes.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Время окончания</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.endHour).padStart(2, "0")} onChange={(e) => setData((d) => ({ ...d, endHour: Number(e.target.value) }))}>
+                {HOURS.map((v) => <option key={v} value={v}>{v} ч</option>)}
+              </select>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.endMinute).padStart(2, "0")} onChange={(e) => setData((d) => ({ ...d, endMinute: Number(e.target.value) }))}>
+                {MINUTES.map((v) => <option key={v} value={v}>{v} мин</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Качество на конец</Label>
+            <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={String(data.qualityEnd)} onChange={(e) => setData((d) => ({ ...d, qualityEnd: Number(e.target.value) }))}>
+              {QUALITY_OPTIONS.map((v) => <option key={v} value={String(v)}>{v} - {QUALITY_LABELS[v]}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Переходящий остаток, кг</Label>
+              <Input type="number" min="0" step="0.01" value={String(data.carryoverKg)} onChange={(e) => setData((d) => ({ ...d, carryoverKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Утилизированный, кг</Label>
+              <Input type="number" min="0" step="0.01" value={String(data.disposedKg)} onChange={(e) => setData((d) => ({ ...d, disposedKg: Number(e.target.value) || 0 }))} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Должность, ФИО контролера</Label>
+            <Input value={data.controllerName} onChange={(e) => setData((d) => ({ ...d, controllerName: e.target.value }))} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
             {props.initialEntry && props.onDelete ? (
-              <Button type="button" variant="outline" className="h-11 rounded-2xl border-[#ffd7d3] text-[#ff3b30]" onClick={() => { void props.onDelete?.(props.initialEntry!.id); props.onOpenChange(false); }}>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-2xl border-[#ffd7d3] px-5 text-[14px] font-medium text-[#ff3b30] shadow-none hover:bg-[#fff4f2] sm:w-auto"
+                onClick={() => { void props.onDelete?.(props.initialEntry!.id); props.onOpenChange(false); }}
+              >
                 Удалить
               </Button>
             ) : null}
-            <Button type="button" disabled={busy} className="h-11 rounded-2xl bg-[#5863f8] px-7 text-white" onClick={() => { void save(); }}>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+              onClick={() => props.onOpenChange(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              disabled={busy}
+              className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+              onClick={() => { void save(); }}
+            >
               {busy ? "Сохранение..." : props.initialEntry ? "Сохранить" : "Добавить"}
             </Button>
           </div>
