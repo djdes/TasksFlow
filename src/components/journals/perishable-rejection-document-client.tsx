@@ -372,7 +372,9 @@ export function PerishableRejectionDocumentClient({
 
   return (
     <div className="space-y-6 text-black">
-      <FocusTodayScroller />
+      <FocusTodayScroller
+        onCreate={!readOnly ? () => setAddModalOpen(true) : undefined}
+      />
       <DocumentBackLink href="/journals/perishable_rejection" documentId={documentId} />
       <div className="flex items-center justify-between">
         <div>

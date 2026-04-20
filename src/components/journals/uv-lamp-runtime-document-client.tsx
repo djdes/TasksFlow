@@ -1069,7 +1069,11 @@ export function UvLampRuntimeDocumentClient(props: Props) {
 
   return (
     <div className="space-y-4">
-      <FocusTodayScroller />
+      <FocusTodayScroller
+        onCreate={
+          props.status === "active" ? () => setAddRowOpen(true) : undefined
+        }
+      />
       <DocumentBackLink href={`/journals/${props.routeCode}`} documentId={props.documentId} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:hidden">

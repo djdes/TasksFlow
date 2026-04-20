@@ -195,7 +195,9 @@ export function FinishedProductDocumentClient({
 
   return (
     <div className="space-y-6 text-black">
-      <FocusTodayScroller />
+      <FocusTodayScroller
+        onCreate={!readOnly ? () => setAddModalOpen(true) : undefined}
+      />
       <div className="rounded-[28px] bg-white px-4 py-5 shadow-sm sm:px-8 sm:py-7">
         <DocumentPageHeader
           backHref="/journals/finished_product"

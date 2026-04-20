@@ -1,26 +1,50 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { CalendarPlus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /**
- * Small client-only component dropped into each document editor that
+ * Client-only component dropped into each document editor that
  * supports "jump to today" from the list-page banner. When the URL
- * carries `?focus=today`, this waits for the target to appear in the
- * DOM, scrolls it into view, and applies a brief highlight pulse so
- * the user immediately sees which row to fill.
+ * carries `?focus=today`, this waits for the target (by default
+ * `[data-focus-today]`) to appear in the DOM, scrolls it into view
+ * and applies a short indigo ring pulse.
  *
- * Each client passes a CSS selector (e.g. `[data-focus-today]`). The
- * editor is responsible for tagging today's row/column with that data
- * attribute — this component doesn't know about per-journal markup.
+ * When the target is NOT found after a few seconds (i.e. the user
+ * followed «Перейти к сегодня» but no row for today exists yet),
+ * we surface a soft dialog: «Записи за сегодня ещё нет» with a
+ * «Создать» button. The caller passes `onCreate`/`createLabel` to
+ * wire up the add-row flow (open the existing new-entry dialog,
+ * push a default row into config.rows, etc.). Clients where today's
+ * row is auto-created from config (hygiene grid, cold-equipment
+ * per-day, climate per-day) don't need the callback — they always
+ * have a target.
  */
 export function FocusTodayScroller({
   selector = "[data-focus-today]",
+  onCreate,
+  createLabel = "Создать запись за сегодня",
+  emptyTitle = "Записи за сегодня ещё нет",
+  emptyBody = "Нажмите кнопку ниже, чтобы создать строку за сегодняшнее число — откроется форма с предзаполненной датой.",
 }: {
   selector?: string;
+  onCreate?: () => void;
+  createLabel?: string;
+  emptyTitle?: string;
+  emptyBody?: string;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const focus = searchParams.get("focus");
+  const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
     if (focus !== "today") return;
@@ -34,7 +58,10 @@ export function FocusTodayScroller({
       attempts += 1;
       if (!el && attempts < maxAttempts) return;
       window.clearInterval(interval);
-      if (!el) return;
+      if (!el) {
+        setShowEmpty(true);
+        return;
+      }
 
       try {
         el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
@@ -50,5 +77,72 @@ export function FocusTodayScroller({
     return () => window.clearInterval(interval);
   }, [focus, selector]);
 
-  return null;
+  function dismiss() {
+    setShowEmpty(false);
+    // Drop the ?focus=today hint so a back-forward or page refresh
+    // doesn't keep bouncing the dialog.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("focus");
+    router.replace(url.pathname + (url.search || ""));
+  }
+
+  return (
+    <Dialog open={showEmpty} onOpenChange={(open) => !open && dismiss()}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[24px] border-0 p-0 sm:max-w-[460px]">
+        <DialogHeader className="border-b px-6 py-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#5566f6]">
+                <CalendarPlus className="size-5" />
+              </span>
+              <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+                {emptyTitle}
+              </DialogTitle>
+            </div>
+            <button
+              type="button"
+              onClick={dismiss}
+              className="rounded-full p-1 text-[#6f7282] transition-colors hover:bg-[#f5f6ff] hover:text-[#5566f6]"
+              aria-label="Закрыть"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+        </DialogHeader>
+        <div className="space-y-5 px-6 py-5">
+          <p className="text-[14px] leading-[1.55] text-[#6f7282]">
+            {onCreate
+              ? emptyBody
+              : "Форма создания записи откроется на этой странице — воспользуйтесь кнопкой «Добавить строку» в панели инструментов документа."}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none sm:w-auto"
+              onClick={dismiss}
+            >
+              Позже
+            </Button>
+            {onCreate ? (
+              <Button
+                type="button"
+                className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+                onClick={() => {
+                  dismiss();
+                  // Give the dialog a tick to unmount before triggering
+                  // the client's add-row flow, which might open another
+                  // dialog synchronously.
+                  window.setTimeout(() => onCreate(), 50);
+                }}
+              >
+                <CalendarPlus className="size-4" />
+                {createLabel}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
