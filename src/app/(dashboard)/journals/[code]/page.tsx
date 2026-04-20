@@ -1365,6 +1365,8 @@ export default async function JournalDocumentsPage({
       isMandatory={isMandatoryTemplate}
       templateCode={template.code}
       templateName={template.name}
+      routeCode={code}
+      activeDocumentId={todaySummary.activeDocumentId}
       todayCount={todaySummary.todayCount}
       expectedCount={todaySummary.expectedCount}
       noActiveDocument={todaySummary.noActiveDocument}

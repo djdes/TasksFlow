@@ -584,6 +584,9 @@ export type TemplateTodaySummary = {
   /** True when there isn't a single active `JournalDocument` covering
    * today — the user has nothing to fill into and needs to create one. */
   noActiveDocument: boolean;
+  /** ID of the first active `JournalDocument` covering today, if any.
+   * Powers the «Перейти к документу» shortcut on the banner. */
+  activeDocumentId: string | null;
 };
 
 /**
@@ -613,6 +616,7 @@ export async function getTemplateTodaySummary(
       todayCount: 0,
       expectedCount: 0,
       noActiveDocument: false,
+      activeDocumentId: null,
     };
   }
 
@@ -633,8 +637,11 @@ export async function getTemplateTodaySummary(
         dateTo: { gte: todayStart },
       },
       select: { id: true, config: true },
+      orderBy: { dateFrom: "desc" },
     }),
   ]);
+
+  const activeDocumentId = activeDocuments[0]?.id ?? null;
 
   if (legacyCount > 0) {
     return {
@@ -643,6 +650,7 @@ export async function getTemplateTodaySummary(
       todayCount: legacyCount,
       expectedCount: legacyCount,
       noActiveDocument: false,
+      activeDocumentId,
     };
   }
   if (activeDocuments.length === 0) {
@@ -652,6 +660,7 @@ export async function getTemplateTodaySummary(
       todayCount: 0,
       expectedCount: 0,
       noActiveDocument: true,
+      activeDocumentId: null,
     };
   }
 
@@ -678,6 +687,7 @@ export async function getTemplateTodaySummary(
       todayCount,
       expectedCount,
       noActiveDocument: false,
+      activeDocumentId,
     };
   }
 
@@ -707,6 +717,7 @@ export async function getTemplateTodaySummary(
     todayCount,
     expectedCount,
     noActiveDocument: false,
+    activeDocumentId,
   };
 }
 
