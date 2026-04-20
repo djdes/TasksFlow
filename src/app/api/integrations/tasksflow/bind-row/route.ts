@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -13,32 +14,38 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Generic bind: TasksFlow asks us to attach a journal row to a remote
- * task. Works for any journal whose adapter is registered in
- * `src/lib/tasksflow-adapters/index.ts`.
+ * Generic bind: TasksFlow asks WeSetup to attach a journal entity to a
+ * remote task. Two flavours:
  *
- *   POST /api/integrations/tasksflow/bind-row
- *   Headers: Authorization: Bearer tfk_…
- *   Body:
- *     {
- *       "journalCode": "cleaning",
- *       "documentId":  "cmo7…",
- *       "rowKey":      "cleaning-pair-…",
- *       "title":       "..."   // optional override
- *     }
+ *   1. **Adapter row** — `rowKey` is provided. We resolve it via the
+ *      registered adapter (e.g. cleaning's responsiblePair). Worker is
+ *      derived from row.responsibleUserId. Title/schedule/description
+ *      come from the adapter.
  *
- * Response:
- *   { "tasksflowTaskId": 14, "created": true|false }
+ *   2. **Free-text task** — no `rowKey`. The admin types a title +
+ *      picks a worker. We mint a synthetic `rowKey = freetask:<uuid>`
+ *      and store everything in the TaskLink. On completion the
+ *      generic handler appends a JournalDocumentEntry on the bound
+ *      document so the journal shows the audit trail.
  *
- * Idempotent: existing TaskLink for the same (integration, doc, row)
- * → returns the existing task id instead of duplicating.
+ * Auth: Bearer key resolved against integration's encrypted secret.
  */
-const bodySchema = z.object({
-  journalCode: z.string().min(1),
-  documentId: z.string().min(1),
-  rowKey: z.string().min(1),
-  title: z.string().trim().max(255).optional(),
-});
+const bodySchema = z
+  .object({
+    journalCode: z.string().min(1),
+    documentId: z.string().min(1),
+    rowKey: z.string().optional(),
+    title: z.string().trim().max(255).optional(),
+    workerUserId: z.string().optional(),
+    weekDays: z.array(z.number().int().min(0).max(6)).optional(),
+  })
+  .refine(
+    (v) => Boolean(v.rowKey) || (Boolean(v.workerUserId) && Boolean(v.title)),
+    {
+      message:
+        "Нужен либо rowKey (адаптер), либо workerUserId+title (свободная задача)",
+    }
+  );
 
 export async function POST(request: Request) {
   const auth = request.headers.get("authorization") ?? "";
@@ -80,17 +87,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const adapter = getAdapter(payload.journalCode);
-  if (!adapter) {
-    return NextResponse.json(
-      { error: `Журнал "${payload.journalCode}" не поддерживается` },
-      { status: 400 }
-    );
-  }
-
-  // Verify document is owned by the integration's org and matches the
-  // declared journalCode. Adapter listing then gives us the canonical
-  // row metadata (label, responsibleUserId).
+  // Document must exist + belong to this org + be the right template.
   const doc = await db.journalDocument.findUnique({
     where: { id: payload.documentId },
     include: { template: true },
@@ -106,23 +103,85 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Document already closed" }, { status: 400 });
   }
 
-  const adapterDocs = await adapter.listDocumentsForOrg(integration.organizationId);
-  const adapterDoc = adapterDocs.find((d) => d.documentId === doc.id);
-  const row = adapterDoc?.rows.find((r) => r.rowKey === payload.rowKey);
-  if (!adapterDoc || !row) {
-    return NextResponse.json({ error: "Row not found" }, { status: 404 });
-  }
-  if (!row.responsibleUserId) {
-    return NextResponse.json(
-      { error: "У этой строки журнала не назначен ответственный" },
-      { status: 400 }
+  const adapter = getAdapter(payload.journalCode);
+  const isFreeText = !payload.rowKey;
+
+  let title: string;
+  let description: string | undefined;
+  let weekDays: number[];
+  let monthDay: number | null;
+  let workerWeSetupId: string;
+  let storedRowKey: string;
+
+  if (isFreeText) {
+    // Free-text path — no adapter row. Validate the worker exists +
+    // is linked to TasksFlow. Title required.
+    if (!payload.workerUserId || !payload.title) {
+      return NextResponse.json(
+        { error: "title и workerUserId обязательны для свободной задачи" },
+        { status: 400 }
+      );
+    }
+    const worker = await db.user.findFirst({
+      where: {
+        id: payload.workerUserId,
+        organizationId: integration.organizationId,
+        isActive: true,
+      },
+      select: { id: true, name: true },
+    });
+    if (!worker) {
+      return NextResponse.json({ error: "Сотрудник не найден" }, { status: 404 });
+    }
+    workerWeSetupId = worker.id;
+    title = payload.title;
+    description = `Свободная задача из TasksFlow\nЖурнал: ${doc.template.name ?? payload.journalCode}\nДокумент: ${doc.title}`;
+    weekDays =
+      payload.weekDays && payload.weekDays.length > 0
+        ? payload.weekDays
+        : [0, 1, 2, 3, 4, 5, 6];
+    monthDay = null;
+    storedRowKey = `freetask:${crypto.randomBytes(8).toString("base64url")}`;
+  } else {
+    // Adapter path — must have a registered adapter for this journal.
+    if (!adapter) {
+      return NextResponse.json(
+        {
+          error: `Журнал «${payload.journalCode}» не имеет адаптера. Используйте свободную задачу.`,
+        },
+        { status: 400 }
+      );
+    }
+    const adapterDocs = await adapter.listDocumentsForOrg(
+      integration.organizationId
     );
+    const adapterDoc = adapterDocs.find((d) => d.documentId === doc.id);
+    const row = adapterDoc?.rows.find((r) => r.rowKey === payload.rowKey);
+    if (!adapterDoc || !row) {
+      return NextResponse.json({ error: "Row not found" }, { status: 404 });
+    }
+    if (!row.responsibleUserId) {
+      return NextResponse.json(
+        { error: "У этой строки журнала не назначен ответственный" },
+        { status: 400 }
+      );
+    }
+    workerWeSetupId = row.responsibleUserId;
+    title =
+      payload.title?.trim() ||
+      adapter.titleForRow?.(row, adapterDoc) ||
+      row.label;
+    description = adapter.descriptionForRow?.(row, adapterDoc);
+    const sched = adapter.scheduleForRow(row, adapterDoc);
+    weekDays = sched.weekDays;
+    monthDay = sched.monthDay ?? null;
+    storedRowKey = payload.rowKey!;
   }
 
   const userLink = await db.tasksFlowUserLink.findFirst({
     where: {
       integrationId: integration.id,
-      wesetupUserId: row.responsibleUserId,
+      wesetupUserId: workerWeSetupId,
     },
   });
   if (!userLink?.tasksflowUserId) {
@@ -135,12 +194,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Idempotent: already bound → return existing.
+  // Idempotent: if (integration, doc, rowKey) already linked → reuse.
   const existing = await db.tasksFlowTaskLink.findFirst({
     where: {
       integrationId: integration.id,
       journalDocumentId: doc.id,
-      rowKey: row.rowKey,
+      rowKey: storedRowKey,
     },
   });
   if (existing) {
@@ -150,20 +209,14 @@ export async function POST(request: Request) {
     });
   }
 
-  const schedule = adapter.scheduleForRow(row, adapterDoc);
-  const title =
-    payload.title?.trim() ||
-    adapter.titleForRow?.(row, adapterDoc) ||
-    row.label;
-  const description = adapter.descriptionForRow?.(row, adapterDoc) ?? undefined;
-
   const journalLink = JSON.stringify({
     kind: `wesetup-${payload.journalCode}`,
     baseUrl: new URL(request.url).origin,
     integrationId: integration.id,
     documentId: doc.id,
-    rowKey: row.rowKey,
+    rowKey: storedRowKey,
     label: title,
+    isFreeText,
   });
 
   const client = tasksflowClientFor(integration);
@@ -174,9 +227,9 @@ export async function POST(request: Request) {
       workerId: userLink.tasksflowUserId,
       requiresPhoto: false,
       isRecurring: true,
-      weekDays: schedule.weekDays,
-      monthDay: schedule.monthDay ?? null,
-      category: `WeSetup · ${adapter.meta.label}`,
+      weekDays,
+      monthDay,
+      category: `WeSetup · ${doc.template.name ?? payload.journalCode}`,
       description: description ?? "",
     });
   } catch (err) {
@@ -191,8 +244,7 @@ export async function POST(request: Request) {
       { status: 502 }
     );
   }
-  // Smuggle the journalLink via follow-up PUT (createTask shape doesn't
-  // expose it). Non-fatal — task exists either way.
+  // Smuggle journalLink so TasksFlow UI can show a chip.
   try {
     await client.updateTask(created.id, { journalLink } as never);
   } catch (err) {
@@ -204,7 +256,7 @@ export async function POST(request: Request) {
       integrationId: integration.id,
       journalCode: payload.journalCode,
       journalDocumentId: doc.id,
-      rowKey: row.rowKey,
+      rowKey: storedRowKey,
       tasksflowTaskId: created.id,
       remoteStatus: created.isCompleted ? "completed" : "active",
       lastDirection: "push",
@@ -218,6 +270,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     tasksflowTaskId: created.id,
     created: true,
+    isFreeText,
+    rowKey: storedRowKey,
     todayKey: toDateKey(new Date()),
   });
 }

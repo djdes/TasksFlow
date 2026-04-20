@@ -1093,16 +1093,30 @@ export function getCleaningDocumentTitle() {
   return CLEANING_PAGE_TITLE;
 }
 
+/**
+ * The cleaning journal is run as a half-month document (1st–15th, then
+ * 16th–end). Pick the half that contains `referenceDate` so creating
+ * a doc on the 20th gives «16–30» (or «16–31» / «16–28»/«16–29»),
+ * not «1–15» from the previous half.
+ */
 export function getCleaningCreatePeriodBounds(referenceDate = new Date()) {
   const date = coerceUtcDate(referenceDate);
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth();
+  const day = date.getUTCDate();
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  const endDay = Math.min(lastDay, 15);
+  const monthStr = String(month + 1).padStart(2, "0");
+
+  if (day <= 15) {
+    return {
+      dateFrom: `${year}-${monthStr}-01`,
+      dateTo: `${year}-${monthStr}-${String(Math.min(lastDay, 15)).padStart(2, "0")}`,
+    };
+  }
 
   return {
-    dateFrom: `${year}-${String(month + 1).padStart(2, "0")}-01`,
-    dateTo: `${year}-${String(month + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`,
+    dateFrom: `${year}-${monthStr}-16`,
+    dateTo: `${year}-${monthStr}-${String(lastDay).padStart(2, "0")}`,
   };
 }
 
