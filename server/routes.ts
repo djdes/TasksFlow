@@ -840,7 +840,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.users.create.path, requireAuth, requireAdmin, async (req, res) => {
+  app.post(api.users.create.path, requireAdminOrApiKey, async (req, res) => {
     try {
       console.log("Create user request body:", req.body);
       const input = api.users.create.input.parse(req.body);
@@ -856,13 +856,15 @@ export async function registerRoutes(
         });
       }
 
-      // Добавляем companyId текущего пользователя
-      const currentUser = await storage.getUserById(req.session.userId!);
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
       const user = await storage.createUser({
         ...input,
         phone: normalizedPhone,
-        isAdmin: false, // Только админ может создавать пользователей, но не может создавать других админов через API
-        companyId: currentUser?.companyId ?? undefined,
+        isAdmin: false, // API всегда создаёт только обычных сотрудников.
+        companyId,
       });
 
       res.status(201).json(user);
