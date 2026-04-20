@@ -199,17 +199,29 @@ async function rollupEntryDataDocumentForDay(
   if (templateCode === "cleaning_ventilation_checklist") {
     // data.procedures = { [procedureId]: time[] } — array of applied times.
     // Expected = sum over enabled procedures of their scheduled times.length.
+    //
+    // The UI at cleaning-ventilation-checklist-document-client.tsx
+    // displays config `procedure.times` as the default cell value when
+    // `entry.procedures[id]` is absent (`entry?.procedures[id] ||
+    // procedure.times`). Users see times in the cells and consider the
+    // procedure «done» even without explicitly saving. To match that
+    // expectation, a procedure with no entry override falls back to its
+    // config-default count — «all cells show a time» = «filled».
     type Procedure = { id?: string; enabled?: boolean; times?: string[] };
     const procedures = Array.isArray(cfg.procedures)
       ? (cfg.procedures as Procedure[])
       : [];
     const enabled = procedures.filter((p) => p?.enabled && p.id);
-    const perProc = new Map<string, number>();
+    const perProc = new Map<string, { expected: number; defaultFilled: number }>();
     let expectedCount = 0;
     for (const p of enabled) {
-      const slots = Array.isArray(p.times) ? p.times.filter(Boolean).length : 0;
+      const rawTimes = Array.isArray(p.times) ? (p.times as string[]) : [];
+      const slots = rawTimes.filter(Boolean).length;
       if (slots === 0) continue;
-      perProc.set(p.id as string, slots);
+      const defaultFilled = rawTimes.filter(
+        (t) => typeof t === "string" && t !== "" && t !== "00:00"
+      ).length;
+      perProc.set(p.id as string, { expected: slots, defaultFilled });
       expectedCount += slots;
     }
     if (expectedCount === 0) {
@@ -220,17 +232,20 @@ async function rollupEntryDataDocumentForDay(
       select: { data: true },
     });
     let todayCount = 0;
-    for (const [procId, expected] of perProc.entries()) {
-      let actualForProc = 0;
+    for (const [procId, { expected, defaultFilled }] of perProc.entries()) {
+      let hasOverride = false;
+      let overrideFilled = 0;
       for (const entry of entries) {
         const data = entry.data as { procedures?: Record<string, unknown> } | null;
         const raw = data?.procedures?.[procId];
         if (!Array.isArray(raw)) continue;
+        hasOverride = true;
         const filled = raw.filter(
           (t) => typeof t === "string" && t !== "" && t !== "00:00"
         ).length;
-        actualForProc = Math.max(actualForProc, filled);
+        overrideFilled = Math.max(overrideFilled, filled);
       }
+      const actualForProc = hasOverride ? overrideFilled : defaultFilled;
       todayCount += Math.min(actualForProc, expected);
     }
     return {
