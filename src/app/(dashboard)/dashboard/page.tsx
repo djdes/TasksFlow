@@ -98,8 +98,14 @@ export default async function DashboardPage() {
   const organizationId = session.user.organizationId;
 
   const now = new Date();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // UTC-midnight — matches how `JournalDocumentEntry.date` is stored
+  // (midnight UTC of the day the row represents) and how the
+  // today-compliance helper derives `todayKey`. Keeping everything on
+  // the same clock means the «записей сегодня» counter and the
+  // compliance ring never disagree about what "today" means.
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
   const cutoff48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
   const [
