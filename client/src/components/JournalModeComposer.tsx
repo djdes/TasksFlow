@@ -35,7 +35,12 @@ type JournalModeComposerProps = {
   selectedRow: FlattenedJournalRow | null;
   selectedDocumentTitle: string | null;
   selectedDocId: string;
-  selectedRowKey: string;
+  /**
+   * Multi-row selection — admin can tick one OR more rows within a
+   * single document. Submit sends `rowKeys[]` to bind-row which creates
+   * one TasksFlow task per entry.
+   */
+  selectedRowKeys: string[];
   journalTaskMode: "row" | "free";
   journalSearch: string;
   rowSearch: string;
@@ -61,7 +66,9 @@ type JournalModeComposerProps = {
   onTaskModeChange: (mode: "row" | "free") => void;
   onRowSearchChange: (value: string) => void;
   onDocumentToggle: (documentId: string, canCollapse: boolean) => void;
-  onRowSelect: (row: FlattenedJournalRow) => void;
+  onRowToggle: (row: FlattenedJournalRow) => void;
+  onRowSelectAllInDocument: (documentId: string, rowKeys: string[]) => void;
+  onRowClear: () => void;
   onDocumentChange: (value: string) => void;
   onTitleChange: (value: string) => void;
   onWorkersChange: (values: string[]) => void;
@@ -81,7 +88,7 @@ export function JournalModeComposer({
   selectedRow,
   selectedDocumentTitle,
   selectedDocId,
-  selectedRowKey,
+  selectedRowKeys,
   journalTaskMode,
   journalSearch,
   rowSearch,
@@ -102,7 +109,9 @@ export function JournalModeComposer({
   onTaskModeChange,
   onRowSearchChange,
   onDocumentToggle,
-  onRowSelect,
+  onRowToggle,
+  onRowSelectAllInDocument,
+  onRowClear,
   onDocumentChange,
   onTitleChange,
   onWorkersChange,
@@ -302,6 +311,22 @@ export function JournalModeComposer({
                       const isOpen =
                         rowSearch.trim().length > 0 ||
                         openDocumentId === group.document.documentId;
+                      const isActiveDocument =
+                        selectedDocId === group.document.documentId;
+                      const selectedCountInDoc = isActiveDocument
+                        ? group.rows.filter((item) =>
+                            selectedRowKeys.includes(item.row.rowKey)
+                          ).length
+                        : 0;
+                      const availableRowKeys = group.rows
+                        .filter((item) => !item.row.existingTasksflowTaskId)
+                        .map((item) => item.row.rowKey);
+                      const allAvailableSelected =
+                        isActiveDocument &&
+                        availableRowKeys.length > 0 &&
+                        availableRowKeys.every((key) =>
+                          selectedRowKeys.includes(key)
+                        );
 
                       return (
                         <div
@@ -326,25 +351,57 @@ export function JournalModeComposer({
                                 {group.document.period.from}—{group.document.period.to}
                               </div>
                             </div>
-                            <div className="rounded-full bg-background px-2 py-1 text-[11px] text-muted-foreground">
-                              {group.rows.length} строк
+                            <div className="flex shrink-0 items-center gap-2">
+                              {selectedCountInDoc > 0 ? (
+                                <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
+                                  {selectedCountInDoc} выбрано
+                                </span>
+                              ) : null}
+                              <span className="rounded-full bg-background px-2 py-1 text-[11px] text-muted-foreground">
+                                {group.rows.length} строк
+                              </span>
                             </div>
                           </button>
 
                           {isOpen ? (
                             <div className="mt-3 space-y-2">
+                              {availableRowKeys.length > 1 ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (allAvailableSelected) {
+                                        onRowClear();
+                                      } else {
+                                        onRowSelectAllInDocument(
+                                          group.document.documentId,
+                                          availableRowKeys
+                                        );
+                                      }
+                                    }}
+                                    className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
+                                    data-testid="select-all-rows"
+                                  >
+                                    {allAvailableSelected
+                                      ? "Снять выделение"
+                                      : `Выбрать все (${availableRowKeys.length})`}
+                                  </button>
+                                </div>
+                              ) : null}
+
                               {group.rows.map((item) => {
                                 const taken = Boolean(item.row.existingTasksflowTaskId);
                                 const selected =
                                   selectedDocId === item.document.documentId &&
-                                  selectedRowKey === item.row.rowKey;
+                                  selectedRowKeys.includes(item.row.rowKey);
 
                                 return (
                                   <button
                                     type="button"
                                     key={`${item.document.documentId}/${item.row.rowKey}`}
                                     disabled={taken}
-                                    onClick={() => onRowSelect(item)}
+                                    onClick={() => onRowToggle(item)}
                                     className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${
                                       selected
                                         ? "border-primary bg-primary/10"
@@ -353,6 +410,12 @@ export function JournalModeComposer({
                                         : "border-border/50 hover:bg-muted/30"
                                     }`}
                                   >
+                                    <Checkbox
+                                      checked={selected}
+                                      disabled={taken}
+                                      tabIndex={-1}
+                                      className="mt-0.5 shrink-0"
+                                    />
                                     <div className="min-w-0 flex-1">
                                       <div className="truncate text-sm font-medium">
                                         {item.row.label}

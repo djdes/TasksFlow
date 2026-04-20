@@ -100,7 +100,9 @@ export default function CreateTask() {
   );
   const [rowSearch, setRowSearch] = useState<string>("");
   const [selectedDocId, setSelectedDocId] = useState<string>("");
-  const [selectedRowKey, setSelectedRowKey] = useState<string>("");
+  // Multi-row selection for row-mode: admin ticks one OR more rows
+  // inside a single document; submit creates one TF task per rowKey.
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [journalTaskTitle, setJournalTaskTitle] = useState<string>("");
   const [journalWorkerUserIds, setJournalWorkerUserIds] = useState<string[]>([]);
   const [journalSubmitting, setJournalSubmitting] = useState(false);
@@ -166,15 +168,19 @@ export default function CreateTask() {
     () => groupJournalRowsByDocument(filteredRows, activeJournal),
     [filteredRows, activeJournal]
   );
-  const selectedRow = useMemo(
+  // First selected row — used as the «anchor» for journal code, title
+  // defaults, and the review summary. All other selected rows share the
+  // same document (enforced at toggle time).
+  const selectedRows = useMemo(
     () =>
-      flatRows.find(
+      flatRows.filter(
         (item) =>
           item.document.documentId === selectedDocId &&
-          item.row.rowKey === selectedRowKey
-      ) ?? null,
-    [flatRows, selectedDocId, selectedRowKey]
+          selectedRowKeys.includes(item.row.rowKey)
+      ),
+    [flatRows, selectedDocId, selectedRowKeys]
   );
+  const selectedRow = selectedRows[0] ?? null;
   const activeJournalRows = useMemo(
     () =>
       flatRows.filter((item) => item.journal.templateCode === activeJournal),
@@ -219,7 +225,9 @@ export default function CreateTask() {
     ? `${activeJournalData.label} · ${activeJournalData.documents.length} док.`
     : null;
   const journalDetailsSummary = selectedRow
-    ? `${activeJournalUi.modeRowLabel} · ${selectedRow.row.label}`
+    ? selectedRows.length > 1
+      ? `${activeJournalUi.modeRowLabel} · ${selectedRow.row.label} +${selectedRows.length - 1}`
+      : `${activeJournalUi.modeRowLabel} · ${selectedRow.row.label}`
     : selectedDocument && journalTaskTitle.trim()
     ? `${activeJournalUi.modeFreeLabel} · ${journalTaskTitle.trim()}`
     : null;
@@ -231,14 +239,16 @@ export default function CreateTask() {
       : `${selectedAssignableUsers[0].name} +${selectedAssignableUsers.length - 1}`;
   const journalReviewSummary = isJournalDetailsReady
     ? journalTaskMode === "row" && selectedRow
-      ? `${selectedRow.document.documentTitle} · ${selectedRow.row.label}`
+      ? selectedRows.length > 1
+        ? `${selectedRow.document.documentTitle} · ${selectedRow.row.label} +${selectedRows.length - 1}`
+        : `${selectedRow.document.documentTitle} · ${selectedRow.row.label}`
       : `${selectedDocument?.documentTitle ?? "Документ"} · ${workersSummary}`
     : null;
 
   useEffect(() => {
     if (!activeJournalData) {
       setSelectedDocId("");
-      setSelectedRowKey("");
+      setSelectedRowKeys([]);
       return;
     }
     const documentIds = new Set(
@@ -247,13 +257,14 @@ export default function CreateTask() {
     if (!documentIds.has(selectedDocId)) {
       setSelectedDocId(activeJournalData.documents[0]?.documentId ?? "");
     }
-    const rowBelongsToActiveJournal = activeJournalRows.some(
-      (item) =>
-        item.document.documentId === selectedDocId &&
-        item.row.rowKey === selectedRowKey
+    const validRowKeys = new Set(
+      activeJournalRows
+        .filter((item) => item.document.documentId === selectedDocId)
+        .map((item) => item.row.rowKey)
     );
-    if (!rowBelongsToActiveJournal) {
-      setSelectedRowKey("");
+    const kept = selectedRowKeys.filter((key) => validRowKeys.has(key));
+    if (kept.length !== selectedRowKeys.length) {
+      setSelectedRowKeys(kept);
     }
     if (!activeJournalSupportsRowMode && journalTaskMode !== "free") {
       setJournalTaskMode("free");
@@ -264,7 +275,7 @@ export default function CreateTask() {
     activeJournalSupportsRowMode,
     journalTaskMode,
     selectedDocId,
-    selectedRowKey,
+    selectedRowKeys,
   ]);
 
   useEffect(() => {
@@ -414,7 +425,9 @@ export default function CreateTask() {
       ? {
           journalCode: selectedRow!.journal.templateCode,
           documentId: selectedRow!.document.documentId,
-          rowKey: selectedRow!.row.rowKey,
+          // Batch — one TF task per selected row (see bind-row's
+          // `rowKeys[]` slot handling).
+          rowKeys: selectedRows.map((r) => r.row.rowKey),
           ...(customTitle ? { title: customTitle } : {}),
         }
       : {
@@ -596,7 +609,7 @@ export default function CreateTask() {
                 selectedRow={selectedRow}
                 selectedDocumentTitle={selectedDocument?.documentTitle ?? null}
                 selectedDocId={selectedDocId}
-                selectedRowKey={selectedRowKey}
+                selectedRowKeys={selectedRowKeys}
                 journalTaskMode={journalTaskMode}
                 journalSearch={journalSearch}
                 rowSearch={rowSearch}
@@ -616,7 +629,7 @@ export default function CreateTask() {
                 onJournalSelect={(journal, rowsTotal) => {
                   setActiveJournal(journal.templateCode);
                   setSelectedDocId(journal.documents[0]?.documentId ?? "");
-                  setSelectedRowKey("");
+                  setSelectedRowKeys([]);
                   setRowSearch("");
                   setJournalTaskMode(
                     journal.hasAdapter && rowsTotal > 0 ? "row" : "free"
@@ -627,7 +640,7 @@ export default function CreateTask() {
                 onTaskModeChange={(nextMode) => {
                   setJournalTaskMode(nextMode);
                   if (nextMode === "free") {
-                    setSelectedRowKey("");
+                    setSelectedRowKeys([]);
                   }
                   setOpenJournalStep("details");
                 }}
@@ -635,15 +648,31 @@ export default function CreateTask() {
                 onDocumentToggle={(documentId, canCollapse) => {
                   setOpenDocumentId(canCollapse ? "" : documentId);
                 }}
-                onRowSelect={(item) => {
-                  setSelectedDocId(item.document.documentId);
-                  setSelectedRowKey(item.row.rowKey);
+                onRowToggle={(item) => {
+                  // Switching documents clears prior selection — a batch
+                  // submit targets a single document.
+                  if (selectedDocId && selectedDocId !== item.document.documentId) {
+                    setSelectedDocId(item.document.documentId);
+                    setSelectedRowKeys([item.row.rowKey]);
+                  } else {
+                    setSelectedDocId(item.document.documentId);
+                    setSelectedRowKeys((prev) =>
+                      prev.includes(item.row.rowKey)
+                        ? prev.filter((k) => k !== item.row.rowKey)
+                        : [...prev, item.row.rowKey]
+                    );
+                  }
                   setOpenDocumentId(item.document.documentId);
                   if (!journalTaskTitle.trim()) {
                     setJournalTaskTitle(item.row.label);
                   }
-                  setOpenJournalStep("review");
                 }}
+                onRowSelectAllInDocument={(documentId, rowKeys) => {
+                  setSelectedDocId(documentId);
+                  setSelectedRowKeys(rowKeys);
+                  setOpenDocumentId(documentId);
+                }}
+                onRowClear={() => setSelectedRowKeys([])}
                 onDocumentChange={setSelectedDocId}
                 onTitleChange={setJournalTaskTitle}
                 onWorkersChange={setJournalWorkerUserIds}
