@@ -88,6 +88,11 @@ export default function CreateTask() {
   const [examplePhotoPreview, setExamplePhotoPreview] = useState<string | null>(null);
   const examplePhotoInputRef = useRef<HTMLInputElement>(null);
 
+  // Multi-worker for free-mode task creation. Admin checks one OR more
+  // workers; submit loops the create mutation once per worker so each
+  // gets their own task instance (same pattern as journal-mode batch).
+  const [freeModeWorkerIds, setFreeModeWorkerIds] = useState<number[]>([]);
+
   // ──── WeSetup journal mode ────
   const [mode, setMode] = useState<"free" | "journal">("free");
   const [catalog, setCatalog] = useState<WesetupCatalog | null>(null);
@@ -497,37 +502,77 @@ export default function CreateTask() {
   };
 
   const onSubmit = async (values: FormValues) => {
-    const taskData = {
+    if (freeModeWorkerIds.length === 0) {
+      toast({
+        title: "Не выбран сотрудник",
+        description: "Отметьте хотя бы одного исполнителя",
+        variant: "destructive",
+      });
+      return;
+    }
+    const base = {
       title: values.title,
-      workerId: values.workerId,
       requiresPhoto: values.requiresPhoto ?? false,
-      weekDays: values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
+      weekDays:
+        values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
       monthDay: values.monthDay || null,
       isRecurring: values.isRecurring ?? true,
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
     };
-    createTask.mutate(taskData as any, {
-      onSuccess: async (createdTask: any) => {
-        // Если есть пример фото, загружаем его
-        if (examplePhotoFile && createdTask?.id) {
-          await uploadExamplePhoto(createdTask.id);
-        }
-        toast({
-          title: "Успешно",
-          description: "Задача создана",
+
+    // Fire one create per selected worker; surface a single summary
+    // toast. Example-photo (if any) is attached to the first task —
+    // attaching to every duplicate would explode storage for no real
+    // gain, and admins typically treat the first as the canonical one.
+    let created = 0;
+    let failed = 0;
+    let firstCreatedId: number | null = null;
+    for (const workerId of freeModeWorkerIds) {
+      await new Promise<void>((resolve) => {
+        createTask.mutate({ ...base, workerId } as any, {
+          onSuccess: async (createdTask: any) => {
+            created += 1;
+            if (firstCreatedId === null && createdTask?.id) {
+              firstCreatedId = createdTask.id;
+            }
+            resolve();
+          },
+          onError: () => {
+            failed += 1;
+            resolve();
+          },
         });
-        setLocation("/");
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Ошибка",
-          description: error.message || "Не удалось создать задачу",
-          variant: "destructive",
-        });
-      },
-    });
+      });
+    }
+
+    if (examplePhotoFile && firstCreatedId !== null) {
+      await uploadExamplePhoto(firstCreatedId);
+    }
+
+    if (created > 0 && failed === 0) {
+      toast({
+        title: "Успешно",
+        description:
+          created === 1
+            ? "Задача создана"
+            : `Создано задач: ${created}`,
+      });
+      setLocation("/");
+    } else if (created > 0 && failed > 0) {
+      toast({
+        title: "Создано с ошибками",
+        description: `Успешно: ${created}, ошибок: ${failed}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось создать задачу",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -725,40 +770,82 @@ export default function CreateTask() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="workerId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Исполнитель</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="things-input w-full">
-                        <SelectValue placeholder="Выберите сотрудника" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {users.length === 0 ? (
-                        <div className="p-3 text-sm text-muted-foreground text-center">
-                          <User className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-                          <p>Нет пользователей</p>
-                        </div>
-                      ) : (
-                        users.map((user) => (
-                          <SelectItem key={user.id} value={user.id.toString()}>
-                            {user.name || user.phone}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+            <FormItem>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <FormLabel>
+                  Исполнители ·{" "}
+                  <span className="text-primary">
+                    {freeModeWorkerIds.length}
+                  </span>{" "}
+                  из {users.length}
+                </FormLabel>
+                {users.length > 0 ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFreeModeWorkerIds(users.map((u) => u.id))
+                      }
+                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
+                      data-testid="select-all-free-workers"
+                    >
+                      Выбрать всех
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFreeModeWorkerIds([])}
+                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
+                      data-testid="deselect-all-free-workers"
+                    >
+                      Очистить
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {users.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                  <User className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p>Нет пользователей</p>
+                </div>
+              ) : (
+                <div className="grid max-h-72 gap-1 overflow-y-auto rounded-xl border border-border/50 p-2 sm:grid-cols-2">
+                  {users.map((user) => {
+                    const checked = freeModeWorkerIds.includes(user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() =>
+                          setFreeModeWorkerIds((prev) =>
+                            prev.includes(user.id)
+                              ? prev.filter((id) => id !== user.id)
+                              : [...prev, user.id]
+                          )
+                        }
+                        className={`flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+                          checked
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-muted/30"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          tabIndex={-1}
+                          className="shrink-0"
+                        />
+                        <span className="truncate">
+                          {user.name || user.phone}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            />
+              <p className="text-xs text-muted-foreground">
+                Каждый выбранный сотрудник получит свою копию задачи.
+              </p>
+            </FormItem>
 
             <FormField
               control={form.control}
