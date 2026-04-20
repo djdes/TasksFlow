@@ -1,0 +1,48 @@
+{
+  "taskId": "telegram-bot-phase2-digests-task1-2026-04-20",
+  "date": "2026-04-20",
+  "verdict": "PASS",
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "summary": "TelegramLog now includes optional kind and dedupeKey fields plus a composite lookup index on userId, kind, dedupeKey, and createdAt."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "summary": "shouldSkipTelegramDelivery checks recent TelegramLog rows for duplicate rerun deliveries."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "summary": "Existing Telegram send helpers accept optional structured delivery metadata without breaking existing callers."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "summary": "Existing Telegram send helpers can optionally skip rerun duplicates via policy.skipOnRerun."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "summary": "Fresh node:test and TypeScript verification commands passed."
+    }
+  ],
+  "verification": [
+    {
+      "command": "node --import tsx --test src/lib/telegram-delivery-policy.test.ts",
+      "status": "PASS",
+      "artifact": "telegram-delivery-policy.test.txt"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "status": "PASS",
+      "artifact": "tsc.txt",
+      "notes": "stdout/stderr empty"
+    }
+  ],
+  "notes": [
+    "Ran npx prisma generate after updating prisma/schema.prisma so local Prisma client types matched the new TelegramLog fields."
+  ]
+}

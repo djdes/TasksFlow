@@ -1,0 +1,12 @@
+? shouldSkipTelegramDelivery returns false without a user id (6.8041ms)
+? shouldSkipTelegramDelivery returns false when metadata is incomplete (0.5455ms)
+? shouldSkipTelegramDelivery checks recent queued or sent deliveries by user kind and key (3.2571ms)
+? shouldSkipTelegramDelivery ignores logs outside the configured lookback window (1.6731ms)
+? tests 4
+? suites 0
+? pass 4
+? fail 0
+? cancelled 0
+? skipped 0
+? todo 0
+? duration_ms 683.0961

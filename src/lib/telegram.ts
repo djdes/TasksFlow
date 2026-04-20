@@ -2,6 +2,11 @@ import { Bot } from "grammy";
 import { Agent, fetch as undiciFetch, setGlobalDispatcher } from "undici";
 import crypto from "node:crypto";
 import { escapeHtml } from "@/lib/html-escape";
+import {
+  shouldSkipTelegramDelivery,
+  type TelegramDeliveryMetadata,
+  type TelegramDeliveryPolicyOptions,
+} from "@/lib/telegram-delivery-policy";
 import { getDbRoleValuesWithLegacy, MANAGEMENT_ROLES } from "@/lib/user-roles";
 
 // Initialize bot (only if token is set).
@@ -120,6 +125,39 @@ function extractRetryAfterSeconds(error: unknown): number | null {
   return Math.min(ra, RETRY_HARD_CAP_SECONDS);
 }
 
+type TelegramSendOptions = {
+  userId?: string | null;
+  delivery?: TelegramDeliveryMetadata | null;
+  policy?: TelegramDeliveryPolicyOptions;
+};
+
+function normalizeTelegramDeliveryMetadata(
+  delivery: TelegramDeliveryMetadata | null | undefined
+): { kind: string | null; dedupeKey: string | null } {
+  const kind = delivery?.kind?.trim();
+  const dedupeKey = delivery?.dedupeKey?.trim();
+
+  return {
+    kind: kind || null,
+    dedupeKey: dedupeKey || null,
+  };
+}
+
+async function shouldSkipTelegramSendOnRerun(
+  opts: TelegramSendOptions | undefined
+): Promise<boolean> {
+  if (!opts?.policy?.skipOnRerun) {
+    return false;
+  }
+
+  return shouldSkipTelegramDelivery({
+    userId: opts.userId ?? null,
+    delivery: opts.delivery,
+    now: opts.policy.now,
+    lookbackMs: opts.policy.lookbackMs,
+  });
+}
+
 /**
  * Send a Telegram message and log every attempt to TelegramLog.
  *
@@ -132,14 +170,21 @@ function extractRetryAfterSeconds(error: unknown): number | null {
 export async function sendTelegramMessage(
   chatId: string,
   text: string,
-  opts?: { userId?: string | null }
+  opts?: TelegramSendOptions
 ): Promise<void> {
   const { db } = await import("./db");
+  if (await shouldSkipTelegramSendOnRerun(opts)) {
+    return;
+  }
+
+  const delivery = normalizeTelegramDeliveryMetadata(opts?.delivery);
   const log = await db.telegramLog.create({
     data: {
       chatId,
       body: text,
       userId: opts?.userId ?? null,
+      kind: delivery.kind,
+      dedupeKey: delivery.dedupeKey,
       status: "queued",
       attempts: 0,
     },
@@ -211,7 +256,8 @@ export type NotificationType = "temperature" | "deviations" | "compliance" | "ex
 export async function notifyEmployee(
   userId: string,
   text: string,
-  action?: { label: string; miniAppUrl: string }
+  action?: { label: string; miniAppUrl: string },
+  opts?: Omit<TelegramSendOptions, "userId">
 ): Promise<void> {
   const { db } = await import("./db");
   const user = await db.user.findUnique({
@@ -222,11 +268,24 @@ export async function notifyEmployee(
     return;
   }
 
+  if (
+    await shouldSkipTelegramSendOnRerun({
+      userId: user.id,
+      delivery: opts?.delivery,
+      policy: opts?.policy,
+    })
+  ) {
+    return;
+  }
+
+  const delivery = normalizeTelegramDeliveryMetadata(opts?.delivery);
   const log = await db.telegramLog.create({
     data: {
       chatId: user.telegramChatId,
       body: text,
       userId: user.id,
+      kind: delivery.kind,
+      dedupeKey: delivery.dedupeKey,
       status: "queued",
       attempts: 0,
     },
@@ -306,6 +365,8 @@ export async function sendTelegramInviteLinkMessage(args: {
   userId: string;
   employeeName: string;
   inviteUrl: string;
+  delivery?: TelegramDeliveryMetadata | null;
+  policy?: TelegramDeliveryPolicyOptions;
 }): Promise<void> {
   const { db } = await import("./db");
   const text = [
@@ -313,11 +374,24 @@ export async function sendTelegramInviteLinkMessage(args: {
     "Откройте кнопку ниже, чтобы подтвердить перепривязку.",
   ].join("\n\n");
 
+  if (
+    await shouldSkipTelegramSendOnRerun({
+      userId: args.userId,
+      delivery: args.delivery,
+      policy: args.policy,
+    })
+  ) {
+    return;
+  }
+
+  const delivery = normalizeTelegramDeliveryMetadata(args.delivery);
   const log = await db.telegramLog.create({
     data: {
       chatId: args.chatId,
       body: text,
       userId: args.userId,
+      kind: delivery.kind,
+      dedupeKey: delivery.dedupeKey,
       status: "queued",
       attempts: 0,
     },
