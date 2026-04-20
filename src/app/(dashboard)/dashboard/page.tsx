@@ -23,6 +23,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
+import { BulkAssignTodayButton } from "@/components/dashboard/bulk-assign-today-button";
 import { getTemplatesFilledToday } from "@/lib/today-compliance";
 import { parseDisabledCodes } from "@/lib/disabled-journals";
 import { cn } from "@/lib/utils";
@@ -178,6 +179,14 @@ export default async function DashboardPage() {
       select: { disabledJournalCodes: true },
     }),
   ]);
+
+  // Show the «заполнить всё» one-click only if there's an enabled
+  // TasksFlow integration to fan out into.
+  const tfIntegration = await db.tasksFlowIntegration.findFirst({
+    where: { organizationId, enabled: true },
+    select: { id: true },
+  });
+  const hasTasksflowIntegration = Boolean(tfIntegration);
 
   const disabledCodes = parseDisabledCodes(org?.disabledJournalCodes);
 
@@ -341,6 +350,22 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {hasTasksflowIntegration && unfilledCount > 0 ? (
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#ececf4] bg-[#fafbff] px-4 py-3">
+            <div className="flex-1 min-w-[200px] text-[13px] text-[#3c4053]">
+              Одним нажатием разошлёт TasksFlow-задачи всем ответственным
+              по {unfilledCount}{" "}
+              {unfilledCount === 1
+                ? "незаполненному журналу"
+                : unfilledCount < 5
+                  ? "незаполненным журналам"
+                  : "незаполненным журналам"}
+              . Уже назначенные пропустит.
+            </div>
+            <BulkAssignTodayButton unfilledCount={unfilledCount} />
+          </div>
+        ) : null}
 
         {complianceItems.length > 0 && (
           <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
