@@ -903,7 +903,16 @@ export function SanitationDayDocumentClient({
                     </td>
                     <td
                       rowSpan={2}
-                      className="border border-black px-3 py-2 text-center align-middle"
+                      className={`border border-black px-3 py-2 text-center align-middle ${readOnly ? "" : "cursor-pointer hover:bg-[#f5f6ff]"}`}
+                      onClick={() => {
+                        if (readOnly) return;
+                        setRoomDialogState({
+                          id: row.id,
+                          name: row.roomName,
+                          plan: { ...row.plan },
+                        });
+                        setRoomDialogOpen(true);
+                      }}
                     >
                       {row.roomName}
                     </td>

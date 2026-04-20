@@ -1147,13 +1147,19 @@ function ZoneBlock({
             </td>
 
             {/* Description */}
-            <td className="border border-black px-3 py-2">
+            <td
+              className={`border border-black px-3 py-2 ${isActive ? "cursor-pointer hover:bg-[#f5f6ff]" : ""}`}
+              onClick={() => isActive && onEditItem(item)}
+            >
               <div className="group flex items-start gap-2">
                 <div className="flex-1 whitespace-pre-line text-[14px] leading-relaxed">
                   {item.text}
                 </div>
                 {isActive && (
-                  <div className="screen-only flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div
+                    className="screen-only flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <button
                       type="button"
                       className="rounded p-1 text-[#6f7282] hover:bg-[#f3f4fb] hover:text-[#5566f6]"
