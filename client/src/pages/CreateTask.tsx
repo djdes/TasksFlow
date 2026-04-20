@@ -62,56 +62,51 @@ export default function CreateTask() {
   const [examplePhotoPreview, setExamplePhotoPreview] = useState<string | null>(null);
   const examplePhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Проверка прав администратора
-  if (!user || !user.isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
-          <p className="text-muted-foreground mb-4">Только администратор может создавать задачи</p>
-          <button
-            onClick={() => setLocation("/")}
-            className="text-primary hover:underline"
-          >
-            На главную
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ──── WeSetup journal mode ────
   // Свободный режим = текущая логика (поле workerId, title и т.д. вручную).
-  // Журнальный режим = выбор документа+строки из WeSetup; задача создаётся
-  // на стороне WeSetup, она же подставит workerId по связке телефонов.
-  type WesetupCatalog = {
-    journalCode: string;
+  // Журнальный режим = выбор любого журнала и его строки. Сейчас в каталоге
+  // только «уборка», но фронт уже умеет N журналов → бэкенд WeSetup
+  // регистрирует новые адаптеры, и они тут же появляются.
+  type CatalogJournal = {
+    templateCode: string;
+    label: string;
+    description: string | null;
+    iconName: string | null;
     documents: Array<{
       documentId: string;
-      title: string;
+      documentTitle: string;
       period: { from: string; to: string };
-      pairs: Array<{
+      rows: Array<{
         rowKey: string;
-        cleaningTitle: string;
-        cleaningUserName: string | null;
-        controlTitle: string;
-        controlUserName: string | null;
+        label: string;
+        sublabel?: string;
+        responsibleUserId: string | null;
         existingTasksflowTaskId: number | null;
       }>;
     }>;
   };
+  type WesetupCatalog = { journals: CatalogJournal[] };
+
   const [mode, setMode] = useState<"free" | "journal">("free");
   const [catalog, setCatalog] = useState<WesetupCatalog | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [activeJournal, setActiveJournal] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
   const [selectedDocId, setSelectedDocId] = useState<string>("");
   const [selectedRowKey, setSelectedRowKey] = useState<string>("");
   const [journalSubmitting, setJournalSubmitting] = useState(false);
+  // Use a ref instead of state so a failed fetch doesn't re-trigger
+  // the effect when error/loading state flips back. Otherwise React
+  // hot-loops requests until the dev rate-limit kills the server.
+  const catalogAttemptedRef = useRef(false);
   useEffect(() => {
-    if (mode !== "journal" || catalog || catalogLoading) return;
+    if (mode !== "journal") return;
+    if (catalogAttemptedRef.current) return;
+    catalogAttemptedRef.current = true;
     setCatalogLoading(true);
     setCatalogError(null);
-    fetch("/api/wesetup/cleaning-catalog", { credentials: "include" })
+    fetch("/api/wesetup/journals-catalog", { credentials: "include" })
       .then(async (r) => {
         if (!r.ok) {
           const data = await r.json().catch(() => null);
@@ -119,17 +114,57 @@ export default function CreateTask() {
         }
         return (await r.json()) as WesetupCatalog;
       })
-      .then((data) => setCatalog(data))
+      .then((data) => {
+        setCatalog(data);
+        if (data.journals.length > 0) {
+          setActiveJournal(data.journals[0].templateCode);
+        }
+      })
       .catch((err) => setCatalogError(err.message || "Ошибка загрузки"))
       .finally(() => setCatalogLoading(false));
-  }, [mode, catalog, catalogLoading]);
-  const selectedDoc = useMemo(
-    () => catalog?.documents.find((d) => d.documentId === selectedDocId) ?? null,
-    [catalog, selectedDocId]
-  );
-  const selectedPair = useMemo(
-    () => selectedDoc?.pairs.find((p) => p.rowKey === selectedRowKey) ?? null,
-    [selectedDoc, selectedRowKey]
+  }, [mode]);
+
+  // Flat list of every (journal, doc, row) for search. We keep the
+  // tree intact above to render tabs, but search is a flat filter
+  // across everything — typing «Громов» finds the row regardless of
+  // which journal/document it lives in.
+  const flatRows = useMemo(() => {
+    if (!catalog) return [];
+    const items: Array<{
+      journal: CatalogJournal;
+      document: CatalogJournal["documents"][number];
+      row: CatalogJournal["documents"][number]["rows"][number];
+    }> = [];
+    for (const j of catalog.journals) {
+      for (const d of j.documents) {
+        for (const r of d.rows) {
+          items.push({ journal: j, document: d, row: r });
+        }
+      }
+    }
+    return items;
+  }, [catalog]);
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return flatRows.filter((item) => {
+      if (activeJournal && item.journal.templateCode !== activeJournal) return false;
+      if (!q) return true;
+      return (
+        item.row.label.toLowerCase().includes(q) ||
+        (item.row.sublabel ?? "").toLowerCase().includes(q) ||
+        item.document.documentTitle.toLowerCase().includes(q) ||
+        item.journal.label.toLowerCase().includes(q)
+      );
+    });
+  }, [flatRows, activeJournal, search]);
+  const selectedRow = useMemo(
+    () =>
+      flatRows.find(
+        (item) =>
+          item.document.documentId === selectedDocId &&
+          item.row.rowKey === selectedRowKey
+      ) ?? null,
+    [flatRows, selectedDocId, selectedRowKey]
   );
 
   const form = useForm<FormValues>({
@@ -146,6 +181,27 @@ export default function CreateTask() {
       description: "",
     },
   });
+
+  // Проверка прав администратора — после всех хуков, иначе React
+  // ругается на «Rendered more hooks than during the previous render»,
+  // потому что guest-render оборвался бы до использования useEffect и
+  // useMemo выше.
+  if (!user || !user.isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
+          <p className="text-muted-foreground mb-4">Только администратор может создавать задачи</p>
+          <button
+            onClick={() => setLocation("/")}
+            className="text-primary hover:underline"
+          >
+            На главную
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleExamplePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -198,14 +254,14 @@ export default function CreateTask() {
   };
 
   // Создание задачи в журнальном режиме: всё делает бекенд WeSetup.
-  // Мы просто говорим «свяжи строку X документа Y», а WeSetup создаст
-  // задачу у нас с правильным workerId + journalLink + зарегистрирует
+  // Мы говорим «свяжи строку X документа Y журнала Z», WeSetup создаёт
+  // задачу у нас с правильным workerId + journalLink + регистрирует
   // TaskLink. После успеха обновляем дашборд.
   const onJournalSubmit = async () => {
-    if (!selectedDoc || !selectedPair) {
+    if (!selectedRow) {
       toast({
         title: "Не выбрана строка",
-        description: "Выберите документ и строку журнала",
+        description: "Найдите и выберите строку журнала из списка ниже",
         variant: "destructive",
       });
       return;
@@ -217,8 +273,9 @@ export default function CreateTask() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          documentId: selectedDoc.documentId,
-          rowKey: selectedPair.rowKey,
+          journalCode: selectedRow.journal.templateCode,
+          documentId: selectedRow.document.documentId,
+          rowKey: selectedRow.row.rowKey,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -227,7 +284,7 @@ export default function CreateTask() {
       }
       toast({
         title: data?.created ? "Задача создана" : "Задача уже существовала",
-        description: `TasksFlow #${data?.tasksflowTaskId}`,
+        description: `${selectedRow.journal.label} → ${selectedRow.row.label} (TasksFlow #${data?.tasksflowTaskId})`,
       });
       setLocation("/");
     } catch (err: any) {
@@ -346,90 +403,122 @@ export default function CreateTask() {
                 <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
                   {catalogError}
                 </div>
-              ) : catalog && catalog.documents.length === 0 ? (
+              ) : catalog && catalog.journals.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                  В WeSetup пока нет активных документов журнала уборки.
-                  Создайте документ там и обновите страницу.
+                  В WeSetup пока нет журналов с поддержкой TasksFlow.
                 </div>
               ) : catalog ? (
                 <>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">
-                      Документ журнала
-                    </label>
-                    <Select
-                      value={selectedDocId}
-                      onValueChange={(v) => {
-                        setSelectedDocId(v);
-                        setSelectedRowKey("");
-                      }}
-                    >
-                      <SelectTrigger className="things-input w-full">
-                        <SelectValue placeholder="Выберите документ" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {catalog.documents.map((doc) => (
-                          <SelectItem key={doc.documentId} value={doc.documentId}>
-                            {doc.title} · {doc.period.from}—{doc.period.to}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {selectedDoc ? (
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        Строка (ответственный за уборку)
-                      </label>
-                      {selectedDoc.pairs.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          В этом документе пока нет ответственных.
-                          Назначьте кого-нибудь в WeSetup.
-                        </p>
-                      ) : (
-                        <Select
-                          value={selectedRowKey}
-                          onValueChange={setSelectedRowKey}
+                  {/* Tabs: one per journal type */}
+                  <div className="flex flex-wrap gap-2">
+                    {catalog.journals.map((j) => {
+                      const active = j.templateCode === activeJournal;
+                      const total = j.documents.reduce(
+                        (sum, d) => sum + d.rows.length,
+                        0
+                      );
+                      return (
+                        <button
+                          key={j.templateCode}
+                          type="button"
+                          onClick={() => {
+                            setActiveJournal(j.templateCode);
+                            setSelectedDocId("");
+                            setSelectedRowKey("");
+                          }}
+                          className={`rounded-xl border px-4 py-2 text-sm transition-colors ${
+                            active
+                              ? "border-primary bg-primary/10 font-medium"
+                              : "border-border/50 hover:bg-muted/30"
+                          }`}
+                          data-testid={`journal-tab-${j.templateCode}`}
                         >
-                          <SelectTrigger className="things-input w-full">
-                            <SelectValue placeholder="Выберите строку" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedDoc.pairs.map((pair) => {
-                              const taken = Boolean(pair.existingTasksflowTaskId);
-                              const label = pair.cleaningUserName
-                                ? `${pair.cleaningUserName} (${pair.cleaningTitle})`
-                                : pair.cleaningTitle;
-                              return (
-                                <SelectItem
-                                  key={pair.rowKey}
-                                  value={pair.rowKey}
-                                  disabled={taken}
-                                >
-                                  {label}
-                                  {taken
-                                    ? ` · уже задача #${pair.existingTasksflowTaskId}`
-                                    : ""}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  ) : null}
-                  {selectedPair ? (
+                          {j.label}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {total}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search input */}
+                  <Input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Поиск: имя сотрудника, название документа…"
+                    className="things-input"
+                    data-testid="journal-search"
+                  />
+
+                  {/* Flat result list */}
+                  <div className="max-h-[420px] space-y-1.5 overflow-y-auto rounded-xl border border-border/50 p-2">
+                    {filteredRows.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        Ничего не найдено. Попробуйте другой запрос или
+                        вкладку.
+                      </div>
+                    ) : (
+                      filteredRows.map((item) => {
+                        const taken = Boolean(item.row.existingTasksflowTaskId);
+                        const selected =
+                          selectedDocId === item.document.documentId &&
+                          selectedRowKey === item.row.rowKey;
+                        return (
+                          <button
+                            type="button"
+                            key={`${item.document.documentId}/${item.row.rowKey}`}
+                            disabled={taken}
+                            onClick={() => {
+                              setSelectedDocId(item.document.documentId);
+                              setSelectedRowKey(item.row.rowKey);
+                            }}
+                            className={`flex w-full items-start justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${
+                              selected
+                                ? "border-primary bg-primary/10"
+                                : taken
+                                ? "border-border/30 bg-muted/20 opacity-50"
+                                : "border-border/50 hover:bg-muted/30"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium">
+                                {item.row.label}
+                              </div>
+                              {item.row.sublabel ? (
+                                <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                  {item.row.sublabel}
+                                </div>
+                              ) : null}
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {item.journal.label} ·{" "}
+                                {item.document.documentTitle} ·{" "}
+                                {item.document.period.from}—
+                                {item.document.period.to}
+                              </div>
+                            </div>
+                            {taken ? (
+                              <div className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px]">
+                                #{item.row.existingTasksflowTaskId}
+                              </div>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {selectedRow ? (
                     <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
                       <div className="font-medium">
                         Будет создана задача:
                       </div>
                       <div className="mt-1 text-muted-foreground">
-                        «Уборка ·{" "}
-                        {selectedPair.cleaningUserName ||
-                          selectedPair.cleaningTitle}
-                        ». Расписание и исполнитель подставятся из
-                        журнала автоматически. После выполнения задачи
-                        соответствующая клетка журнала отметится сама.
+                        «{selectedRow.row.label}» из журнала «
+                        {selectedRow.journal.label}». Расписание и
+                        исполнитель подставятся автоматически. После
+                        выполнения задачи журнал WeSetup отметит её сам.
                       </div>
                     </div>
                   ) : null}
@@ -440,7 +529,7 @@ export default function CreateTask() {
                 <Button
                   type="button"
                   size="lg"
-                  disabled={!selectedPair || journalSubmitting}
+                  disabled={!selectedRow || journalSubmitting}
                   onClick={onJournalSubmit}
                   className="things-button"
                 >

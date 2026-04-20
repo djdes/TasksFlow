@@ -1057,24 +1057,31 @@ export async function registerRoutes(
   // в WeSetup со своим WESETUP_API_KEY (тот же tfk_, что админ вписал в
   // настройках интеграции в WeSetup) и отдаёт каталог фронту.
 
-  app.get("/api/wesetup/cleaning-catalog", requireAuth, requireAdmin, async (_req, res) => {
+  // Каталог всех журналов (любого типа), которые WeSetup готов
+  // предложить TasksFlow для привязки. Старый /cleaning-catalog
+  // оставлен для обратной совместимости — внутри он ходит сюда же.
+  async function fetchWesetupJournalsCatalog() {
     const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
     const key = process.env.WESETUP_API_KEY;
     if (!baseUrl || !key) {
-      return res.status(503).json({
-        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
-      });
-    }
-    try {
-      const upstream = await fetch(
-        `${baseUrl}/api/integrations/tasksflow/cleaning-catalog`,
-        {
-          headers: { Authorization: `Bearer ${key}` },
-          // Никакого кеша — каталог меняется в реальном времени, как только
-          // менеджер правит ответственных в WeSetup-журнале.
-          cache: "no-store",
-        }
+      throw Object.assign(
+        new Error("WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env"),
+        { status: 503 }
       );
+    }
+    const upstream = await fetch(
+      `${baseUrl}/api/integrations/tasksflow/journals-catalog`,
+      {
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+      }
+    );
+    return upstream;
+  }
+
+  app.get("/api/wesetup/journals-catalog", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const upstream = await fetchWesetupJournalsCatalog();
       const text = await upstream.text();
       res.status(upstream.status);
       res.setHeader(
@@ -1083,9 +1090,65 @@ export async function registerRoutes(
       );
       res.send(text);
     } catch (err: any) {
-      console.error("[wesetup-proxy] catalog fetch failed", err);
-      res.status(502).json({
-        message: `Не удалось получить каталог WeSetup: ${err?.message || "network error"}`,
+      console.error("[wesetup-proxy] journals-catalog failed", err);
+      res.status(err?.status || 502).json({
+        message: err?.message || "Network error",
+      });
+    }
+  });
+
+  // Backwards-compat shim: старая страница CreateTask.tsx звала
+  // /cleaning-catalog. Теперь оборачиваем универсальный ответ так,
+  // чтобы клиент, ожидающий старый формат, не падал.
+  app.get("/api/wesetup/cleaning-catalog", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const upstream = await fetchWesetupJournalsCatalog();
+      if (!upstream.ok) {
+        const text = await upstream.text();
+        res.status(upstream.status);
+        res.setHeader(
+          "Content-Type",
+          upstream.headers.get("content-type") || "application/json"
+        );
+        return res.send(text);
+      }
+      const data = (await upstream.json()) as {
+        journals?: Array<{
+          templateCode: string;
+          documents: Array<{
+            documentId: string;
+            documentTitle: string;
+            period: { from: string; to: string };
+            rows: Array<{
+              rowKey: string;
+              label: string;
+              sublabel?: string;
+              responsibleUserId: string | null;
+              existingTasksflowTaskId: number | null;
+            }>;
+          }>;
+        }>;
+      };
+      const cleaning = data.journals?.find((j) => j.templateCode === "cleaning");
+      const documents = (cleaning?.documents ?? []).map((doc) => ({
+        documentId: doc.documentId,
+        title: doc.documentTitle,
+        period: doc.period,
+        pairs: doc.rows.map((row) => ({
+          rowKey: row.rowKey,
+          cleaningTitle: row.label,
+          cleaningUserName: row.label,
+          controlTitle: row.sublabel ?? "",
+          controlUserName: null,
+          cleaningUserId: row.responsibleUserId,
+          existingTasksflowTaskId: row.existingTasksflowTaskId,
+        })),
+      }));
+      res.json({ journalCode: "cleaning", documents });
+    } catch (err: any) {
+      console.error("[wesetup-proxy] cleaning-catalog (compat) failed", err);
+      res.status(err?.status || 502).json({
+        message: err?.message || "Network error",
       });
     }
   });
