@@ -53,7 +53,7 @@ import {
   type AcceptanceDocumentConfig,
   type AcceptanceRow,
 } from "@/lib/acceptance-document";
-import { PositionSelectItems } from "@/components/shared/position-select";
+import { PositionNativeOptions, PositionSelectItems } from "@/components/shared/position-select";
 import { useMobileView } from "@/lib/use-mobile-view";
 import {
   MobileViewToggle,
@@ -259,217 +259,266 @@ function RowDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[560px]">
-        <DialogHeader className="flex flex-row items-center justify-between border-b px-8 py-6">
-          <DialogTitle className="text-[24px] font-semibold text-black">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {isEdit ? "Редактирование строки" : "Добавление новой строки"}
           </DialogTitle>
-          <button type="button" className="rounded-md p-1 text-black/80 hover:bg-black/5" onClick={() => props.onOpenChange(false)}>
-            <X className="size-6" />
-          </button>
         </DialogHeader>
-        <div className="space-y-4 px-8 py-6">
+
+        <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
           {/* Дата и время поставки */}
-          <fieldset className="space-y-3 rounded-2xl border border-[#dfe1ec] p-4">
-            <legend className="px-2 text-[14px] text-[#6f7282]">Дата и время поставки</legend>
-            <div className="space-y-1">
-              <Label className="text-[14px] text-[#6f7282]">Дата поставки</Label>
-              <Input type="date" value={row.deliveryDate} onChange={(e) => setValue("deliveryDate", e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Дата и время поставки</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <Input type="date" value={row.deliveryDate} onChange={(e) => setValue("deliveryDate", e.target.value)} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={row.deliveryHour || "--"} onChange={(e) => setValue("deliveryHour", e.target.value === "--" ? "" : e.target.value)}>
+                <option value="--">-- ч</option>
+                {HOURS.map((h) => <option key={h} value={h}>{h} ч</option>)}
+              </select>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={row.deliveryMinute || "--"} onChange={(e) => setValue("deliveryMinute", e.target.value === "--" ? "" : e.target.value)}>
+                <option value="--">-- мин</option>
+                {MINUTES.map((m) => <option key={m} value={m}>{m} мин</option>)}
+              </select>
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1 space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Часы</Label>
-                <Select value={row.deliveryHour || "--"} onValueChange={(v) => setValue("deliveryHour", v === "--" ? "" : v)}>
-                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    <SelectItem value="--">--</SelectItem>
-                    {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
-                <Select value={row.deliveryMinute || "--"} onValueChange={(v) => setValue("deliveryMinute", v === "--" ? "" : v)}>
-                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    <SelectItem value="--">--</SelectItem>
-                    {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+          </div>
+
+          {/* Наименование продукции — radio cards */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Наименование продукции</Label>
+            <div className="flex flex-col gap-2">
+              {productOptions.map((item) => {
+                const active = row.productName === item;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setValue("productName", item)}
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-[14px] transition-colors ${
+                      active
+                        ? "border-[#5566f6] bg-[#f5f6ff] text-[#0b1024]"
+                        : "border-[#dcdfed] bg-white text-[#3c4053] hover:bg-[#fafbff]"
+                    }`}
+                  >
+                    <span className="font-medium">{item}</span>
+                    <span className={`flex size-5 items-center justify-center rounded-full border-2 ${active ? "border-[#5566f6]" : "border-[#c7ccea]"}`}>
+                      {active ? <span className="size-2 rounded-full bg-[#5566f6]" /> : null}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          </fieldset>
+            <div className="flex gap-2">
+              <Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="Добавить название новой продукции" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <Button type="button" className="h-11 rounded-2xl bg-[#5566f6] px-5 text-white hover:bg-[#4a5bf0]" onClick={() => addInlineOption("product")}>
+                <Plus className="size-5" />
+              </Button>
+            </div>
+          </div>
 
-          <>
-              {/* Наименование продукции */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Наименование продукции</Label>
-                {productOptions.map((item) => (
-                  <label key={item} className="flex items-center gap-3 text-[15px]">
-                    <input type="radio" name="product" checked={row.productName === item} onChange={() => setValue("productName", item)} className="size-4 accent-[#5863f8]" />
-                    {item}
-                  </label>
-                ))}
-                <div className="flex gap-2">
-                  <Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="Добавить название новой продукции" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("product")}>
-                    <Plus className="size-5" />
-                  </Button>
-                </div>
-              </div>
+          {/* Производитель */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Производитель</Label>
+            <select
+              className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+              value={row.manufacturer}
+              onChange={(e) => setValue("manufacturer", e.target.value)}
+            >
+              <option value="">Выберите из списка или добавьте нового</option>
+              {manufacturerOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Input value={newManufacturer} onChange={(e) => setNewManufacturer(e.target.value)} placeholder="Добавить название нового производителя" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <Button type="button" className="h-11 rounded-2xl bg-[#5566f6] px-5 text-white hover:bg-[#4a5bf0]" onClick={() => addInlineOption("manufacturer")}>
+                <Plus className="size-5" />
+              </Button>
+            </div>
+          </div>
 
-              {/* Производитель */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Производитель</Label>
-                <Select value={row.manufacturer} onValueChange={(v) => setValue("manufacturer", v)}>
-                  <SelectTrigger className="h-12 rounded-xl border-[#dfe1ec] text-[15px]"><SelectValue placeholder="Выберите из списка или добавьте нового" /></SelectTrigger>
-                  <SelectContent>
-                    {manufacturerOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2">
-                  <Input value={newManufacturer} onChange={(e) => setNewManufacturer(e.target.value)} placeholder="Добавить название нового производителя" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("manufacturer")}>
-                    <Plus className="size-5" />
-                  </Button>
-                </div>
-              </div>
+          {/* Поставщик */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Поставщик</Label>
+            <select
+              className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+              value={row.supplier}
+              onChange={(e) => setValue("supplier", e.target.value)}
+            >
+              <option value="">Выберите из списка или добавьте нового</option>
+              {supplierOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder="Добавить название нового поставщика" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <Button type="button" className="h-11 rounded-2xl bg-[#5566f6] px-5 text-white hover:bg-[#4a5bf0]" onClick={() => addInlineOption("supplier")}>
+                <Plus className="size-5" />
+              </Button>
+            </div>
+          </div>
 
-              {/* Поставщик */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Поставщик</Label>
-                <Select value={row.supplier} onValueChange={(v) => setValue("supplier", v)}>
-                  <SelectTrigger className="h-12 rounded-xl border-[#dfe1ec] text-[15px]"><SelectValue placeholder="Выберите из списка или добавьте нового" /></SelectTrigger>
-                  <SelectContent>
-                    {supplierOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2">
-                  <Input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder="Добавить название нового поставщика" className="h-12 rounded-xl border-[#dfe1ec] px-4 text-[15px]" />
-                  <Button type="button" className="h-12 rounded-xl bg-[#5863f8] px-4" onClick={() => addInlineOption("supplier")}>
-                    <Plus className="size-5" />
-                  </Button>
-                </div>
-              </div>
+          {/* Условия транспортировки — pill segmented */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Условия транспортировки</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["satisfactory", "Удовл.", "#136b2a", "#ecfdf5"],
+                  ["unsatisfactory", "Не удовл.", "#d2453d", "#fff4f2"],
+                ] as const
+              ).map(([value, label, fg, bg]) => {
+                const active = row.transportCondition === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue("transportCondition", value)}
+                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-[14px] font-medium transition-colors ${
+                      active ? "border-transparent text-white" : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"
+                    }`}
+                    style={active ? { backgroundColor: fg, color: "white" } : { backgroundColor: bg, color: fg, borderColor: bg }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Условия транспортировки */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Условия транспортировки</Label>
-                <div className="flex gap-6 text-[15px]">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="transport" checked={row.transportCondition === "satisfactory"} onChange={() => setValue("transportCondition", "satisfactory")} className="size-4 accent-[#5863f8]" />
-                    Удовл.
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="transport" checked={row.transportCondition === "unsatisfactory"} onChange={() => setValue("transportCondition", "unsatisfactory")} className="size-4 accent-[#5863f8]" />
-                    Не удовл.
-                  </label>
-                </div>
-              </div>
+          {/* Соответствие упаковки — pill segmented */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Соответствие упаковки</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["compliant", "Соотв.", "#136b2a", "#ecfdf5"],
+                  ["non_compliant", "Не соотв.", "#d2453d", "#fff4f2"],
+                ] as const
+              ).map(([value, label, fg, bg]) => {
+                const active = row.packagingCompliance === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue("packagingCompliance", value)}
+                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-[14px] font-medium transition-colors ${
+                      active ? "border-transparent text-white" : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"
+                    }`}
+                    style={active ? { backgroundColor: fg, color: "white" } : { backgroundColor: bg, color: fg, borderColor: bg }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Соответствие упаковки */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Соответствие упаковки</Label>
-                <div className="flex gap-6 text-[15px]">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="packaging" checked={row.packagingCompliance === "compliant"} onChange={() => setValue("packagingCompliance", "compliant")} className="size-4 accent-[#5863f8]" />
-                    Соотв.
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="packaging" checked={row.packagingCompliance === "non_compliant"} onChange={() => setValue("packagingCompliance", "non_compliant")} className="size-4 accent-[#5863f8]" />
-                    Не соотв.
-                  </label>
-                </div>
-              </div>
+          {/* Результаты орг. оценки — pill segmented */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Результаты орг. оценки</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["satisfactory", "Удовл.", "#136b2a", "#ecfdf5"],
+                  ["unsatisfactory", "Не удовл.", "#d2453d", "#fff4f2"],
+                ] as const
+              ).map(([value, label, fg, bg]) => {
+                const active = row.organolepticResult === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue("organolepticResult", value)}
+                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-[14px] font-medium transition-colors ${
+                      active ? "border-transparent text-white" : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"
+                    }`}
+                    style={active ? { backgroundColor: fg, color: "white" } : { backgroundColor: bg, color: fg, borderColor: bg }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Результаты орг. оценки */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Результаты орг. оценки</Label>
-                <div className="flex gap-6 text-[15px]">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="organoleptic" checked={row.organolepticResult === "satisfactory"} onChange={() => setValue("organolepticResult", "satisfactory")} className="size-4 accent-[#5863f8]" />
-                    Удовл.
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="organoleptic" checked={row.organolepticResult === "unsatisfactory"} onChange={() => setValue("organolepticResult", "unsatisfactory")} className="size-4 accent-[#5863f8]" />
-                    Не удовл.
-                  </label>
-                </div>
-              </div>
+          {/* Предельный срок реализации */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">
+              {getExpiryFieldDisplayLabel(props.config.expiryFieldLabel)}
+            </Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <Input type="date" value={row.expiryDate} onChange={(e) => setValue("expiryDate", e.target.value)} className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={row.expiryHour || "--"} onChange={(e) => setValue("expiryHour", e.target.value === "--" ? "" : e.target.value)}>
+                <option value="--">-- ч</option>
+                {HOURS.map((h) => <option key={h} value={h}>{h} ч</option>)}
+              </select>
+              <select className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]" value={row.expiryMinute || "--"} onChange={(e) => setValue("expiryMinute", e.target.value === "--" ? "" : e.target.value)}>
+                <option value="--">-- мин</option>
+                {MINUTES.map((m) => <option key={m} value={m}>{m} мин</option>)}
+              </select>
+            </div>
+          </div>
 
-              {/* Предельный срок реализации */}
-              <fieldset className="space-y-3 rounded-2xl border border-[#dfe1ec] p-4">
-                <legend className="px-2 text-[14px] font-semibold">{getExpiryFieldDisplayLabel(props.config.expiryFieldLabel)}</legend>
-                <div className="space-y-1">
-                  <Label className="text-[14px] text-[#6f7282]">Годен до</Label>
-                  <Input type="date" value={row.expiryDate} onChange={(e) => setValue("expiryDate", e.target.value)} className="h-11 rounded-2xl border-[#dfe1ec] px-5 text-[16px]" />
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-[14px] text-[#6f7282]">Часы</Label>
-                    <Select value={row.expiryHour || "--"} onValueChange={(v) => setValue("expiryHour", v === "--" ? "" : v)}>
-                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
-                      <SelectContent className="max-h-[200px]">
-                        <SelectItem value="--">--</SelectItem>
-                        {HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-[14px] text-[#6f7282]">Минуты</Label>
-                    <Select value={row.expiryMinute || "--"} onValueChange={(v) => setValue("expiryMinute", v === "--" ? "" : v)}>
-                      <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue /></SelectTrigger>
-                      <SelectContent className="max-h-[200px]">
-                        <SelectItem value="--">--</SelectItem>
-                        {MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </fieldset>
+          {/* Примечание */}
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">Примечание</Label>
+            <Textarea value={row.note} onChange={(e) => setValue("note", e.target.value)} placeholder="Примечание" rows={3} className="rounded-2xl border-[#dcdfed] px-4 py-3 text-[15px]" />
+          </div>
 
-              {/* Примечание */}
-              <Textarea value={row.note} onChange={(e) => setValue("note", e.target.value)} placeholder="Примечание" rows={3} className="rounded-2xl border-[#dfe1ec] px-5 py-4 text-[15px]" />
-
-              {/* Должность ответственного */}
-              <div className="space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Должность ответственного</Label>
-                <Select value={row.responsibleTitle} onValueChange={(v) => {
+          {/* Должность ответственного + сотрудник */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Должность ответственного</Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.responsibleTitle}
+                onChange={(e) => {
+                  const v = e.target.value;
                   const candidates = getUsersForRoleLabel(props.users, v);
                   const stillValid = candidates.some((u) => u.id === row.responsibleUserId);
                   setValue("responsibleTitle", v);
                   if (!stillValid) setValue("responsibleUserId", "");
-                }}>
-                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
-                  <SelectContent>
-                    <PositionSelectItems users={props.users} />
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Сотрудник */}
-              <div className="space-y-1">
-                <Label className="text-[14px] text-[#6f7282]">Сотрудник</Label>
-                <Select value={row.responsibleUserId} onValueChange={(v) => {
+                }}
+              >
+                <option value="">— выберите —</option>
+                <PositionNativeOptions users={props.users} />
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Сотрудник</Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.responsibleUserId}
+                onChange={(e) => {
+                  const v = e.target.value;
                   setValue("responsibleUserId", v);
                   if (!row.responsibleTitle) {
                     const user = props.users.find((u) => u.id === v);
                     if (user) setValue("responsibleTitle", getUserRoleLabel(user.role));
                   }
-                }}>
-                  <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f3f4fb] px-4 text-[16px]"><SelectValue placeholder="- Выберите значение -" /></SelectTrigger>
-                  <SelectContent>
-                    {(row.responsibleTitle ? getUsersForRoleLabel(props.users, row.responsibleTitle) : props.users).map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-          </>
-
-          <div className="flex justify-end pt-2">
-            <Button type="button" onClick={handleSave} disabled={isSubmitting} className="h-11 rounded-2xl bg-[#5863f8] px-4 text-[15px] font-medium text-white hover:bg-[#4b57f3]">
-              {isSubmitting ? "Сохранение..." : isEdit ? "Сохранить" : "Добавить"}
-            </Button>
+                }}
+              >
+                <option value="">— выберите —</option>
+                {(row.responsibleTitle ? getUsersForRoleLabel(props.users, row.responsibleTitle) : props.users).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
           </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+            onClick={() => props.onOpenChange(false)}
+          >
+            Отмена
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSubmitting}
+            className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+          >
+            {isSubmitting ? "Сохранение..." : isEdit ? "Сохранить" : "Добавить"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
