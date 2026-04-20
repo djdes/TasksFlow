@@ -211,7 +211,7 @@ export default async function JournalDocumentPage({
     }),
     db.organization.findUnique({
       where: { id: session.user.organizationId },
-      select: { name: true },
+      select: { name: true, disabledJournalCodes: true },
     }),
     db.user.findMany({
       where: {
@@ -247,6 +247,34 @@ export default async function JournalDocumentPage({
     document.template.code !== resolvedCode
   ) {
     notFound();
+  }
+
+  // Org-level toggle. If the journal was disabled in /settings/journals,
+  // surface the soft disabled screen instead of silently rendering the
+  // editor — otherwise a stale deep-link would keep working after the
+  // manager deliberately turned the journal off.
+  const disabledJournalCodes = Array.isArray(organization?.disabledJournalCodes)
+    ? (organization?.disabledJournalCodes as string[])
+    : [];
+  if (disabledJournalCodes.includes(resolvedCode)) {
+    return (
+      <div className="mx-auto max-w-[640px] space-y-6 rounded-3xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-6 py-16 text-center">
+        <div className="text-[20px] font-semibold text-[#0b1024]">
+          Этот журнал отключён
+        </div>
+        <p className="text-[14px] leading-[1.6] text-[#6f7282]">
+          «{document.template.name}» отключён для вашей организации. Старые
+          записи сохранены — включите журнал в настройках, чтобы продолжить
+          их редактирование.
+        </p>
+        <a
+          href="/settings/journals"
+          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#5566f6] px-5 text-[15px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+        >
+          Открыть настройки набора журналов
+        </a>
+      </div>
+    );
   }
 
   if (document.template.code === "hygiene") {
