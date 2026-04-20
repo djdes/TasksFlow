@@ -17,6 +17,7 @@ import {
 import { z } from "zod";
 import { loginSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { ApiError } from "@/lib/queryClient";
 
 const formSchema = loginSchema;
 
@@ -87,15 +88,14 @@ export default function Login() {
 
       // Hard reload to ensure fresh JS bundle is loaded after deploy
       window.location.href = "/dashboard";
-    } catch (error: any) {
-      // Если пользователь не найден - перенаправляем на регистрацию с номером
-      const phone = form.getValues("phone");
-      if (phone && phone.length > 2) {
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) {
+        const phone = form.getValues("phone");
         setLocation(`/register?phone=${encodeURIComponent(phone)}`);
       } else {
         toast({
           title: "Ошибка",
-          description: error.message || "Ошибка входа",
+          description: error instanceof Error ? error.message : "Ошибка входа",
           variant: "destructive",
         });
       }

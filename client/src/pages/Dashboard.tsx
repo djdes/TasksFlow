@@ -174,7 +174,7 @@ export default function Dashboard() {
     setIsTaskDialogOpen(true);
   };
 
-  const toggleTaskComplete = (taskId: number, e?: React.MouseEvent, comment?: string) => {
+  const toggleTaskComplete = async (taskId: number, e?: React.MouseEvent, comment?: string) => {
     if (e) {
       e.stopPropagation();
     }
@@ -186,13 +186,28 @@ export default function Dashboard() {
       return;
     }
 
-    // Journal-bound tasks: open the WeSetup form filler instead of
-    // marking complete immediately. The dialog's own «Подтвердить»
-    // button does both the completion and posts structured values.
-    // We detect via category prefix for now (fast client-side check).
+    // Journal-bound tasks: redirect the worker to WeSetup's public
+    // `/task-fill/<taskId>` page — there they see the SAME add-row
+    // form admins use inside the WeSetup journal. No session
+    // needed, auth via HMAC token we ask the backend to mint now.
     const category = (task as { category?: string | null }).category ?? "";
     if (category.startsWith("WeSetup · ")) {
-      setJournalTaskId(taskId);
+      try {
+        const response = await fetch(
+          `/api/wesetup/task-fill-url?taskId=${taskId}`,
+          { credentials: "include" }
+        );
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.url) {
+          throw new Error(data?.message || `task-fill-url ${response.status}`);
+        }
+        window.location.href = data.url;
+      } catch (err: any) {
+        console.error("[dashboard] task-fill-url failed", err);
+        // Fallback — just open the old inline form so the worker can
+        // still complete the task even if WeSetup is down.
+        setJournalTaskId(taskId);
+      }
       return;
     }
 

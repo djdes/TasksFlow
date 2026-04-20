@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
 
 type User = {
   id: number;
@@ -40,16 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Мутация для логина
   const loginMutation = useMutation({
     mutationFn: async ({ phone }: { phone: string }) => {
-      const response = await fetch(api.auth.login.path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ phone }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Ошибка авторизации");
-      }
+      const response = await apiRequest("POST", api.auth.login.path, { phone });
       return response.json();
     },
     onSuccess: () => {
@@ -62,13 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Мутация для выхода
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(api.auth.logout.path, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("Ошибка выхода");
-      }
+      const response = await apiRequest("POST", api.auth.logout.path);
       return response.json();
     },
     onSuccess: () => {

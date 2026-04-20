@@ -1155,6 +1155,67 @@ export async function registerRoutes(
     }
   });
 
+  // Прокси, который минтит HMAC-токен на WeSetup и отдаёт фронту
+  // готовый URL вида
+  //   https://wesetup.ru/task-fill/<taskId>?token=<signed>&return=<back>
+  // Браузер редиректит сотрудника на этот URL — WeSetup рендерит
+  // ту же форму, которой пользуется админ в своём журнале. Никакой
+  // WeSetup-сессии у сотрудника не нужно: токен HMAC'ан нашим
+  // webhookSecret.
+  app.get("/api/wesetup/task-fill-url", requireAuth, async (req, res) => {
+    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY;
+    if (!baseUrl || !key) {
+      return res.status(503).json({
+        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
+      });
+    }
+    const taskId = Number(req.query.taskId);
+    if (!Number.isFinite(taskId) || taskId <= 0) {
+      return res.status(400).json({ message: "Bad taskId" });
+    }
+    try {
+      const upstream = await fetch(
+        `${baseUrl}/api/integrations/tasksflow/task-fill-token`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ taskId }),
+          cache: "no-store",
+        }
+      );
+      const text = await upstream.text();
+      if (!upstream.ok) {
+        res.status(upstream.status);
+        res.setHeader(
+          "Content-Type",
+          upstream.headers.get("content-type") || "application/json"
+        );
+        return res.send(text);
+      }
+      const data = JSON.parse(text) as { url?: string; token?: string };
+      if (!data?.url) {
+        return res.status(502).json({ message: "No url in response" });
+      }
+      // Tack on a return= parameter so the worker can bounce back to
+      // TasksFlow after submit without tapping anything extra.
+      const returnUrl =
+        (req.headers.origin as string | undefined) ||
+        `http://localhost:${process.env.PORT || 5001}/dashboard`;
+      const sep = data.url.includes("?") ? "&" : "?";
+      const finalUrl = `${data.url}${sep}return=${encodeURIComponent(
+        returnUrl
+      )}`;
+      res.json({ url: finalUrl, token: data.token });
+    } catch (err: any) {
+      console.error("[wesetup-proxy] task-fill-url failed", err);
+      res.status(502).json({ message: err?.message || "Network error" });
+    }
+  });
+
   // Прокси для task-form: фронт задачи зовёт сюда,
   // когда сотруднику нужно показать форму заполнения перед
   // «Выполнено». Возвращает TaskFormSchema или null.
