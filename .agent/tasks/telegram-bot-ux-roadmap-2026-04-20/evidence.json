@@ -1,0 +1,38 @@
+{
+  "taskId": "telegram-bot-ux-roadmap-2026-04-20",
+  "phase": "phase1",
+  "commands": [
+    {
+      "command": "node --import tsx --test src/lib/journal-obligation-links.test.ts src/lib/journal-obligations.test.ts src/lib/bot/start-home.test.ts src/lib/bot/start-response.test.ts",
+      "result": "PASS",
+      "raw": "raw/tests.txt",
+      "testsPassed": 29
+    },
+    {
+      "command": "npm run lint -- src/lib/journal-obligation-links.ts src/lib/journal-obligation-links.test.ts src/lib/journal-obligations.ts src/lib/journal-obligations.test.ts src/lib/bot/start-home.ts src/lib/bot/start-home.test.ts src/lib/bot/start-response.ts src/lib/bot/start-response.test.ts src/lib/bot/handlers/start.ts src/app/api/mini/home/route.ts src/app/mini/page.tsx src/app/mini/o/[id]/page.tsx",
+      "result": "PASS",
+      "raw": "raw/lint.txt"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "result": "PASS",
+      "raw": "raw/tsc.txt"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS",
+      "raw": "raw/build.txt",
+      "note": "Executed through cmd /c so PowerShell would not fail on Next.js warning output written to stderr."
+    }
+  ],
+  "acceptanceCriteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "DEFERRED",
+    "AC6": "PASS",
+    "AC7": "PASS",
+    "AC8": "PASS"
+  }
+}

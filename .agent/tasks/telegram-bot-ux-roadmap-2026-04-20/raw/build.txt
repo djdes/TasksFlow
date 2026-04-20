@@ -1,0 +1,188 @@
+
+> haccp-online@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\www\Wesetup.ru\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\www\Wesetup.ru\.worktrees\telegram-phase1-obligations\package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 37.8s
+  Skipping validation of types
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/43) ...
+  Generating static pages using 11 workers (10/43) 
+  Generating static pages using 11 workers (21/43) 
+  Generating static pages using 11 workers (32/43) 
+✓ Generating static pages using 11 workers (43/43) in 761.8ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/areas
+├ ƒ /api/areas/[id]
+├ ƒ /api/audit
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/register
+├ ƒ /api/auth/register/confirm
+├ ƒ /api/auth/register/request
+├ ƒ /api/batches
+├ ƒ /api/batches/[id]
+├ ƒ /api/build-info
+├ ƒ /api/capa
+├ ƒ /api/capa/[id]
+├ ƒ /api/changes
+├ ƒ /api/changes/[id]
+├ ƒ /api/charts/temperature
+├ ƒ /api/competencies
+├ ƒ /api/cron/compliance
+├ ƒ /api/cron/expiry
+├ ƒ /api/cron/mini-digest
+├ ƒ /api/equipment
+├ ƒ /api/equipment/[id]
+├ ƒ /api/external/entries
+├ ƒ /api/external/healthz
+├ ƒ /api/external/summary
+├ ƒ /api/feedback
+├ ƒ /api/integrations/tasksflow
+├ ƒ /api/integrations/tasksflow/bind-row
+├ ƒ /api/integrations/tasksflow/cleaning-catalog
+├ ƒ /api/integrations/tasksflow/complete
+├ ƒ /api/integrations/tasksflow/journals-catalog
+├ ƒ /api/integrations/tasksflow/links
+├ ƒ /api/integrations/tasksflow/sync-tasks
+├ ƒ /api/integrations/tasksflow/sync-users
+├ ƒ /api/integrations/tasksflow/task-form
+├ ƒ /api/invite/[token]/accept
+├ ƒ /api/journal-documents
+├ ƒ /api/journal-documents/[id]
+├ ƒ /api/journal-documents/[id]/cleaning
+├ ƒ /api/journal-documents/[id]/climate
+├ ƒ /api/journal-documents/[id]/cold-equipment
+├ ƒ /api/journal-documents/[id]/entries
+├ ƒ /api/journal-documents/[id]/equipment-cleaning
+├ ƒ /api/journal-documents/[id]/fryer-oil
+├ ƒ /api/journal-documents/[id]/pdf
+├ ƒ /api/journal-documents/[id]/pest-control-entries
+├ ƒ /api/journal-documents/[id]/staff
+├ ƒ /api/journal-documents/[id]/traceability/import
+├ ƒ /api/journal-scans/[code]
+├ ƒ /api/journals
+├ ƒ /api/journals/[id]/status
+├ ƒ /api/losses
+├ ƒ /api/mercury
+├ ƒ /api/mini/home
+├ ƒ /api/mini/journals/[code]/entries
+├ ƒ /api/mini/unlink-tg
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/preferences
+├ ƒ /api/notifications/telegram
+├ ƒ /api/notifications/telegram/unlink
+├ ƒ /api/ocr/label
+├ ƒ /api/payments/create
+├ ƒ /api/payments/webhook
+├ ƒ /api/plans
+├ ƒ /api/plans/[id]
+├ ƒ /api/positions
+├ ƒ /api/positions/[id]
+├ ƒ /api/products
+├ ƒ /api/products/import
+├ ƒ /api/products/lookup
+├ ƒ /api/reports/excel
+├ ƒ /api/reports/pdf
+├ ƒ /api/root/articles
+├ ƒ /api/root/articles/[id]
+├ ƒ /api/root/impersonate
+├ ƒ /api/runtime-probe
+├ ƒ /api/settings/external-token
+├ ƒ /api/settings/journals
+├ ƒ /api/staff
+├ ƒ /api/staff/[id]
+├ ƒ /api/staff/[id]/archive
+├ ƒ /api/staff/[id]/invite-tg
+├ ƒ /api/staff/[id]/unlink-tg
+├ ƒ /api/staff/schedules/dismissals
+├ ƒ /api/staff/schedules/dismissals/[id]
+├ ƒ /api/staff/schedules/periods
+├ ƒ /api/staff/schedules/periods/[id]
+├ ƒ /api/staff/schedules/work-off
+├ ƒ /api/telegram/webhook
+├ ƒ /api/tuya/collect
+├ ƒ /api/tuya/device
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/access
+├ ƒ /api/users/invite
+├ ƒ /api/users/invite/tg
+├ ƒ /api/webhooks/tasksflow/task-complete
+├ ƒ /batches
+├ ƒ /batches/[id]
+├ ƒ /batches/new
+├ ƒ /blog
+├ ƒ /blog/[slug]
+├ ƒ /capa
+├ ƒ /capa/[id]
+├ ƒ /capa/new
+├ ƒ /changes
+├ ƒ /changes/new
+├ ƒ /competencies
+├ ƒ /dashboard
+├ ƒ /features/[slug]
+├ ƒ /invite/[token]
+├ ƒ /journals
+├ ƒ /journals-info
+├ ƒ /journals-info/[code]
+├ ƒ /journals/[code]
+├ ƒ /journals/[code]/[entryId]
+├ ƒ /journals/[code]/documents/[docId]
+├ ƒ /journals/[code]/new
+├ ƒ /login
+├ ƒ /losses
+├ ƒ /losses/new
+├ ƒ /mini
+├ ƒ /mini/journals/[code]
+├ ƒ /mini/journals/[code]/new
+├ ƒ /mini/me
+├ ƒ /mini/o/[id]
+├ ƒ /mini/shift
+├ ƒ /plans
+├ ƒ /plans/new
+├ ƒ /register
+├ ƒ /reports
+├ ○ /robots.txt
+├ ƒ /root
+├ ƒ /root/blog
+├ ƒ /root/feedback
+├ ƒ /root/organizations/[id]
+├ ƒ /root/telegram-logs
+├ ƒ /sanpin
+├ ƒ /settings
+├ ƒ /settings/api
+├ ƒ /settings/areas
+├ ƒ /settings/audit
+├ ƒ /settings/equipment
+├ ƒ /settings/integrations/tasksflow
+├ ƒ /settings/journals
+├ ƒ /settings/notifications
+├ ƒ /settings/products
+├ ƒ /settings/subscription
+├ ƒ /settings/users
+├ ƒ /settings/users/[id]/access
+└ ƒ /sitemap.xml
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
