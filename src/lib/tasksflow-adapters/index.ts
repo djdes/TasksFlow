@@ -20,10 +20,19 @@
 import { db } from "@/lib/db";
 import { cleaningAdapter } from "./cleaning";
 import { hygieneAdapter } from "./hygiene";
+import { healthCheckAdapter } from "./health-check";
+import { coldEquipmentAdapter } from "./cold-equipment";
+import { cleaningVentilationChecklistAdapter } from "./cleaning-ventilation-checklist";
 import { buildGenericAdapter } from "./generic";
 import type { JournalAdapter } from "./types";
 
-const SPECIFIC_ADAPTERS: JournalAdapter[] = [cleaningAdapter, hygieneAdapter];
+const SPECIFIC_ADAPTERS: JournalAdapter[] = [
+  cleaningAdapter,
+  hygieneAdapter,
+  healthCheckAdapter,
+  coldEquipmentAdapter,
+  cleaningVentilationChecklistAdapter,
+];
 
 const SPECIFIC_BY_CODE = new Map<string, JournalAdapter>(
   SPECIFIC_ADAPTERS.map((a) => [a.meta.templateCode, a])
