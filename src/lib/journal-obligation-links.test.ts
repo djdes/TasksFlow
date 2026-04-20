@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildMiniObligationEntryUrl,
   resolveJournalObligationTargetPath,
+  sanitizeMiniAppRedirectPath,
 } from "@/lib/journal-obligation-links";
 
 test("resolveJournalObligationTargetPath sends entry journals to the mini new page", () => {
@@ -36,6 +37,24 @@ test("resolveJournalObligationTargetPath keeps document journals on the journal 
     }),
     "/mini/journals/hygiene"
   );
+});
+
+test("sanitizeMiniAppRedirectPath keeps internal mini app paths", () => {
+  assert.equal(
+    sanitizeMiniAppRedirectPath("/mini/journals/hygiene/new"),
+    "/mini/journals/hygiene/new"
+  );
+});
+
+test("sanitizeMiniAppRedirectPath rejects external redirects", () => {
+  assert.equal(
+    sanitizeMiniAppRedirectPath("https://evil.example/phish"),
+    null
+  );
+});
+
+test("sanitizeMiniAppRedirectPath rejects traversal outside the mini app", () => {
+  assert.equal(sanitizeMiniAppRedirectPath("/mini/../dashboard"), null);
 });
 
 test("buildMiniObligationEntryUrl appends the obligation path to the mini base url", () => {

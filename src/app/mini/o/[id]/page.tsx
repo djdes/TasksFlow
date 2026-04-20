@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { getServerSession } from "@/lib/server-session";
+import { sanitizeMiniAppRedirectPath } from "@/lib/journal-obligation-links";
 import {
   getJournalObligationById,
   markJournalObligationOpened,
 } from "@/lib/journal-obligations";
+import { getServerSession } from "@/lib/server-session";
 
 export default async function MiniObligationRedirectPage({
   params,
@@ -22,6 +23,20 @@ export default async function MiniObligationRedirectPage({
     notFound();
   }
 
-  await markJournalObligationOpened(id, session.user.id);
-  redirect(obligation.targetPath);
+  const targetPath = sanitizeMiniAppRedirectPath(obligation.targetPath);
+  if (!targetPath) {
+    notFound();
+  }
+
+  try {
+    await markJournalObligationOpened(id, session.user.id);
+  } catch (error) {
+    console.error("Failed to mark journal obligation as opened", {
+      id,
+      userId: session.user.id,
+      error,
+    });
+  }
+
+  redirect(targetPath);
 }
