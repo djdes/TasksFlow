@@ -27,6 +27,7 @@ import {
   type TaskSchedule,
 } from "./types";
 import type { TaskFormSchema } from "./task-form";
+import { extractEmployeeId, rowKeyForEmployee } from "./row-key";
 
 const GENERIC_TASK_FORM: TaskFormSchema = {
   intro:
@@ -45,16 +46,7 @@ const GENERIC_TASK_FORM: TaskFormSchema = {
   ],
 };
 
-function rowKeyForEmployee(employeeId: string): string {
-  return `employee-${employeeId}`;
-}
-
-function employeeIdFromRowKey(rowKey: string): string | null {
-  if (rowKey.startsWith("employee-")) {
-    return rowKey.slice("employee-".length);
-  }
-  return null;
-}
+const employeeIdFromRowKey = extractEmployeeId;
 
 /**
  * Build a generic adapter for any journal template. The label/icon

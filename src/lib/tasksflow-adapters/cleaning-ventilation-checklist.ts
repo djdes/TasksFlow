@@ -31,17 +31,9 @@ import {
   type TaskSchedule,
 } from "./types";
 import type { TaskFormField, TaskFormSchema } from "./task-form";
+import { extractEmployeeId as employeeIdFromRowKey, rowKeyForEmployee } from "./row-key";
 
 const TEMPLATE_CODE = CLEANING_VENTILATION_CHECKLIST_TEMPLATE_CODE;
-
-function rowKeyForEmployee(id: string) {
-  return `employee-${id}`;
-}
-function employeeIdFromRowKey(rowKey: string): string | null {
-  return rowKey.startsWith("employee-")
-    ? rowKey.slice("employee-".length)
-    : null;
-}
 const toDateKey = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 

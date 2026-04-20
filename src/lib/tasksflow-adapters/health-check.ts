@@ -21,6 +21,7 @@ import {
   type TaskSchedule,
 } from "./types";
 import type { TaskFormSchema } from "./task-form";
+import { extractEmployeeId as employeeIdFromRowKey, rowKeyForEmployee } from "./row-key";
 
 const TEMPLATE_CODE = "health_check";
 
@@ -47,14 +48,6 @@ const HEALTH_TASK_FORM: TaskFormSchema = {
   ],
 };
 
-function rowKeyForEmployee(id: string): string {
-  return `employee-${id}`;
-}
-function employeeIdFromRowKey(rowKey: string): string | null {
-  return rowKey.startsWith("employee-")
-    ? rowKey.slice("employee-".length)
-    : null;
-}
 const toDateKey = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 

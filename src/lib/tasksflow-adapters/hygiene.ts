@@ -27,6 +27,7 @@ import {
   type TaskSchedule,
 } from "./types";
 import type { TaskFormSchema } from "./task-form";
+import { extractEmployeeId as employeeIdFromRowKey, rowKeyForEmployee } from "./row-key";
 
 const HYGIENE_CODE = "hygiene";
 const CATEGORY = "WeSetup · Гигиена";
@@ -57,15 +58,6 @@ const HYGIENE_TASK_FORM: TaskFormSchema = {
     },
   ],
 };
-
-function rowKeyForEmployee(employeeId: string): string {
-  return `employee-${employeeId}`;
-}
-
-function employeeIdFromRowKey(rowKey: string): string | null {
-  if (!rowKey.startsWith("employee-")) return null;
-  return rowKey.slice("employee-".length);
-}
 
 export const hygieneAdapter: JournalAdapter = {
   meta: {

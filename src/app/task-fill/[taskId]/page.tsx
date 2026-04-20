@@ -62,13 +62,21 @@ export default async function TaskFillPage({
       select: { id: true, title: true, dateFrom: true, dateTo: true },
     }),
     (async () => {
-      // rowKey format is `employee-<userId>` for almost every adapter.
-      // Non-employee rowKeys (e.g. cleaning-pair-…) don't have a direct
-      // user — we'll fall back to the integration's organization root.
-      const m = /^employee-(.+)$/.exec(link.rowKey);
-      if (!m) return null;
+      // rowKey formats:
+      //   - `employee-<userId>`   — most adapters (hygiene, cold-equipment…)
+      //   - `freetask:<userId>:<rand>` — admin-driven free-text task
+      //   - other (e.g. `cleaning-pair-…`) → no direct user binding.
+      let userId: string | null = null;
+      const mEmp = /^employee-(.+)$/.exec(link.rowKey);
+      if (mEmp) userId = mEmp[1];
+      if (!userId && link.rowKey.startsWith("freetask:")) {
+        const rest = link.rowKey.slice("freetask:".length);
+        const sep = rest.indexOf(":");
+        if (sep > 0) userId = rest.slice(0, sep);
+      }
+      if (!userId) return null;
       return db.user.findUnique({
-        where: { id: m[1] },
+        where: { id: userId },
         select: { id: true, name: true, positionTitle: true },
       });
     })(),

@@ -211,7 +211,11 @@ export async function POST(request: Request) {
         ? payload.weekDays
         : [0, 1, 2, 3, 4, 5, 6];
       monthDay = null;
-      storedRowKey = `freetask:${crypto.randomBytes(8).toString("base64url")}`;
+      // Encode the WeSetup worker id in the rowKey so the generic
+      // adapter can file the journal entry on completion without
+      // needing an extra DB lookup via TaskLink. Format:
+      // `freetask:<userId>:<rand>`.
+      storedRowKey = `freetask:${worker.id}:${crypto.randomBytes(6).toString("base64url")}`;
     }
 
     if (!workerWeSetupId) {
