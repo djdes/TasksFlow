@@ -185,6 +185,50 @@ async function rollupEntryDataDocumentForDay(
     };
   }
 
+  if (templateCode === "cleaning_ventilation_checklist") {
+    // data.procedures = { [procedureId]: time[] } — array of applied times.
+    // Expected = sum over enabled procedures of their scheduled times.length.
+    type Procedure = { id?: string; enabled?: boolean; times?: string[] };
+    const procedures = Array.isArray(cfg.procedures)
+      ? (cfg.procedures as Procedure[])
+      : [];
+    const enabled = procedures.filter((p) => p?.enabled && p.id);
+    const perProc = new Map<string, number>();
+    let expectedCount = 0;
+    for (const p of enabled) {
+      const slots = Array.isArray(p.times) ? p.times.filter(Boolean).length : 0;
+      if (slots === 0) continue;
+      perProc.set(p.id as string, slots);
+      expectedCount += slots;
+    }
+    if (expectedCount === 0) {
+      return { todayCount: 0, expectedCount: 0, filled: false };
+    }
+    const entries = await db.journalDocumentEntry.findMany({
+      where: { documentId, date: { gte: todayStart, lt: todayEnd } },
+      select: { data: true },
+    });
+    let todayCount = 0;
+    for (const [procId, expected] of perProc.entries()) {
+      let actualForProc = 0;
+      for (const entry of entries) {
+        const data = entry.data as { procedures?: Record<string, unknown> } | null;
+        const raw = data?.procedures?.[procId];
+        if (!Array.isArray(raw)) continue;
+        const filled = raw.filter(
+          (t) => typeof t === "string" && t !== "" && t !== "00:00"
+        ).length;
+        actualForProc = Math.max(actualForProc, filled);
+      }
+      todayCount += Math.min(actualForProc, expected);
+    }
+    return {
+      todayCount,
+      expectedCount,
+      filled: todayCount >= expectedCount,
+    };
+  }
+
   if (templateCode === "climate_control") {
     // data = { measurements: { roomId: { time: { temperature?, humidity? } } } }
     const rooms = Array.isArray(cfg.rooms) ? cfg.rooms : [];
@@ -397,7 +441,11 @@ export async function getTemplatesFilledToday(
 
   // Templates that pack many sub-values into `entry.data` need
   // per-template inspection. Handle them one-by-one and add to `filled`.
-  const deepInspectCodes = new Set(["cold_equipment_control", "climate_control"]);
+  const deepInspectCodes = new Set([
+    "cold_equipment_control",
+    "climate_control",
+    "cleaning_ventilation_checklist",
+  ]);
   const deepDocs = activeDocuments.filter((doc) =>
     deepInspectCodes.has(doc.template.code)
   );
