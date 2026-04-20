@@ -246,6 +246,7 @@ export class DatabaseStorage implements IStorage {
       category: tasks.category,
       description: tasks.description,
       companyId: tasks.companyId,
+      journalLink: tasks.journalLink,
     }).from(tasks);
 
     const result = companyId
@@ -277,6 +278,7 @@ export class DatabaseStorage implements IStorage {
       category: tasks.category,
       description: tasks.description,
       companyId: tasks.companyId,
+      journalLink: tasks.journalLink,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
@@ -305,6 +307,7 @@ export class DatabaseStorage implements IStorage {
       description: insertTask.description ?? null,
       examplePhotoUrl: insertTask.examplePhotoUrl ?? null,
       companyId: insertTask.companyId ?? null,
+      journalLink: insertTask.journalLink ?? null,
     };
     const [result] = await db.insert(tasks).values(taskData as any);
     const insertId = (result as any).insertId;
@@ -324,6 +327,7 @@ export class DatabaseStorage implements IStorage {
       category: tasks.category,
       description: tasks.description,
       companyId: tasks.companyId,
+      journalLink: tasks.journalLink,
     }).from(tasks).where(eq(tasks.id, insertId));
     return {
       ...task,
@@ -377,6 +381,7 @@ export class DatabaseStorage implements IStorage {
       category: tasks.category,
       description: tasks.description,
       companyId: tasks.companyId,
+      journalLink: tasks.journalLink,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {

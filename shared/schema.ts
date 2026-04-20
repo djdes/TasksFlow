@@ -42,6 +42,12 @@ export const tasks = mysqlTable("tasks", {
   category: varchar("category", { length: 100 }), // Категория задачи (уборка, готовка и т.д.)
   description: text("description"), // Описание задачи
   companyId: int("company_id"), // FK на companies
+  // JSON-blob {kind:'wesetup-cleaning', baseUrl, integrationId, documentId, rowKey, label?}
+  // Set when the task was created in «Журнальный» mode and is bound to a row
+  // in a remote WeSetup journal. Completion via /api/tasks/:id/complete still
+  // works exactly the same — WeSetup polls our state and mirrors the cell.
+  // Free-mode tasks have NULL here.
+  journalLink: text("journal_link"),
 });
 
 export const insertUserSchema = z.object({
@@ -98,6 +104,9 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   price: z.number().min(0).optional().default(0), // стоимость выполнения в рублях
   category: z.string().max(100).nullable().optional(), // категория задачи
   description: z.string().nullable().optional(), // описание задачи
+  // Опциональная привязка к строке журнала во внешней системе (WeSetup).
+  // Хранится как stringified JSON; шейп описан в shared/journal-link.ts.
+  journalLink: z.string().nullable().optional(),
 });
 
 // Схема валидации для регистрации компании

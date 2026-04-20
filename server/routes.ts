@@ -1051,5 +1051,85 @@ export async function registerRoutes(
     }
   });
 
+  // ===================== WESETUP PROXY =====================
+  // Тонкий прокси, чтобы создание задачи в «Журнальном» режиме не зависело
+  // от того, видит ли браузер админа сервер WeSetup. Сервер TasksFlow ходит
+  // в WeSetup со своим WESETUP_API_KEY (тот же tfk_, что админ вписал в
+  // настройках интеграции в WeSetup) и отдаёт каталог фронту.
+
+  app.get("/api/wesetup/cleaning-catalog", requireAuth, requireAdmin, async (_req, res) => {
+    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY;
+    if (!baseUrl || !key) {
+      return res.status(503).json({
+        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
+      });
+    }
+    try {
+      const upstream = await fetch(
+        `${baseUrl}/api/integrations/tasksflow/cleaning-catalog`,
+        {
+          headers: { Authorization: `Bearer ${key}` },
+          // Никакого кеша — каталог меняется в реальном времени, как только
+          // менеджер правит ответственных в WeSetup-журнале.
+          cache: "no-store",
+        }
+      );
+      const text = await upstream.text();
+      res.status(upstream.status);
+      res.setHeader(
+        "Content-Type",
+        upstream.headers.get("content-type") || "application/json"
+      );
+      res.send(text);
+    } catch (err: any) {
+      console.error("[wesetup-proxy] catalog fetch failed", err);
+      res.status(502).json({
+        message: `Не удалось получить каталог WeSetup: ${err?.message || "network error"}`,
+      });
+    }
+  });
+
+  // Прокси для bind-row: фронт CreateTask в журнальном режиме шлёт сюда
+  // {documentId, rowKey, title?}. WeSetup создаёт задачу у себя через
+  // свою же сохранённую интеграцию + регистрирует TaskLink, и возвращает
+  // нам id уже созданной задачи. Мы не дублируем создание — ответ
+  // содержит `tasksflowTaskId`, фронт просто рефрешит список.
+  app.post("/api/wesetup/bind-row", requireAuth, requireAdmin, async (req, res) => {
+    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY;
+    if (!baseUrl || !key) {
+      return res.status(503).json({
+        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
+      });
+    }
+    try {
+      const upstream = await fetch(
+        `${baseUrl}/api/integrations/tasksflow/bind-row`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(req.body || {}),
+          cache: "no-store",
+        }
+      );
+      const text = await upstream.text();
+      res.status(upstream.status);
+      res.setHeader(
+        "Content-Type",
+        upstream.headers.get("content-type") || "application/json"
+      );
+      res.send(text);
+    } catch (err: any) {
+      console.error("[wesetup-proxy] bind-row failed", err);
+      res.status(502).json({
+        message: `Не удалось связать с журналом WeSetup: ${err?.message || "network error"}`,
+      });
+    }
+  });
+
   return httpServer;
 }
