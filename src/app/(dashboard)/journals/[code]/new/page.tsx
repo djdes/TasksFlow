@@ -29,6 +29,35 @@ export default async function NewJournalEntryPage({
     notFound();
   }
 
+  // If the manager disabled this journal, don't let users create new
+  // entries. Existing ones stay in the DB (reversible via settings).
+  const org = await db.organization.findUnique({
+    where: { id: session.user.organizationId },
+    select: { disabledJournalCodes: true },
+  });
+  const disabledCodes = Array.isArray(org?.disabledJournalCodes)
+    ? (org?.disabledJournalCodes as string[])
+    : [];
+  if (disabledCodes.includes(resolvedCode)) {
+    return (
+      <div className="mx-auto max-w-[640px] space-y-6 rounded-3xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-6 py-16 text-center">
+        <div className="text-[20px] font-semibold text-[#0b1024]">
+          Журнал отключён
+        </div>
+        <p className="text-[14px] leading-[1.6] text-[#6f7282]">
+          Нельзя создать запись для отключённого журнала. Включите его в
+          настройках набора журналов, чтобы продолжить.
+        </p>
+        <Link
+          href="/settings/journals"
+          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#5566f6] px-5 text-[15px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+        >
+          Открыть настройки
+        </Link>
+      </div>
+    );
+  }
+
   const [areas, equipment, employees, products] = await Promise.all([
     db.area.findMany({
       where: { organizationId: session.user.organizationId },
