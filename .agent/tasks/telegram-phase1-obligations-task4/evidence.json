@@ -1,0 +1,23 @@
+{
+  "taskId": "telegram-phase1-obligations-task4",
+  "sourcePlan": "docs/superpowers/plans/2026-04-20-telegram-bot-phase1-obligations.md",
+  "verification": [
+    {
+      "command": "node --import tsx --test src/lib/journal-obligations.test.ts",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-task4/raw/journal-obligations.test.txt"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-task4/raw/tsc.txt"
+    }
+  ],
+  "acceptanceCriteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS"
+  }
+}

@@ -1,32 +1,56 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
-import { getTelegramWebApp } from "./_components/telegram-web-app";
 import { MiniCard } from "./_components/mini-card";
+import { getTelegramWebApp } from "./_components/telegram-web-app";
 
 type LocalState =
   | { kind: "init" }
   | { kind: "no-telegram" }
   | { kind: "error"; message: string };
 
-type HomeData = {
-  user: { name: string; organizationName: string };
-  today: Array<{ code: string; name: string; description: string | null }>;
-  all: Array<{ code: string; name: string; description: string | null; filled: boolean }>;
+type HomeUser = {
+  name: string;
+  organizationName: string;
 };
 
-/**
- * Mini App root: "На сегодня" home.
- *
- * Auth bootstrap: on first `unauthenticated` tick we read
- * `Telegram.WebApp.initData` and hand it to `signIn("telegram", ...)`. Once
- * NextAuth flips to `authenticated` we fetch `/api/mini/home` which returns
- * the user's pending-today journals + the full ACL-filtered catalogue in a
- * single payload.
- */
+type HomeJournal = {
+  code: string;
+  name: string;
+  description: string | null;
+  filled: boolean;
+};
+
+type StaffHomeData = {
+  mode: "staff";
+  user: HomeUser;
+  now: Array<{
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    href: string;
+  }>;
+  all: HomeJournal[];
+};
+
+type ManagerHomeData = {
+  mode: "manager";
+  user: HomeUser;
+  summary: {
+    total: number;
+    pending: number;
+    done: number;
+    employeesWithPending: number;
+  };
+  all: HomeJournal[];
+};
+
+type HomeData = StaffHomeData | ManagerHomeData;
+
 export default function MiniHomePage() {
   const { data: session, status } = useSession();
   const [localState, setLocalState] = useState<LocalState>({ kind: "init" });
@@ -119,6 +143,8 @@ export default function MiniHomePage() {
     role: session?.user?.role,
     isRoot: session?.user?.isRoot,
   });
+  const showStaffNow = home.mode === "staff" && home.now.length > 0;
+  const showStaffDoneBanner = home.mode === "staff" && home.now.length === 0;
 
   return (
     <div className="flex flex-1 flex-col gap-6 pb-24">
@@ -133,26 +159,42 @@ export default function MiniHomePage() {
         ) : null}
       </header>
 
-      {home.today.length > 0 ? (
+      {showStaffNow ? (
         <section className="space-y-2">
           <h2 className="px-1 text-[13px] font-semibold uppercase tracking-wider text-slate-500">
-            На сегодня · {home.today.length}
+            На сейчас · {home.now.length}
           </h2>
-          {home.today.map((t) => (
+          {home.now.map((item) => (
             <MiniCard
-              key={t.code}
-              href={`/mini/journals/${t.code}`}
-              title={t.name}
-              subtitle={t.description}
-              status={{ kind: "todo", label: "не заполнено" }}
+              key={item.id}
+              href={item.href}
+              title={item.name}
+              subtitle={item.description}
+              status={{ kind: "todo", label: "нужно заполнить" }}
             />
           ))}
         </section>
-      ) : (
+      ) : null}
+
+      {showStaffDoneBanner ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-center text-[14px] text-emerald-700">
           Все журналы на сегодня заполнены. Молодец!
         </section>
-      )}
+      ) : null}
+
+      {home.mode === "manager" ? (
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+          <h2 className="text-[15px] font-semibold text-slate-900">
+            Сводка на сегодня
+          </h2>
+          <p className="mt-1 text-[13px] text-slate-500">
+            Открыто: {home.summary.pending} · Выполнено: {home.summary.done}
+          </p>
+          <p className="mt-0.5 text-[13px] text-slate-500">
+            Сотрудников с открытыми задачами: {home.summary.employeesWithPending}
+          </p>
+        </section>
+      ) : null}
 
       <section className="space-y-2">
         <h2 className="px-1 text-[13px] font-semibold uppercase tracking-wider text-slate-500">
@@ -163,14 +205,14 @@ export default function MiniHomePage() {
             Руководитель ещё не дал доступ ни к одному журналу.
           </div>
         ) : (
-          home.all.map((t) => (
+          home.all.map((journal) => (
             <MiniCard
-              key={t.code}
-              href={`/mini/journals/${t.code}`}
-              title={t.name}
-              subtitle={t.description}
+              key={journal.code}
+              href={`/mini/journals/${journal.code}`}
+              title={journal.name}
+              subtitle={journal.description}
               status={
-                t.filled
+                journal.filled
                   ? { kind: "done", label: "заполнено" }
                   : { kind: "idle", label: "—" }
               }

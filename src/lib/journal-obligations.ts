@@ -437,10 +437,13 @@ export async function listOpenJournalObligationsForUser(
   overrides?: Partial<ObligationDeps>
 ): Promise<OpenJournalObligation[]> {
   const deps = resolveDeps(overrides);
-  return deps.listOpenRows({
+  const rows = await deps.listOpenRows({
     userId,
     dateKey: utcDayStart(now),
   });
+  return [...rows].sort((left, right) =>
+    left.template.name.localeCompare(right.template.name)
+  );
 }
 
 export async function getJournalObligationById(

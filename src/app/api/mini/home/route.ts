@@ -1,28 +1,20 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/server-session";
+import { getDisabledJournalCodes } from "@/lib/disabled-journals";
+import {
+  getManagerObligationSummary,
+  listOpenJournalObligationsForUser,
+  syncDailyJournalObligationsForOrganization,
+  syncDailyJournalObligationsForUser,
+} from "@/lib/journal-obligations";
 import {
   aclActorFromSession,
   getAllowedJournalCodes,
 } from "@/lib/journal-acl";
-import { getDisabledJournalCodes } from "@/lib/disabled-journals";
+import { hasFullWorkspaceAccess } from "@/lib/role-access";
+import { getServerSession } from "@/lib/server-session";
 
-/**
- * GET /api/mini/home
- *
- * One-shot payload for the Mini App home screen. Returns:
- *   - user: minimal identity for the greeting
- *   - today: journals with at least one scheduled obligation today that
- *     the caller has not yet completed
- *   - all:   every other journal the caller can at least read
- *
- * "Today" is heuristically defined as "no JournalEntry by this user for
- * this template since the start of the local day". We don't encode each
- * journal's scheduling rules in Stage 2 — that lives in the template
- * metadata and can grow over later stages without a breaking change to
- * this endpoint's shape.
- */
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -42,6 +34,10 @@ export async function GET() {
     getAllowedJournalCodes(actor),
     getDisabledJournalCodes(session.user.organizationId),
   ]);
+  const fullAccess = hasFullWorkspaceAccess({
+    role: session.user.role,
+    isRoot: session.user.isRoot === true,
+  });
 
   const rawTemplates = await db.journalTemplate.findMany({
     where:
@@ -55,47 +51,51 @@ export async function GET() {
     orderBy: { name: "asc" },
   });
 
-  // Hide org-disabled journals from the mini app — employees can't
-  // re-enable them, and they're not expected to fill data for a
-  // journal their organization has switched off.
-  const templates = rawTemplates.filter((t) => !disabledCodes.has(t.code));
+  const templates = rawTemplates.filter((template) => !disabledCodes.has(template.code));
+  const user = {
+    name: session.user.name ?? "",
+    organizationName: session.user.organizationName ?? "",
+  };
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  if (fullAccess) {
+    await syncDailyJournalObligationsForOrganization(session.user.organizationId);
+    const summary = await getManagerObligationSummary(session.user.organizationId);
 
-  const templateIds = templates.map((t) => t.id);
-  const todaysEntries =
-    templateIds.length === 0
-      ? []
-      : await db.journalEntry.findMany({
-          where: {
-            filledById: session.user.id,
-            templateId: { in: templateIds },
-            createdAt: { gte: startOfDay },
-          },
-          select: { templateId: true },
-        });
+    return NextResponse.json({
+      user,
+      mode: "manager",
+      summary,
+      all: templates.map((template) => ({
+        code: template.code,
+        name: template.name,
+        description: template.description,
+        filled: false,
+      })),
+    });
+  }
 
-  const filledByTemplateId = new Set(todaysEntries.map((e) => e.templateId));
-
-  const today = templates.filter((t) => !filledByTemplateId.has(t.id));
-  const all = templates;
+  await syncDailyJournalObligationsForUser({
+    userId: session.user.id,
+    organizationId: session.user.organizationId,
+  });
+  const now = await listOpenJournalObligationsForUser(session.user.id);
+  const openJournalCodes = new Set(now.map((row) => row.journalCode));
 
   return NextResponse.json({
-    user: {
-      name: session.user.name ?? "",
-      organizationName: session.user.organizationName ?? "",
-    },
-    today: today.map((t) => ({
-      code: t.code,
-      name: t.name,
-      description: t.description,
+    user,
+    mode: "staff",
+    now: now.map((row) => ({
+      id: row.id,
+      code: row.journalCode,
+      name: row.template.name,
+      description: row.template.description,
+      href: `/mini/o/${row.id}`,
     })),
-    all: all.map((t) => ({
-      code: t.code,
-      name: t.name,
-      description: t.description,
-      filled: filledByTemplateId.has(t.id),
+    all: templates.map((template) => ({
+      code: template.code,
+      name: template.name,
+      description: template.description,
+      filled: !openJournalCodes.has(template.code),
     })),
   });
 }

@@ -239,6 +239,34 @@ test("listOpenJournalObligationsForUser scopes to UTC day start", async () => {
   assert.equal(rows.length, 1);
 });
 
+test("listOpenJournalObligationsForUser returns pending obligations ordered by journal name", async () => {
+  const rows = await listOpenJournalObligationsForUser(
+    "user_1",
+    new Date("2026-04-20T09:00:00.000Z"),
+    {
+      listOpenRows: async () => [
+        {
+          id: "2",
+          journalCode: "hygiene",
+          targetPath: "/mini/journals/hygiene",
+          template: { name: "Beta", description: "Shift" },
+        },
+        {
+          id: "1",
+          journalCode: "incoming_control",
+          targetPath: "/mini/journals/incoming_control/new",
+          template: { name: "Alpha", description: null },
+        },
+      ],
+    }
+  );
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ["1", "2"]
+  );
+});
+
 test("getJournalObligationById returns only the caller-owned obligation", async () => {
   const obligation = await getJournalObligationById("obl_1", "user_1", {
     findObligationById: async (id, userId) =>
