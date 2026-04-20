@@ -1,0 +1,48 @@
+{
+  "taskId": "telegram-phase1-obligations-final-review",
+  "branch": "feature/telegram-phase1-obligations",
+  "status": "PASS",
+  "acceptanceCriteria": {
+    "AC1": {
+      "status": "PASS",
+      "evidence": "Unauthenticated /mini/o/[id] requests now redirect to /mini?next=... via buildMiniAppAuthBootstrapPath(...), and /mini sanitizes plus consumes that next path after Telegram sign-in before loading generic home."
+    },
+    "AC2": {
+      "status": "PASS",
+      "evidence": "/api/mini/home now includes isActive: true in the journalTemplate query, matching the active-template filter used by journal obligation sync/read code."
+    }
+  },
+  "changedFiles": [
+    "src/lib/journal-obligation-links.ts",
+    "src/lib/journal-obligation-links.test.ts",
+    "src/app/mini/o/[id]/page.tsx",
+    "src/app/mini/page.tsx",
+    "src/app/api/mini/home/route.ts"
+  ],
+  "verification": [
+    {
+      "command": "node --import tsx --test src/lib/journal-obligation-links.test.ts src/lib/journal-obligations.test.ts src/lib/bot/start-home.test.ts src/lib/bot/start-response.test.ts",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-final-review/raw/tests.txt"
+    },
+    {
+      "command": "npm run lint -- src/lib/journal-obligation-links.ts src/lib/journal-obligation-links.test.ts src/lib/journal-obligations.ts src/lib/journal-obligations.test.ts src/lib/bot/start-home.ts src/lib/bot/start-home.test.ts src/lib/bot/start-response.ts src/lib/bot/start-response.test.ts src/lib/bot/handlers/start.ts src/app/api/mini/home/route.ts src/app/mini/page.tsx src/app/mini/o/[id]/page.tsx",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-final-review/raw/lint.txt"
+    },
+    {
+      "command": "npx tsc --noEmit --pretty false",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-final-review/raw/tsc.txt"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS",
+      "raw": ".agent/tasks/telegram-phase1-obligations-final-review/raw/build.txt",
+      "notes": [
+        "Build completed successfully.",
+        "Next.js still prints the existing workspace-root and deprecated middleware warnings."
+      ]
+    }
+  ]
+}

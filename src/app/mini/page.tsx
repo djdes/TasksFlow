@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { sanitizeMiniAppRedirectPath } from "@/lib/journal-obligation-links";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { MiniCard } from "./_components/mini-card";
 import { getTelegramWebApp } from "./_components/telegram-web-app";
@@ -53,10 +55,17 @@ type HomeData = StaffHomeData | ManagerHomeData;
 
 export default function MiniHomePage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [localState, setLocalState] = useState<LocalState>({ kind: "init" });
   const [home, setHome] = useState<HomeData | null>(null);
   const signInStarted = useRef(false);
   const fetchStarted = useRef(false);
+  const redirectStarted = useRef(false);
+  const nextPath = (() => {
+    const target = sanitizeMiniAppRedirectPath(searchParams.get("next") ?? "");
+    return target === "/mini" ? null : target;
+  })();
 
   useEffect(() => {
     if (status !== "unauthenticated" || signInStarted.current) return;
@@ -89,7 +98,27 @@ export default function MiniHomePage() {
   }, [status]);
 
   useEffect(() => {
-    if (status !== "authenticated" || fetchStarted.current) return;
+    if (
+      status !== "authenticated" ||
+      !nextPath ||
+      redirectStarted.current
+    ) {
+      return;
+    }
+
+    redirectStarted.current = true;
+    router.replace(nextPath);
+  }, [nextPath, router, status]);
+
+  useEffect(() => {
+    if (
+      status !== "authenticated" ||
+      fetchStarted.current ||
+      nextPath
+    ) {
+      return;
+    }
+
     fetchStarted.current = true;
     void (async () => {
       try {
@@ -109,7 +138,7 @@ export default function MiniHomePage() {
         });
       }
     })();
-  }, [status]);
+  }, [nextPath, status]);
 
   if (localState.kind === "no-telegram") {
     return (

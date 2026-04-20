@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { sanitizeMiniAppRedirectPath } from "@/lib/journal-obligation-links";
+import {
+  buildMiniAppAuthBootstrapPath,
+  sanitizeMiniAppRedirectPath,
+} from "@/lib/journal-obligation-links";
 import {
   getJournalObligationById,
   markJournalObligationOpened,
@@ -15,7 +18,7 @@ export default async function MiniObligationRedirectPage({
   const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) {
-    redirect("/mini");
+    redirect(buildMiniAppAuthBootstrapPath(`/mini/o/${encodeURIComponent(id)}`));
   }
 
   const obligation = await getJournalObligationById(id, session.user.id);

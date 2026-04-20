@@ -42,7 +42,9 @@ export async function GET() {
 
   const rawTemplates = await db.journalTemplate.findMany({
     where:
-      allowedCodes === null ? undefined : { code: { in: allowedCodes } },
+      allowedCodes === null
+        ? { isActive: true }
+        : { isActive: true, code: { in: allowedCodes } },
     select: {
       id: true,
       code: true,

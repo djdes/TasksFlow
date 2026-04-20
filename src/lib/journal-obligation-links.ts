@@ -48,6 +48,16 @@ export function sanitizeMiniAppRedirectPath(
   }
 }
 
+export function buildMiniAppAuthBootstrapPath(targetPath: string): string {
+  const safeTargetPath = sanitizeMiniAppRedirectPath(targetPath);
+  if (!safeTargetPath || safeTargetPath === "/mini") {
+    return "/mini";
+  }
+
+  const params = new URLSearchParams({ next: safeTargetPath });
+  return `/mini?${params.toString()}`;
+}
+
 export function buildMiniObligationEntryUrl(
   miniAppBaseUrl: string,
   obligationId: string
