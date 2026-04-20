@@ -58,6 +58,8 @@ test("syncDailyJournalObligationsForUser creates obligations only for allowed da
         noActiveDocument: false,
         activeDocumentId: templateId === "tpl_hy" ? "doc_7" : null,
       }),
+      listExistingDailyObligations: async () => [],
+      deleteStaleDailyObligations: async () => undefined,
       saveDailyObligations: async (rows) => {
         writes.push(...rows);
         return rows;
@@ -103,11 +105,112 @@ test("syncDailyJournalObligationsForUser sends incoming_control to the entry for
         noActiveDocument: false,
         activeDocumentId: "doc_7",
       }),
+      listExistingDailyObligations: async () => [],
+      deleteStaleDailyObligations: async () => undefined,
       saveDailyObligations: async (rows) => rows,
     }
   );
 
   assert.equal(obligations[0]?.targetPath, "/mini/journals/incoming_control/new");
+});
+
+test("syncDailyJournalObligationsForUser clears stale sync rows that are no longer eligible", async () => {
+  const deletedIds: string[] = [];
+
+  await syncDailyJournalObligationsForUser(
+    {
+      userId: "user_1",
+      organizationId: "org_1",
+      now: new Date("2026-04-20T08:00:00.000Z"),
+    },
+    {
+      getUserActor: async () => ({ id: "user_1", role: "cook", isRoot: false }),
+      getAllowedJournalCodes: async () => ["hygiene"],
+      getDisabledJournalCodes: async () => new Set<string>(),
+      listTemplates: async () => [
+        {
+          id: "tpl_hy",
+          code: "hygiene",
+          name: "Hygiene",
+          description: null,
+          isDocument: true,
+        },
+      ],
+      listExistingDailyObligations: async () => [
+        {
+          id: "obl_stale",
+          dedupeKey: "daily:2026-04-20:incoming_control",
+          status: "pending",
+          completedAt: null,
+        },
+        {
+          id: "obl_keep",
+          dedupeKey: "daily:2026-04-20:hygiene",
+          status: "pending",
+          completedAt: null,
+        },
+      ],
+      deleteStaleDailyObligations: async (ids) => {
+        deletedIds.push(...ids);
+      },
+      getTemplateTodaySummary: async () => ({
+        filled: false,
+        aperiodic: false,
+        todayCount: 0,
+        expectedCount: 1,
+        noActiveDocument: false,
+        activeDocumentId: "doc_7",
+      }),
+      saveDailyObligations: async (rows) => rows,
+    }
+  );
+
+  assert.deepEqual(deletedIds, ["obl_stale"]);
+});
+
+test("syncDailyJournalObligationsForUser preserves the original completedAt when a done obligation stays done", async () => {
+  const firstCompletedAt = new Date("2026-04-20T06:15:00.000Z");
+  const obligations = await syncDailyJournalObligationsForUser(
+    {
+      userId: "user_1",
+      organizationId: "org_1",
+      now: new Date("2026-04-20T08:00:00.000Z"),
+    },
+    {
+      getUserActor: async () => ({ id: "user_1", role: "cook", isRoot: false }),
+      getAllowedJournalCodes: async () => ["incoming_control"],
+      getDisabledJournalCodes: async () => new Set<string>(),
+      listTemplates: async () => [
+        {
+          id: "tpl_in",
+          code: "incoming_control",
+          name: "Incoming control",
+          description: null,
+          isDocument: false,
+        },
+      ],
+      listExistingDailyObligations: async () => [
+        {
+          id: "obl_done",
+          dedupeKey: "daily:2026-04-20:incoming_control",
+          status: "done",
+          completedAt: firstCompletedAt,
+        },
+      ],
+      deleteStaleDailyObligations: async () => undefined,
+      getTemplateTodaySummary: async () => ({
+        filled: true,
+        aperiodic: false,
+        todayCount: 1,
+        expectedCount: 1,
+        noActiveDocument: false,
+        activeDocumentId: null,
+      }),
+      saveDailyObligations: async (rows) => rows,
+    }
+  );
+
+  assert.equal(obligations[0]?.completedAt?.toISOString(), firstCompletedAt.toISOString());
 });
 
 test("listOpenJournalObligationsForUser scopes to UTC day start", async () => {
@@ -195,6 +298,8 @@ test("syncDailyJournalObligationsForOrganization syncs each active staff user", 
         noActiveDocument: false,
         activeDocumentId: "doc_7",
       }),
+      listExistingDailyObligations: async () => [],
+      deleteStaleDailyObligations: async () => undefined,
       saveDailyObligations: async (rows) => {
         calls.push({
           userId: String(rows[0]?.userId),
