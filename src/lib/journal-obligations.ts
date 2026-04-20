@@ -13,8 +13,21 @@ import {
 } from "@/lib/today-compliance";
 import { isManagementRole } from "@/lib/user-roles";
 
-const PHASE_ONE_DAILY_JOURNAL_CODES = new Set<string>(["incoming_control"]);
-const PHASE_ONE_ENTRY_TARGET_CODES = new Set<string>(["incoming_control"]);
+const DAILY_OBLIGATION_SOURCE = "daily-journal-sync" as const;
+const PHASE_ONE_JOURNAL_RULES: Partial<
+  Record<
+    string,
+    {
+      countsAsDaily?: boolean;
+      forceEntryTarget?: boolean;
+    }
+  >
+> = {
+  incoming_control: {
+    countsAsDaily: true,
+    forceEntryTarget: true,
+  },
+};
 
 export type ObligationTemplate = {
   id: string;
@@ -43,6 +56,13 @@ export type OpenJournalObligation = {
   journalCode: string;
   targetPath: string;
   template: { name: string; description: string | null };
+};
+
+export type ExistingDailyObligation = {
+  id: string;
+  dedupeKey: string;
+  status: "pending" | "done";
+  completedAt: Date | null;
 };
 
 export type FoundJournalObligation = {
@@ -75,6 +95,12 @@ export type ObligationDeps = {
     templateCode: string,
     now: Date
   ) => Promise<TemplateTodaySummary>;
+  listExistingDailyObligations: (args: {
+    userId: string;
+    dateKey: Date;
+    source: string;
+  }) => Promise<ExistingDailyObligation[]>;
+  deleteStaleDailyObligations: (ids: string[]) => Promise<void>;
   saveDailyObligations: (rows: ObligationRow[]) => Promise<ObligationRow[]>;
   listOpenRows: (args: {
     userId: string;
@@ -108,15 +134,17 @@ function buildDedupeKey(dateKey: Date, templateCode: string): string {
   return `daily:${dateStamp(dateKey)}:${templateCode}`;
 }
 
+function getPhaseOneJournalRule(templateCode: string) {
+  return PHASE_ONE_JOURNAL_RULES[templateCode];
+}
+
 function isDailyObligationCode(templateCode: string): boolean {
-  return (
-    ALL_DAILY_JOURNAL_CODES.has(templateCode) ||
-    PHASE_ONE_DAILY_JOURNAL_CODES.has(templateCode)
-  );
+  return ALL_DAILY_JOURNAL_CODES.has(templateCode) ||
+    getPhaseOneJournalRule(templateCode)?.countsAsDaily === true;
 }
 
 function usesDocumentTarget(template: ObligationTemplate): boolean {
-  if (PHASE_ONE_ENTRY_TARGET_CODES.has(template.code)) {
+  if (getPhaseOneJournalRule(template.code)?.forceEntryTarget === true) {
     return false;
   }
   return template.isDocument;
@@ -154,6 +182,32 @@ function createDefaultDeps(): ObligationDeps {
       }));
     },
     getTemplateTodaySummary: loadTemplateTodaySummary,
+    async listExistingDailyObligations({ userId, dateKey, source }) {
+      return db.journalObligation.findMany({
+        where: {
+          userId,
+          dateKey,
+          source,
+        },
+        select: {
+          id: true,
+          dedupeKey: true,
+          status: true,
+          completedAt: true,
+        },
+      });
+    },
+    async deleteStaleDailyObligations(ids) {
+      if (ids.length === 0) return;
+
+      await db.journalObligation.deleteMany({
+        where: {
+          id: {
+            in: ids,
+          },
+        },
+      });
+    },
     async saveDailyObligations(rows) {
       if (rows.length === 0) return [];
 
@@ -282,11 +336,19 @@ export async function syncDailyJournalObligationsForUser(
   const now = args.now ?? new Date();
   const dateKey = utcDayStart(now);
   const actor = await deps.getUserActor(args.userId);
-  const [allowedCodes, disabledCodes, templates] = await Promise.all([
+  const [allowedCodes, disabledCodes, templates, existingRows] = await Promise.all([
     deps.getAllowedJournalCodes(actor),
     deps.getDisabledJournalCodes(args.organizationId),
     deps.listTemplates(),
+    deps.listExistingDailyObligations({
+      userId: args.userId,
+      dateKey,
+      source: DAILY_OBLIGATION_SOURCE,
+    }),
   ]);
+  const existingByDedupeKey = new Map(
+    existingRows.map((row) => [row.dedupeKey, row])
+  );
 
   const filteredTemplates = templates.filter((template) => {
     if (!isDailyObligationCode(template.code)) return false;
@@ -298,6 +360,7 @@ export async function syncDailyJournalObligationsForUser(
   });
 
   const rows: ObligationRow[] = [];
+  const keepDedupeKeys = new Set<string>();
   for (const template of filteredTemplates) {
     const summary = await deps.getTemplateTodaySummary(
       args.organizationId,
@@ -310,6 +373,15 @@ export async function syncDailyJournalObligationsForUser(
     if (summary.aperiodic) {
       continue;
     }
+    const dedupeKey = buildDedupeKey(dateKey, template.code);
+    const existing = existingByDedupeKey.get(dedupeKey);
+    keepDedupeKeys.add(dedupeKey);
+    const completedAt =
+      summary.filled && existing?.status === "done" && existing.completedAt
+        ? existing.completedAt
+        : summary.filled
+          ? now
+          : null;
 
     rows.push({
       organizationId: args.organizationId,
@@ -324,11 +396,16 @@ export async function syncDailyJournalObligationsForUser(
         isDocument: isDocumentTarget,
         activeDocumentId: isDocumentTarget ? summary.activeDocumentId : null,
       }),
-      source: "daily-journal-sync",
-      dedupeKey: buildDedupeKey(dateKey, template.code),
-      completedAt: summary.filled ? now : null,
+      source: DAILY_OBLIGATION_SOURCE,
+      dedupeKey,
+      completedAt,
     });
   }
+
+  const staleIds = existingRows
+    .filter((row) => !keepDedupeKeys.has(row.dedupeKey))
+    .map((row) => row.id);
+  await deps.deleteStaleDailyObligations(staleIds);
 
   return deps.saveDailyObligations(rows);
 }
