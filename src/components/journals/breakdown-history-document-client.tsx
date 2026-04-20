@@ -15,13 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   createBreakdownRow,
   normalizeBreakdownHistoryDocumentConfig,
   BREAKDOWN_HISTORY_HEADING,
@@ -98,58 +91,60 @@ function RowDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[28px] border-0 p-0 sm:max-w-[560px]">
-        <DialogHeader className="border-b px-8 py-6">
-          <DialogTitle className="text-[30px] font-medium text-black">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
             {props.initialRow ? "Редактирование строки" : "Добавление новой строки"}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 px-8 py-6">
+
+        <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
           {/* Start date + time */}
-          <fieldset className="space-y-2 rounded-xl border border-[#e5e8f2] p-3">
-            <legend className="px-1 text-sm font-medium">Дата и время начала работ</legend>
-            <Input
-              type="date"
-              value={row.startDate}
-              onChange={(e) => setValue("startDate", e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Select value={row.startHour} onValueChange={(v) => setValue("startHour", v)}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Час" />
-                </SelectTrigger>
-                <SelectContent>
-                  {hourOptions().map((h) => (
-                    <SelectItem key={h} value={h}>{h}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={row.startMinute} onValueChange={(v) => setValue("startMinute", v)}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Мин" />
-                </SelectTrigger>
-                <SelectContent>
-                  {minuteOptions().map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">
+              Дата и время начала работ
+            </Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <Input
+                type="date"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={row.startDate}
+                onChange={(e) => setValue("startDate", e.target.value)}
+              />
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.startHour}
+                onChange={(e) => setValue("startHour", e.target.value)}
+              >
+                {hourOptions().map((h) => (
+                  <option key={h} value={h}>{h} ч</option>
+                ))}
+              </select>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.startMinute}
+                onChange={(e) => setValue("startMinute", e.target.value)}
+              >
+                {minuteOptions().map((m) => (
+                  <option key={m} value={m}>{m} мин</option>
+                ))}
+              </select>
             </div>
-          </fieldset>
+          </div>
 
           <div className="space-y-2">
-            <Label>Наименование оборудования</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">Наименование оборудования</Label>
             <Input
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
               value={row.equipmentName}
               onChange={(e) => setValue("equipmentName", e.target.value)}
-              className="focus:border-[#5563ff]"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Описание поломки</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">Описание поломки</Label>
             <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-[#5563ff] focus:outline-none"
+              className="w-full rounded-2xl border border-[#dcdfed] bg-white px-4 py-3 text-[15px] text-[#0b1024] focus:outline-none"
               rows={3}
               value={row.breakdownDescription}
               onChange={(e) => setValue("breakdownDescription", e.target.value)}
@@ -157,9 +152,9 @@ function RowDialog(props: {
           </div>
 
           <div className="space-y-2">
-            <Label>Выполненный ремонт</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">Выполненный ремонт</Label>
             <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-[#5563ff] focus:outline-none"
+              className="w-full rounded-2xl border border-[#dcdfed] bg-white px-4 py-3 text-[15px] text-[#0b1024] focus:outline-none"
               rows={3}
               value={row.repairPerformed}
               onChange={(e) => setValue("repairPerformed", e.target.value)}
@@ -167,9 +162,9 @@ function RowDialog(props: {
           </div>
 
           <div className="space-y-2">
-            <Label>Замена частей (если произведена)</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">Замена частей (если произведена)</Label>
             <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-[#5563ff] focus:outline-none"
+              className="w-full rounded-2xl border border-[#dcdfed] bg-white px-4 py-3 text-[15px] text-[#0b1024] focus:outline-none"
               rows={2}
               value={row.partsReplaced}
               onChange={(e) => setValue("partsReplaced", e.target.value)}
@@ -177,65 +172,74 @@ function RowDialog(props: {
           </div>
 
           {/* End date + time */}
-          <fieldset className="space-y-2 rounded-xl border border-[#e5e8f2] p-3">
-            <legend className="px-1 text-sm font-medium">Дата и время окончания работ</legend>
-            <Input
-              type="date"
-              value={row.endDate}
-              onChange={(e) => setValue("endDate", e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Select value={row.endHour} onValueChange={(v) => setValue("endHour", v)}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Час" />
-                </SelectTrigger>
-                <SelectContent>
-                  {hourOptions().map((h) => (
-                    <SelectItem key={h} value={h}>{h}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={row.endMinute} onValueChange={(v) => setValue("endMinute", v)}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Мин" />
-                </SelectTrigger>
-                <SelectContent>
-                  {minuteOptions().map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <Label className="text-[13px] font-medium text-[#3c4053]">
+              Дата и время окончания работ
+            </Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <Input
+                type="date"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={row.endDate}
+                onChange={(e) => setValue("endDate", e.target.value)}
+              />
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.endHour}
+                onChange={(e) => setValue("endHour", e.target.value)}
+              >
+                {hourOptions().map((h) => (
+                  <option key={h} value={h}>{h} ч</option>
+                ))}
+              </select>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={row.endMinute}
+                onChange={(e) => setValue("endMinute", e.target.value)}
+              >
+                {minuteOptions().map((m) => (
+                  <option key={m} value={m}>{m} мин</option>
+                ))}
+              </select>
             </div>
-          </fieldset>
+          </div>
 
           <div className="space-y-2">
-            <Label>Часы простоя</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">Часы простоя</Label>
             <Input
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
               value={row.downtimeHours}
               onChange={(e) => setValue("downtimeHours", e.target.value)}
-              className="focus:border-[#5563ff]"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>ФИО лица, ответственного за ремонт</Label>
+            <Label className="text-[13px] font-medium text-[#3c4053]">ФИО лица, ответственного за ремонт</Label>
             <Input
+              className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
               value={row.responsiblePerson}
               onChange={(e) => setValue("responsiblePerson", e.target.value)}
-              className="focus:border-[#5563ff]"
             />
           </div>
+        </div>
 
-          <div className="flex justify-end pt-2">
-            <Button
-              type="button"
-              className="bg-[#5563ff] hover:bg-[#4452ee]"
-              onClick={handleSave}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Сохранение..." : props.initialRow ? "Сохранить" : "Добавить"}
-            </Button>
-          </div>
+        <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+            onClick={() => props.onOpenChange(false)}
+          >
+            Отмена
+          </Button>
+          <Button
+            type="button"
+            className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+            onClick={handleSave}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Сохранение..." : props.initialRow ? "Сохранить" : "Добавить"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
