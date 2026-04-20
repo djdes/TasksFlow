@@ -410,7 +410,7 @@ export function TaskViewDialog({
             {canComplete && (
               currentTask.isCompleted ? (
                 <button
-                  onClick={onComplete}
+                  onClick={() => onComplete()}
                   className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm"
                 >
                   <RotateCcw className="w-5 h-5" />

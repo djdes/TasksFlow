@@ -3,7 +3,9 @@ import {
   filterJournalRows,
   filterJournals,
   flattenJournalRows,
+  groupJournalRowsByDocument,
   resolveActiveJournal,
+  resolveJournalUi,
 } from "@shared/wesetup-journal-mode";
 import { parseJournalLink } from "../shared/journal-link";
 
@@ -72,6 +74,58 @@ describe("wesetup journal mode helpers", () => {
     expect(filterJournalRows(rows, "cleaning", "иван")).toHaveLength(1);
     expect(filterJournalRows(rows, "cleaning", "апрель")).toHaveLength(1);
     expect(filterJournalRows(rows, "health_check", "")).toHaveLength(0);
+  });
+});
+
+describe("journal composer helpers", () => {
+  it("groups active journal rows by document for collapsible document blocks", () => {
+    const rows = flattenJournalRows({
+      journals: [
+        {
+          ...catalog.journals[0],
+          documents: [
+            catalog.journals[0].documents[0],
+            {
+              documentId: "doc-3",
+              documentTitle: "РњР°Р№",
+              period: { from: "2026-05-01", to: "2026-05-31" },
+              rows: [
+                {
+                  rowKey: "row-2",
+                  label: "РњРѕР№РєР° Р±Р°СЂР°",
+                  responsibleUserId: "u-2",
+                  existingTasksflowTaskId: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const groups = groupJournalRowsByDocument(rows, "cleaning");
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.document.documentId)).toEqual([
+      "doc-1",
+      "doc-3",
+    ]);
+    expect(groups[1].rows[0].row.label).toBe("РњРѕР№РєР° Р±Р°СЂР°");
+  });
+
+  it("resolveJournalUi merges defaults with journal specific wording", () => {
+    const resolved = resolveJournalUi({
+      ...catalog.journals[1],
+      ui: {
+        subjectLabel: "РЎРѕС‚СЂСѓРґРЅРёРє",
+        titlePlaceholder:
+          "РќР°РїСЂРёРјРµСЂ: РџСЂРѕРІРµСЃС‚Рё РїСЂРµРґСЃРјРµРЅРЅС‹Р№ РѕСЃРјРѕС‚СЂ",
+        submitLabel: "РЎРѕР·РґР°С‚СЊ Р·Р°РґР°С‡Сѓ РїРѕ Р¶СѓСЂРЅР°Р»Сѓ Р·РґРѕСЂРѕРІСЊСЏ",
+      },
+    });
+
+    expect(resolved.subjectLabel).toBe("РЎРѕС‚СЂСѓРґРЅРёРє");
+    expect(resolved.documentLabel).toBe("Документ журнала");
+    expect(resolved.submitLabel).toContain("Р·РґРѕСЂРѕРІСЊСЏ");
   });
 });
 

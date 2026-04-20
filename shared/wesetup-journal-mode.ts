@@ -13,12 +13,37 @@ export type CatalogDocument = {
   rows: CatalogRow[];
 };
 
+export type CatalogJournalUi = {
+  subjectLabel?: string;
+  subjectPlural?: string;
+  modeRowLabel?: string;
+  modeRowHint?: string;
+  modeFreeLabel?: string;
+  modeFreeHint?: string;
+  rowSearchPlaceholder?: string;
+  rowListTitle?: string;
+  rowEmptyState?: string;
+  titleLabel?: string;
+  titlePlaceholder?: string;
+  titleHint?: string;
+  documentLabel?: string;
+  documentPlaceholder?: string;
+  workerLabel?: string;
+  workerPlaceholder?: string;
+  workerHint?: string;
+  submitLabel?: string;
+  reviewTitle?: string;
+  reviewRowHint?: string;
+  reviewFreeHint?: string;
+};
+
 export type CatalogJournal = {
   templateCode: string;
   label: string;
   description: string | null;
   iconName: string | null;
   hasAdapter?: boolean;
+  ui?: CatalogJournalUi;
   documents: CatalogDocument[];
 };
 
@@ -38,6 +63,41 @@ export type FlattenedJournalRow = {
   journal: CatalogJournal;
   document: CatalogDocument;
   row: CatalogRow;
+};
+
+export type JournalRowGroup = {
+  document: CatalogDocument;
+  rows: FlattenedJournalRow[];
+};
+
+export type ResolvedCatalogJournalUi = Required<CatalogJournalUi>;
+
+const DEFAULT_JOURNAL_UI: ResolvedCatalogJournalUi = {
+  subjectLabel: "Строка журнала",
+  subjectPlural: "строкам",
+  modeRowLabel: "По строке журнала",
+  modeRowHint:
+    "Привязка к существующей строке журнала с уже заданным контекстом.",
+  modeFreeLabel: "Свободная задача",
+  modeFreeHint:
+    "Произвольная задача, которая после выполнения попадет в выбранный документ журнала.",
+  rowSearchPlaceholder: "Поиск по строкам, документам и журналу…",
+  rowListTitle: "Строки журнала",
+  rowEmptyState: "По строкам ничего не найдено.",
+  titleLabel: "Название задачи",
+  titlePlaceholder: "Например: Проверить запись в журнале",
+  titleHint: "Можно оставить стандартный текст или задать свой.",
+  documentLabel: "Документ журнала",
+  documentPlaceholder: "Выберите документ журнала",
+  workerLabel: "Сотрудник",
+  workerPlaceholder: "Кому назначить задачу",
+  workerHint: "Сотрудник получит задачу в TasksFlow.",
+  submitLabel: "Создать журнальную задачу",
+  reviewTitle: "Проверка перед созданием",
+  reviewRowHint:
+    "Исполнитель и расписание подтянутся автоматически из строки журнала.",
+  reviewFreeHint:
+    "После выполнения WeSetup добавит запись в выбранный документ журнала.",
 };
 
 export function flattenJournalRows(
@@ -99,4 +159,35 @@ export function filterJournalRows(
       item.journal.label.toLowerCase().includes(query)
     );
   });
+}
+
+export function groupJournalRowsByDocument(
+  rows: FlattenedJournalRow[],
+  activeJournal: string
+): JournalRowGroup[] {
+  const groups = new Map<string, JournalRowGroup>();
+  for (const item of rows) {
+    if (activeJournal && item.journal.templateCode !== activeJournal) {
+      continue;
+    }
+    const existing = groups.get(item.document.documentId);
+    if (existing) {
+      existing.rows.push(item);
+      continue;
+    }
+    groups.set(item.document.documentId, {
+      document: item.document,
+      rows: [item],
+    });
+  }
+  return Array.from(groups.values());
+}
+
+export function resolveJournalUi(
+  journal: CatalogJournal | null | undefined
+): ResolvedCatalogJournalUi {
+  return {
+    ...DEFAULT_JOURNAL_UI,
+    ...(journal?.ui ?? {}),
+  };
 }

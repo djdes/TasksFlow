@@ -3,11 +3,26 @@ import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
+import { JournalModeComposer } from "@/components/JournalModeComposer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, User, Plus, Calendar, RefreshCw, CalendarDays, Coins, Tag, FileText, ImagePlus, X, BookOpen, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Plus,
+  Calendar,
+  RefreshCw,
+  CalendarDays,
+  Coins,
+  Tag,
+  FileText,
+  ImagePlus,
+  X,
+  BookOpen,
+  Sparkles,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -33,7 +48,9 @@ import {
   filterJournals,
   filterJournalRows,
   flattenJournalRows,
+  groupJournalRowsByDocument,
   resolveActiveJournal,
+  resolveJournalUi,
 } from "@shared/wesetup-journal-mode";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +104,10 @@ export default function CreateTask() {
   const [journalTaskTitle, setJournalTaskTitle] = useState<string>("");
   const [journalWorkerUserId, setJournalWorkerUserId] = useState<string>("");
   const [journalSubmitting, setJournalSubmitting] = useState(false);
+  const [openJournalStep, setOpenJournalStep] = useState<
+    "journal" | "details" | "review"
+  >("journal");
+  const [openDocumentId, setOpenDocumentId] = useState<string>("");
   // Use a ref instead of state so a failed fetch doesn't re-trigger
   // the effect when error/loading state flips back. Otherwise React
   // hot-loops requests until the dev rate-limit kills the server.
@@ -132,11 +153,19 @@ export default function CreateTask() {
       null,
     [catalog, activeJournal]
   );
+  const activeJournalUi = useMemo(
+    () => resolveJournalUi(activeJournalData),
+    [activeJournalData]
+  );
 
   const flatRows = useMemo(() => flattenJournalRows(catalog), [catalog]);
   const filteredRows = useMemo(() => {
     return filterJournalRows(flatRows, activeJournal, rowSearch);
   }, [flatRows, activeJournal, rowSearch]);
+  const groupedFilteredRows = useMemo(
+    () => groupJournalRowsByDocument(filteredRows, activeJournal),
+    [filteredRows, activeJournal]
+  );
   const selectedRow = useMemo(
     () =>
       flatRows.find(
@@ -167,6 +196,32 @@ export default function CreateTask() {
       ) ?? null,
     [assignableUsers, journalWorkerUserId]
   );
+  const selectedDocument = useMemo(
+    () =>
+      activeJournalData?.documents.find(
+        (document) => document.documentId === selectedDocId
+      ) ?? null,
+    [activeJournalData, selectedDocId]
+  );
+  const isJournalDetailsReady =
+    journalTaskMode === "row" && activeJournalSupportsRowMode
+      ? Boolean(selectedRow)
+      : Boolean(selectedDocId && journalTaskTitle.trim() && journalWorkerUserId);
+  const journalSelectionSummary = activeJournalData
+    ? `${activeJournalData.label} · ${activeJournalData.documents.length} док.`
+    : null;
+  const journalDetailsSummary = selectedRow
+    ? `${activeJournalUi.modeRowLabel} · ${selectedRow.row.label}`
+    : selectedDocument && journalTaskTitle.trim()
+    ? `${activeJournalUi.modeFreeLabel} · ${journalTaskTitle.trim()}`
+    : null;
+  const journalReviewSummary = isJournalDetailsReady
+    ? journalTaskMode === "row" && selectedRow
+      ? `${selectedRow.document.documentTitle} · ${selectedRow.row.label}`
+      : `${selectedDocument?.documentTitle ?? "Документ"} · ${
+          selectedAssignableUser?.name ?? "Сотрудник"
+        }`
+    : null;
 
   useEffect(() => {
     if (!activeJournalData) {
@@ -199,6 +254,18 @@ export default function CreateTask() {
     selectedDocId,
     selectedRowKey,
   ]);
+
+  useEffect(() => {
+    if (groupedFilteredRows.length === 0) {
+      setOpenDocumentId("");
+      return;
+    }
+    const hasOpenDocument = groupedFilteredRows.some(
+      (group) => group.document.documentId === openDocumentId
+    );
+    if (hasOpenDocument) return;
+    setOpenDocumentId(selectedDocId || groupedFilteredRows[0].document.documentId);
+  }, [groupedFilteredRows, openDocumentId, selectedDocId]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -411,7 +478,7 @@ export default function CreateTask() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="max-w-2xl mx-auto p-8">
+      <div className="mx-auto max-w-4xl p-4 sm:p-8">
         <div className="mb-8">
           <button
             onClick={() => setLocation("/")}
@@ -429,7 +496,7 @@ export default function CreateTask() {
           <p className="text-muted-foreground text-sm ml-[60px]">Создайте новую задачу и назначьте исполнителя</p>
         </div>
 
-        <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-8">
+        <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-5 sm:p-8">
           {/* Mode toggle: Free vs Journal */}
           <div className="mb-6 flex flex-col gap-2 sm:flex-row">
             <button
@@ -452,7 +519,10 @@ export default function CreateTask() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("journal")}
+              onClick={() => {
+                setMode("journal");
+                setOpenJournalStep("journal");
+              }}
               className={`flex-1 rounded-xl border p-4 text-left transition-all ${
                 mode === "journal"
                   ? "border-primary bg-primary/5 shadow-sm"
@@ -471,6 +541,74 @@ export default function CreateTask() {
           </div>
 
           {mode === "journal" ? (
+            <>
+              <JournalModeComposer
+                catalogLoading={catalogLoading}
+                catalogError={catalogError}
+                catalog={catalog}
+                visibleJournals={visibleJournals}
+                activeJournal={activeJournal}
+                activeJournalData={activeJournalData}
+                activeJournalUi={activeJournalUi}
+                activeJournalSupportsRowMode={activeJournalSupportsRowMode}
+                groupedFilteredRows={groupedFilteredRows}
+                selectedRow={selectedRow}
+                selectedDocumentTitle={selectedDocument?.documentTitle ?? null}
+                selectedDocId={selectedDocId}
+                selectedRowKey={selectedRowKey}
+                journalTaskMode={journalTaskMode}
+                journalSearch={journalSearch}
+                rowSearch={rowSearch}
+                journalTaskTitle={journalTaskTitle}
+                journalWorkerUserId={journalWorkerUserId}
+                assignableUsers={assignableUsers}
+                selectedAssignableUserName={selectedAssignableUser?.name ?? null}
+                openJournalStep={openJournalStep}
+                openDocumentId={openDocumentId}
+                isJournalDetailsReady={isJournalDetailsReady}
+                journalSelectionSummary={journalSelectionSummary}
+                journalDetailsSummary={journalDetailsSummary}
+                journalReviewSummary={journalReviewSummary}
+                journalSubmitting={journalSubmitting}
+                onStepChange={setOpenJournalStep}
+                onJournalSearchChange={setJournalSearch}
+                onJournalSelect={(journal, rowsTotal) => {
+                  setActiveJournal(journal.templateCode);
+                  setSelectedDocId(journal.documents[0]?.documentId ?? "");
+                  setSelectedRowKey("");
+                  setRowSearch("");
+                  setJournalTaskMode(
+                    journal.hasAdapter && rowsTotal > 0 ? "row" : "free"
+                  );
+                  setOpenDocumentId(journal.documents[0]?.documentId ?? "");
+                  setOpenJournalStep("details");
+                }}
+                onTaskModeChange={(nextMode) => {
+                  setJournalTaskMode(nextMode);
+                  if (nextMode === "free") {
+                    setSelectedRowKey("");
+                  }
+                  setOpenJournalStep("details");
+                }}
+                onRowSearchChange={setRowSearch}
+                onDocumentToggle={(documentId, canCollapse) => {
+                  setOpenDocumentId(canCollapse ? "" : documentId);
+                }}
+                onRowSelect={(item) => {
+                  setSelectedDocId(item.document.documentId);
+                  setSelectedRowKey(item.row.rowKey);
+                  setOpenDocumentId(item.document.documentId);
+                  if (!journalTaskTitle.trim()) {
+                    setJournalTaskTitle(item.row.label);
+                  }
+                  setOpenJournalStep("review");
+                }}
+                onDocumentChange={setSelectedDocId}
+                onTitleChange={setJournalTaskTitle}
+                onWorkerChange={setJournalWorkerUserId}
+                onSubmit={onJournalSubmit}
+              />
+              {false ? (
             <div className="space-y-4">
               {catalogLoading ? (
                 <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
@@ -480,7 +618,7 @@ export default function CreateTask() {
                 <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
                   {catalogError}
                 </div>
-              ) : catalog && catalog.journals.length === 0 ? (
+              ) : catalog?.journals.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
                   В WeSetup пока нет журналов с поддержкой TasksFlow.
                 </div>
@@ -540,19 +678,19 @@ export default function CreateTask() {
                   {activeJournalData ? (
                     <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-medium">{activeJournalData.label}</div>
+                        <div className="font-medium">{activeJournalData!.label}</div>
                         <div className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
-                          {activeJournalData.documents.length} документов
+                          {activeJournalData!.documents.length} документов
                         </div>
                         <div className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
-                          {activeJournalData.hasAdapter
+                          {activeJournalData!.hasAdapter
                             ? "Есть строки журнала"
                             : "Свободные задачи"}
                         </div>
                       </div>
-                      {activeJournalData.description ? (
+                      {activeJournalData!.description ? (
                         <div className="mt-1 text-sm text-muted-foreground">
-                          {activeJournalData.description}
+                          {activeJournalData!.description}
                         </div>
                       ) : null}
                     </div>
@@ -678,8 +816,8 @@ export default function CreateTask() {
                           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
                             <div className="font-medium">Будет создана задача:</div>
                             <div className="mt-1 text-muted-foreground">
-                              «{journalTaskTitle.trim() || selectedRow.row.label}» в журнале «
-                              {selectedRow.journal.label}». Исполнитель и расписание
+                              «{journalTaskTitle.trim() || selectedRow!.row.label}» в журнале «
+                              {selectedRow!.journal.label}». Исполнитель и расписание
                               подставятся автоматически из строки журнала.
                             </div>
                           </div>
@@ -687,7 +825,7 @@ export default function CreateTask() {
                       </>
                     ) : (
                       <>
-                        {activeJournalData.documents.length === 0 ? (
+                        {activeJournalData!.documents.length === 0 ? (
                           <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
                             В этом журнале пока нет активных документов.
                           </div>
@@ -703,7 +841,7 @@ export default function CreateTask() {
                                   <SelectValue placeholder="Выберите документ" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {activeJournalData.documents.map((document) => (
+                                  {activeJournalData!.documents.map((document) => (
                                     <SelectItem
                                       key={document.documentId}
                                       value={document.documentId}
@@ -757,9 +895,9 @@ export default function CreateTask() {
                               <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
                                 <div className="font-medium">Будет создана задача:</div>
                                 <div className="mt-1 text-muted-foreground">
-                                  «{journalTaskTitle.trim()}» в журнале «{activeJournalData.label}»
+                                  «{journalTaskTitle.trim()}» в журнале «{activeJournalData!.label}»
                                   {selectedAssignableUser
-                                    ? ` для ${selectedAssignableUser.name}`
+                                    ? ` для ${selectedAssignableUser!.name}`
                                     : ""}.
                                   После выполнения WeSetup добавит запись в выбранный документ.
                                 </div>
@@ -793,6 +931,8 @@ export default function CreateTask() {
                 </Button>
               </div>
             </div>
+              ) : null}
+            </>
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
