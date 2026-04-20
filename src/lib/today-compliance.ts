@@ -379,7 +379,8 @@ function rollupConfigDocumentForDay(
 export async function getTemplatesFilledToday(
   organizationId: string,
   now: Date = new Date(),
-  allTemplates?: Array<{ id: string; code: string }>
+  allTemplates?: Array<{ id: string; code: string }>,
+  disabledCodes?: Set<string>
 ): Promise<Set<string>> {
   const todayStart = utcDayStart(now);
   const todayEnd = new Date(todayStart);
@@ -417,8 +418,15 @@ export async function getTemplatesFilledToday(
 
   // Aperiodic journals are always considered filled — there's nothing
   // to do today unless an event (accident, complaint…) happens.
+  // Disabled journals (toggled off in /settings/journals) are also added
+  // to `filled` so they don't drag the compliance ring down — the caller
+  // should filter them out of the displayed list separately.
   if (allTemplates) {
     for (const tpl of allTemplates) {
+      if (disabledCodes?.has(tpl.code)) {
+        filled.add(tpl.id);
+        continue;
+      }
       if (!DAILY_JOURNAL_CODES.has(tpl.code) && !CONFIG_DAILY_CODES.has(tpl.code)) {
         filled.add(tpl.id);
       }

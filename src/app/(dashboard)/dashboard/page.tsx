@@ -24,7 +24,7 @@ import { db } from "@/lib/db";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
 import { getTemplatesFilledToday } from "@/lib/today-compliance";
-import { ALL_DAILY_JOURNAL_CODES } from "@/lib/daily-journal-codes";
+import { parseDisabledCodes } from "@/lib/disabled-journals";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -174,24 +174,31 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: { disabledJournalCodes: true },
+  });
+  const disabledCodes = parseDisabledCodes(org?.disabledJournalCodes);
+
   const filledTodayIds = await getTemplatesFilledToday(
     organizationId,
     now,
-    templates.map((t) => ({ id: t.id, code: t.code }))
+    templates.map((t) => ({ id: t.id, code: t.code })),
+    disabledCodes
   );
 
   const totalTodayEntries = todayEntries + todayDocumentEntries;
 
-  // Only DAILY mandatory journals count toward today's compliance ring.
-  // Aperiodic journals (accidents, complaints, audits…) have no daily
-  // obligation — flagging them as «not filled today» every day would be
-  // false alarms.
-  const mandatoryDailyTemplates = templates.filter(
+  // Compliance covers EVERY mandatory ENABLED journal — daily ones get a
+  // real «all rows filled» check, aperiodic ones (accidents, complaints,
+  // audits…) count as filled by default. Disabled journals are skipped
+  // entirely so they don't drag the ring down.
+  const mandatoryEnabledTemplates = templates.filter(
     (t) =>
       (t.isMandatorySanpin || t.isMandatoryHaccp) &&
-      ALL_DAILY_JOURNAL_CODES.has(t.code)
+      !disabledCodes.has(t.code)
   );
-  const complianceItems = mandatoryDailyTemplates.map((t) => ({
+  const complianceItems = mandatoryEnabledTemplates.map((t) => ({
     id: t.id,
     name: t.name,
     code: t.code,

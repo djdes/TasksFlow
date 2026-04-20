@@ -5,6 +5,7 @@ import {
   Bell,
   BookOpen,
   Building2,
+  ClipboardList,
   CreditCard,
   KeyRound,
   Package,
@@ -43,6 +44,14 @@ const settingsCards = [
     icon: Users,
     color: "#0ea5e9",
     bg: "#e8f7ff",
+  },
+  {
+    title: "Набор журналов",
+    description: "Какие журналы ваша компания ведёт",
+    href: "/settings/journals",
+    icon: ClipboardList,
+    color: "#d946ef",
+    bg: "#fdf4ff",
   },
   {
     title: "Справочник продуктов",

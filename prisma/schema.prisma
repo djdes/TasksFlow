@@ -25,6 +25,12 @@ model Organization {
   /// overrides the shared EXTERNAL_API_TOKEN env and resolves the caller's
   /// organizationId automatically. Keep unique across orgs.
   externalApiToken  String?           @unique
+  /// Journal template codes the organization has chosen NOT to keep. Empty
+  /// by default (= all 35 journals enabled). Toggled from /settings/journals
+  /// so different production profiles (кафе, мясокомбинат, пекарня…) can
+  /// hide the journals that don't apply. Disabled journals are muted in
+  /// the browser and excluded from dashboard compliance counts.
+  disabledJournalCodes Json            @default("[]")
   users             User[]
   areas             Area[]
   journalEntries    JournalEntry[]

@@ -8,6 +8,7 @@ import { ALL_DAILY_JOURNAL_CODES } from "@/lib/daily-journal-codes";
 import {
   AlertCircle,
   ArrowRight,
+  EyeOff,
   BookHeart,
   Brush,
   Bug,
@@ -58,6 +59,7 @@ type JournalTemplateListItem = {
   isMandatorySanpin: boolean;
   isMandatoryHaccp: boolean;
   filledToday: boolean;
+  disabled: boolean;
 };
 
 type JournalsBrowserProps = {
@@ -122,24 +124,24 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
   }, [templates, normalizedQuery]);
 
   const totalCount = templates.length;
-  const mandatoryTemplates = templates.filter(
+  const enabledTemplates = templates.filter((t) => !t.disabled);
+  const disabledTemplates = templates.filter((t) => t.disabled);
+  const enabledCount = enabledTemplates.length;
+  const disabledCount = disabledTemplates.length;
+  const mandatoryEnabledTemplates = enabledTemplates.filter(
     (t) => t.isMandatorySanpin || t.isMandatoryHaccp
   );
-  const mandatoryCount = mandatoryTemplates.length;
-  // Only daily journals contribute to «нужно заполнить сегодня». Aperiodic
-  // mandatory journals (complaints, accidents, audits, …) don't have a
-  // daily obligation and should neither tug the progress bar nor show up
-  // as «pending today».
-  const dailyMandatoryTemplates = mandatoryTemplates.filter((t) =>
-    ALL_DAILY_JOURNAL_CODES.has(t.code)
-  );
-  const dailyMandatoryCount = dailyMandatoryTemplates.length;
-  const filledTodayCount = dailyMandatoryTemplates.filter((t) => t.filledToday).length;
-  const pendingTodayCount = dailyMandatoryCount - filledTodayCount;
-  const compliancePercent = dailyMandatoryCount
-    ? Math.round((filledTodayCount / dailyMandatoryCount) * 100)
+  const filledTodayCount = mandatoryEnabledTemplates.filter(
+    (t) => t.filledToday
+  ).length;
+  const pendingTodayCount =
+    mandatoryEnabledTemplates.length - filledTodayCount;
+  const compliancePercent = mandatoryEnabledTemplates.length
+    ? Math.round((filledTodayCount / mandatoryEnabledTemplates.length) * 100)
     : 100;
 
+  const filteredEnabled = filteredTemplates.filter((t) => !t.disabled);
+  const filteredDisabled = filteredTemplates.filter((t) => t.disabled);
   const hasResults = filteredTemplates.length > 0;
 
   return (
@@ -200,14 +202,18 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
 
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             <StatPill label="Всего" value={totalCount} />
-            <StatPill label="Обязательных" value={mandatoryCount} />
+            <StatPill
+              label="Включено"
+              value={enabledCount}
+              hint={disabledCount > 0 ? `отключено ${disabledCount}` : undefined}
+            />
             <StatPill
               label="Заполнено сегодня"
               value={filledTodayCount}
               hint={
-                dailyMandatoryCount === 0
+                mandatoryEnabledTemplates.length === 0
                   ? undefined
-                  : `из ${dailyMandatoryCount}`
+                  : `из ${mandatoryEnabledTemplates.length}`
               }
             />
             <StatPill
@@ -252,10 +258,38 @@ export function JournalsBrowser({ templates }: JournalsBrowserProps) {
       {!hasResults ? (
         <EmptyState onReset={() => setQuery("")} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredTemplates.map((template) => (
-            <TemplateCard key={template.id} template={template} />
-          ))}
+        <div className="space-y-8">
+          {filteredEnabled.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredEnabled.map((template) => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          ) : null}
+
+          {filteredDisabled.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#9b9fb3]">
+                  Отключённые журналы
+                </h3>
+                <span className="text-[13px] text-[#9b9fb3]">
+                  ({filteredDisabled.length}) — включить в{" "}
+                  <Link
+                    href="/settings/journals"
+                    className="font-medium text-[#5566f6] hover:underline"
+                  >
+                    настройках
+                  </Link>
+                </span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredDisabled.map((template) => (
+                  <TemplateCard key={template.id} template={template} />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
     </div>
@@ -302,8 +336,48 @@ function TemplateCard({ template }: { template: JournalTemplateListItem }) {
   const Icon = JOURNAL_ICONS[template.code] ?? NotebookPen;
   const isMandatory = template.isMandatorySanpin || template.isMandatoryHaccp;
   const isDaily = ALL_DAILY_JOURNAL_CODES.has(template.code);
-  const needsAttentionToday = isMandatory && isDaily && !template.filledToday;
-  const readyToday = isMandatory && isDaily && template.filledToday;
+  const needsAttentionToday =
+    !template.disabled && isMandatory && isDaily && !template.filledToday;
+  const readyToday =
+    !template.disabled && isMandatory && isDaily && template.filledToday;
+
+  if (template.disabled) {
+    return (
+      <div
+        className="flex h-full cursor-not-allowed items-start gap-4 rounded-2xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-5 py-5 opacity-70"
+        aria-label={`${template.name} — отключён в настройках`}
+      >
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef0f6] text-[#9b9fb3]">
+          <Icon className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold leading-snug text-[#6f7282]">
+            {template.name}
+          </div>
+          {template.description ? (
+            <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-[#9b9fb3]">
+              {template.description}
+            </div>
+          ) : null}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#eef0f6] px-2 py-0.5 text-[11px] font-medium text-[#6f7282]">
+              <EyeOff className="size-3" />
+              Отключён
+            </span>
+            <Link
+              href="/settings/journals"
+              className="inline-flex items-center gap-1 rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[11px] font-medium text-[#5566f6] hover:bg-[#eef1ff]"
+            >
+              Включить
+            </Link>
+            <span className="ml-auto rounded-full bg-[#f5f6ff] px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-[#9b9fb3]">
+              {template.code}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link href={`/journals/${template.code}`} className="group block focus:outline-none">

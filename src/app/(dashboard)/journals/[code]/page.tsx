@@ -1312,6 +1312,36 @@ export default async function JournalDocumentsPage({
     notFound();
   }
 
+  // Organization-level toggle (see /settings/journals). If the manager
+  // turned this journal off, we shouldn't silently 404 — point the user
+  // at the setting instead so they can re-enable it.
+  const orgSettings = await db.organization.findUnique({
+    where: { id: session.user.organizationId },
+    select: { disabledJournalCodes: true },
+  });
+  const disabledCodes = Array.isArray(orgSettings?.disabledJournalCodes)
+    ? (orgSettings?.disabledJournalCodes as string[])
+    : [];
+  if (disabledCodes.includes(resolvedCode)) {
+    return (
+      <div className="mx-auto max-w-[640px] space-y-6 rounded-3xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-6 py-16 text-center">
+        <div className="text-[20px] font-semibold text-[#0b1024]">
+          Этот журнал отключён
+        </div>
+        <p className="text-[14px] leading-[1.6] text-[#6f7282]">
+          «{template.name}» отключён для вашей организации. Чтобы вернуть его
+          в дашборд и список, включите журнал в настройках.
+        </p>
+        <a
+          href="/settings/journals"
+          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#5566f6] px-5 text-[15px] font-medium text-white shadow-[0_10px_30px_-12px_rgba(85,102,246,0.55)] transition-colors hover:bg-[#4a5bf0]"
+        >
+          Открыть настройки набора журналов
+        </a>
+      </div>
+    );
+  }
+
   const activeTab = tab === "closed" ? "closed" : "active";
 
   const orgUsers = await db.user.findMany({
