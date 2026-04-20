@@ -158,6 +158,19 @@ export function PerishableRejectionDocumentClient({
     return Array.from(new Set(fromLists)).filter(Boolean);
   }, [config.productLists]);
 
+  // Dedupe manufacturer/supplier catalogs at render time — legacy
+  // documents may contain duplicate entries (same name typed twice
+  // by different staff), and React would warn about duplicate keys
+  // in the <option key={name}> selects below.
+  const manufacturerOptions = useMemo(
+    () => Array.from(new Set(config.manufacturers.filter(Boolean))),
+    [config.manufacturers]
+  );
+  const supplierOptions = useMemo(
+    () => Array.from(new Set(config.suppliers.filter(Boolean))),
+    [config.suppliers]
+  );
+
   async function saveConfig(nextConfig = config) {
     setIsSaving(true);
     try {
@@ -843,7 +856,7 @@ export function PerishableRejectionDocumentClient({
                 }
               >
                 <option value="">— выберите из списка —</option>
-                {config.manufacturers.map((name) => (
+                {manufacturerOptions.map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
@@ -886,7 +899,7 @@ export function PerishableRejectionDocumentClient({
                 }
               >
                 <option value="">— выберите из списка —</option>
-                {config.suppliers.map((name) => (
+                {supplierOptions.map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
@@ -1287,38 +1300,44 @@ export function PerishableRejectionDocumentClient({
 
                 <div className="space-y-2">
                   <Label>Изделия</Label>
-                  {config.productLists
-                    .find((l) => l.id === activeListId)
-                    ?.items.map((item) => (
-                      <div
-                        key={item}
-                        className="flex items-center gap-2 rounded-lg border p-2"
-                      >
-                        <div className="flex-1">{item}</div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              productLists: prev.productLists.map((list) =>
-                                list.id === activeListId
-                                  ? {
-                                      ...list,
-                                      items: list.items.filter(
-                                        (x) => x !== item
-                                      ),
-                                    }
-                                  : list
-                              ),
-                            }))
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    )) ??
-                    productOptions.map((item) => (
+                  {(() => {
+                    const activeList = config.productLists.find(
+                      (l) => l.id === activeListId
+                    );
+                    if (activeList) {
+                      return Array.from(new Set(activeList.items)).map(
+                        (item) => (
+                          <div
+                            key={item}
+                            className="flex items-center gap-2 rounded-lg border p-2"
+                          >
+                            <div className="flex-1">{item}</div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() =>
+                                setConfig((prev) => ({
+                                  ...prev,
+                                  productLists: prev.productLists.map((list) =>
+                                    list.id === activeListId
+                                      ? {
+                                          ...list,
+                                          items: list.items.filter(
+                                            (x) => x !== item
+                                          ),
+                                        }
+                                      : list
+                                  ),
+                                }))
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        )
+                      );
+                    }
+                    return Array.from(new Set(productOptions)).map((item) => (
                       <div
                         key={item}
                         className="flex items-center gap-2 rounded-lg border p-2"
@@ -1334,7 +1353,8 @@ export function PerishableRejectionDocumentClient({
                           </Button>
                         )}
                       </div>
-                    ))}
+                    ));
+                  })()}
                   <div className="flex gap-2">
                     <Input
                       value={newItemName}
@@ -1360,7 +1380,7 @@ export function PerishableRejectionDocumentClient({
             {activeListSection === "manufacturers" && (
               <div className="space-y-2">
                 <Label>Изготовители</Label>
-                {config.manufacturers.map((item) => (
+                {Array.from(new Set(config.manufacturers)).map((item) => (
                   <div
                     key={item}
                     className="flex items-center gap-2 rounded-lg border p-2"
@@ -1406,7 +1426,7 @@ export function PerishableRejectionDocumentClient({
             {activeListSection === "suppliers" && (
               <div className="space-y-2">
                 <Label>Поставщики</Label>
-                {config.suppliers.map((item) => (
+                {Array.from(new Set(config.suppliers)).map((item) => (
                   <div
                     key={item}
                     className="flex items-center gap-2 rounded-lg border p-2"

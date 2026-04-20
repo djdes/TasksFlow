@@ -493,7 +493,7 @@ export function ProductWriteoffDocumentClient({
               <Label className="text-[13px] font-medium text-[#3c4053]">Наименование ТМЦ</Label>
               <select value={rowDialog.row.productName} onChange={(event) => setRowDialog((prev) => ({ ...prev, row: { ...prev.row, productName: event.target.value } }))} className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]">
                 <option value="">Выберите из списка</option>
-                {(rowDialogProductOptions.length > 0 ? rowDialogProductOptions : productOptions).map((item) => (
+                {Array.from(new Set(rowDialogProductOptions.length > 0 ? rowDialogProductOptions : productOptions)).map((item) => (
                   <option key={item} value={item}>{item}</option>
                 ))}
               </select>

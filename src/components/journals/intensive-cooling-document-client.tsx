@@ -206,7 +206,7 @@ function RowDialog(props: {
             placeholder="Введите наименование блюда"
           />
           <datalist id="intensive-cooling-dishes">
-            {props.config.dishSuggestions.map((item) => (
+            {Array.from(new Set(props.config.dishSuggestions)).map((item) => (
               <option key={item} value={item} />
             ))}
           </datalist>

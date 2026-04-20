@@ -394,7 +394,7 @@ function RowDialog(props: {
                 <Label className="text-[15px] text-[#7a7c8e]">Наименование сырья</Label>
                 <Select value={draft.incomingRawMaterialName || "__empty__"} onValueChange={(value) => setField("incomingRawMaterialName", value === "__empty__" ? "" : value)}>
                   <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-white px-4 text-[18px]"><SelectValue placeholder="Выберите из списка или добавьте новое" /></SelectTrigger>
-                  <SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem>{rawOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                  <SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem>{Array.from(new Set(rawOptions)).map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                 </Select>
                 <div className="flex items-center gap-2"><Input value={newRaw} onChange={(e) => setNewRaw(e.target.value)} placeholder="Добавить название нового сырья" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[16px]" /><Button type="button" onClick={() => addCustom("raw")} className="h-11 rounded-2xl bg-[#5563ff] px-4 text-white hover:bg-[#4654ff]"><Plus className="size-5" /></Button></div>
               </div>
@@ -409,7 +409,7 @@ function RowDialog(props: {
                 <Label className="text-[15px] text-[#7a7c8e]">Наименование ПФ</Label>
                 <Select value={draft.outgoingProductName || "__empty__"} onValueChange={(value) => setField("outgoingProductName", value === "__empty__" ? "" : value)}>
                   <SelectTrigger className="h-11 rounded-2xl border-[#d8dae6] bg-white px-4 text-[18px]"><SelectValue placeholder="Выберите из списка или добавьте новое" /></SelectTrigger>
-                  <SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem>{productOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                  <SelectContent><SelectItem value="__empty__">- Выберите значение -</SelectItem>{Array.from(new Set(productOptions)).map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                 </Select>
                 <div className="flex items-center gap-2"><Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="Добавить название нового ПФ" className="h-11 rounded-2xl border-[#d8dae6] px-4 text-[16px]" /><Button type="button" onClick={() => addCustom("product")} className="h-11 rounded-2xl bg-[#5563ff] px-4 text-white hover:bg-[#4654ff]"><Plus className="size-5" /></Button></div>
               </div>

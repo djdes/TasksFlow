@@ -155,7 +155,15 @@ export function FinishedProductDocumentClient({
   }));
 
   const productOptions = useMemo(() => Array.from(new Set(config.itemsCatalog)).filter(Boolean), [config.itemsCatalog]);
-  const personOptions = useMemo(() => users.map((item) => item.name), [users]);
+  // Dedupe by name — multiple staff records can carry identical full
+  // names ("Титов Максим Андреевич"), and React would warn about
+  // duplicate keys in the <datalist> below. The select still falls
+  // back to a free-text input, so dropping ID-disambiguation here is
+  // safe for the autosuggest UX.
+  const personOptions = useMemo(
+    () => Array.from(new Set(users.map((item) => item.name).filter(Boolean))),
+    [users]
+  );
 
   async function saveConfig(nextConfig = config) {
     setIsSaving(true);
@@ -428,7 +436,7 @@ export function FinishedProductDocumentClient({
 
       <Dialog open={readOnly ? false : catalogOpen} onOpenChange={setCatalogOpen}>
         <DialogContent className="sm:max-w-[640px]"><DialogHeader><DialogTitle>Список изделий</DialogTitle></DialogHeader><div className="space-y-4">
-          {config.itemsCatalog.map((item) => <div key={item} className="flex items-center gap-2 rounded-lg border p-2"><div className="flex-1">{item}</div><Button type="button" variant="ghost" onClick={() => setConfig((prev) => ({ ...prev, itemsCatalog: prev.itemsCatalog.filter((catalogItem) => catalogItem !== item) }))}><Trash2 className="size-4" /></Button></div>)}
+          {Array.from(new Set(config.itemsCatalog)).map((item) => <div key={item} className="flex items-center gap-2 rounded-lg border p-2"><div className="flex-1">{item}</div><Button type="button" variant="ghost" onClick={() => setConfig((prev) => ({ ...prev, itemsCatalog: prev.itemsCatalog.filter((catalogItem) => catalogItem !== item) }))}><Trash2 className="size-4" /></Button></div>)}
           <div className="flex gap-2"><Input value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Введите название нового изделия" /><Button onClick={() => { if (!newItemName.trim()) return; setConfig((prev) => ({ ...prev, itemsCatalog: Array.from(new Set([...prev.itemsCatalog, newItemName.trim()])) })); setNewItemName(""); }}><Plus className="size-4" /></Button></div>
         </div></DialogContent>
       </Dialog>

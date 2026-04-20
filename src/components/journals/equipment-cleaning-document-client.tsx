@@ -558,7 +558,7 @@ export function EquipmentCleaningDocumentClient({
                 placeholder="Введите наименование оборудования"
               />
               <datalist id="equipment-cleaning-options">
-                {equipmentOptions.map((item) => (
+                {Array.from(new Set(equipmentOptions)).map((item) => (
                   <option key={item} value={item} />
                 ))}
               </datalist>

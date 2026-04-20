@@ -251,7 +251,7 @@ function GlassControlSettingsDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {options.titles.map((titleItem) => (
+                {Array.from(new Set(options.titles)).map((titleItem) => (
                   <SelectItem key={titleItem} value={titleItem}>
                     {titleItem}
                   </SelectItem>
@@ -409,7 +409,7 @@ function RowDialog(props: {
                 <SelectValue placeholder="- Выберите значение -" />
               </SelectTrigger>
               <SelectContent>
-                {options.titles.map((titleItem) => (
+                {Array.from(new Set(options.titles)).map((titleItem) => (
                   <SelectItem key={titleItem} value={titleItem}>
                     {titleItem}
                   </SelectItem>
@@ -458,7 +458,7 @@ function RowDialog(props: {
                   className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
                 />
                 <datalist id="glass-control-item-suggestions">
-                  {props.itemSuggestions.map((item) => (
+                  {Array.from(new Set(props.itemSuggestions)).map((item) => (
                     <option key={item} value={item} />
                   ))}
                 </datalist>

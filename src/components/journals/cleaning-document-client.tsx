@@ -413,7 +413,7 @@ export function CleaningDocumentClient(props: Props) {
               </tr>;
             })}
           </tbody></table>
-          <div className="space-y-2 text-[18px] italic">{config.legend.map((item) => <div key={item}>{item}</div>)}</div>
+          <div className="space-y-2 text-[18px] italic">{Array.from(new Set(config.legend)).map((item) => <div key={item}>{item}</div>)}</div>
           <table className="w-full border-collapse text-[16px]"><thead><tr><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Наименование помещения</th><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Текущая уборка</th><th className="border border-black bg-[#f6f6f6] p-3 font-semibold">Генеральная уборка</th></tr></thead><tbody>{config.rooms.map((room) => <tr key={room.id}><td className="border border-black p-3">{room.name}</td><td className="border border-black p-3">{room.currentScope.join(", ")}</td><td className="border border-black p-3">{room.generalScope.join(", ")}</td></tr>)}</tbody></table>
         </div></div>
         </div>

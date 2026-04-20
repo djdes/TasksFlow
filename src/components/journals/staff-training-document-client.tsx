@@ -743,11 +743,25 @@ export function StaffTrainingDocumentClient({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__custom__">Без привязки (ввести вручную ниже)</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.name}>
-                      {buildStaffOptionLabel({ id: u.id, name: u.name, role: u.role })}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    // Two staff records can carry the same full name —
+                    // Radix Select uses `value` as identity and would
+                    // attach both to the same option. Pick the first
+                    // user per unique name (label keeps role suffix
+                    // for visual disambiguation when needed).
+                    const seen = new Set<string>();
+                    return users
+                      .filter((u) => {
+                        if (!u.name || seen.has(u.name)) return false;
+                        seen.add(u.name);
+                        return true;
+                      })
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.name}>
+                          {buildStaffOptionLabel({ id: u.id, name: u.name, role: u.role })}
+                        </SelectItem>
+                      ));
+                  })()}
                 </SelectContent>
               </Select>
             )}

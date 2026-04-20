@@ -287,7 +287,7 @@ function RowDialog(props: {
           <div className="space-y-2">
             <Label className="text-[13px] font-medium text-[#3c4053]">Наименование продукции</Label>
             <div className="flex flex-col gap-2">
-              {productOptions.map((item) => {
+              {Array.from(new Set(productOptions)).map((item) => {
                 const active = row.productName === item;
                 return (
                   <button
@@ -325,7 +325,7 @@ function RowDialog(props: {
               onChange={(e) => setValue("manufacturer", e.target.value)}
             >
               <option value="">Выберите из списка или добавьте нового</option>
-              {manufacturerOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              {Array.from(new Set(manufacturerOptions)).map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
             <div className="flex gap-2">
               <Input value={newManufacturer} onChange={(e) => setNewManufacturer(e.target.value)} placeholder="Добавить название нового производителя" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
@@ -344,7 +344,7 @@ function RowDialog(props: {
               onChange={(e) => setValue("supplier", e.target.value)}
             >
               <option value="">Выберите из списка или добавьте нового</option>
-              {supplierOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              {Array.from(new Set(supplierOptions)).map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
             <div className="flex gap-2">
               <Input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder="Добавить название нового поставщика" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" />
@@ -569,7 +569,7 @@ function EditListsDialog(props: {
           {/* Продукция */}
           <div className="space-y-2">
             <div className="text-[16px] font-semibold">Продукция</div>
-            {products.map((item) => (
+            {Array.from(new Set(products)).map((item) => (
               <div key={item} className="flex items-center justify-between rounded-xl bg-[#f9f9fc] px-4 py-2">
                 <span className="text-[15px]">{item}</span>
                 <button type="button" onClick={() => removeItem(products, setProducts, item)} className="text-[#999] hover:text-red-500"><Pencil className="size-4" /></button>
@@ -584,7 +584,7 @@ function EditListsDialog(props: {
           {/* Производители */}
           <div className="space-y-2">
             <div className="text-[16px] font-semibold">Производители</div>
-            {manufacturers.map((item) => (
+            {Array.from(new Set(manufacturers)).map((item) => (
               <div key={item} className="flex items-center justify-between rounded-xl bg-[#f9f9fc] px-4 py-2">
                 <span className="text-[15px]">{item}</span>
                 <button type="button" onClick={() => removeItem(manufacturers, setManufacturers, item)} className="text-[#999] hover:text-red-500"><Pencil className="size-4" /></button>
@@ -599,7 +599,7 @@ function EditListsDialog(props: {
           {/* Поставщики */}
           <div className="space-y-2">
             <div className="text-[16px] font-semibold">Поставщики</div>
-            {suppliers.map((item) => (
+            {Array.from(new Set(suppliers)).map((item) => (
               <div key={item} className="flex items-center justify-between rounded-xl bg-[#f9f9fc] px-4 py-2">
                 <span className="text-[15px]">{item}</span>
                 <button type="button" onClick={() => removeItem(suppliers, setSuppliers, item)} className="text-[#999] hover:text-red-500"><Pencil className="size-4" /></button>
@@ -673,7 +673,7 @@ function EditableListSection(props: {
   return (
     <div className="space-y-3">
       <div className="text-[16px] font-semibold">{props.title}</div>
-      {props.items.map((item) => (
+      {Array.from(new Set(props.items)).map((item) => (
         <div
           key={item}
           className="flex items-center justify-between rounded-xl bg-[#f9f9fc] px-4 py-3"
