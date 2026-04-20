@@ -240,7 +240,7 @@ export default async function DashboardPage() {
             maskImage: "radial-gradient(ellipse at 30% 40%, black 40%, transparent 70%)",
           }}
         />
-        <div className="relative z-10 p-8 md:p-10">
+        <div className="relative z-10 p-5 sm:p-8 md:p-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex size-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
@@ -480,9 +480,9 @@ export default async function DashboardPage() {
 
       {/* Recent activity table */}
       <section className="overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[#ececf4] px-6 py-5">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-2xl bg-[#f5f6ff] text-[#5566f6]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ececf4] px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f6ff] text-[#5566f6]">
               <Activity className="size-5" />
             </span>
             <div>
