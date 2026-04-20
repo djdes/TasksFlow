@@ -405,6 +405,7 @@ export function ProductWriteoffDocumentClient({
                 <tr key={row.id} className={!isClosed ? "cursor-pointer hover:bg-[#fbfbff]" : undefined} onClick={(event) => {
                   if (isClosed) return;
                   if ((event.target as HTMLElement).closest("button")) return;
+                  if ((event.target as HTMLElement).closest("[role='checkbox']")) return;
                   setRowDialog({ open: true, index, row, newProductName: "" });
                   setRowDialogProductOptions(productOptions);
                 }}>

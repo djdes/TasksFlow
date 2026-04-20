@@ -306,6 +306,7 @@ export function GlassListDocumentClient({
                   onClick={(event) => {
                     if (isClosed) return;
                     if ((event.target as HTMLElement).closest("button")) return;
+                    if ((event.target as HTMLElement).closest("[role='checkbox']")) return;
                     setRowDialog({ open: true, rowIndex: index, row });
                   }}
                 >
