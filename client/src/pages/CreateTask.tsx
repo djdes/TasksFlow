@@ -102,7 +102,7 @@ export default function CreateTask() {
   const [selectedDocId, setSelectedDocId] = useState<string>("");
   const [selectedRowKey, setSelectedRowKey] = useState<string>("");
   const [journalTaskTitle, setJournalTaskTitle] = useState<string>("");
-  const [journalWorkerUserId, setJournalWorkerUserId] = useState<string>("");
+  const [journalWorkerUserIds, setJournalWorkerUserIds] = useState<string[]>([]);
   const [journalSubmitting, setJournalSubmitting] = useState(false);
   const [openJournalStep, setOpenJournalStep] = useState<
     "journal" | "details" | "review"
@@ -189,13 +189,17 @@ export default function CreateTask() {
       ),
     [catalog]
   );
-  const selectedAssignableUser = useMemo(
+  const selectedAssignableUsers = useMemo(
     () =>
-      assignableUsers.find(
-        (worker) => worker.userId === journalWorkerUserId
-      ) ?? null,
-    [assignableUsers, journalWorkerUserId]
+      assignableUsers.filter((worker) =>
+        journalWorkerUserIds.includes(worker.userId)
+      ),
+    [assignableUsers, journalWorkerUserIds]
   );
+  // Backward-compat single-name string for the review summary (first
+  // selected worker, since that's enough to anchor the «for whom»
+  // sentence). The full count goes into the explicit summary below.
+  const selectedAssignableUser = selectedAssignableUsers[0] ?? null;
   const selectedDocument = useMemo(
     () =>
       activeJournalData?.documents.find(
@@ -206,7 +210,11 @@ export default function CreateTask() {
   const isJournalDetailsReady =
     journalTaskMode === "row" && activeJournalSupportsRowMode
       ? Boolean(selectedRow)
-      : Boolean(selectedDocId && journalTaskTitle.trim() && journalWorkerUserId);
+      : Boolean(
+          selectedDocId &&
+            journalTaskTitle.trim() &&
+            journalWorkerUserIds.length > 0
+        );
   const journalSelectionSummary = activeJournalData
     ? `${activeJournalData.label} · ${activeJournalData.documents.length} док.`
     : null;
@@ -215,12 +223,16 @@ export default function CreateTask() {
     : selectedDocument && journalTaskTitle.trim()
     ? `${activeJournalUi.modeFreeLabel} · ${journalTaskTitle.trim()}`
     : null;
+  const workersSummary =
+    selectedAssignableUsers.length === 0
+      ? "Сотрудник не выбран"
+      : selectedAssignableUsers.length === 1
+      ? selectedAssignableUsers[0].name
+      : `${selectedAssignableUsers[0].name} +${selectedAssignableUsers.length - 1}`;
   const journalReviewSummary = isJournalDetailsReady
     ? journalTaskMode === "row" && selectedRow
       ? `${selectedRow.document.documentTitle} · ${selectedRow.row.label}`
-      : `${selectedDocument?.documentTitle ?? "Документ"} · ${
-          selectedAssignableUser?.name ?? "Сотрудник"
-        }`
+      : `${selectedDocument?.documentTitle ?? "Документ"} · ${workersSummary}`
     : null;
 
   useEffect(() => {
@@ -387,10 +399,11 @@ export default function CreateTask() {
         });
         return;
       }
-      if (!journalWorkerUserId) {
+      if (journalWorkerUserIds.length === 0) {
         toast({
-          title: "Не выбран сотрудник",
-          description: "Укажите сотрудника, которому уйдёт журнальная задача",
+          title: "Не выбраны сотрудники",
+          description:
+            "Отметьте хотя бы одного сотрудника, кому уйдёт журнальная задача",
           variant: "destructive",
         });
         return;
@@ -408,7 +421,9 @@ export default function CreateTask() {
           journalCode: activeJournalData.templateCode,
           documentId: selectedDocId,
           title: customTitle,
-          workerUserId: journalWorkerUserId,
+          // Batch — backend создаст по одной TasksFlow-задаче на каждого
+          // выбранного сотрудника (см. /api/integrations/tasksflow/bind-row).
+          workerUserIds: journalWorkerUserIds,
         };
 
     setJournalSubmitting(true);
@@ -423,13 +438,39 @@ export default function CreateTask() {
       if (!response.ok) {
         throw new Error(data?.error || data?.message || "Ошибка связи с WeSetup");
       }
+      // Batch response: { results: [...], summary: {...} } for free-text
+      // mode (multi-worker) and single { tasksflowTaskId, created } for
+      // adapter-row mode. Normalise both into a human-readable summary.
+      const isBatch = Array.isArray(data?.results);
       const toastLabel = isRowMode
         ? `${selectedRow!.journal.label} → ${customTitle || selectedRow!.row.label}`
         : `${activeJournalData.label} → ${customTitle}`;
-      toast({
-        title: data?.created ? "Задача создана" : "Задача уже существовала",
-        description: `${toastLabel} (TasksFlow #${data?.tasksflowTaskId})`,
-      });
+      if (isBatch) {
+        const sum = data!.summary as {
+          created: number;
+          alreadyLinked: number;
+          skipped: number;
+          errors: number;
+        };
+        const parts = [
+          `Создано: ${sum.created}`,
+          sum.alreadyLinked
+            ? `уже было: ${sum.alreadyLinked}`
+            : null,
+          sum.skipped ? `пропущено: ${sum.skipped}` : null,
+          sum.errors ? `ошибок: ${sum.errors}` : null,
+        ].filter(Boolean);
+        toast({
+          title: sum.errors === 0 ? "Задачи разосланы" : "Часть задач не создана",
+          description: `${toastLabel} · ${parts.join(", ")}`,
+          variant: sum.errors > 0 ? "destructive" : "default",
+        });
+      } else {
+        toast({
+          title: data?.created ? "Задача создана" : "Задача уже существовала",
+          description: `${toastLabel} (TasksFlow #${data?.tasksflowTaskId})`,
+        });
+      }
       setLocation("/");
     } catch (err: any) {
       toast({
@@ -560,7 +601,7 @@ export default function CreateTask() {
                 journalSearch={journalSearch}
                 rowSearch={rowSearch}
                 journalTaskTitle={journalTaskTitle}
-                journalWorkerUserId={journalWorkerUserId}
+                journalWorkerUserIds={journalWorkerUserIds}
                 assignableUsers={assignableUsers}
                 selectedAssignableUserName={selectedAssignableUser?.name ?? null}
                 openJournalStep={openJournalStep}
@@ -605,7 +646,7 @@ export default function CreateTask() {
                 }}
                 onDocumentChange={setSelectedDocId}
                 onTitleChange={setJournalTaskTitle}
-                onWorkerChange={setJournalWorkerUserId}
+                onWorkersChange={setJournalWorkerUserIds}
                 onSubmit={onJournalSubmit}
               />
             </>

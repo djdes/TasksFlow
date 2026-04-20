@@ -1,8 +1,9 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Users } from "lucide-react";
 
 import { JournalStepCard } from "@/components/JournalStepCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,12 @@ type JournalModeComposerProps = {
   journalSearch: string;
   rowSearch: string;
   journalTaskTitle: string;
-  journalWorkerUserId: string;
+  /**
+   * Multi-worker selection. Empty array = no one picked. The submit
+   * batch in CreateTask sends all of them as workerUserIds[] to
+   * /api/wesetup/bind-row, which creates one TasksFlow task per worker.
+   */
+  journalWorkerUserIds: string[];
   assignableUsers: CatalogAssignableUser[];
   selectedAssignableUserName: string | null;
   openJournalStep: StepKey;
@@ -58,7 +64,7 @@ type JournalModeComposerProps = {
   onRowSelect: (row: FlattenedJournalRow) => void;
   onDocumentChange: (value: string) => void;
   onTitleChange: (value: string) => void;
-  onWorkerChange: (value: string) => void;
+  onWorkersChange: (values: string[]) => void;
   onSubmit: () => void;
 };
 
@@ -80,7 +86,7 @@ export function JournalModeComposer({
   journalSearch,
   rowSearch,
   journalTaskTitle,
-  journalWorkerUserId,
+  journalWorkerUserIds,
   assignableUsers,
   selectedAssignableUserName,
   openJournalStep,
@@ -99,7 +105,7 @@ export function JournalModeComposer({
   onRowSelect,
   onDocumentChange,
   onTitleChange,
-  onWorkerChange,
+  onWorkersChange,
   onSubmit,
 }: JournalModeComposerProps) {
   if (catalogLoading) {
@@ -436,35 +442,95 @@ export function JournalModeComposer({
                 </div>
 
                 <div className="space-y-2 lg:col-span-3">
-                  <div className="text-sm font-medium">
-                    {activeJournalUi.workerLabel}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium">
+                      {activeJournalUi.workerLabel} ·{" "}
+                      <span className="text-primary">
+                        {journalWorkerUserIds.length}
+                      </span>{" "}
+                      из {assignableUsers.length}
+                    </div>
+                    {assignableUsers.length > 0 ? (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onWorkersChange(
+                              assignableUsers.map((w) => w.userId)
+                            )
+                          }
+                          className="text-xs font-medium text-primary hover:underline"
+                          data-testid="select-all-workers"
+                        >
+                          Выбрать всех
+                        </button>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <button
+                          type="button"
+                          onClick={() => onWorkersChange([])}
+                          className="text-xs font-medium text-muted-foreground hover:underline"
+                          data-testid="deselect-all-workers"
+                        >
+                          Снять
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                  <Select
-                    value={journalWorkerUserId}
-                    onValueChange={onWorkerChange}
-                  >
-                    <SelectTrigger className="things-input w-full">
-                      <SelectValue
-                        placeholder={activeJournalUi.workerPlaceholder}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assignableUsers.length === 0 ? (
-                        <div className="p-3 text-sm text-muted-foreground">
-                          В WeSetup еще не синхронизированы сотрудники для TasksFlow.
-                        </div>
-                      ) : (
-                        assignableUsers.map((worker) => (
-                          <SelectItem key={worker.userId} value={worker.userId}>
-                            {worker.name}
-                            {worker.positionTitle ? ` · ${worker.positionTitle}` : ""}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {assignableUsers.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                      <Users className="mx-auto mb-2 size-5 opacity-40" />
+                      В WeSetup ещё не синхронизированы сотрудники для TasksFlow.
+                    </div>
+                  ) : (
+                    <div className="max-h-[260px] space-y-1 overflow-y-auto rounded-xl border border-border/50 p-2">
+                      {assignableUsers.map((worker) => {
+                        const checked = journalWorkerUserIds.includes(
+                          worker.userId
+                        );
+                        return (
+                          <label
+                            key={worker.userId}
+                            className={`flex cursor-pointer items-center gap-3 rounded-lg p-2 text-sm transition-colors ${
+                              checked
+                                ? "bg-primary/10"
+                                : "hover:bg-muted/30"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                if (v) {
+                                  onWorkersChange([
+                                    ...journalWorkerUserIds,
+                                    worker.userId,
+                                  ]);
+                                } else {
+                                  onWorkersChange(
+                                    journalWorkerUserIds.filter(
+                                      (id) => id !== worker.userId
+                                    )
+                                  );
+                                }
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium">
+                                {worker.name}
+                              </div>
+                              {worker.positionTitle ? (
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {worker.positionTitle}
+                                </div>
+                              ) : null}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground">
-                    {activeJournalUi.workerHint}
+                    {activeJournalUi.workerHint} По задаче на каждого
+                    выбранного — итог в TasksFlow получит каждый из них.
                   </div>
                 </div>
               </div>
