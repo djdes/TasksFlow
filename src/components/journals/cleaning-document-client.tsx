@@ -36,7 +36,7 @@ import { getDistinctRoleLabels, getUsersForRoleLabel } from "@/lib/user-roles";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
 import { FocusTodayScroller } from "@/components/journals/focus-today-scroller";
-import { PositionSelectItems } from "@/components/shared/position-select";
+import { PositionNativeOptions, PositionSelectItems } from "@/components/shared/position-select";
 
 type UserItem = { id: string; name: string; role: string };
 type EntryItem = { id: string; employeeId: string; date: string; data: unknown };
@@ -419,8 +419,141 @@ export function CleaningDocumentClient(props: Props) {
         </div>
       </div>
 
-      <Dialog open={!!roomDialog} onOpenChange={(open) => !open && setRoomDialog(null)}><DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]"><DialogHeader className="border-b px-5 py-6 sm:px-10 sm:py-8"><div className="flex items-center justify-between"><DialogTitle className="text-[22px] font-semibold text-black">{roomDialog?.id ? "Редактирование помещения" : "Добавление нового помещения"}</DialogTitle><button type="button" className="rounded-xl p-2 hover:bg-black/5" onClick={() => setRoomDialog(null)}><X className="size-7" /></button></div></DialogHeader>{roomDialog ? <div className="space-y-4 px-10 py-8"><Input value={roomDialog.name} onChange={(event) => setRoomDialog((current) => current ? { ...current, name: event.target.value } : current)} placeholder="Введите название помещения" className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" /><Textarea value={roomDialog.detergent} onChange={(event) => setRoomDialog((current) => current ? { ...current, detergent: event.target.value } : current)} placeholder="Моющие и дезинфицирующие средства" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><Textarea value={roomDialog.currentScope} onChange={(event) => setRoomDialog((current) => current ? { ...current, currentScope: event.target.value } : current)} placeholder="Предмет текущей уборки" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><Textarea value={roomDialog.generalScope} onChange={(event) => setRoomDialog((current) => current ? { ...current, generalScope: event.target.value } : current)} placeholder="Предмет генеральной уборки" className="min-h-[120px] rounded-[18px] border-[#dfe1ec] px-5 py-4 text-[18px]" /><div className="flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={submitRoom}>Сохранить</Button></div></div> : null}</DialogContent></Dialog>
-      <Dialog open={!!responsibleDialog} onOpenChange={(open) => !open && setResponsibleDialog(null)}><DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[720px]"><DialogHeader className="border-b px-5 py-6 sm:px-10 sm:py-8"><div className="flex items-center justify-between"><DialogTitle className="text-[22px] font-semibold text-black">Добавление ответственного лица</DialogTitle><button type="button" className="rounded-xl p-2 hover:bg-black/5" onClick={() => setResponsibleDialog(null)}><X className="size-7" /></button></div></DialogHeader>{responsibleDialog ? <div className="space-y-5 px-5 py-6 sm:px-10 sm:py-8"><div className="space-y-2"><Label>Должность ответственного</Label><Select value={responsibleDialog.title} onValueChange={(value) => setResponsibleDialog((current) => current ? { ...current, title: value, userId: primaryUserId(props.users, value) } : current)}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Выберите значение" /></SelectTrigger><SelectContent><PositionSelectItems users={props.users} /></SelectContent></Select></div><div className="space-y-2"><Label>Сотрудник</Label><Select value={responsibleDialog.userId} onValueChange={(value) => setResponsibleDialog((current) => current ? { ...current, userId: value } : current)}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Выберите сотрудника" /></SelectTrigger><SelectContent>{responsibleUsers.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select></div><div className="flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={submitResponsible}>Добавить</Button></div></div> : null}</DialogContent></Dialog>
+      <Dialog open={!!roomDialog} onOpenChange={(open) => !open && setRoomDialog(null)}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+              {roomDialog?.id ? "Редактирование помещения" : "Добавление нового помещения"}
+            </DialogTitle>
+          </DialogHeader>
+          {roomDialog ? (
+            <>
+              <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Название помещения</Label>
+                  <Input
+                    value={roomDialog.name}
+                    onChange={(event) => setRoomDialog((current) => current ? { ...current, name: event.target.value } : current)}
+                    placeholder="Введите название помещения"
+                    className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Моющие и дезинфицирующие средства</Label>
+                  <Textarea
+                    value={roomDialog.detergent}
+                    onChange={(event) => setRoomDialog((current) => current ? { ...current, detergent: event.target.value } : current)}
+                    placeholder="Моющие и дезинфицирующие средства"
+                    className="rounded-2xl border-[#dcdfed] px-4 py-3 text-[15px]"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Предмет текущей уборки</Label>
+                  <Textarea
+                    value={roomDialog.currentScope}
+                    onChange={(event) => setRoomDialog((current) => current ? { ...current, currentScope: event.target.value } : current)}
+                    placeholder="Предмет текущей уборки"
+                    className="rounded-2xl border-[#dcdfed] px-4 py-3 text-[15px]"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Предмет генеральной уборки</Label>
+                  <Textarea
+                    value={roomDialog.generalScope}
+                    onChange={(event) => setRoomDialog((current) => current ? { ...current, generalScope: event.target.value } : current)}
+                    placeholder="Предмет генеральной уборки"
+                    className="rounded-2xl border-[#dcdfed] px-4 py-3 text-[15px]"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+                  onClick={() => setRoomDialog(null)}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="button"
+                  className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+                  onClick={submitRoom}
+                >
+                  Сохранить
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!responsibleDialog} onOpenChange={(open) => !open && setResponsibleDialog(null)}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+              Добавление ответственного лица
+            </DialogTitle>
+          </DialogHeader>
+          {responsibleDialog ? (
+            <>
+              <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-[13px] font-medium text-[#3c4053]">Должность ответственного</Label>
+                    <select
+                      className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                      value={responsibleDialog.title}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setResponsibleDialog((current) => current ? { ...current, title: value, userId: primaryUserId(props.users, value) } : current);
+                      }}
+                    >
+                      <option value="">— выберите —</option>
+                      <PositionNativeOptions users={props.users} />
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[13px] font-medium text-[#3c4053]">Сотрудник</Label>
+                    <select
+                      className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                      value={responsibleDialog.userId}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setResponsibleDialog((current) => current ? { ...current, userId: value } : current);
+                      }}
+                    >
+                      <option value="">— выберите —</option>
+                      {responsibleUsers.map((user) => (
+                        <option key={user.id} value={user.id}>{user.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+                  onClick={() => setResponsibleDialog(null)}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="button"
+                  className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+                  onClick={submitResponsible}
+                >
+                  {responsibleDialog.id ? "Сохранить" : "Добавить"}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}><DialogContent className="max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]"><DialogHeader className="border-b px-5 py-6 sm:px-10 sm:py-8"><div className="flex items-center justify-between"><DialogTitle className="text-[22px] font-semibold text-black">Настройки документа</DialogTitle><button type="button" className="rounded-xl p-2 hover:bg-black/5" onClick={() => setSettingsOpen(false)}><X className="size-7" /></button></div></DialogHeader><div className="space-y-5 px-5 py-6 sm:px-10 sm:py-8"><Input value={settingsState.title} onChange={(event) => setSettingsState((current) => ({ ...current, title: event.target.value }))} className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]" /><Select value={settingsState.cleaningRole} onValueChange={(value) => setSettingsState((current) => ({ ...current, cleaningRole: value, cleaningUserId: primaryUserId(props.users, value) }))}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Должность ответственного за уборку" /></SelectTrigger><SelectContent><PositionSelectItems users={props.users} /></SelectContent></Select><Select value={settingsState.cleaningUserId} onValueChange={(value) => setSettingsState((current) => ({ ...current, cleaningUserId: value }))}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Сотрудник" /></SelectTrigger><SelectContent>{getUsersForRoleLabel(props.users, settingsState.cleaningRole).map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><Select value={settingsState.controlRole} onValueChange={(value) => setSettingsState((current) => ({ ...current, controlRole: value, controlUserId: primaryUserId(props.users, value) }))}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Должность ответственного за контроль" /></SelectTrigger><SelectContent><PositionSelectItems users={props.users} /></SelectContent></Select><Select value={settingsState.controlUserId} onValueChange={(value) => setSettingsState((current) => ({ ...current, controlUserId: value }))}><SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] bg-[#f2f3f8] text-[18px]"><SelectValue placeholder="Сотрудник" /></SelectTrigger><SelectContent>{getUsersForRoleLabel(props.users, settingsState.controlRole).map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><div className="flex justify-end"><Button type="button" className="h-11 rounded-2xl bg-[#5563ff] px-4 text-[15px] text-white hover:bg-[#4554ff]" onClick={async () => { await updateSettings({}); setSettingsOpen(false); }}>Сохранить</Button></div></div></DialogContent></Dialog>
       <ConfirmDialog open={deleteOpen} title="Удалить выбранные строки?" submitLabel="Удалить" onOpenChange={setDeleteOpen} onSubmit={deleteSelectedRows} />
     </>
