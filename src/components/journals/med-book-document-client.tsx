@@ -896,150 +896,188 @@ export function MedBookDocumentClient({
       </Dialog>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
-          <DialogHeader className="border-b border-[#e5e7f0] px-8 py-6">
-            <DialogTitle className="text-[20px] font-medium text-black">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
               Добавление новой строки
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5 px-8 py-6">
-            <Input
-              value={draft.positionTitle}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  positionTitle: event.target.value,
-                }))
-              }
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-              placeholder="Должность"
-            />
-            <Select
-              value={draft.employeeId}
-              onValueChange={(value) => {
-                const employee = availableEmployees.find(
-                  (item) => item.id === value,
-                );
-                setDraft((current) => ({
-                  ...current,
-                  employeeId: value,
-                  positionTitle: employee
-                    ? getUserRoleLabel(employee.role)
-                    : current.positionTitle,
-                }));
-              }}
-            >
-              <SelectTrigger className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]">
-                <SelectValue placeholder="Сотрудник" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableEmployees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="date"
-              value={draft.birthDate}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  birthDate: event.target.value,
-                }))
-              }
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-            />
-            <div className="flex gap-8 text-[18px]">
-              <label className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="med-book-add-gender"
-                  checked={draft.gender === "male"}
-                  onChange={() =>
-                    setDraft((current) => ({ ...current, gender: "male" }))
-                  }
-                />
-                Мужской
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="med-book-add-gender"
-                  checked={draft.gender === "female"}
-                  onChange={() =>
-                    setDraft((current) => ({ ...current, gender: "female" }))
-                  }
-                />
-                Женский
-              </label>
-            </div>
-            <Input
-              type="date"
-              value={draft.hireDate}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  hireDate: event.target.value,
-                }))
-              }
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-            />
-            <Input
-              value={draft.medBookNumber}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  medBookNumber: event.target.value,
-                }))
-              }
-              placeholder="Введите номер мед. книжки"
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-            />
-            <Input
-              value={draft.note}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  note: event.target.value,
-                }))
-              }
-              placeholder="Примечание"
-              className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-            />
-            <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#d7dbe7] bg-white px-6 py-10 text-center">
-              {draft.photoUrl ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={draft.photoUrl}
-                    alt="Фото сотрудника"
-                    className="mx-auto h-28 rounded-2xl object-cover"
-                  />
-                </>
-              ) : (
-                <div className="text-[18px] text-[#5863f8]">
-                  Выберите файл или перетащите его сюда
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => void onPhoto(event.target.files, "add")}
+
+          <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Должность</Label>
+              <Input
+                value={draft.positionTitle}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    positionTitle: event.target.value,
+                  }))
+                }
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                placeholder="Должность"
               />
-            </label>
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={addEmployee}
-                disabled={!draft.employeeId}
-                className="h-12 rounded-2xl bg-[#5863f8] px-7 text-[16px] text-white"
-              >
-                Добавить
-              </Button>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Сотрудник</Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={draft.employeeId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const employee = availableEmployees.find(
+                    (item) => item.id === value,
+                  );
+                  setDraft((current) => ({
+                    ...current,
+                    employeeId: value,
+                    positionTitle: employee
+                      ? getUserRoleLabel(employee.role)
+                      : current.positionTitle,
+                  }));
+                }}
+              >
+                <option value="">— выберите —</option>
+                {availableEmployees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>{employee.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Дата рождения</Label>
+                <Input
+                  type="date"
+                  value={draft.birthDate}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      birthDate: event.target.value,
+                    }))
+                  }
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Дата приема</Label>
+                <Input
+                  type="date"
+                  value={draft.hireDate}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      hireDate: event.target.value,
+                    }))
+                  }
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Пол</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["male", "Мужской"],
+                    ["female", "Женский"],
+                  ] as const
+                ).map(([value, label]) => {
+                  const active = draft.gender === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDraft((current) => ({ ...current, gender: value }))}
+                      className={`flex h-11 items-center justify-center rounded-2xl border px-4 text-[14px] font-medium transition-colors ${
+                        active
+                          ? "border-[#5566f6] bg-[#5566f6] text-white"
+                          : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Номер мед. книжки</Label>
+              <Input
+                value={draft.medBookNumber}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    medBookNumber: event.target.value,
+                  }))
+                }
+                placeholder="Введите номер мед. книжки"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Примечание</Label>
+              <Input
+                value={draft.note}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    note: event.target.value,
+                  }))
+                }
+                placeholder="Примечание"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Фото</Label>
+              <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#dcdfed] bg-white px-6 py-8 text-center">
+                {draft.photoUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={draft.photoUrl}
+                      alt="Фото сотрудника"
+                      className="mx-auto h-24 rounded-xl object-cover"
+                    />
+                  </>
+                ) : (
+                  <div className="text-[14px] text-[#5566f6]">
+                    Выберите файл или перетащите его сюда
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => void onPhoto(event.target.files, "add")}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+              onClick={() => setAddOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              onClick={addEmployee}
+              disabled={!draft.employeeId}
+              className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+            >
+              Добавить
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1051,103 +1089,129 @@ export function MedBookDocumentClient({
             if (!value) setEditId(null);
           }}
         >
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] rounded-[28px] border-0 p-0 sm:max-w-[760px]">
-            <DialogHeader className="border-b border-[#e5e7f0] px-8 py-6">
-              <DialogTitle className="text-[20px] font-medium text-black">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+            <DialogHeader className="border-b px-6 py-5">
+              <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
                 Редактирование строки
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-5 px-8 py-6">
-              <Input
-                defaultValue={editRow.data.positionTitle}
-                onBlur={(event) =>
-                  updateRow(editRow.id, { positionTitle: event.target.value })
-                }
-                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-                placeholder="Должность"
-              />
-              <Input
-                type="date"
-                defaultValue={editRow.data.birthDate || ""}
-                onBlur={(event) =>
-                  updateRow(editRow.id, {
-                    birthDate: event.target.value || null,
-                  })
-                }
-                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-              />
-              <Input
-                type="date"
-                defaultValue={editRow.data.hireDate || ""}
-                onBlur={(event) =>
-                  updateRow(editRow.id, {
-                    hireDate: event.target.value || null,
-                  })
-                }
-                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-              />
-              <Input
-                defaultValue={editRow.data.medBookNumber || ""}
-                onBlur={(event) =>
-                  updateRow(editRow.id, {
-                    medBookNumber: event.target.value || null,
-                  })
-                }
-                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-                placeholder="Введите номер мед. книжки"
-              />
-              <Input
-                defaultValue={editRow.data.note || ""}
-                onBlur={(event) =>
-                  updateRow(editRow.id, { note: event.target.value || null })
-                }
-                className="h-11 rounded-2xl border-[#dfe1ec] px-4 text-[15px]"
-                placeholder="Примечание"
-              />
-              <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#d7dbe7] bg-white px-6 py-10 text-center">
-                {editRow.data.photoUrl ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={editRow.data.photoUrl}
-                      alt="Фото сотрудника"
-                      className="mx-auto h-28 rounded-2xl object-cover"
-                    />
-                  </>
-                ) : (
-                  <div className="text-[18px] text-[#5863f8]">
-                    Выберите файл или перетащите его сюда
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => void onPhoto(event.target.files, "edit")}
+
+            <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Должность</Label>
+                <Input
+                  defaultValue={editRow.data.positionTitle}
+                  onBlur={(event) =>
+                    updateRow(editRow.id, { positionTitle: event.target.value })
+                  }
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  placeholder="Должность"
                 />
-              </label>
-              <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-11 rounded-2xl px-4 text-[#ff4d4f]"
-                  onClick={() => {
-                    if (!window.confirm("Удалить строку сотрудника?")) return;
-                    saveRows(rows.filter((row) => row.id !== editRow.id));
-                    setEditId(null);
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                  Удалить
-                </Button>
-                <Button
-                  type="button"
-                  className="h-12 rounded-2xl bg-[#5863f8] px-7 text-[16px] text-white"
-                  onClick={() => setEditId(null)}
-                >
-                  Закрыть
-                </Button>
               </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Дата рождения</Label>
+                  <Input
+                    type="date"
+                    defaultValue={editRow.data.birthDate || ""}
+                    onBlur={(event) =>
+                      updateRow(editRow.id, {
+                        birthDate: event.target.value || null,
+                      })
+                    }
+                    className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium text-[#3c4053]">Дата приема</Label>
+                  <Input
+                    type="date"
+                    defaultValue={editRow.data.hireDate || ""}
+                    onBlur={(event) =>
+                      updateRow(editRow.id, {
+                        hireDate: event.target.value || null,
+                      })
+                    }
+                    className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Номер мед. книжки</Label>
+                <Input
+                  defaultValue={editRow.data.medBookNumber || ""}
+                  onBlur={(event) =>
+                    updateRow(editRow.id, {
+                      medBookNumber: event.target.value || null,
+                    })
+                  }
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  placeholder="Введите номер мед. книжки"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Примечание</Label>
+                <Input
+                  defaultValue={editRow.data.note || ""}
+                  onBlur={(event) =>
+                    updateRow(editRow.id, { note: event.target.value || null })
+                  }
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  placeholder="Примечание"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Фото</Label>
+                <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#dcdfed] bg-white px-6 py-8 text-center">
+                  {editRow.data.photoUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={editRow.data.photoUrl}
+                        alt="Фото сотрудника"
+                        className="mx-auto h-24 rounded-xl object-cover"
+                      />
+                    </>
+                  ) : (
+                    <div className="text-[14px] text-[#5566f6]">
+                      Выберите файл или перетащите его сюда
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => void onPhoto(event.target.files, "edit")}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-2xl border-[#ffd7d3] px-5 text-[14px] font-medium text-[#ff4d4f] shadow-none hover:bg-[#fff4f2] sm:w-auto"
+                onClick={() => {
+                  if (!window.confirm("Удалить строку сотрудника?")) return;
+                  saveRows(rows.filter((row) => row.id !== editRow.id));
+                  setEditId(null);
+                }}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Удалить
+              </Button>
+              <Button
+                type="button"
+                className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+                onClick={() => setEditId(null)}
+              >
+                Закрыть
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
