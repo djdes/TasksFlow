@@ -193,8 +193,19 @@ export const intensiveCoolingAdapter: JournalAdapter = {
     });
 
     const { hour, minute } = splitTime(values?.productionTime);
-    const newRow: IntensiveCoolingRow = {
-      id: `cooling-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    // Upsert-by-sourceRowKey: if this TF task already produced a row
+    // here, update it in place; otherwise append. Prevents duplicate
+    // rows when TF task gets re-completed (admin un- then re-marks,
+    // worker taps «Готово» twice, etc.).
+    const existingIndex = existingRows.findIndex(
+      (r) => r.sourceRowKey === rowKey
+    );
+    const existingId =
+      existingIndex >= 0
+        ? existingRows[existingIndex].id
+        : `cooling-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const row: IntensiveCoolingRow = {
+      id: existingId,
       productionDate: todayKey,
       productionHour: hour,
       productionMinute: minute,
@@ -213,11 +224,16 @@ export const intensiveCoolingAdapter: JournalAdapter = {
       comment: typeof values?.comment === "string" ? values.comment : "",
       responsibleTitle: employee?.positionTitle ?? "",
       responsibleUserId: employeeId,
+      sourceRowKey: rowKey,
     };
 
+    const nextRows =
+      existingIndex >= 0
+        ? existingRows.map((r, i) => (i === existingIndex ? row : r))
+        : [...existingRows, row];
     const nextConfig = {
       ...currentConfig,
-      rows: [...existingRows, newRow],
+      rows: nextRows,
     };
 
     await db.journalDocument.update({

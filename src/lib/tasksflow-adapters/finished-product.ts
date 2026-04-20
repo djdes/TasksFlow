@@ -210,8 +210,18 @@ export const finishedProductAdapter: JournalAdapter = {
     const productionDateTime = `${todayKey} ${productionTime}`.trim();
     const tempRaw = values?.productTemp;
 
-    const newRow: FinishedProductDocumentRow = {
-      id: `bracerage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    // Upsert-by-sourceRowKey: re-completion of the same TF task updates
+    // the existing row instead of appending. Manual admin rows (no
+    // sourceRowKey) are untouched.
+    const existingIndex = currentConfig.rows.findIndex(
+      (r) => r.sourceRowKey === rowKey
+    );
+    const existingId =
+      existingIndex >= 0
+        ? currentConfig.rows[existingIndex].id
+        : `bracerage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const row: FinishedProductDocumentRow = {
+      id: existingId,
       productionDateTime,
       rejectionTime: "",
       productName:
@@ -237,11 +247,16 @@ export const finishedProductAdapter: JournalAdapter = {
       organolepticResult: "",
       releaseAllowed:
         values?.releaseAllowed === "no" ? "no" : "yes",
+      sourceRowKey: rowKey,
     };
 
+    const nextRows =
+      existingIndex >= 0
+        ? currentConfig.rows.map((r, i) => (i === existingIndex ? row : r))
+        : [...currentConfig.rows, row];
     const nextConfig: FinishedProductDocumentConfig = {
       ...currentConfig,
-      rows: [...currentConfig.rows, newRow],
+      rows: nextRows,
     };
     await db.journalDocument.update({
       where: { id: documentId },

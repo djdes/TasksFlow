@@ -27,6 +27,12 @@ export type FinishedProductDocumentRow = {
   organolepticValue: string;
   organolepticResult: string;
   releaseAllowed: "yes" | "no";
+  /**
+   * TaskLink.rowKey of the TasksFlow task that produced this row, if
+   * any. The adapter looks it up to update-in-place on re-completion
+   * instead of appending a duplicate. Undefined for manual entries.
+   */
+  sourceRowKey?: string;
 };
 
 export type FinishedProductDocumentConfig = {
@@ -73,6 +79,9 @@ export function createFinishedProductRow(
     organolepticValue: normalizeText(overrides.organolepticValue),
     organolepticResult: normalizeText(overrides.organolepticResult),
     releaseAllowed: overrides.releaseAllowed === "no" ? "no" : "yes",
+    ...(overrides.sourceRowKey
+      ? { sourceRowKey: normalizeText(overrides.sourceRowKey) }
+      : {}),
   };
 }
 

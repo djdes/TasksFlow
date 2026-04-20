@@ -18,6 +18,13 @@ export type IntensiveCoolingRow = {
   comment: string;
   responsibleTitle: string;
   responsibleUserId: string;
+  /**
+   * If the row was produced by a TasksFlow task completion, this carries
+   * the TaskLink.rowKey so a subsequent re-completion of the same task
+   * updates this row instead of appending a duplicate. Undefined for
+   * manually-entered rows.
+   */
+  sourceRowKey?: string;
 };
 
 export type IntensiveCoolingConfig = {
@@ -76,6 +83,9 @@ export function createIntensiveCoolingRow(
     comment: normalizeText(overrides?.comment),
     responsibleTitle: normalizeText(overrides?.responsibleTitle),
     responsibleUserId: normalizeText(overrides?.responsibleUserId),
+    ...(overrides?.sourceRowKey
+      ? { sourceRowKey: normalizeText(overrides.sourceRowKey) }
+      : {}),
   };
 }
 
