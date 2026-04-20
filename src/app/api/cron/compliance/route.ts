@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { notifyOrganization, escapeTelegramHtml as esc } from "@/lib/telegram";
 import { sendComplianceReminderEmail } from "@/lib/email";
 import { getDbRoleValuesWithLegacy, MANAGEMENT_ROLES } from "@/lib/user-roles";
+import { getTemplatesFilledToday } from "@/lib/today-compliance";
+import { parseDisabledCodes } from "@/lib/disabled-journals";
 
 const CRON_SECRET = process.env.CRON_SECRET || "";
 
@@ -13,9 +15,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Get all organizations
+    // Get all organizations (with their disabled-journal toggle).
     const organizations = await db.organization.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true, disabledJournalCodes: true },
     });
 
     // Get all mandatory journal templates
@@ -30,26 +32,25 @@ export async function POST(request: Request) {
       select: { id: true, name: true, code: true },
     });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const results: { org: string; missing: string[] }[] = [];
 
     for (const org of organizations) {
-      // Get today's entries for this org
-      const todayEntries = await db.journalEntry.findMany({
-        where: {
-          organizationId: org.id,
-          createdAt: { gte: today },
-        },
-        select: { templateId: true },
-      });
+      const disabledCodes = parseDisabledCodes(org.disabledJournalCodes);
 
-      const filledTemplateIds = new Set(todayEntries.map((e) => e.templateId));
+      // Use the same compliance helper the dashboard uses. Aperiodic
+      // journals are already treated as filled by default, disabled
+      // ones are added to the «filled» set, so what's left in
+      // `missingTemplates` is «daily + enabled + not filled today» —
+      // exactly what a reminder should cover.
+      const filledTemplateIds = await getTemplatesFilledToday(
+        org.id,
+        new Date(),
+        mandatoryTemplates.map((t) => ({ id: t.id, code: t.code })),
+        disabledCodes
+      );
 
-      // Find mandatory templates not filled today
       const missingTemplates = mandatoryTemplates.filter(
-        (t) => !filledTemplateIds.has(t.id)
+        (t) => !filledTemplateIds.has(t.id) && !disabledCodes.has(t.code)
       );
 
       if (missingTemplates.length === 0) continue;

@@ -61,10 +61,20 @@ export async function POST(request: Request) {
     [];
 
   for (const worker of workers) {
-    const templates = await db.journalTemplate.findMany({
-      where: { isActive: true },
-      select: { id: true, code: true, name: true },
-    });
+    const [templates, org] = await Promise.all([
+      db.journalTemplate.findMany({
+        where: { isActive: true },
+        select: { id: true, code: true, name: true },
+      }),
+      db.organization.findUnique({
+        where: { id: worker.organizationId },
+        select: { disabledJournalCodes: true },
+      }),
+    ]);
+
+    const disabledCodes = Array.isArray(org?.disabledJournalCodes)
+      ? new Set(org?.disabledJournalCodes as string[])
+      : new Set<string>();
 
     const todaysEntries = await db.journalEntry.findMany({
       where: {
@@ -74,7 +84,9 @@ export async function POST(request: Request) {
       select: { templateId: true },
     });
     const filled = new Set(todaysEntries.map((e) => e.templateId));
-    const pending = templates.filter((t) => !filled.has(t.id));
+    const pending = templates.filter(
+      (t) => !filled.has(t.id) && !disabledCodes.has(t.code)
+    );
 
     if (pending.length === 0) {
       results.push({ userId: worker.id, notified: false, pending: 0 });

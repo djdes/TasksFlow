@@ -6,6 +6,7 @@ import {
   aclActorFromSession,
   getAllowedJournalCodes,
 } from "@/lib/journal-acl";
+import { getDisabledJournalCodes } from "@/lib/disabled-journals";
 
 /**
  * GET /api/mini/home
@@ -37,9 +38,12 @@ export async function GET() {
       isRoot: session.user.isRoot === true,
     },
   });
-  const allowedCodes = await getAllowedJournalCodes(actor);
+  const [allowedCodes, disabledCodes] = await Promise.all([
+    getAllowedJournalCodes(actor),
+    getDisabledJournalCodes(session.user.organizationId),
+  ]);
 
-  const templates = await db.journalTemplate.findMany({
+  const rawTemplates = await db.journalTemplate.findMany({
     where:
       allowedCodes === null ? undefined : { code: { in: allowedCodes } },
     select: {
@@ -50,6 +54,11 @@ export async function GET() {
     },
     orderBy: { name: "asc" },
   });
+
+  // Hide org-disabled journals from the mini app — employees can't
+  // re-enable them, and they're not expected to fill data for a
+  // journal their organization has switched off.
+  const templates = rawTemplates.filter((t) => !disabledCodes.has(t.code));
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
