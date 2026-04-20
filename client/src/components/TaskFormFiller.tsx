@@ -150,18 +150,20 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Заполнить журнал</DialogTitle>
+        <DialogContent className="max-w-md rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-xl font-bold">
+              Заполнить журнал
+            </DialogTitle>
           </DialogHeader>
           {loading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="px-6 py-10 text-center text-sm text-muted-foreground">
               Загружаем форму…
             </div>
           ) : schema ? (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 px-6 pb-4">
               {schema.intro ? (
-                <p className="rounded-lg bg-muted/50 p-3 text-sm leading-relaxed">
+                <p className="rounded-2xl bg-primary/5 border border-primary/10 p-4 text-sm leading-relaxed text-foreground/90">
                   {schema.intro}
                 </p>
               ) : null}
@@ -175,17 +177,19 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
               ))}
             </div>
           ) : null}
-          <DialogFooter>
+          <DialogFooter className="gap-2 border-t border-border/40 bg-muted/30 px-6 py-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
+              className="h-12 rounded-xl px-5 font-semibold"
             >
               Отмена
             </Button>
             <Button
               disabled={!readyToSubmit || submitting}
               onClick={() => setConfirmOpen(true)}
+              className="h-12 rounded-xl px-6 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
             >
               {schema?.submitLabel ?? "Выполнено"}
             </Button>
@@ -194,28 +198,35 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       </Dialog>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Подтверждение</DialogTitle>
+        <DialogContent className="max-w-sm rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-xl font-bold">
+              Подтвердите данные
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 py-2 text-sm">
+          <div className="space-y-3 px-6 pb-4 text-sm">
             <p className="text-muted-foreground">
-              Проверьте данные перед отправкой — после этого журнал заполнится
-              автоматически.
+              После подтверждения данные сразу попадут в журнал WeSetup
+              — изменить можно будет только через менеджера.
             </p>
-            <div className="whitespace-pre-line rounded-lg border border-border/60 p-3 text-sm">
+            <div className="whitespace-pre-line rounded-2xl border border-border/50 bg-muted/40 p-4 text-sm font-medium">
               {confirmSummary}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 border-t border-border/40 bg-muted/30 px-6 py-4">
             <Button
               variant="outline"
               onClick={() => setConfirmOpen(false)}
               disabled={submitting}
+              className="h-12 rounded-xl px-5 font-semibold"
             >
               Назад, проверить
             </Button>
-            <Button onClick={doSubmit} disabled={submitting}>
+            <Button
+              onClick={doSubmit}
+              disabled={submitting}
+              className="h-12 rounded-xl px-6 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+            >
               {submitting ? "Отправка…" : "Подтвердить"}
             </Button>
           </DialogFooter>
@@ -234,13 +245,16 @@ function FieldInput({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
+  const labelCls = "mb-2 block text-sm font-semibold text-foreground";
   switch (field.type) {
     case "text":
       return (
         <div>
-          <label className="mb-1 block text-sm font-medium">
+          <label className={labelCls}>
             {field.label}
-            {field.required ? " *" : ""}
+            {field.required ? (
+              <span className="ml-1 text-destructive">*</span>
+            ) : null}
           </label>
           {field.multiline ? (
             <Textarea
@@ -249,6 +263,7 @@ function FieldInput({
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               rows={3}
+              className="things-input min-h-[100px] py-3"
             />
           ) : (
             <Input
@@ -256,6 +271,7 @@ function FieldInput({
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholder}
               maxLength={field.maxLength}
+              className="things-input"
             />
           )}
         </div>
@@ -263,10 +279,16 @@ function FieldInput({
     case "number":
       return (
         <div>
-          <label className="mb-1 block text-sm font-medium">
+          <label className={labelCls}>
             {field.label}
-            {field.unit ? ` (${field.unit})` : ""}
-            {field.required ? " *" : ""}
+            {field.unit ? (
+              <span className="ml-1 font-normal text-muted-foreground">
+                ({field.unit})
+              </span>
+            ) : null}
+            {field.required ? (
+              <span className="ml-1 text-destructive">*</span>
+            ) : null}
           </label>
           <Input
             type="number"
@@ -278,38 +300,50 @@ function FieldInput({
             min={field.min}
             max={field.max}
             step={field.step}
+            className="things-input text-lg font-semibold tabular-nums"
           />
         </div>
       );
     case "boolean":
       return (
-        <label className="flex items-center gap-3 rounded-lg border border-border/50 p-3 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-border/60 bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5">
           <Checkbox
             checked={Boolean(value)}
             onCheckedChange={(v) => onChange(Boolean(v))}
+            className="size-5"
           />
-          <span className="text-sm">{field.label}</span>
+          <span className="text-base font-medium">{field.label}</span>
         </label>
       );
     case "select":
       return (
         <div>
-          <label className="mb-1 block text-sm font-medium">
+          <label className={labelCls}>
             {field.label}
-            {field.required ? " *" : ""}
+            {field.required ? (
+              <span className="ml-1 text-destructive">*</span>
+            ) : null}
           </label>
           <Select
             value={(value as string) ?? ""}
             onValueChange={(v) => onChange(v)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="things-input w-full justify-between">
               <SelectValue placeholder="Выберите значение" />
             </SelectTrigger>
             <SelectContent>
               {field.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.code ? `${opt.code} · ` : ""}
-                  {opt.label}
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="py-2.5"
+                >
+                  {opt.code ? (
+                    <span className="mr-2 inline-flex min-w-[36px] justify-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                      {opt.code}
+                    </span>
+                  ) : null}
+                  <span className="text-sm">{opt.label}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -319,14 +353,17 @@ function FieldInput({
     case "date":
       return (
         <div>
-          <label className="mb-1 block text-sm font-medium">
+          <label className={labelCls}>
             {field.label}
-            {field.required ? " *" : ""}
+            {field.required ? (
+              <span className="ml-1 text-destructive">*</span>
+            ) : null}
           </label>
           <Input
             type="date"
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
+            className="things-input text-base"
           />
         </div>
       );
