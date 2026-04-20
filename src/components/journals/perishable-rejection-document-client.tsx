@@ -253,16 +253,18 @@ export function PerishableRejectionDocumentClient({
     setDraftUserId("");
   }
 
-  function saveDraftRow() {
+  async function saveDraftRow() {
     if (readOnly) return;
     const user = users.find((u) => u.id === draftUserId);
     const responsible = user
       ? `${user.name}, ${draftPosition}`
       : draftPosition;
-    setConfig((prev) => ({
-      ...prev,
-      rows: [...prev.rows, { ...draftRow, responsiblePerson: responsible }],
-    }));
+    const nextConfig = {
+      ...config,
+      rows: [...config.rows, { ...draftRow, responsiblePerson: responsible }],
+    };
+    setConfig(nextConfig);
+    await saveConfig(nextConfig);
     resetDraftRow();
     setAddModalOpen(false);
   }
@@ -697,362 +699,492 @@ export function PerishableRejectionDocumentClient({
         </MobileViewTableWrapper>
       </div>
 
-      {/* Add Row Dialog */}
+      {/* Add Row Dialog — design-system shape: padded header, body
+       * sections, bottom-stuck footer with secondary + primary buttons. */}
       <Dialog open={readOnly ? false : addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[760px]">
-          <DialogHeader>
-            <DialogTitle>Добавление новой строки</DialogTitle>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+              Добавление новой строки
+            </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-3">
+
+          <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
             {/* Дата и время поступления */}
-            <Label>Дата и время поступления</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                type="date"
-                value={draftRow.arrivalDate}
-                onChange={(e) =>
-                  setDraftRow((prev) => ({
-                    ...prev,
-                    arrivalDate: e.target.value,
-                  }))
-                }
-              />
-              <select
-                className="rounded-md border px-3 py-2 text-sm"
-                value={arrivalHM.h}
-                onChange={(e) =>
-                  setDraftRow((prev) => ({
-                    ...prev,
-                    arrivalTime: mergeHM(e.target.value, arrivalHM.m),
-                  }))
-                }
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={padTwo(i)}>
-                    {padTwo(i)} ч
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border px-3 py-2 text-sm"
-                value={arrivalHM.m}
-                onChange={(e) =>
-                  setDraftRow((prev) => ({
-                    ...prev,
-                    arrivalTime: mergeHM(arrivalHM.h, e.target.value),
-                  }))
-                }
-              >
-                {Array.from({ length: 60 }, (_, i) => (
-                  <option key={i} value={padTwo(i)}>
-                    {padTwo(i)} мин
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Дата и время поступления
+              </Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                <Input
+                  type="date"
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  value={draftRow.arrivalDate}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      arrivalDate: e.target.value,
+                    }))
+                  }
+                />
+                <select
+                  className="h-11 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={arrivalHM.h}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      arrivalTime: mergeHM(e.target.value, arrivalHM.m),
+                    }))
+                  }
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={padTwo(i)}>
+                      {padTwo(i)} ч
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-11 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={arrivalHM.m}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      arrivalTime: mergeHM(arrivalHM.h, e.target.value),
+                    }))
+                  }
+                >
+                  {Array.from({ length: 60 }, (_, i) => (
+                    <option key={i} value={padTwo(i)}>
+                      {padTwo(i)} мин
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Наименование изделия */}
-            <Label>Наименование изделия</Label>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={draftRow.productName}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  productName: e.target.value,
-                }))
-              }
-            >
-              <option value="">- Выберите значение -</option>
-              {productOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <Input
-              placeholder="Или введите новое наименование"
-              value={
-                productOptions.includes(draftRow.productName)
-                  ? ""
-                  : draftRow.productName
-              }
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  productName: e.target.value,
-                }))
-              }
-            />
-
-            {/* Дата выработки */}
-            <Label>Дата выработки</Label>
-            <Input
-              type="date"
-              value={draftRow.productionDate}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  productionDate: e.target.value,
-                }))
-              }
-            />
-
-            {/* Изготовитель */}
-            <Label>Изготовитель</Label>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={draftRow.manufacturer}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  manufacturer: e.target.value,
-                }))
-              }
-            >
-              <option value="">- Выберите значение -</option>
-              {config.manufacturers.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <Input
-              placeholder="Или введите нового изготовителя"
-              value={
-                config.manufacturers.includes(draftRow.manufacturer)
-                  ? ""
-                  : draftRow.manufacturer
-              }
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  manufacturer: e.target.value,
-                }))
-              }
-            />
-
-            {/* Поставщик */}
-            <Label>Поставщик</Label>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={draftRow.supplier}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  supplier: e.target.value,
-                }))
-              }
-            >
-              <option value="">- Выберите значение -</option>
-              {config.suppliers.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <Input
-              placeholder="Или введите нового поставщика"
-              value={
-                config.suppliers.includes(draftRow.supplier)
-                  ? ""
-                  : draftRow.supplier
-              }
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  supplier: e.target.value,
-                }))
-              }
-            />
-
-            {/* Фасовка */}
-            <Label>Фасовка</Label>
-            <Input
-              value={draftRow.packaging}
-              onChange={(e) =>
-                setDraftRow((prev) => ({ ...prev, packaging: e.target.value }))
-              }
-            />
-
-            {/* Кол-во */}
-            <Label>Кол-во</Label>
-            <Input
-              value={draftRow.quantity}
-              onChange={(e) =>
-                setDraftRow((prev) => ({ ...prev, quantity: e.target.value }))
-              }
-            />
-
-            {/* Номер документа */}
-            <Label>Номер документа</Label>
-            <Input
-              value={draftRow.documentNumber}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  documentNumber: e.target.value,
-                }))
-              }
-            />
-
-            {/* Органолептическая оценка */}
-            <Label>Органолептическая оценка</Label>
-            <div className="flex items-center gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={draftRow.organolepticResult === "compliant"}
-                  onChange={() =>
-                    setDraftRow((prev) => ({
-                      ...prev,
-                      organolepticResult: "compliant",
-                    }))
-                  }
-                />
-                Соответствует
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={draftRow.organolepticResult === "non_compliant"}
-                  onChange={() =>
-                    setDraftRow((prev) => ({
-                      ...prev,
-                      organolepticResult: "non_compliant",
-                    }))
-                  }
-                />
-                Не соответствует
-              </label>
-            </div>
-
-            {/* Условия хранения */}
-            <Label>Условия хранения</Label>
-            <div className="flex flex-col gap-2 text-sm">
-              {(
-                Object.entries(STORAGE_CONDITION_LABELS) as [string, string][]
-              ).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={draftRow.storageCondition === key}
-                    onChange={() =>
-                      setDraftRow((prev) => ({
-                        ...prev,
-                        storageCondition: key as PerishableRejectionRow["storageCondition"],
-                      }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-
-            {/* Конечный срок реализации */}
-            <Label>Конечный срок реализации</Label>
-            <Input
-              type="date"
-              value={draftRow.expiryDate}
-              onChange={(e) =>
-                setDraftRow((prev) => ({
-                  ...prev,
-                  expiryDate: e.target.value,
-                }))
-              }
-            />
-
-            {/* Дата и время фактической реализации */}
-            <Label>Дата и время фактической реализации</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                type="date"
-                value={draftRow.actualSaleDate}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Наименование изделия
+              </Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={
+                  productOptions.includes(draftRow.productName)
+                    ? draftRow.productName
+                    : ""
+                }
                 onChange={(e) =>
                   setDraftRow((prev) => ({
                     ...prev,
-                    actualSaleDate: e.target.value,
+                    productName: e.target.value,
+                  }))
+                }
+              >
+                <option value="">— выберите из списка —</option>
+                {productOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <Input
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                placeholder="Или введите новое наименование"
+                value={
+                  productOptions.includes(draftRow.productName)
+                    ? ""
+                    : draftRow.productName
+                }
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    productName: e.target.value,
                   }))
                 }
               />
-              <select
-                className="rounded-md border px-3 py-2 text-sm"
-                value={saleHM.h}
-                onChange={(e) =>
-                  setDraftRow((prev) => ({
-                    ...prev,
-                    actualSaleTime: mergeHM(e.target.value, saleHM.m),
-                  }))
-                }
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={padTwo(i)}>
-                    {padTwo(i)} ч
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border px-3 py-2 text-sm"
-                value={saleHM.m}
-                onChange={(e) =>
-                  setDraftRow((prev) => ({
-                    ...prev,
-                    actualSaleTime: mergeHM(saleHM.h, e.target.value),
-                  }))
-                }
-              >
-                {Array.from({ length: 60 }, (_, i) => (
-                  <option key={i} value={padTwo(i)}>
-                    {padTwo(i)} мин
-                  </option>
-                ))}
-              </select>
             </div>
 
-            {/* Должность ответственного */}
-            <Label>Должность ответственного</Label>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={draftPosition}
-              onChange={(e) => {
-                const pos = e.target.value;
-                setDraftPosition(pos);
-                const candidates = getUsersForRoleLabel(users, pos);
-                if (draftUserId && !candidates.some((u) => u.id === draftUserId)) {
-                  setDraftUserId("");
+            {/* Дата выработки */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Дата выработки
+              </Label>
+              <Input
+                type="date"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={draftRow.productionDate}
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    productionDate: e.target.value,
+                  }))
                 }
-              }}
-            >
-              <PositionNativeOptions users={users} />
-            </select>
+              />
+            </div>
 
-            {/* Сотрудник */}
-            <Label>Сотрудник</Label>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={draftUserId}
-              onChange={(e) => setDraftUserId(e.target.value)}
-            >
-              <option value="">- Выберите значение -</option>
-              {getUsersForRoleLabel(users, draftPosition).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+            {/* Изготовитель */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Изготовитель
+              </Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={
+                  config.manufacturers.includes(draftRow.manufacturer)
+                    ? draftRow.manufacturer
+                    : ""
+                }
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    manufacturer: e.target.value,
+                  }))
+                }
+              >
+                <option value="">— выберите из списка —</option>
+                {config.manufacturers.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <Input
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                placeholder="Или введите нового изготовителя"
+                value={
+                  config.manufacturers.includes(draftRow.manufacturer)
+                    ? ""
+                    : draftRow.manufacturer
+                }
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    manufacturer: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Поставщик */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Поставщик
+              </Label>
+              <select
+                className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                value={
+                  config.suppliers.includes(draftRow.supplier)
+                    ? draftRow.supplier
+                    : ""
+                }
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    supplier: e.target.value,
+                  }))
+                }
+              >
+                <option value="">— выберите из списка —</option>
+                {config.suppliers.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <Input
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                placeholder="Или введите нового поставщика"
+                value={
+                  config.suppliers.includes(draftRow.supplier)
+                    ? ""
+                    : draftRow.supplier
+                }
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    supplier: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Фасовка + Кол-во side-by-side */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">
+                  Фасовка
+                </Label>
+                <Input
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  value={draftRow.packaging}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      packaging: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">
+                  Количество
+                </Label>
+                <Input
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  value={draftRow.quantity}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      quantity: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Номер документа */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Номер документа
+              </Label>
+              <Input
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={draftRow.documentNumber}
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    documentNumber: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Органолептическая оценка — pill-style segmented control */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Органолептическая оценка
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["compliant", "Соответствует", "#136b2a", "#ecfdf5"],
+                    ["non_compliant", "Не соответствует", "#d2453d", "#fff4f2"],
+                  ] as const
+                ).map(([value, label, fg, bg]) => {
+                  const active = draftRow.organolepticResult === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        setDraftRow((prev) => ({
+                          ...prev,
+                          organolepticResult: value,
+                        }))
+                      }
+                      className={`flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-[14px] font-medium transition-colors ${
+                        active
+                          ? "border-transparent text-white"
+                          : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"
+                      }`}
+                      style={
+                        active ? { backgroundColor: fg, color: "white" } : { backgroundColor: bg, color: fg, borderColor: bg }
+                      }
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Условия хранения — radio cards */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Условия хранения
+              </Label>
+              <div className="flex flex-col gap-2">
+                {(
+                  Object.entries(STORAGE_CONDITION_LABELS) as [string, string][]
+                ).map(([key, label]) => {
+                  const active = draftRow.storageCondition === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setDraftRow((prev) => ({
+                          ...prev,
+                          storageCondition: key as PerishableRejectionRow["storageCondition"],
+                        }))
+                      }
+                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-[14px] transition-colors ${
+                        active
+                          ? "border-[#5566f6] bg-[#f5f6ff] text-[#0b1024]"
+                          : "border-[#dcdfed] bg-white text-[#3c4053] hover:bg-[#fafbff]"
+                      }`}
+                    >
+                      <span className="font-medium">{label}</span>
+                      <span
+                        className={`flex size-5 items-center justify-center rounded-full border-2 ${
+                          active ? "border-[#5566f6]" : "border-[#c7ccea]"
+                        }`}
+                      >
+                        {active ? (
+                          <span className="size-2 rounded-full bg-[#5566f6]" />
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Конечный срок реализации */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Конечный срок реализации
+              </Label>
+              <Input
+                type="date"
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={draftRow.expiryDate}
+                onChange={(e) =>
+                  setDraftRow((prev) => ({
+                    ...prev,
+                    expiryDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Дата и время фактической реализации */}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Дата и время фактической реализации
+              </Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                <Input
+                  type="date"
+                  className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                  value={draftRow.actualSaleDate}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      actualSaleDate: e.target.value,
+                    }))
+                  }
+                />
+                <select
+                  className="h-11 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={saleHM.h}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      actualSaleTime: mergeHM(e.target.value, saleHM.m),
+                    }))
+                  }
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={padTwo(i)}>
+                      {padTwo(i)} ч
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-11 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={saleHM.m}
+                  onChange={(e) =>
+                    setDraftRow((prev) => ({
+                      ...prev,
+                      actualSaleTime: mergeHM(saleHM.h, e.target.value),
+                    }))
+                  }
+                >
+                  {Array.from({ length: 60 }, (_, i) => (
+                    <option key={i} value={padTwo(i)}>
+                      {padTwo(i)} мин
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Должность + Сотрудник side-by-side */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">
+                  Должность ответственного
+                </Label>
+                <select
+                  className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={draftPosition}
+                  onChange={(e) => {
+                    const pos = e.target.value;
+                    setDraftPosition(pos);
+                    const candidates = getUsersForRoleLabel(users, pos);
+                    if (draftUserId && !candidates.some((u) => u.id === draftUserId)) {
+                      setDraftUserId("");
+                    }
+                  }}
+                >
+                  <PositionNativeOptions users={users} />
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">
+                  Сотрудник
+                </Label>
+                <select
+                  className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024]"
+                  value={draftUserId}
+                  onChange={(e) => setDraftUserId(e.target.value)}
+                >
+                  <option value="">— выберите —</option>
+                  {getUsersForRoleLabel(users, draftPosition).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Примечание */}
-            <Label>Примечание</Label>
-            <Input
-              value={draftRow.note}
-              onChange={(e) =>
-                setDraftRow((prev) => ({ ...prev, note: e.target.value }))
-              }
-            />
-
-            <div className="flex justify-end">
-              <Button onClick={saveDraftRow}>Добавить</Button>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">
+                Примечание
+              </Label>
+              <Input
+                className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]"
+                value={draftRow.note}
+                onChange={(e) =>
+                  setDraftRow((prev) => ({ ...prev, note: e.target.value }))
+                }
+              />
             </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto"
+              onClick={() => setAddModalOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto"
+              onClick={() => {
+                void saveDraftRow();
+              }}
+              disabled={isSaving}
+            >
+              {isSaving ? "Сохранение…" : "Добавить запись"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

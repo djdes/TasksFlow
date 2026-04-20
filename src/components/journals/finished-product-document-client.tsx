@@ -184,8 +184,10 @@ export function FinishedProductDocumentClient({
     setSelectedRows([]);
   }
 
-  function saveDraftRow() {
-    setConfig((prev) => ({ ...prev, rows: [...prev.rows, draftRow] }));
+  async function saveDraftRow() {
+    const nextConfig = { ...config, rows: [...config.rows, draftRow] };
+    setConfig(nextConfig);
+    await saveConfig(nextConfig);
     setDraftRow(createDraft(users));
     setAddModalOpen(false);
   }
@@ -315,24 +317,101 @@ export function FinishedProductDocumentClient({
       </section>
 
       <Dialog open={readOnly ? false : addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[720px]">
-          <DialogHeader><DialogTitle>Добавление новой строки</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 gap-4">
-            <Label>Дата и время изготовления</Label>
-            <div className="grid grid-cols-2 gap-2"><Input type="date" value={parseDateTime(draftRow.productionDateTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, productionDateTime: mergeDateTime(e.target.value, parseDateTime(prev.productionDateTime).time) }))} /><Input type="time" value={parseDateTime(draftRow.productionDateTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, productionDateTime: mergeDateTime(parseDateTime(prev.productionDateTime).date, e.target.value) }))} /></div>
-            <Label>Время снятия бракеража</Label>
-            <div className="grid grid-cols-2 gap-2"><Input type="date" value={parseDateTime(draftRow.rejectionTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, rejectionTime: mergeDateTime(e.target.value, parseDateTime(prev.rejectionTime).time) }))} /><Input type="time" value={parseDateTime(draftRow.rejectionTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, rejectionTime: mergeDateTime(parseDateTime(prev.rejectionTime).date, e.target.value) }))} /></div>
-            <Label>Наименование изделия</Label><Input value={draftRow.productName} onChange={(e) => setDraftRow((prev) => ({ ...prev, productName: e.target.value }))} list="finished-product-items" />
-            <Label>Органолептическая оценка</Label><Input value={draftRow.organoleptic} onChange={(e) => setDraftRow((prev) => ({ ...prev, organoleptic: e.target.value }))} />
-            {config.showProductTemp && <><Label>Введите T°C внутри продукта</Label><Input value={draftRow.productTemp} onChange={(e) => setDraftRow((prev) => ({ ...prev, productTemp: e.target.value }))} /></>}
-            {config.showCorrectiveAction && <><Label>Корректирующие действия</Label><Textarea value={draftRow.correctiveAction} onChange={(e) => setDraftRow((prev) => ({ ...prev, correctiveAction: e.target.value }))} /></>}
-            <Label>Разрешение к реализации</Label>
-            <div className="flex items-center gap-4 text-sm"><label className="flex items-center gap-2"><input type="radio" checked={draftRow.releaseAllowed === "yes"} onChange={() => setDraftRow((prev) => ({ ...prev, releaseAllowed: "yes" }))} />Да</label><label className="flex items-center gap-2"><input type="radio" checked={draftRow.releaseAllowed === "no"} onChange={() => setDraftRow((prev) => ({ ...prev, releaseAllowed: "no" }))} />Нет</label></div>
-            <Label>Дата и время разрешения</Label><div className="grid grid-cols-2 gap-2"><Input type="date" value={parseDateTime(draftRow.releasePermissionTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, releasePermissionTime: mergeDateTime(e.target.value, parseDateTime(prev.releasePermissionTime).time) }))} /><Input type="time" value={parseDateTime(draftRow.releasePermissionTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, releasePermissionTime: mergeDateTime(parseDateTime(prev.releasePermissionTime).date, e.target.value) }))} /></div>
-            {config.showCourierTime && <><Label>Дата и время передачи блюд курьеру</Label><div className="grid grid-cols-2 gap-2"><Input type="date" value={parseDateTime(draftRow.courierTransferTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, courierTransferTime: mergeDateTime(e.target.value, parseDateTime(prev.courierTransferTime).time) }))} /><Input type="time" value={parseDateTime(draftRow.courierTransferTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, courierTransferTime: mergeDateTime(parseDateTime(prev.courierTransferTime).date, e.target.value) }))} /></div></>}
-            <Label>Ответственный исполнитель</Label><Input value={draftRow.responsiblePerson} onChange={(e) => setDraftRow((prev) => ({ ...prev, responsiblePerson: e.target.value }))} list="finished-product-users" />
-            <Label>{config.inspectorMode === "commission_signatures" ? "Подписи членов комиссии" : "Лицо, проводившее бракераж"}</Label><Input value={draftRow.inspectorName} onChange={(e) => setDraftRow((prev) => ({ ...prev, inspectorName: e.target.value }))} list="finished-product-users" />
-            <div className="flex justify-end"><Button onClick={saveDraftRow}>Добавить</Button></div>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-1rem)] max-h-[92vh] overflow-hidden rounded-[24px] border-0 p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b px-6 py-5">
+            <DialogTitle className="text-[18px] font-semibold tracking-[-0.02em] text-[#0b1024]">
+              Добавление новой строки
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[calc(92vh-160px)] space-y-5 overflow-y-auto px-6 py-5">
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Дата и время изготовления</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.productionDateTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, productionDateTime: mergeDateTime(e.target.value, parseDateTime(prev.productionDateTime).time) }))} />
+                <Input type="time" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.productionDateTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, productionDateTime: mergeDateTime(parseDateTime(prev.productionDateTime).date, e.target.value) }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Время снятия бракеража</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.rejectionTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, rejectionTime: mergeDateTime(e.target.value, parseDateTime(prev.rejectionTime).time) }))} />
+                <Input type="time" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.rejectionTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, rejectionTime: mergeDateTime(parseDateTime(prev.rejectionTime).date, e.target.value) }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Наименование изделия</Label>
+              <Input className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={draftRow.productName} onChange={(e) => setDraftRow((prev) => ({ ...prev, productName: e.target.value }))} list="finished-product-items" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Органолептическая оценка</Label>
+              <Input className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={draftRow.organoleptic} onChange={(e) => setDraftRow((prev) => ({ ...prev, organoleptic: e.target.value }))} />
+            </div>
+            {config.showProductTemp ? (
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">T°C внутри продукта</Label>
+                <Input className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={draftRow.productTemp} onChange={(e) => setDraftRow((prev) => ({ ...prev, productTemp: e.target.value }))} />
+              </div>
+            ) : null}
+            {config.showCorrectiveAction ? (
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Корректирующие действия</Label>
+                <Textarea className="rounded-2xl border-[#dcdfed] px-4 py-3 text-[15px]" value={draftRow.correctiveAction} onChange={(e) => setDraftRow((prev) => ({ ...prev, correctiveAction: e.target.value }))} />
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Разрешение к реализации</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["yes", "Да", "#136b2a", "#ecfdf5"],
+                    ["no", "Нет", "#d2453d", "#fff4f2"],
+                  ] as const
+                ).map(([value, label, fg, bg]) => {
+                  const active = draftRow.releaseAllowed === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDraftRow((prev) => ({ ...prev, releaseAllowed: value }))}
+                      className={`flex h-11 items-center justify-center rounded-2xl border px-4 text-[14px] font-medium transition-colors ${active ? "border-transparent text-white" : "border-[#dcdfed] bg-white text-[#0b1024] hover:bg-[#fafbff]"}`}
+                      style={active ? { backgroundColor: fg, color: "white" } : { backgroundColor: bg, color: fg, borderColor: bg }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Дата и время разрешения</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.releasePermissionTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, releasePermissionTime: mergeDateTime(e.target.value, parseDateTime(prev.releasePermissionTime).time) }))} />
+                <Input type="time" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.releasePermissionTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, releasePermissionTime: mergeDateTime(parseDateTime(prev.releasePermissionTime).date, e.target.value) }))} />
+              </div>
+            </div>
+            {config.showCourierTime ? (
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#3c4053]">Дата и время передачи блюд курьеру</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="date" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.courierTransferTime).date} onChange={(e) => setDraftRow((prev) => ({ ...prev, courierTransferTime: mergeDateTime(e.target.value, parseDateTime(prev.courierTransferTime).time) }))} />
+                  <Input type="time" className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={parseDateTime(draftRow.courierTransferTime).time} onChange={(e) => setDraftRow((prev) => ({ ...prev, courierTransferTime: mergeDateTime(parseDateTime(prev.courierTransferTime).date, e.target.value) }))} />
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">Ответственный исполнитель</Label>
+              <Input className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={draftRow.responsiblePerson} onChange={(e) => setDraftRow((prev) => ({ ...prev, responsiblePerson: e.target.value }))} list="finished-product-users" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[13px] font-medium text-[#3c4053]">{config.inspectorMode === "commission_signatures" ? "Подписи членов комиссии" : "Лицо, проводившее бракераж"}</Label>
+              <Input className="h-11 rounded-2xl border-[#dcdfed] px-4 text-[15px]" value={draftRow.inspectorName} onChange={(e) => setDraftRow((prev) => ({ ...prev, inspectorName: e.target.value }))} list="finished-product-users" />
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-2 border-t bg-white px-6 py-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" className="h-11 w-full rounded-2xl border-[#dcdfed] px-5 text-[14px] font-medium text-[#0b1024] shadow-none hover:bg-[#fafbff] sm:w-auto" onClick={() => setAddModalOpen(false)}>Отмена</Button>
+            <Button type="button" className="h-11 w-full rounded-2xl bg-[#5566f6] px-5 text-[14px] font-medium text-white hover:bg-[#4a5bf0] sm:w-auto" onClick={() => { void saveDraftRow(); }} disabled={isSaving}>
+              {isSaving ? "Сохранение…" : "Добавить запись"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
