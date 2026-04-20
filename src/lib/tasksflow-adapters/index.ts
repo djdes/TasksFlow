@@ -23,6 +23,8 @@ import { hygieneAdapter } from "./hygiene";
 import { healthCheckAdapter } from "./health-check";
 import { coldEquipmentAdapter } from "./cold-equipment";
 import { cleaningVentilationChecklistAdapter } from "./cleaning-ventilation-checklist";
+import { uvLampRuntimeAdapter } from "./uv-lamp-runtime";
+import { pestControlAdapter } from "./pest-control";
 import { buildGenericAdapter } from "./generic";
 import type { JournalAdapter } from "./types";
 
@@ -32,6 +34,8 @@ const SPECIFIC_ADAPTERS: JournalAdapter[] = [
   healthCheckAdapter,
   coldEquipmentAdapter,
   cleaningVentilationChecklistAdapter,
+  uvLampRuntimeAdapter,
+  pestControlAdapter,
 ];
 
 const SPECIFIC_BY_CODE = new Map<string, JournalAdapter>(
