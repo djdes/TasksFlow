@@ -65,12 +65,14 @@ export function TasksFlowSettingsClient({
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [links, setLinks] = useState<LinkRow[] | null>(null);
   const [linksLoading, setLinksLoading] = useState(false);
+  const integrationId = integration?.id ?? null;
+  const integrationLastSyncAt = integration?.lastSyncAt ?? null;
 
   // Load the user-link table whenever an integration exists. Re-fetches
   // after a successful sync — the server bumps `updatedAt`, so the UI
   // reflects "auto / manual" + current TasksFlow id without refresh.
   useEffect(() => {
-    if (!integration) {
+    if (!integrationId) {
       setLinks(null);
       return;
     }
@@ -91,7 +93,7 @@ export function TasksFlowSettingsClient({
     return () => {
       cancelled = true;
     };
-  }, [integration?.id, integration?.lastSyncAt]);
+  }, [integrationId, integrationLastSyncAt]);
 
   function handleConnect() {
     startConnect(async () => {
@@ -142,7 +144,7 @@ export function TasksFlowSettingsClient({
         const t = data.totals;
         toast.success(
           `Связано ${t.linked} из ${t.wesetupUsers}. ` +
-            `Без телефона: ${t.withoutPhone}, не найдены в TasksFlow: ${t.withoutMatch}.`
+            `Создано в TasksFlow: ${t.createdRemote}, без телефона: ${t.withoutPhone}, не связаны: ${t.withoutMatch}.`
         );
         const status = await fetch("/api/integrations/tasksflow", {
           cache: "no-store",
@@ -220,8 +222,9 @@ export function TasksFlowSettingsClient({
                     tasksflow.ru
                     <ExternalLink className="ml-1 inline size-3" />
                   </a>
-                  . Создаёте строку в журнале уборки — у уборщицы автоматически
-                  появляется задача в её приложении. Когда задача отмечена
+                  . Синхронизация сотрудников автоматически создаёт отсутствующих
+                  людей в TasksFlow, а строки журнала уборки превращаются в
+                  recurring-задачи для уборщицы. Когда задача отмечена
                   выполненной — клетка журнала проставляется автоматически.
                 </p>
               </div>
@@ -269,12 +272,14 @@ export function TasksFlowSettingsClient({
             </h2>
           </div>
           <p className="mb-4 max-w-[640px] text-[13px] text-[#6f7282]">
-            Сопоставление по номеру телефона. У сотрудника в WeSetup и в
-            TasksFlow должен быть один и тот же телефон в формате
+            Синхронизация идёт по номеру телефона. Если сотрудник уже есть в
+            TasksFlow, он свяжется автоматически. Если его там ещё нет, WeSetup
+            создаст его в компании, к которой привязан API-ключ. Номер телефона
+            должен быть в формате
             <code className="mx-1 rounded bg-[#f5f6ff] px-1.5 py-0.5 font-mono text-[12px] text-[#3848c7]">
               +7XXXXXXXXXX
             </code>
-            — тогда он автоматически свяжется при синхронизации.
+            — тогда синхронизация пройдет без ручной магии.
           </p>
           {linksLoading ? (
             <div className="rounded-2xl border border-dashed border-[#dcdfed] bg-[#fafbff] px-6 py-10 text-center text-[13px] text-[#6f7282]">

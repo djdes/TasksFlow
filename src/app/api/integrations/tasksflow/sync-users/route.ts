@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getActiveOrgId, requireRole } from "@/lib/auth-helpers";
+import { getActiveOrgId, requireAuth } from "@/lib/auth-helpers";
+import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import {
   TasksFlowError,
-  normalizeRussianPhone,
   tasksflowClientFor,
 } from "@/lib/tasksflow-client";
+import { syncTasksflowUsers } from "@/lib/tasksflow-user-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,12 +25,10 @@ export const dynamic = "force-dynamic";
  * Returns counts so the UI can show "Связано 7 из 12 сотрудников".
  */
 export async function POST() {
-  const session = await requireRole([
-    "owner",
-    "manager",
-    "technologist",
-    "head_chef",
-  ]);
+  const session = await requireAuth();
+  if (!hasFullWorkspaceAccess(session.user)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
   const integration = await db.tasksFlowIntegration.findUnique({
     where: { organizationId: orgId },
@@ -63,74 +62,67 @@ export async function POST() {
     );
   }
 
-  const remoteByPhone = new Map<
-    string,
-    { id: number; name: string | null; phone: string }
-  >();
-  for (const user of remoteUsers) {
-    const normalized = normalizeRussianPhone(user.phone);
-    if (!normalized) continue;
-    if (!remoteByPhone.has(normalized)) {
-      remoteByPhone.set(normalized, {
-        id: user.id,
-        name: user.name,
-        phone: normalized,
-      });
-    }
-  }
-
-  // Don't clobber manual links on the way in.
   const existingLinks = await db.tasksFlowUserLink.findMany({
     where: { integrationId: integration.id },
     select: { id: true, wesetupUserId: true, source: true },
   });
-  const existingByUser = new Map(
-    existingLinks.map((l) => [l.wesetupUserId, l])
-  );
 
-  let linked = 0;
-  let withoutPhone = 0;
-  let withoutMatch = 0;
-  let manualSkipped = 0;
-
-  for (const u of wesetupUsers) {
-    const phone = normalizeRussianPhone(u.phone);
-    if (!phone) {
-      withoutPhone += 1;
-      continue;
-    }
-    const remote = remoteByPhone.get(phone) ?? null;
-    if (!remote) withoutMatch += 1;
-
-    const existing = existingByUser.get(u.id);
-    if (existing?.source === "manual") {
-      manualSkipped += 1;
-      continue;
-    }
-
-    await db.tasksFlowUserLink.upsert({
-      where: {
-        integrationId_wesetupUserId: {
-          integrationId: integration.id,
-          wesetupUserId: u.id,
-        },
-      },
-      create: {
-        integrationId: integration.id,
-        wesetupUserId: u.id,
+  const client = tasksflowClientFor(integration);
+  let result;
+  try {
+    result = await syncTasksflowUsers({
+      integrationId: integration.id,
+      wesetupUsers,
+      existingLinks,
+      remoteUsers,
+      createRemoteUser: async ({ name, phone }) =>
+        client.createUser({
+          phone,
+          ...(name ? { name } : {}),
+        }),
+      upsertLink: async ({
+        integrationId,
+        wesetupUserId,
         phone,
-        tasksflowUserId: remote?.id ?? null,
-        tasksflowWorkerId: remote?.id ?? null,
-        source: "auto",
-      },
-      update: {
-        phone,
-        tasksflowUserId: remote?.id ?? null,
-        tasksflowWorkerId: remote?.id ?? null,
-        source: "auto",
+        tasksflowUserId,
+        tasksflowWorkerId,
+        source,
+      }) => {
+        await db.tasksFlowUserLink.upsert({
+          where: {
+            integrationId_wesetupUserId: {
+              integrationId,
+              wesetupUserId,
+            },
+          },
+          create: {
+            integrationId,
+            wesetupUserId,
+            phone,
+            tasksflowUserId,
+            tasksflowWorkerId,
+            source,
+          },
+          update: {
+            phone,
+            tasksflowUserId,
+            tasksflowWorkerId,
+            source,
+          },
+        });
       },
     });
-    if (remote) linked += 1;
+  } catch (err) {
+    if (err instanceof TasksFlowError) {
+      return NextResponse.json(
+        { error: `TasksFlow ошибка: ${err.message}` },
+        { status: 502 }
+      );
+    }
+    return NextResponse.json(
+      { error: "Не удалось синхронизировать сотрудников с TasksFlow" },
+      { status: 502 }
+    );
   }
 
   await db.tasksFlowIntegration.update({
@@ -138,14 +130,5 @@ export async function POST() {
     data: { lastSyncAt: new Date() },
   });
 
-  return NextResponse.json({
-    totals: {
-      wesetupUsers: wesetupUsers.length,
-      remoteUsers: remoteUsers.length,
-      linked,
-      withoutPhone,
-      withoutMatch,
-      manualSkipped,
-    },
-  });
+  return NextResponse.json(result);
 }

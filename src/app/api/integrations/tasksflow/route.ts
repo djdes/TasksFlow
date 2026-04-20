@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { getActiveOrgId, requireRole } from "@/lib/auth-helpers";
+import { getActiveOrgId, requireAuth } from "@/lib/auth-helpers";
+import { hasFullWorkspaceAccess } from "@/lib/role-access";
+import { isManagerRole } from "@/lib/user-roles";
 import {
   encryptSecret,
   generateWebhookSecret,
@@ -9,7 +11,6 @@ import {
 import {
   TasksFlowError,
   tasksflowClient,
-  tasksflowClientFor,
 } from "@/lib/tasksflow-client";
 
 export const runtime = "nodejs";
@@ -21,12 +22,10 @@ export const dynamic = "force-dynamic";
  * count for the settings page header.
  */
 export async function GET() {
-  const session = await requireRole([
-    "owner",
-    "manager",
-    "technologist",
-    "head_chef",
-  ]);
+  const session = await requireAuth();
+  if (!hasFullWorkspaceAccess(session.user)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
   const integration = await db.tasksFlowIntegration.findUnique({
     where: { organizationId: orgId },
@@ -87,7 +86,10 @@ const connectSchema = z.object({
  * Single integration per org (we upsert against `organizationId`).
  */
 export async function POST(request: Request) {
-  const session = await requireRole(["owner", "manager"]);
+  const session = await requireAuth();
+  if (!isManagerRole(session.user.role) && !session.user.isRoot) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
 
   let payload: z.infer<typeof connectSchema>;
@@ -179,7 +181,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  const session = await requireRole(["owner", "manager"]);
+  const session = await requireAuth();
+  if (!isManagerRole(session.user.role) && !session.user.isRoot) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
   await db.tasksFlowIntegration
     .delete({ where: { organizationId: orgId } })

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getActiveOrgId, requireRole } from "@/lib/auth-helpers";
+import { getActiveOrgId, requireAuth } from "@/lib/auth-helpers";
+import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { pullCompletionsForOrganization } from "@/lib/tasksflow-sync";
 
 export const runtime = "nodejs";
@@ -15,12 +16,10 @@ export const dynamic = "force-dynamic";
  * sees today's marks immediately on open without waiting for cron.
  */
 export async function POST() {
-  const session = await requireRole([
-    "owner",
-    "manager",
-    "technologist",
-    "head_chef",
-  ]);
+  const session = await requireAuth();
+  if (!hasFullWorkspaceAccess(session.user)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
   const summary = await pullCompletionsForOrganization({
     organizationId: orgId,

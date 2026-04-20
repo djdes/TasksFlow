@@ -1,0 +1,95 @@
+{
+  "taskId": "tasksflow-cleaning-autoprovision-2026-04-20",
+  "status": "PASS",
+  "repos": [
+    {
+      "path": "C:\\www\\Wesetup.ru",
+      "baseHead": "8c37ab8",
+      "changedFiles": [
+        "src/lib/tasksflow-user-sync.ts",
+        "src/lib/tasksflow-user-sync.test.ts",
+        "src/lib/tasksflow-client.ts",
+        "src/app/api/integrations/tasksflow/sync-users/route.ts",
+        "src/app/api/integrations/tasksflow/route.ts",
+        "src/app/api/integrations/tasksflow/links/route.ts",
+        "src/app/api/integrations/tasksflow/sync-tasks/route.ts",
+        "src/app/(dashboard)/settings/integrations/tasksflow/tasksflow-settings-client.tsx"
+      ],
+      "verification": [
+        {
+          "command": "node --import tsx --test src/lib/tasksflow-user-sync.test.ts src/lib/role-access.test.ts",
+          "status": "PASS"
+        },
+        {
+          "command": "npx eslint \"src/lib/tasksflow-user-sync.ts\" \"src/lib/tasksflow-user-sync.test.ts\" \"src/lib/tasksflow-client.ts\" \"src/app/api/integrations/tasksflow/sync-users/route.ts\" \"src/app/api/integrations/tasksflow/route.ts\" \"src/app/api/integrations/tasksflow/links/route.ts\" \"src/app/api/integrations/tasksflow/sync-tasks/route.ts\" \"src/app/(dashboard)/settings/integrations/tasksflow/tasksflow-settings-client.tsx\"",
+          "status": "PASS"
+        },
+        {
+          "command": "npx tsc --noEmit --pretty false",
+          "status": "PASS"
+        },
+        {
+          "command": "npm run build",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "C:\\www\\TasksFlow",
+      "baseHead": "3327057",
+      "changedFiles": [
+        "server/routes.ts",
+        "tests/api-user-provision.test.ts"
+      ],
+      "verification": [
+        {
+          "command": "npm test -- api-user-provision.test.ts api-keys.test.ts wesetup-journal-mode.test.ts",
+          "status": "PASS"
+        },
+        {
+          "command": "npm run check",
+          "status": "PASS"
+        },
+        {
+          "command": "npm run build",
+          "status": "PASS",
+          "notes": [
+            "Build emits pre-existing warnings about import.meta in vite.config.ts but completes successfully."
+          ]
+        }
+      ]
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "note": "Missing WeSetup employees are provisioned in TasksFlow and linked."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "note": "Existing remote employees are reused by normalized phone; manual links are preserved."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "note": "Root-aware access is used on WeSetup TasksFlow integration API routes for read/sync actions."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "note": "Cleaning sync now has deterministic remote user ids after employee sync."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "note": "Completion mirror path remains intact."
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "note": "Integration UI copy now explains employee auto-creation."
+    }
+  ]
+}

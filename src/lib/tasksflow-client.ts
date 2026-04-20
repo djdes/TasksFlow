@@ -54,6 +54,11 @@ export type CreateTaskInput = {
   description?: string;
 };
 
+export type CreateUserInput = {
+  phone: string;
+  name?: string;
+};
+
 export class TasksFlowError extends Error {
   constructor(
     public readonly status: number,
@@ -141,6 +146,10 @@ class TasksFlowClient {
 
   listUsers(): Promise<TasksFlowUser[]> {
     return this.request<TasksFlowUser[]>("GET", "/api/users");
+  }
+
+  createUser(input: CreateUserInput): Promise<TasksFlowUser> {
+    return this.request<TasksFlowUser>("POST", "/api/users", input);
   }
 
   listTasks(): Promise<TasksFlowTask[]> {

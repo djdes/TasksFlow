@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getActiveOrgId, requireRole } from "@/lib/auth-helpers";
+import { getActiveOrgId, requireAuth } from "@/lib/auth-helpers";
+import { hasFullWorkspaceAccess } from "@/lib/role-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,12 +12,10 @@ export const dynamic = "force-dynamic";
  * per employee with status «Связан / Не найден / Без телефона».
  */
 export async function GET() {
-  const session = await requireRole([
-    "owner",
-    "manager",
-    "technologist",
-    "head_chef",
-  ]);
+  const session = await requireAuth();
+  if (!hasFullWorkspaceAccess(session.user)) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
   const orgId = getActiveOrgId(session);
 
   const integration = await db.tasksFlowIntegration.findUnique({
