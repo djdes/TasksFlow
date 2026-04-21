@@ -9,6 +9,7 @@ import {
   CreditCard,
   KeyRound,
   Package,
+  Phone,
   Plug,
   ScrollText,
   Settings2,
@@ -61,6 +62,14 @@ const settingsCards = [
     icon: Package,
     color: "#f59e0b",
     bg: "#fff8eb",
+  },
+  {
+    title: "Привязка телефона",
+    description: "Связать аккаунт с TasksFlow по номеру",
+    href: "/settings/phone",
+    icon: Phone,
+    color: "#3848c7",
+    bg: "#eef1ff",
   },
   {
     title: "Уведомления",
