@@ -5,6 +5,8 @@ import { getActiveOrgId, requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { isManagementRole } from "@/lib/user-roles";
 import { notifyManagement } from "@/lib/notifications";
+import { normalizePhone } from "@/lib/phone";
+import { tryAutolinkTasksflowByPhone } from "@/lib/tasksflow-autolink";
 
 /**
  * Minimal "add an employee" endpoint matching the reference-staff screen:
@@ -29,6 +31,10 @@ const createSchema = z.object({
     .trim()
     .min(2, "ФИО слишком короткое")
     .max(200, "ФИО слишком длинное"),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Укажите телефон — без него не связать с TasksFlow"),
 });
 
 function forbidden() {
@@ -74,10 +80,22 @@ export async function POST(request: Request) {
     );
   }
 
+  const phone = normalizePhone(parsed.phone);
+  if (!phone) {
+    return NextResponse.json(
+      {
+        error:
+          "Неверный формат телефона. Пример: +7 985 123-45-67",
+      },
+      { status: 400 }
+    );
+  }
+
   const user = await db.user.create({
     data: {
       email: syntheticEmail(orgId),
       name: parsed.fullName,
+      phone,
       passwordHash: "",
       role: deriveRoleFromCategory(position.categoryKey),
       positionTitle: position.name,
@@ -95,6 +113,18 @@ export async function POST(request: Request) {
       jobPositionId: true,
       isActive: true,
     },
+  });
+
+  // Best-effort: if this org has an enabled TasksFlow integration and
+  // a TF user with the matching phone already exists, create the link
+  // right away. Silent on failure — owner can still link manually via
+  // the staff page.
+  tryAutolinkTasksflowByPhone({
+    organizationId: orgId,
+    weSetupUserId: user.id,
+    phone,
+  }).catch((err) => {
+    console.error("[staff] tasksflow autolink failed", err);
   });
 
   // Surface the new hire in the bell panel — managers see it on next refresh

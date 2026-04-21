@@ -262,6 +262,7 @@ export function StaffAddEmployeeDialog(props: {
   onCreated: () => void;
 } & Close) {
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [positionId, setPositionId] = useState(props.position.id);
   const [pending, setPending] = useState(false);
   const [step, setStep] = useState<AddStep>({ kind: "form" });
@@ -270,6 +271,7 @@ export function StaffAddEmployeeDialog(props: {
   function closeAll() {
     // Reset local state so the next open starts clean.
     setFullName("");
+    setPhone("");
     setPositionId(props.position.id);
     setPending(false);
     setStep({ kind: "form" });
@@ -282,12 +284,20 @@ export function StaffAddEmployeeDialog(props: {
       toast.error("Введите ФИО");
       return;
     }
+    if (phone.trim().length < 10) {
+      toast.error("Укажите телефон — нужен для связи с TasksFlow");
+      return;
+    }
     setPending(true);
     try {
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobPositionId: positionId, fullName: fullName.trim() }),
+        body: JSON.stringify({
+          jobPositionId: positionId,
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+        }),
       });
       const data = (await res.json().catch(() => null)) as
         | { user?: { id: string; name: string }; error?: string }
@@ -469,6 +479,19 @@ export function StaffAddEmployeeDialog(props: {
               placeholder="Введите ФИО сотрудника"
               className="h-12 rounded-xl border-[#dcdfed] bg-white text-[14px] text-[#0b1024] focus-visible:border-[#5566f6] focus-visible:ring-4 focus-visible:ring-[#5566f6]/15"
             />
+            <div>
+              <Input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Телефон · +7 985 123-45-67"
+                autoComplete="tel"
+                className="h-12 rounded-xl border-[#dcdfed] bg-white text-[14px] text-[#0b1024] focus-visible:border-[#5566f6] focus-visible:ring-4 focus-visible:ring-[#5566f6]/15"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-[#6f7282]">
+                Если у сотрудника есть TasksFlow с этим номером — автоматически свяжем аккаунты.
+              </p>
+            </div>
           </div>,
           primaryBtn("Добавить", submit, pending)
         )}

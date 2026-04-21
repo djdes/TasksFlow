@@ -10,6 +10,8 @@ import {
   normalizeUserRole,
   toCanonicalUserRole,
 } from "@/lib/user-roles";
+import { normalizePhone } from "@/lib/phone";
+import { tryAutolinkTasksflowByPhone } from "@/lib/tasksflow-autolink";
 
 const updateUserSchema = z.object({
   name: z.string().trim().min(2).optional(),
@@ -66,12 +68,36 @@ export async function PUT(
       );
     }
 
+    // Normalize phone before saving so every downstream consumer
+    // (TasksFlow link, adapter display, Telegram invite) sees a clean
+    // `+7XXXXXXXXXX`. Null-clear stays allowed — owner is allowed to
+    // scrub a phone from a record.
+    let normalizedPhone: string | null | undefined;
+    if (phone !== undefined) {
+      const trimmed = phone?.trim() ?? "";
+      if (trimmed === "") {
+        normalizedPhone = null;
+      } else {
+        const parsed = normalizePhone(trimmed);
+        if (!parsed) {
+          return NextResponse.json(
+            {
+              error:
+                "Неверный формат телефона. Пример: +7 985 123-45-67",
+            },
+            { status: 400 }
+          );
+        }
+        normalizedPhone = parsed;
+      }
+    }
+
     const updated = await db.user.update({
       where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(role !== undefined && { role: toCanonicalUserRole(role) }),
-        ...(phone !== undefined && { phone: phone?.trim() || null }),
+        ...(normalizedPhone !== undefined && { phone: normalizedPhone }),
         ...(positionTitle !== undefined && {
           positionTitle: positionTitle?.trim() || null,
         }),
@@ -87,6 +113,19 @@ export async function PUT(
         phone: true,
       },
     });
+
+    // If the phone just changed (or appeared), try to auto-link the user
+    // to the matching TasksFlow worker. Fire-and-forget so a slow TF
+    // response doesn't stall the PUT.
+    if (normalizedPhone) {
+      tryAutolinkTasksflowByPhone({
+        organizationId: session.user.organizationId,
+        weSetupUserId: id,
+        phone: normalizedPhone,
+      }).catch((err) => {
+        console.error("[users/PUT] autolink failed", err);
+      });
+    }
 
     return NextResponse.json({ user: updated });
   } catch (error) {

@@ -7,6 +7,7 @@ import {
 } from "@/lib/registration";
 import { sendWelcomeEmail } from "@/lib/email";
 import { seedDefaultJobPositions } from "@/lib/default-job-positions";
+import { normalizePhone } from "@/lib/phone";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,10 +38,12 @@ export async function POST(request: Request) {
   const code = typeof body.code === "string" ? body.code.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
-  const phone =
-    typeof body.phone === "string" && body.phone.trim().length > 0
-      ? body.phone.trim()
-      : null;
+  // Phone is required now — every account needs to be linkable to a
+  // TasksFlow worker, which keys off phone. Accept any format the user
+  // types and normalize to `+7XXXXXXXXXX`.
+  const phone = normalizePhone(
+    typeof body.phone === "string" ? body.phone : null
+  );
   const organizationName =
     typeof body.organizationName === "string"
       ? body.organizationName.trim()
@@ -61,6 +64,12 @@ export async function POST(request: Request) {
   if (!email || !code || !password || !name || !organizationName) {
     return NextResponse.json(
       { error: "Не все поля заполнены" },
+      { status: 400 }
+    );
+  }
+  if (!phone) {
+    return NextResponse.json(
+      { error: "Укажите телефон в формате +7XXXXXXXXXX — без него не получится связать аккаунт с TasksFlow" },
       { status: 400 }
     );
   }

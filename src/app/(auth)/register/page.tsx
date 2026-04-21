@@ -286,8 +286,10 @@ export default function RegisterPage() {
                   type="tel"
                   value={form.phone}
                   onChange={(v) => update("phone", v)}
-                  placeholder="+7 ..."
+                  placeholder="+7 985 123-45-67"
                   autoComplete="tel"
+                  required
+                  helperText="Нужен, чтобы связать аккаунт с TasksFlow. Можно вводить в любом формате — приведём к +7."
                 />
               </div>
               <Field
@@ -423,6 +425,7 @@ function Field({
   required,
   minLength,
   inputMode,
+  helperText,
 }: {
   id: string;
   label: string;
@@ -434,6 +437,7 @@ function Field({
   required?: boolean;
   minLength?: number;
   inputMode?: "numeric" | "text" | "tel" | "email";
+  helperText?: string;
 }) {
   return (
     <label htmlFor={id} className="block">
@@ -453,6 +457,11 @@ function Field({
         inputMode={inputMode}
         className="h-11 w-full rounded-2xl border border-[#dcdfed] bg-white px-4 text-[15px] text-[#0b1024] placeholder:text-[#c1c5d6] transition-[border-color,box-shadow] focus:border-[#5566f6] focus:outline-none focus:ring-4 focus:ring-[#5566f6]/15"
       />
+      {helperText ? (
+        <span className="mt-1 block text-[11px] leading-snug text-[#6f7282]">
+          {helperText}
+        </span>
+      ) : null}
     </label>
   );
 }
