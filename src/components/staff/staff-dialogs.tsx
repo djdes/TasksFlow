@@ -500,6 +500,94 @@ export function StaffAddEmployeeDialog(props: {
   );
 }
 
+/**
+ * Диалог редактирования ФИО и телефона сотрудника. Пароль / почта /
+ * роль / должность тут не трогаются — это отдельные более глубокие
+ * действия через /settings/users/[id] (TBD). Этот диалог закрывает
+ * частый кейс «опечатался в ФИО — надо исправить» одним кликом.
+ */
+export function StaffEditEmployeeDialog(props: {
+  employee: StaffEmployee;
+  pending: boolean;
+  onSave: (patch: { name?: string; phone?: string | null }) => void;
+} & Close) {
+  const { employee, open, onClose, pending, onSave } = props;
+  const [name, setName] = useState(employee.name);
+  const [phone, setPhone] = useState(employee.phone ?? "");
+
+  // Reset local state when dialog opens on a different employee.
+  useEffect(() => {
+    if (open) {
+      setName(employee.name);
+      setPhone(employee.phone ?? "");
+    }
+  }, [open, employee.id, employee.name, employee.phone]);
+
+  function submit() {
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      toast.error("Введите ФИО (минимум 2 символа)");
+      return;
+    }
+    const patch: { name?: string; phone?: string | null } = {};
+    if (trimmedName !== employee.name) patch.name = trimmedName;
+    const trimmedPhone = phone.trim();
+    const currentPhone = employee.phone ?? "";
+    if (trimmedPhone !== currentPhone) {
+      patch.phone = trimmedPhone === "" ? null : trimmedPhone;
+    }
+    if (Object.keys(patch).length === 0) {
+      onClose();
+      return;
+    }
+    onSave(patch);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[460px]">
+        {shell(
+          `Редактировать: ${employee.name}`,
+          <div className="space-y-4">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ФИО"
+              className="h-12 rounded-xl border-[#dcdfed] bg-white text-[14px] text-[#0b1024] focus-visible:border-[#5566f6] focus-visible:ring-4 focus-visible:ring-[#5566f6]/15"
+            />
+            <div>
+              <Input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Телефон · +7 985 123-45-67"
+                autoComplete="tel"
+                className="h-12 rounded-xl border-[#dcdfed] bg-white text-[14px] text-[#0b1024] focus-visible:border-[#5566f6] focus-visible:ring-4 focus-visible:ring-[#5566f6]/15"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-[#6f7282]">
+                Меняется номер — запустится автосвязка с TasksFlow по
+                совпадению телефона. Чтобы очистить телефон, оставьте
+                поле пустым.
+              </p>
+            </div>
+          </div>,
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={pending}
+            >
+              Отмена
+            </Button>
+            {primaryBtn("Сохранить", submit, pending)}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function StaffTelegramInviteDialog(props: {
   employee: StaffEmployee;
   mode: "invite" | "rebind";

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/server-session";
@@ -125,6 +126,38 @@ export async function PUT(
       }).catch((err) => {
         console.error("[users/PUT] autolink failed", err);
       });
+    }
+
+    // Имя или должность поменялись — прокатим label по Notification.items
+    // в рамках организации. Иначе в колокольчике застрял бы устаревший
+    // текст «Иван опечатка, Повар» до dismiss.
+    if (name !== undefined || positionTitle !== undefined) {
+      const newLabel = updated.positionTitle
+        ? `${updated.name}, ${updated.positionTitle}`
+        : updated.name;
+      const notifications = await db.notification.findMany({
+        where: { organizationId: session.user.organizationId },
+        select: { id: true, items: true },
+      });
+      for (const n of notifications) {
+        const list = Array.isArray(n.items) ? (n.items as unknown[]) : [];
+        let changed = false;
+        const nextItems = list.map((raw) => {
+          if (!raw || typeof raw !== "object") return raw;
+          const item = raw as { id?: string; label?: string };
+          if (item.id === id && item.label !== newLabel) {
+            changed = true;
+            return { ...item, label: newLabel };
+          }
+          return raw;
+        });
+        if (changed) {
+          await db.notification.update({
+            where: { id: n.id },
+            data: { items: nextItems as Prisma.InputJsonValue },
+          });
+        }
+      }
     }
 
     return NextResponse.json({ user: updated });

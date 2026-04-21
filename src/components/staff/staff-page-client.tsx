@@ -29,6 +29,7 @@ import {
   StaffAddPositionDialog,
   StaffArchiveDialog,
   StaffDeleteBlockedDialog,
+  StaffEditEmployeeDialog,
   StaffEditPositionDialog,
   StaffIikoDialog,
   StaffInstructionDialog,
@@ -124,6 +125,7 @@ export function StaffPageClient(props: StaffPageProps) {
     | { kind: "add-position"; categoryKey: PositionCategory }
     | { kind: "edit-position"; position: StaffPosition }
     | { kind: "add-employee"; position: StaffPosition }
+    | { kind: "edit-employee"; employee: StaffEmployee; pending: boolean }
     | {
         kind: "tg-invite";
         employee: StaffEmployee;
@@ -338,6 +340,52 @@ export function StaffPageClient(props: StaffPageProps) {
       startTransition(() => router.refresh());
     } catch (error) {
       toast.error((error as Error).message);
+    }
+  }
+
+  async function openEditEmployee(employee: StaffEmployee) {
+    setDlg({ kind: "edit-employee", employee, pending: false });
+  }
+
+  async function saveEmployeeEdit(
+    id: string,
+    patch: { name?: string; phone?: string | null }
+  ) {
+    setDlg((current) =>
+      current?.kind === "edit-employee" && current.employee.id === id
+        ? { ...current, pending: true }
+        : current
+    );
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(
+          (data as { error?: string })?.error || "Не удалось сохранить"
+        );
+        setDlg((current) =>
+          current?.kind === "edit-employee" && current.employee.id === id
+            ? { ...current, pending: false }
+            : current
+        );
+        return;
+      }
+      toast.success("Сохранено");
+      setDlg(null);
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Сохранение не удалось"
+      );
+      setDlg((current) =>
+        current?.kind === "edit-employee" && current.employee.id === id
+          ? { ...current, pending: false }
+          : current
+      );
     }
   }
 
@@ -608,6 +656,7 @@ export function StaffPageClient(props: StaffPageProps) {
                 onUnlinkTelegram={(employee) =>
                   setDlg({ kind: "tg-unlink", employee, pending: false })
                 }
+                onEditEmployee={(employee) => void openEditEmployee(employee)}
                 onAddPosition={() => setDlg({ kind: "add-position", categoryKey: cat })}
                 onAddEmployee={(position) => setDlg({ kind: "add-employee", position })}
                 onEditPosition={(position) => setDlg({ kind: "edit-position", position })}
@@ -769,6 +818,15 @@ export function StaffPageClient(props: StaffPageProps) {
           }}
         />
       ) : null}
+      {dlg?.kind === "edit-employee" ? (
+        <StaffEditEmployeeDialog
+          employee={dlg.employee}
+          pending={dlg.pending}
+          open
+          onClose={() => setDlg(null)}
+          onSave={(patch) => void saveEmployeeEdit(dlg.employee.id, patch)}
+        />
+      ) : null}
       {dlg?.kind === "tg-invite" ? (
         <StaffTelegramInviteDialog
           employee={dlg.employee}
@@ -851,6 +909,7 @@ function CategoryColumn(props: {
   onInviteTelegram: (employee: StaffEmployee) => void;
   onRebindTelegram: (employee: StaffEmployee) => void;
   onUnlinkTelegram: (employee: StaffEmployee) => void;
+  onEditEmployee: (employee: StaffEmployee) => void;
   onAddPosition: () => void;
   onAddEmployee: (position: StaffPosition) => void;
   onEditPosition: (position: StaffPosition) => void;
@@ -984,6 +1043,20 @@ function CategoryColumn(props: {
                               ) : null}
                             </span>
                             <span className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  props.onEditEmployee(e);
+                                }}
+                                title="Редактировать"
+                                aria-label="Редактировать сотрудника"
+                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#dcdfed] bg-white px-2 text-[11px] font-medium text-[#6f7282] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff] hover:text-[#0b1024]"
+                              >
+                                <Pencil className="size-3.5" />
+                                <span className="hidden sm:inline">Изменить</span>
+                              </button>
                               {e.telegramLinked && props.telegramBotUrl ? (
                                 <Link
                                   href={props.telegramBotUrl}
