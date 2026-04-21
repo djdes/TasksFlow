@@ -41,6 +41,9 @@ import {
 import { FeedbackDialog } from "@/components/layout/feedback-dialog";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
 
+// Items inside the dropdown under the org-pill. «Сотрудники» вынесен
+// отдельной pill-кнопкой в шапке (см. разметку ниже), т.к. это самый
+// частый destination для управляющего.
 const secondaryNavItems = [
   { label: "Журналы", href: "/journals", icon: ClipboardList },
   { label: "Партии", href: "/batches", icon: Package },
@@ -50,8 +53,13 @@ const secondaryNavItems = [
   { label: "Компетенции", href: "/competencies", icon: GraduationCap },
   { label: "CAPA", href: "/capa", icon: AlertTriangle },
   { label: "Отчёты", href: "/reports", icon: FileText },
-  { label: "Сотрудники", href: "/settings/users", icon: Users },
 ];
+
+const STAFF_NAV_ITEM = {
+  label: "Сотрудники",
+  href: "/settings/users",
+  icon: Users,
+};
 
 function getInitials(name: string): string {
   return name
@@ -178,6 +186,12 @@ export function Header({
   const navItems = [
     { label: homeLabel, href: homeHref, icon: HomeIcon, tooltip: homeTooltip },
     ...visibleSecondaryNavItems.map((i) => ({ ...i, tooltip: i.label })),
+    // «Сотрудники» добавлен отдельно — он вытащен из secondaryNavItems
+    // в pill на десктопе, но в мобильном Sheet-меню должен
+    // присутствовать рядом с остальными разделами.
+    ...(fullAccess
+      ? [{ ...STAFF_NAV_ITEM, tooltip: STAFF_NAV_ITEM.label }]
+      : []),
   ];
 
   return (
@@ -257,6 +271,28 @@ export function Header({
               </div>
             ) : null}
           </div>
+
+          {/* «Сотрудники» — вытащено из дропдауна в постоянную pill-кнопку
+              справа от org-pill. Это самое частое destination управляющего
+              (добавить новичка, отметить больничный, выдать TG-приглашение),
+              клик вместо «наведи → пункт в списке» экономит менеджеру секунды. */}
+          {fullAccess ? (
+            <Link
+              href={STAFF_NAV_ITEM.href}
+              title={STAFF_NAV_ITEM.label}
+              className={cn(
+                "ml-1 flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                pathname === STAFF_NAV_ITEM.href ||
+                  pathname.startsWith(STAFF_NAV_ITEM.href + "/")
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <STAFF_NAV_ITEM.icon className="size-4 shrink-0" />
+              <span className="truncate">{STAFF_NAV_ITEM.label}</span>
+            </Link>
+          ) : null}
+
           <div className="flex-1" />
         </div>
 
