@@ -52,6 +52,7 @@ model Organization {
   notifications        Notification[]
   botInviteTokens      BotInviteToken[]
   journalObligations   JournalObligation[]
+  workShifts           WorkShift[]
 }
 
 model User {
@@ -106,6 +107,7 @@ model User {
   dismissal             StaffDismissal?
   notifications         Notification[]
   journalObligations    JournalObligation[]
+  workShifts            WorkShift[]
 
   @@index([organizationId, archivedAt])
   @@index([jobPositionId])
@@ -127,6 +129,7 @@ model JobPosition {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   users          User[]
+  workShifts     WorkShift[]
   /// JSON-массив permission-кодов (см. src/lib/permissions.ts). null =
   /// наследовать defaults группы (management/staff). Override для
   /// конкретной должности: «пекари тоже могут редактировать график».
@@ -186,6 +189,36 @@ model StaffDismissal {
   createdAt DateTime @default(now())
 
   @@index([date])
+}
+
+/// Смена сотрудника — «кто сегодня на работе и в какой роли». Именно
+/// эта таблица делает возможным «Назначить задачу на должность, а не на
+/// Иванова»: сохраняем расписание на каждый день, потом резолвер находит
+/// дежурного с нужной `jobPositionId` на целевую дату. Если строки на
+/// день нет — сотрудник считается не запланированным (исключается из
+/// автосзначений).
+model WorkShift {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Якорь дня (UTC-midnight).
+  date           DateTime
+  /// На какой должности дежурит. Необязательно — fallback на jobPositionId
+  /// пользователя из User.jobPositionId. Явно задаётся, если сотрудник
+  /// сегодня подменяет другой пост (повар холодного цеха перекрывает
+  /// горячий, например).
+  jobPositionId  String?
+  jobPosition    JobPosition? @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
+  /// scheduled | off | vacation | sick
+  status         String       @default("scheduled")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, date])
+  @@index([organizationId, date])
+  @@index([date, status])
 }
 
 /// Invite flow token. Created alongside a placeholder `User` when an owner

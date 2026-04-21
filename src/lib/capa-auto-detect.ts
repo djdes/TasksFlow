@@ -15,6 +15,7 @@
  */
 import { db } from "@/lib/db";
 import { getDbRoleValuesWithLegacy, MANAGER_ROLES } from "@/lib/user-roles";
+import { resolveOnDutyByCategory } from "@/lib/work-shifts";
 
 const SOURCE_TYPE = "auto_temp_3days";
 
@@ -197,15 +198,29 @@ export async function detectTemperatureCapas(args: {
     }
 
     if (managerId === undefined) {
-      const manager = await db.user.findFirst({
-        where: {
-          organizationId: args.organizationId,
-          role: { in: getDbRoleValuesWithLegacy(MANAGER_ROLES) },
-          isActive: true,
-        },
-        select: { id: true },
-      });
-      managerId = manager?.id ?? null;
+      // Сначала пытаемся назначить на дежурного из руководства сегодня —
+      // чтобы CAPA «проверить компрессор» упала не Иванову на 7-дневной
+      // болезни, а тому, кто реально в смене. Если в workShift никого
+      // из management-категории на сегодня нет, фолбэчимся на первого
+      // активного менеджера в организации.
+      const onDuty = await resolveOnDutyByCategory(
+        args.organizationId,
+        "management",
+        now
+      );
+      if (onDuty) {
+        managerId = onDuty.userId;
+      } else {
+        const manager = await db.user.findFirst({
+          where: {
+            organizationId: args.organizationId,
+            role: { in: getDbRoleValuesWithLegacy(MANAGER_ROLES) },
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        managerId = manager?.id ?? null;
+      }
     }
     if (!managerId) {
       summary.details.push({

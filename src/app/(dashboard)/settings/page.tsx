@@ -15,6 +15,7 @@ import {
   ScrollText,
   Settings2,
   ShieldCheck,
+  CalendarRange,
   Users,
   Wrench,
 } from "lucide-react";
@@ -88,6 +89,14 @@ const settingsCards = [
     icon: ShieldCheck,
     color: "#3848c7",
     bg: "#eef1ff",
+  },
+  {
+    title: "График смен",
+    description: "Кто сегодня на смене — для авто-назначений",
+    href: "/settings/schedule",
+    icon: CalendarRange,
+    color: "#10b981",
+    bg: "#ecfdf5",
   },
   {
     title: "Уведомления",
