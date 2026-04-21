@@ -5,6 +5,24 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reconcileEntryStaffFields } from "@/lib/journal-staff-binding";
 import { isManagementRole } from "@/lib/user-roles";
+import { detectTemperatureCapas } from "@/lib/capa-auto-detect";
+
+/**
+ * Fire-and-forget авто-детектор CAPA по температуре. Дёргается после
+ * каждой записи в документ `cold_equipment_control` — если среди трёх
+ * последних дней по одному и тому же холодильнику есть отклонение от
+ * нормы, detectTemperatureCapas откроет CAPA с заготовленным планом
+ * «проверить компрессор». Идемпотентно.
+ */
+function maybeTriggerColdEquipmentCapaDetection(
+  templateCode: string | undefined,
+  organizationId: string
+): void {
+  if (templateCode !== "cold_equipment_control") return;
+  detectTemperatureCapas({ organizationId }).catch((err) => {
+    console.warn("[capa-auto] cold-equipment detect failed:", err);
+  });
+}
 
 function isValidDate(value: Date) {
   return Number.isFinite(value.getTime());
@@ -26,7 +44,10 @@ export async function PUT(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const doc = await db.journalDocument.findUnique({ where: { id: documentId } });
+  const doc = await db.journalDocument.findUnique({
+    where: { id: documentId },
+    include: { template: { select: { code: true } } },
+  });
   if (!doc || doc.organizationId !== session.user.organizationId) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
   }
@@ -86,6 +107,11 @@ export async function PUT(
     },
   });
 
+  maybeTriggerColdEquipmentCapaDetection(
+    doc.template?.code,
+    session.user.organizationId
+  );
+
   return NextResponse.json({ entry });
 }
 
@@ -101,7 +127,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
-  const doc = await db.journalDocument.findUnique({ where: { id: documentId } });
+  const doc = await db.journalDocument.findUnique({
+    where: { id: documentId },
+    include: { template: { select: { code: true } } },
+  });
   if (!doc || doc.organizationId !== session.user.organizationId) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
   }
@@ -221,6 +250,11 @@ export async function PATCH(
       });
     });
 
+    maybeTriggerColdEquipmentCapaDetection(
+      doc.template?.code,
+      session.user.organizationId
+    );
+
     return NextResponse.json({ entries: result });
   } catch (error) {
     return NextResponse.json(
@@ -242,7 +276,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
-  const doc = await db.journalDocument.findUnique({ where: { id: documentId } });
+  const doc = await db.journalDocument.findUnique({
+    where: { id: documentId },
+    include: { template: { select: { code: true } } },
+  });
   if (!doc || doc.organizationId !== session.user.organizationId) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
   }
