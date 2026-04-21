@@ -4,7 +4,14 @@ import { ReportForm } from "@/components/reports/report-form";
 import { ComplianceBundleCard } from "@/components/reports/compliance-bundle-card";
 
 export default async function ReportsPage() {
-  const session = await requireRole(["owner", "technologist"]);
+  // Принимаем и новые (manager / head_chef), и легаси (owner /
+  // technologist) роли — и то, и то пишет отчёты.
+  const session = await requireRole([
+    "manager",
+    "head_chef",
+    "owner",
+    "technologist",
+  ]);
 
   const [templates, areas] = await Promise.all([
     db.journalTemplate.findMany({
