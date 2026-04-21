@@ -91,6 +91,11 @@ model User {
   jobPositionId         String?
   jobPosition           JobPosition?        @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
   createdAt             DateTime            @default(now())
+  /// Personal permission override — JSON-массив кодов из
+  /// src/lib/permissions.ts. null = наследовать от должности/группы.
+  /// Индивидуальный override используется редко: «этот конкретный
+  /// официант умеет принимать поставки и его надо пустить в batches».
+  permissionsJson       Json?
   journalEntries        JournalEntry[]
   journalAccess         UserJournalAccess[]
   inviteToken           InviteToken?
@@ -122,6 +127,10 @@ model JobPosition {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   users          User[]
+  /// JSON-массив permission-кодов (см. src/lib/permissions.ts). null =
+  /// наследовать defaults группы (management/staff). Override для
+  /// конкретной должности: «пекари тоже могут редактировать график».
+  permissionsJson Json?
 
   @@unique([organizationId, categoryKey, name])
   @@index([organizationId, sortOrder])

@@ -14,6 +14,7 @@ import {
   Plug,
   ScrollText,
   Settings2,
+  ShieldCheck,
   Users,
   Wrench,
 } from "lucide-react";
@@ -78,6 +79,14 @@ const settingsCards = [
     href: "/settings/auto-journals",
     icon: Sparkles,
     color: "#5566f6",
+    bg: "#eef1ff",
+  },
+  {
+    title: "Права доступа",
+    description: "Группы, должности, индивидуальные права",
+    href: "/settings/permissions",
+    icon: ShieldCheck,
+    color: "#3848c7",
     bg: "#eef1ff",
   },
   {
