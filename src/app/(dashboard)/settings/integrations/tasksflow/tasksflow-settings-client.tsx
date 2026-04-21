@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  ClipboardCopy,
   ExternalLink,
   KeyRound,
   Plug,
@@ -380,14 +381,40 @@ export function TasksFlowSettingsClient({
                 {pluralPeople(lastFailures.length)}
               </h2>
               {hasForbiddenFailure(lastFailures) ? (
-                <p className="mt-1 text-[13px] leading-relaxed text-[#3c4053]">
-                  TasksFlow отказывается создавать пользователей через
-                  текущий API-ключ. Скорее всего, ключ выпущен как
-                  «только чтение» или без прав admin. Зайдите в TasksFlow
-                  в раздел «API» и выпустите ключ с правом{" "}
-                  <strong>«Создание пользователей»</strong>, затем
-                  вставьте его сюда и синхронизируйтесь ещё раз.
-                </p>
+                <div className="mt-1 space-y-3 text-[13px] leading-relaxed text-[#3c4053]">
+                  <p>
+                    TasksFlow не даёт создать пользователей по Bearer
+                    API-ключу — это ограничение на их стороне. Есть два
+                    способа продолжить:
+                  </p>
+                  <ol className="list-decimal space-y-2 pl-5">
+                    <li>
+                      <strong>Выдать ключу право создавать</strong> —
+                      если в вашем TasksFlow есть роль API-ключа с
+                      правом «Создание пользователей», выпустите такой
+                      ключ, подставьте его сюда и нажмите
+                      «Синхронизировать» заново.
+                    </li>
+                    <li>
+                      <strong>Добавить руками в TasksFlow</strong> —
+                      откройте TasksFlow, добавьте сотрудника с тем же
+                      телефоном (через «+Сотрудник»), вернитесь сюда и
+                      нажмите «Синхронизировать». WeSetup свяжется по
+                      номеру автоматически.
+                    </li>
+                  </ol>
+                  {integration?.baseUrl ? (
+                    <a
+                      href={integration.baseUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 items-center gap-2 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[13px] font-medium text-[#3848c7] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
+                    >
+                      Открыть TasksFlow
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ) : null}
+                </div>
               ) : (
                 <p className="mt-1 text-[13px] leading-relaxed text-[#3c4053]">
                   Смотрите точную причину по каждому сотруднику ниже.
@@ -395,7 +422,7 @@ export function TasksFlowSettingsClient({
                   сотрудника в TasksFlow.
                 </p>
               )}
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-4 space-y-2">
                 {lastFailures.map((f) => (
                   <li
                     key={f.wesetupUserId}
@@ -417,6 +444,15 @@ export function TasksFlowSettingsClient({
                     <div className="mt-1 text-[12px] leading-relaxed text-[#6f7282]">
                       {friendlyReason(f.reason)}: {f.message}
                     </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <CopyChip
+                        label="Скопировать телефон"
+                        value={f.phone}
+                      />
+                      {f.name ? (
+                        <CopyChip label="Скопировать ФИО" value={f.name} />
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -425,6 +461,33 @@ export function TasksFlowSettingsClient({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function CopyChip({ label, value }: { label: string; value: string }) {
+  const [done, setDone] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1500);
+    } catch {
+      toast.error("Не удалось скопировать. Выделите вручную.");
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 rounded-full border border-[#dcdfed] bg-white px-3 py-1 text-[11px] font-medium text-[#3c4053] hover:border-[#5566f6]/40 hover:bg-[#f5f6ff]"
+    >
+      {done ? (
+        <CheckCircle2 className="size-3 text-[#136b2a]" />
+      ) : (
+        <ClipboardCopy className="size-3 text-[#6f7282]" />
+      )}
+      {done ? "Скопировано" : label}
+    </button>
   );
 }
 
