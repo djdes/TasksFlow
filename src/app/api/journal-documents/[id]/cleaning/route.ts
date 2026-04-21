@@ -8,6 +8,7 @@ import {
   normalizeCleaningDocumentConfig,
 } from "@/lib/cleaning-document";
 import { toDateKey } from "@/lib/hygiene-document";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function POST(
   request: Request,
@@ -18,7 +19,7 @@ export async function POST(
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { competencySchema } from "@/lib/validators";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  if (session.user.role !== "owner" && session.user.role !== "technologist") {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

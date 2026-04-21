@@ -8,6 +8,7 @@ import {
   normalizeTraceabilityRow,
   validateTraceabilityRow,
 } from "@/lib/traceability-document";
+import { isManagementRole } from "@/lib/user-roles";
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
@@ -159,7 +160,7 @@ export async function POST(
     });
   }
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return asImportResponse({
       rows: [],
       errors: [{ rowNumber: 0, errors: ["Недостаточно прав"] }],

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isManagementRole } from "@/lib/user-roles";
 
 function buildStoredDate(
   performedDate: string,
@@ -280,7 +281,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

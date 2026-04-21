@@ -1,4 +1,3 @@
-﻿# Problems
+# Problems
 
-- None. All 35 journals passed POST, UI, and PDF verification.
-
+- climate_control: POST=200, UI=false, PDF=false

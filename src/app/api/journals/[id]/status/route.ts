@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function PATCH(
   request: Request,
@@ -13,7 +14,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
 
-  if (session.user.role !== "owner" && session.user.role !== "technologist") {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

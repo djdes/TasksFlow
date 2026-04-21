@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { equipmentSchema } from "@/lib/validators";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function GET() {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!["owner", "technologist"].includes(session.user.role)) {
+    if (!isManagementRole(session.user.role)) {
       return NextResponse.json(
         { error: "Недостаточно прав" },
         { status: 403 }

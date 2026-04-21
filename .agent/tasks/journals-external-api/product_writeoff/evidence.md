@@ -1,4 +1,4 @@
-# product_writeoff external API — 2026-04-14T14:25:25.667Z
+# product_writeoff external API — 2026-04-14T14:39:11.568Z
 - POST status: 200
 - ok: true
 - documentId: cmnyp95o5005e08ts5dk4ckta

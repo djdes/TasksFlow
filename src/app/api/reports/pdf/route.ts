@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { generateJournalPDF } from "@/lib/pdf";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     // Only owner and technologist can generate reports
-    if (!["owner", "technologist"].includes(session.user.role)) {
+    if (!isManagementRole(session.user.role)) {
       return NextResponse.json(
         { error: "Недостаточно прав" },
         { status: 403 }

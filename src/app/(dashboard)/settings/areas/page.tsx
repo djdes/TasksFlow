@@ -4,6 +4,7 @@ import { requireAuth, getActiveOrgId } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { AreaDialog } from "@/components/settings/area-dialog";
 import { DeleteButton } from "@/components/settings/delete-button";
+import { isManagementRole, isManagerRole } from "@/lib/user-roles";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,8 @@ export default async function AreasSettingsPage() {
     },
   });
 
-  const canManage = ["owner", "technologist"].includes(session.user.role);
-  const canDelete = session.user.role === "owner";
+  const canManage = isManagementRole(session.user.role);
+  const canDelete = isManagerRole(session.user.role);
 
   return (
     <div className="space-y-8">

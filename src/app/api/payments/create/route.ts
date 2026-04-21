@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PLANS, isValidPlanId } from "@/lib/plans";
+import { isManagerRole } from "@/lib/user-roles";
 
 const YOOKASSA_API = "https://api.yookassa.ru/v3";
 
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
 
-    if (session.user.role !== "owner") {
+    if (!isManagerRole(session.user.role)) {
       return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
     }
 

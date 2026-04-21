@@ -6,6 +6,7 @@ import {
   EQUIPMENT_CLEANING_TEMPLATE_CODE,
   normalizeEquipmentCleaningRowData,
 } from "@/lib/equipment-cleaning-document";
+import { isManagementRole } from "@/lib/user-roles";
 
 async function loadDocument(id: string, organizationId: string) {
   const document = await db.journalDocument.findUnique({
@@ -161,7 +162,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reconcileEntryStaffFields } from "@/lib/journal-staff-binding";
+import { isManagementRole } from "@/lib/user-roles";
 
 function isValidDate(value: Date) {
   return Number.isFinite(value.getTime());
@@ -96,7 +97,7 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
@@ -237,7 +238,7 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  if (!["owner", "technologist"].includes(session.user.role)) {
+  if (!isManagementRole(session.user.role)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 

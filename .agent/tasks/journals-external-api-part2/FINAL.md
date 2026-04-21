@@ -1,4 +1,4 @@
-﻿# External API verification
+# External API verification — 2026-04-14T14:43:40.397Z
 
 | Code | POST | UI | PDF | Verdict |
 |---|---:|---|---|---|
@@ -9,7 +9,7 @@
 | breakdown_history | 200 | PASS | PASS | PASS |
 | cleaning | 200 | PASS | PASS | PASS |
 | cleaning_ventilation_checklist | 200 | PASS | PASS | PASS |
-| climate_control | 200 | PASS | PASS | PASS |
+| climate_control | 200 | FAIL | FAIL | FAIL |
 | cold_equipment_control | 200 | PASS | PASS | PASS |
 | complaint_register | 200 | PASS | PASS | PASS |
 | disinfectant_usage | 200 | PASS | PASS | PASS |

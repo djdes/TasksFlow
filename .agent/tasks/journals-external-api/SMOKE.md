@@ -1,4 +1,4 @@
-# External API smoke — 2026-04-14T14:25:25.914Z
+# External API smoke — 2026-04-14T14:39:11.830Z
 Base: https://wesetup.ru
 Org: cmnm40ikt00002ktseet6fd5y
 

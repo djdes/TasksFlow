@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ExcelJS from "exceljs";
+import { isManagementRole } from "@/lib/user-roles";
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
 
-    if (!["owner", "technologist"].includes(session.user.role)) {
+    if (!isManagementRole(session.user.role)) {
       return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
     }
 

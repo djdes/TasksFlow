@@ -10,6 +10,7 @@ import {
 import { requireAuth, getActiveOrgId } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { ProductImportDialog } from "@/components/settings/product-import-dialog";
+import { isManagementRole } from "@/lib/user-roles";
 import { ProductDialog } from "@/components/settings/product-dialog";
 import { DeleteProductButton } from "@/components/settings/delete-product-button";
 
@@ -27,8 +28,7 @@ const UNIT: Record<string, string> = {
 export default async function ProductsSettingsPage() {
   const session = await requireAuth();
   const orgId = getActiveOrgId(session);
-  const canManage =
-    session.user.role === "owner" || session.user.role === "technologist";
+  const canManage = isManagementRole(session.user.role);
 
   const products = await db.product.findMany({
     where: { organizationId: orgId, isActive: true },

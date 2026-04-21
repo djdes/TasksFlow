@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isManagerRole } from "@/lib/user-roles";
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (session.user.role !== "owner") {
+    if (!isManagerRole(session.user.role)) {
       return NextResponse.json(
         { error: "Недостаточно прав" },
         { status: 403 }
