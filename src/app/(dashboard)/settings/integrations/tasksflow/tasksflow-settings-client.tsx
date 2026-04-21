@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   ExternalLink,
@@ -65,6 +66,16 @@ export function TasksFlowSettingsClient({
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [links, setLinks] = useState<LinkRow[] | null>(null);
   const [linksLoading, setLinksLoading] = useState(false);
+  const [lastFailures, setLastFailures] = useState<
+    Array<{
+      wesetupUserId: string;
+      name: string | null;
+      phone: string;
+      reason: string;
+      message: string;
+      httpStatus?: number;
+    }>
+  >([]);
   const integrationId = integration?.id ?? null;
   const integrationLastSyncAt = integration?.lastSyncAt ?? null;
 
@@ -142,10 +153,16 @@ export function TasksFlowSettingsClient({
           throw new Error(data?.error ?? "Не удалось синхронизировать");
         }
         const t = data.totals;
-        toast.success(
+        const failures = Array.isArray(data.failures) ? data.failures : [];
+        setLastFailures(failures);
+        const summary =
           `Связано ${t.linked} из ${t.wesetupUsers}. ` +
-            `Создано в TasksFlow: ${t.createdRemote}, без телефона: ${t.withoutPhone}, не связаны: ${t.withoutMatch}.`
-        );
+          `Создано в TasksFlow: ${t.createdRemote}, без телефона: ${t.withoutPhone}, не связаны: ${t.withoutMatch}.`;
+        if (failures.length > 0) {
+          toast.warning(summary + ` Не удалось создать ${failures.length} — см. детали ниже.`);
+        } else {
+          toast.success(summary);
+        }
         const status = await fetch("/api/integrations/tasksflow", {
           cache: "no-store",
         }).then((r) => r.json());
@@ -349,8 +366,94 @@ export function TasksFlowSettingsClient({
           )}
         </section>
       ) : null}
+
+      {/* Sync-failures diagnostic panel. Shown only after a sync that
+          came back with problems. Without it the manager saw 0/N and
+          had zero clue why; now we expose the TasksFlow response verbatim. */}
+      {lastFailures.length > 0 ? (
+        <section className="rounded-3xl border border-[#ffd2cd] bg-[#fff4f2] p-6 shadow-[0_0_0_1px_rgba(255,195,185,0.35)]">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[#a13a32]" />
+            <div className="flex-1">
+              <h2 className="text-[15px] font-semibold text-[#0b1024]">
+                Не получилось связать {lastFailures.length}{" "}
+                {pluralPeople(lastFailures.length)}
+              </h2>
+              {hasForbiddenFailure(lastFailures) ? (
+                <p className="mt-1 text-[13px] leading-relaxed text-[#3c4053]">
+                  TasksFlow отказывается создавать пользователей через
+                  текущий API-ключ. Скорее всего, ключ выпущен как
+                  «только чтение» или без прав admin. Зайдите в TasksFlow
+                  в раздел «API» и выпустите ключ с правом{" "}
+                  <strong>«Создание пользователей»</strong>, затем
+                  вставьте его сюда и синхронизируйтесь ещё раз.
+                </p>
+              ) : (
+                <p className="mt-1 text-[13px] leading-relaxed text-[#3c4053]">
+                  Смотрите точную причину по каждому сотруднику ниже.
+                  Часто дело в формате телефона или в отсутствии
+                  сотрудника в TasksFlow.
+                </p>
+              )}
+              <ul className="mt-3 space-y-2">
+                {lastFailures.map((f) => (
+                  <li
+                    key={f.wesetupUserId}
+                    className="rounded-2xl border border-[#ffb0a6] bg-white px-4 py-3 text-[13px]"
+                  >
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="font-medium text-[#0b1024]">
+                        {f.name ?? "(без имени)"}
+                      </span>
+                      <span className="font-mono text-[12px] text-[#6f7282]">
+                        {f.phone}
+                      </span>
+                      {typeof f.httpStatus === "number" && f.httpStatus > 0 ? (
+                        <span className="ml-auto rounded-full bg-[#fff4f2] px-2 py-0.5 text-[11px] font-semibold text-[#a13a32]">
+                          HTTP {f.httpStatus}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-[12px] leading-relaxed text-[#6f7282]">
+                      {friendlyReason(f.reason)}: {f.message}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
+}
+
+function friendlyReason(reason: string): string {
+  switch (reason) {
+    case "remote_create_forbidden":
+      return "TasksFlow не даёт создать";
+    case "remote_create_failed":
+      return "Ошибка создания";
+    case "phone_invalid":
+      return "Плохой телефон";
+    default:
+      return "Не удалось связать";
+  }
+}
+
+function hasForbiddenFailure(
+  list: Array<{ reason: string }>
+): boolean {
+  return list.some((f) => f.reason === "remote_create_forbidden");
+}
+
+function pluralPeople(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "сотрудника";
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100))
+    return "сотрудников";
+  return "сотрудников";
 }
 
 function ConnectForm({

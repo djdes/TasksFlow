@@ -32,6 +32,18 @@ type UpsertSyncLinkInput = {
   source: "auto";
 };
 
+export type SyncFailure = {
+  wesetupUserId: string;
+  name: string | null;
+  phone: string;
+  reason:
+    | "remote_create_failed"
+    | "remote_create_forbidden"
+    | "phone_invalid";
+  message: string;
+  httpStatus?: number;
+};
+
 export async function syncTasksflowUsers(args: {
   integrationId: string;
   wesetupUsers: WeSetupSyncUser[];
@@ -51,6 +63,7 @@ export async function syncTasksflowUsers(args: {
     withoutMatch: number;
     manualSkipped: number;
   };
+  failures: SyncFailure[];
 }> {
   const remoteByPhone = new Map<string, RemoteSyncUser>();
   for (const user of args.remoteUsers) {
@@ -72,11 +85,27 @@ export async function syncTasksflowUsers(args: {
   let withoutPhone = 0;
   let withoutMatch = 0;
   let manualSkipped = 0;
+  const failures: SyncFailure[] = [];
+
+  // Как только TasksFlow отказывает «в принципе» (403 на Bearer-ключ, 404
+  // на endpoint) — дальнейшие попытки create бессмысленны и только
+  // тратят время. Помечаем флаг и пропускаем остальных.
+  let remoteCreateDisabled: { status: number; message: string } | null = null;
 
   for (const user of args.wesetupUsers) {
     const phone = normalizeRussianPhone(user.phone);
     if (!phone) {
       withoutPhone += 1;
+      if (user.phone && user.phone.trim().length > 0) {
+        failures.push({
+          wesetupUserId: user.id,
+          name: user.name ?? null,
+          phone: user.phone,
+          reason: "phone_invalid",
+          message:
+            "Телефон не в формате +7… — TasksFlow не сможет его принять",
+        });
+      }
       continue;
     }
 
@@ -87,12 +116,7 @@ export async function syncTasksflowUsers(args: {
     }
 
     let remote = remoteByPhone.get(phone) ?? null;
-    if (!remote) {
-      // Try to create the missing worker in TasksFlow. Fails graceful-
-      // ly: production TasksFlow allows POST /api/users only for admin
-      // session cookies, not Bearer keys — and /api/users/register is
-      // public but requires SMS. Either way, a 4xx here just means
-      // «leave this user unlinked», not «abort the whole sync».
+    if (!remote && !remoteCreateDisabled) {
       let nextRemote: RemoteSyncUser | null = null;
       try {
         nextRemote = await args.createRemoteUser({
@@ -100,11 +124,26 @@ export async function syncTasksflowUsers(args: {
           phone,
         });
       } catch (err) {
-        // Swallow — caller logs via the outer try/catch in route.ts.
-        console.warn(
-          `[tf-sync] createRemoteUser failed for ${phone}:`,
-          err instanceof Error ? err.message : err
-        );
+        const status = extractHttpStatus(err);
+        const message = err instanceof Error ? err.message : String(err);
+        const isGlobalBlock =
+          status === 401 ||
+          status === 403 ||
+          status === 404 ||
+          status === 405;
+        failures.push({
+          wesetupUserId: user.id,
+          name: user.name ?? null,
+          phone,
+          reason: isGlobalBlock
+            ? "remote_create_forbidden"
+            : "remote_create_failed",
+          message,
+          httpStatus: status,
+        });
+        if (isGlobalBlock) {
+          remoteCreateDisabled = { status: status ?? 0, message };
+        }
       }
       if (nextRemote) {
         remote = {
@@ -115,6 +154,17 @@ export async function syncTasksflowUsers(args: {
         remoteByPhone.set(phone, remote);
         createdRemote += 1;
       }
+    } else if (!remote && remoteCreateDisabled) {
+      // Не вызываем API, но всё равно сообщаем UI что пользователь не
+      // связан именно потому, что TF отказывается создавать через ключ.
+      failures.push({
+        wesetupUserId: user.id,
+        name: user.name ?? null,
+        phone,
+        reason: "remote_create_forbidden",
+        message: remoteCreateDisabled.message,
+        httpStatus: remoteCreateDisabled.status || undefined,
+      });
     }
 
     if (!remote) {
@@ -143,5 +193,13 @@ export async function syncTasksflowUsers(args: {
       withoutMatch,
       manualSkipped,
     },
+    failures,
   };
+}
+
+function extractHttpStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== "object") return undefined;
+  const candidate = (err as { status?: unknown; httpStatus?: unknown }).status
+    ?? (err as { httpStatus?: unknown }).httpStatus;
+  return typeof candidate === "number" ? candidate : undefined;
 }
