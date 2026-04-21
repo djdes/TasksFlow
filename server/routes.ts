@@ -1162,14 +1162,47 @@ export async function registerRoutes(
   // ту же форму, которой пользуется админ в своём журнале. Никакой
   // WeSetup-сессии у сотрудника не нужно: токен HMAC'ан нашим
   // webhookSecret.
-  app.get("/api/wesetup/task-fill-url", requireAuth, async (req, res) => {
+  /**
+   * Resolve the WeSetup integration pair for the current request. Each
+   * TasksFlow company owns its own (baseUrl, apiKey) pair — stored on
+   * `companies.wesetup_base_url / wesetup_api_key`. Falls back to the
+   * legacy single-tenant `.env` values when the company row is null so
+   * old deployments keep working.
+   */
+  async function resolveWesetupTarget(
+    req: Express.Request
+  ): Promise<{ baseUrl: string; key: string } | { error: string; status: number }> {
+    const userId = (req as any).session?.userId;
+    let companyId: number | null = null;
+    if (userId) {
+      const u = await storage.getUserById(userId);
+      companyId = u?.companyId ?? null;
+    }
+    if (companyId) {
+      const company = await storage.getCompanyById(companyId);
+      if (company?.wesetupApiKey && company.wesetupBaseUrl) {
+        return {
+          baseUrl: company.wesetupBaseUrl.replace(/\/+$/, ""),
+          key: company.wesetupApiKey,
+        };
+      }
+    }
     const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
     const key = process.env.WESETUP_API_KEY;
-    if (!baseUrl || !key) {
-      return res.status(503).json({
-        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
-      });
+    if (baseUrl && key) return { baseUrl, key };
+    return {
+      error:
+        "WeSetup-интеграция не настроена для этой компании. Добавьте wesetup_api_key в companies или WESETUP_API_KEY в .env.",
+      status: 503,
+    };
+  }
+
+  app.get("/api/wesetup/task-fill-url", requireAuth, async (req, res) => {
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({ message: target.error });
     }
+    const { baseUrl, key } = target;
     const taskId = Number(req.query.taskId);
     if (!Number.isFinite(taskId) || taskId <= 0) {
       return res.status(400).json({ message: "Bad taskId" });
@@ -1220,13 +1253,11 @@ export async function registerRoutes(
   // когда сотруднику нужно показать форму заполнения перед
   // «Выполнено». Возвращает TaskFormSchema или null.
   app.get("/api/wesetup/task-form", requireAuth, async (req, res) => {
-    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
-    const key = process.env.WESETUP_API_KEY;
-    if (!baseUrl || !key) {
-      return res.status(503).json({
-        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
-      });
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({ message: target.error });
     }
+    const { baseUrl, key } = target;
     const taskId = req.query.taskId;
     if (!taskId) {
       return res.status(400).json({ message: "taskId required" });
@@ -1254,13 +1285,11 @@ export async function registerRoutes(
   // которые WeSetup разложит по колонкам журнала. После успеха тут же
   // отмечаем задачу выполненной локально.
   app.post("/api/wesetup/complete-with-values", requireAuth, async (req, res) => {
-    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
-    const key = process.env.WESETUP_API_KEY;
-    if (!baseUrl || !key) {
-      return res.status(503).json({
-        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
-      });
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({ message: target.error });
     }
+    const { baseUrl, key } = target;
     const { taskId, values, isCompleted } = req.body || {};
     if (typeof taskId !== "number") {
       return res.status(400).json({ message: "taskId должен быть числом" });

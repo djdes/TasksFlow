@@ -8,6 +8,12 @@ export const companies = mysqlTable("companies", {
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }), // Email для уведомлений о выполненных задачах
   createdAt: int("created_at").notNull().default(0),
+  // WeSetup integration pairing. Per-company because each TasksFlow
+  // company can be linked to a different WeSetup organisation. `null`
+  // means the company uses whatever WESETUP_API_KEY is in .env (legacy
+  // single-tenant setup).
+  wesetupBaseUrl: varchar("wesetup_base_url", { length: 255 }),
+  wesetupApiKey: varchar("wesetup_api_key", { length: 255 }),
 });
 
 export const users = mysqlTable("users", {
