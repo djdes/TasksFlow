@@ -57,17 +57,34 @@ export async function POST(
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const link = await db.tasksFlowTaskLink.findFirst({
+  // Resolve the link via HMAC signature — see the matching comment in
+  // /task-fill/[taskId]/page.tsx for why findFirst() alone is unsafe
+  // when two integrations share the same TasksFlow instance.
+  const candidates = await db.tasksFlowTaskLink.findMany({
     where: { tasksflowTaskId: taskId },
     include: { integration: true },
   });
-  if (!link) {
+  if (candidates.length === 0) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
-  const verify = verifyTaskFillToken(parsed.token, link.integration.webhookSecret);
-  if (!verify.ok || verify.taskId !== taskId) {
+  let link: (typeof candidates)[number] | null = null;
+  let lastReason = "bad-signature";
+  for (const c of candidates) {
+    const v = verifyTaskFillToken(parsed.token, c.integration.webhookSecret);
+    if (!v.ok) {
+      lastReason = v.reason;
+      continue;
+    }
+    if (v.taskId !== taskId) {
+      lastReason = "taskId mismatch";
+      continue;
+    }
+    link = c;
+    break;
+  }
+  if (!link) {
     return NextResponse.json(
-      { error: `Invalid token (${verify.ok ? "taskId mismatch" : verify.reason})` },
+      { error: `Invalid token (${lastReason})` },
       { status: 401 }
     );
   }

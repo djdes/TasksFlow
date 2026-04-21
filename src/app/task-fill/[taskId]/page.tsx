@@ -32,19 +32,39 @@ export default async function TaskFillPage({
     notFound();
   }
 
-  const link = await db.tasksFlowTaskLink.findFirst({
+  // A single tasksflowTaskId may legitimately exist in more than one
+  // TaskLink row if two integrations point at the same TasksFlow
+  // instance — the TF auto-increment is global, so the admin who ran
+  // bulk-assign for org A and another admin for org B can both have a
+  // task #51, but their journalCode + rowKey + document are different.
+  // Ambiguous-findFirst() would show whichever row the DB happened to
+  // return → worker sees someone else's journal. Filter by the token's
+  // HMAC signature: it's signed with the integration's webhookSecret,
+  // so only the correct org can verify.
+  const candidates = await db.tasksFlowTaskLink.findMany({
     where: { tasksflowTaskId: taskId },
     include: { integration: true },
   });
-  if (!link) notFound();
+  if (candidates.length === 0) notFound();
 
-  const verify = verifyTaskFillToken(token, link.integration.webhookSecret);
-  if (!verify.ok) {
+  let link: (typeof candidates)[number] | null = null;
+  let firstVerify: ReturnType<typeof verifyTaskFillToken> | null = null;
+  for (const candidate of candidates) {
+    const v = verifyTaskFillToken(token, candidate.integration.webhookSecret);
+    if (!firstVerify) firstVerify = v;
+    if (v.ok && v.taskId === taskId) {
+      link = candidate;
+      break;
+    }
+  }
+  if (!link) {
+    const reason =
+      firstVerify && !firstVerify.ok ? firstVerify.reason : "bad-signature";
     return (
       <TaskFillErrorShell
         title="Ссылка недействительна"
         message={
-          verify.reason === "expired"
+          reason === "expired"
             ? "Срок жизни ссылки истёк — попросите администратора выслать задачу заново."
             : "Токен повреждён или не подходит к этой задаче."
         }
