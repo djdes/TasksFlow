@@ -48,6 +48,11 @@ export const tasks = mysqlTable("tasks", {
   // works exactly the same — WeSetup polls our state and mirrors the cell.
   // Free-mode tasks have NULL here.
   journalLink: text("journal_link"),
+  // Unix seconds. createdAt is set on insert by the route handler;
+  // completedAt is set on /complete and cleared on /uncomplete. Rows
+  // predating this migration get 0 which the client renders as «раньше».
+  createdAt: int("created_at").notNull().default(0),
+  completedAt: int("completed_at"),
 });
 
 export const insertUserSchema = z.object({

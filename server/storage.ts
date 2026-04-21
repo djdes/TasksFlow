@@ -247,6 +247,8 @@ export class DatabaseStorage implements IStorage {
       description: tasks.description,
       companyId: tasks.companyId,
       journalLink: tasks.journalLink,
+      createdAt: tasks.createdAt,
+      completedAt: tasks.completedAt,
     }).from(tasks);
 
     const result = companyId
@@ -279,6 +281,8 @@ export class DatabaseStorage implements IStorage {
       description: tasks.description,
       companyId: tasks.companyId,
       journalLink: tasks.journalLink,
+      createdAt: tasks.createdAt,
+      completedAt: tasks.completedAt,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
@@ -308,6 +312,8 @@ export class DatabaseStorage implements IStorage {
       examplePhotoUrl: insertTask.examplePhotoUrl ?? null,
       companyId: insertTask.companyId ?? null,
       journalLink: insertTask.journalLink ?? null,
+      createdAt: Math.floor(Date.now() / 1000),
+      completedAt: null,
     };
     const [result] = await db.insert(tasks).values(taskData as any);
     const insertId = (result as any).insertId;
@@ -328,6 +334,8 @@ export class DatabaseStorage implements IStorage {
       description: tasks.description,
       companyId: tasks.companyId,
       journalLink: tasks.journalLink,
+      createdAt: tasks.createdAt,
+      completedAt: tasks.completedAt,
     }).from(tasks).where(eq(tasks.id, insertId));
     return {
       ...task,
@@ -349,7 +357,7 @@ export class DatabaseStorage implements IStorage {
    */
   async updateTask(id: number, updates: Partial<InsertTask>): Promise<Task | undefined> {
     // Сериализуем weekDays и photoUrls если они переданы
-    const updateData = {
+    const updateData: Record<string, unknown> = {
       ...updates,
       weekDays: updates.weekDays !== undefined
         ? (updates.weekDays ? JSON.stringify(updates.weekDays) : null)
@@ -358,6 +366,15 @@ export class DatabaseStorage implements IStorage {
         ? (updates.photoUrls ? JSON.stringify(updates.photoUrls) : null)
         : undefined,
     };
+    // Stamp completedAt whenever isCompleted flips. Setting true assigns
+    // «now» (seconds); setting false clears the column so the next toggle
+    // gets a fresh timestamp. Recurring tasks auto-reset elsewhere — they
+    // hit this path with isCompleted=false at midnight.
+    if ("isCompleted" in updates) {
+      updateData.completedAt = updates.isCompleted
+        ? Math.floor(Date.now() / 1000)
+        : null;
+    }
     // Удаляем undefined поля
     Object.keys(updateData).forEach(key => {
       if (updateData[key as keyof typeof updateData] === undefined) {
@@ -382,6 +399,8 @@ export class DatabaseStorage implements IStorage {
       description: tasks.description,
       companyId: tasks.companyId,
       journalLink: tasks.journalLink,
+      createdAt: tasks.createdAt,
+      completedAt: tasks.completedAt,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {

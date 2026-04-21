@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUsers } from "@/hooks/use-users";
@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
+import { GroupedTaskList } from "@/components/GroupedTaskList";
 import type { Task } from "@shared/schema";
 import {
   CheckCircle2,
@@ -23,6 +24,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Camera,
   Check,
   RefreshCw,
@@ -414,138 +416,23 @@ export default function Dashboard() {
             )}
           </div>
         ) : (
-          <div className="task-list">
-            {filteredTasks.map(task => {
-              const isCompleted = Boolean(task.isCompleted);
-              const hasPrice = (task as any).price > 0;
-              const hasCategory = (task as any).category;
-              const requiresPhoto = task.requiresPhoto && !task.photoUrl;
-              const weekDays = (task as any).weekDays;
-              const monthDay = (task as any).monthDay;
-
-              return (
-                <div
-                  key={task.id}
-                  className={`task-card ${isCompleted ? 'completed' : ''}`}
-                  onClick={() => handleTaskClick(task)}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    <button
-                      onClick={(e) => toggleTaskComplete(task.id, e)}
-                      className={`task-checkbox ${isCompleted ? 'checked' : ''}`}
-                    >
-                      {isCompleted && <Check className="w-4 h-4 text-white" />}
-                    </button>
-
-                    {/* Content */}
-                    <div className="task-content">
-                      <h3 className="task-title">{task.title}</h3>
-
-                      {/* Task meta */}
-                      <div className="task-meta">
-                        {/* Worker - only for admin */}
-                        {user?.isAdmin && task.workerId && (
-                          <div className="worker-info">
-                            <div className="worker-avatar">
-                              {getUserInitials(task.workerId)}
-                            </div>
-                            <span>{getUserName(task.workerId)}</span>
-                          </div>
-                        )}
-
-                        {/* Photo required */}
-                        {requiresPhoto && !isCompleted && (
-                          <div className="task-badge photo">
-                            <Camera className="w-3.5 h-3.5" />
-                            <span>Фото</span>
-                          </div>
-                        )}
-
-                        {/* Price */}
-                        {hasPrice && (
-                          <div className="task-badge price">
-                            <Coins className="w-3.5 h-3.5" />
-                            <span>+{(task as any).price} ₽</span>
-                          </div>
-                        )}
-
-                        {/* Category */}
-                        {hasCategory && (
-                          <div className="task-badge category">
-                            <Tag className="w-3.5 h-3.5" />
-                            <span>{(task as any).category}</span>
-                          </div>
-                        )}
-
-                        {/* Schedule - only for admin */}
-                        {user?.isAdmin && weekDays && weekDays.length > 0 && (
-                          <div className="task-badge schedule">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>
-                              {(weekDays as number[])
-                                .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
-                                .map(d => WEEK_DAY_SHORT_NAMES[d])
-                                .join(", ")}
-                            </span>
-                          </div>
-                        )}
-
-                        {user?.isAdmin && monthDay && (
-                          <div className="task-badge schedule">
-                            <CalendarDays className="w-3.5 h-3.5" />
-                            <span>{monthDay} число</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center">
-                      {user?.isAdmin ? (
-                        <div className="task-actions">
-                          <button
-                            className="task-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLocation(`/tasks/${task.id}/edit`);
-                            }}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="task-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDuplicateTask(task);
-                              setIsDuplicateDialogOpen(true);
-                            }}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="task-action-btn delete"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm("Удалить задачу?")) {
-                                deleteTask.mutate(task.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="task-arrow">
-                          <ChevronRight className="w-5 h-5" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <GroupedTaskList
+            activeTasks={filteredTasks.filter((t) => !t.isCompleted)}
+            completedTasks={filteredTasks.filter((t) => Boolean(t.isCompleted))}
+            isAdmin={Boolean(user?.isAdmin)}
+            getUserInitials={getUserInitials}
+            getUserName={getUserName}
+            onTaskClick={handleTaskClick}
+            onToggleComplete={toggleTaskComplete}
+            onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
+            onDuplicate={(task) => {
+              setDuplicateTask(task);
+              setIsDuplicateDialogOpen(true);
+            }}
+            onDelete={(id) => {
+              if (confirm("Удалить задачу?")) deleteTask.mutate(id);
+            }}
+          />
         )}
       </main>
 

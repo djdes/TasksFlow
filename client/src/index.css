@@ -676,3 +676,252 @@
     background-position: -100% 50%;
   }
 }
+
+/* ===== GROUPED TASK LIST — year / month / day accordion ===== */
+
+.grouped-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grouped-section {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(220, 223, 237, 0.5);
+  border-radius: 20px;
+  padding: 14px 14px 6px;
+  box-shadow: 0 1px 2px rgba(11, 16, 36, 0.02);
+}
+
+.grouped-section--completed {
+  background: rgba(248, 249, 253, 0.85);
+}
+
+.grouped-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 12px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.grouped-section-header--clickable {
+  cursor: pointer;
+}
+
+.grouped-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0b1024;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.grouped-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef1ff;
+  color: #3848c7;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.grouped-section--completed .grouped-section-count {
+  background: #e4e7f2;
+  color: #6f7282;
+}
+
+.grouped-empty {
+  padding: 18px 14px;
+  border: 1px dashed #dcdfed;
+  border-radius: 14px;
+  background: #fafbff;
+  color: #6f7282;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Year accordion */
+.group-year {
+  border-top: 1px solid rgba(220, 223, 237, 0.45);
+}
+.group-year:first-child {
+  border-top: 0;
+}
+
+.group-year-header {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.group-year-header::-webkit-details-marker {
+  display: none;
+}
+
+.group-year-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0b1024;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.group-year-count {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f5f6ff;
+  color: #3848c7;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.group-year-body {
+  padding: 0 0 8px 2px;
+}
+
+/* Month accordion */
+.group-month {
+  margin: 4px 0;
+}
+
+.group-month-header {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+.group-month-header::-webkit-details-marker {
+  display: none;
+}
+.group-month-header:hover {
+  background: #f5f6ff;
+}
+
+.group-month-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #3c4053;
+}
+
+.group-month-count {
+  margin-left: auto;
+  color: #9b9fb3;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.group-month-body {
+  padding: 4px 0 8px 14px;
+  border-left: 2px solid rgba(85, 102, 246, 0.12);
+  margin-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Day header pill */
+.group-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-day-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: transparent;
+  color: #6f7282;
+  font-size: 12px;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.group-day-header--today {
+  background: #eef1ff;
+  color: #3848c7;
+  padding-left: 10px;
+}
+
+.group-day-label {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.group-day-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f0f2f7;
+  color: #6f7282;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.group-day-header--today .group-day-count {
+  background: rgba(85, 102, 246, 0.15);
+  color: #3848c7;
+}
+
+/* Chevron rotation via open-state — <details> native */
+.group-chevron {
+  color: #6f7282;
+  transition: transform 180ms ease;
+  flex-shrink: 0;
+}
+details:not([open]) > summary .group-chevron {
+  transform: rotate(-90deg);
+}
+.group-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Inside a grouped list, disable the 2-col grid that .task-list has on
+   >=640px — it breaks the per-day stacking and makes the day-header
+   pill hover over a 2-col grid. The grouped view looks best as a simple
+   vertical list regardless of viewport. */
+.grouped-task-list .task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .grouped-task-list .task-list {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 10px !important;
+  }
+}
