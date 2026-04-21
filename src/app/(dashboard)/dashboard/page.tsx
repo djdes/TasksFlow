@@ -25,6 +25,7 @@ import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { TemperatureChart } from "@/components/charts/temperature-chart";
 import { BulkAssignTodayButton } from "@/components/dashboard/bulk-assign-today-button";
 import { getTemplatesFilledToday } from "@/lib/today-compliance";
+import { getWeeklyTails } from "@/lib/weekly-tails";
 import { parseDisabledCodes } from "@/lib/disabled-journals";
 import { cn } from "@/lib/utils";
 
@@ -190,12 +191,15 @@ export default async function DashboardPage() {
 
   const disabledCodes = parseDisabledCodes(org?.disabledJournalCodes);
 
-  const filledTodayIds = await getTemplatesFilledToday(
-    organizationId,
-    now,
-    templates.map((t) => ({ id: t.id, code: t.code })),
-    disabledCodes
-  );
+  const [filledTodayIds, weeklyTails] = await Promise.all([
+    getTemplatesFilledToday(
+      organizationId,
+      now,
+      templates.map((t) => ({ id: t.id, code: t.code })),
+      disabledCodes
+    ),
+    getWeeklyTails(organizationId, now, 3),
+  ]);
 
   const totalTodayEntries = todayEntries + todayDocumentEntries;
 
@@ -411,6 +415,70 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Weekly tails — «просрочено за последние 7 дней», shortcut to
+          the exact date inside the document viewer */}
+      {weeklyTails.length > 0 && (
+        <section className="rounded-3xl border border-[#ffd2cd] bg-[#fff4f2] p-6 shadow-[0_0_0_1px_rgba(255,195,185,0.35)]">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#ffe1dc] text-[#a13a32]">
+              <AlertTriangle className="size-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[18px] font-semibold text-[#0b1024]">
+                Хвосты за неделю
+              </h2>
+              <p className="mt-0.5 text-[13px] text-[#6f7282]">
+                За последние 7 дней остались незаполненные записи. Клик —
+                открывает журнал на самом старом пропуске.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {weeklyTails.map((tail) => {
+                  const badgeLabel =
+                    tail.missingDays.length === 1
+                      ? "1 пропуск"
+                      : `${tail.missingDays.length} пропуска`;
+                  const oldestPretty = new Date(
+                    tail.oldestMissing + "T00:00:00Z"
+                  ).toLocaleDateString("ru-RU", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  });
+                  return (
+                    <li key={tail.documentId}>
+                      <Link
+                        href={`/journals/${tail.templateCode}/documents/${tail.documentId}?focus=${tail.oldestMissing}`}
+                        className="group flex items-center gap-3 rounded-2xl border border-[#ffd2cd] bg-white px-4 py-3 text-[14px] transition-colors hover:border-[#ff8d7d] hover:shadow-[0_6px_20px_-12px_rgba(210,69,61,0.25)]"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#ffe1dc] text-[#d2453d]">
+                          <XCircle className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-[#0b1024]">
+                            {tail.templateName}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[12px] text-[#6f7282]">
+                            {tail.documentTitle}
+                          </span>
+                        </span>
+                        <span className="hidden shrink-0 flex-col items-end text-right sm:flex">
+                          <span className="text-[12px] font-medium text-[#a13a32]">
+                            {badgeLabel}
+                          </span>
+                          <span className="text-[11px] text-[#9b9fb3]">
+                            с {oldestPretty}
+                          </span>
+                        </span>
+                        <ArrowRight className="size-4 shrink-0 text-[#ffb0a6] transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Alerts — shown only when something's off */}
       {(openCapaCount > 0 || expiringBatches > 0 || weekLossCount > 0 || pendingApproval > 0) && (
