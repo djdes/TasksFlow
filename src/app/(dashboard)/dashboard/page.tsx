@@ -400,7 +400,7 @@ export default async function DashboardPage() {
                 key={item.id}
                 href={`/journals/${item.code}`}
                 className={cn(
-                  "group flex w-full min-w-0 items-center gap-3 rounded-2xl border px-4 py-3 text-[14px] transition-all",
+                  "group flex w-full min-w-0 items-start gap-3 rounded-2xl border px-4 py-3 text-[14px] transition-all sm:items-center",
                   item.filled
                     ? "border-[#c8f0d5] bg-[#effaf1] hover:border-[#7cf5c0] hover:shadow-[0_6px_20px_-12px_rgba(19,107,42,0.25)]"
                     : "border-[#ffd2cd] bg-[#fff4f2] hover:border-[#ff8d7d] hover:shadow-[0_6px_20px_-12px_rgba(210,69,61,0.25)]"
@@ -420,7 +420,7 @@ export default async function DashboardPage() {
                 </span>
                 <span
                   className={cn(
-                    "min-w-0 flex-1 truncate font-medium",
+                    "min-w-0 flex-1 font-medium leading-snug line-clamp-2 sm:truncate",
                     item.filled ? "text-[#136b2a]" : "text-[#d2453d]"
                   )}
                 >
@@ -470,13 +470,13 @@ export default async function DashboardPage() {
                     <li key={tail.documentId}>
                       <Link
                         href={`/journals/${tail.templateCode}/documents/${tail.documentId}?focus=${tail.oldestMissing}`}
-                        className="group flex items-center gap-3 rounded-2xl border border-[#ffd2cd] bg-white px-4 py-3 text-[14px] transition-colors hover:border-[#ff8d7d] hover:shadow-[0_6px_20px_-12px_rgba(210,69,61,0.25)]"
+                        className="group flex items-start gap-3 rounded-2xl border border-[#ffd2cd] bg-white px-4 py-3 text-[14px] transition-colors hover:border-[#ff8d7d] hover:shadow-[0_6px_20px_-12px_rgba(210,69,61,0.25)] sm:items-center"
                       >
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#ffe1dc] text-[#d2453d]">
                           <XCircle className="size-4" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-[#0b1024]">
+                          <span className="block font-medium leading-snug text-[#0b1024] line-clamp-2 sm:truncate">
                             {tail.templateName}
                           </span>
                           <span className="mt-0.5 block truncate text-[12px] text-[#6f7282]">
