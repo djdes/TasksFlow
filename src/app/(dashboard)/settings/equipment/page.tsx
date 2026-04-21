@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   MapPin,
+  QrCode,
   Thermometer,
   Wifi,
   WifiOff,
@@ -98,7 +99,19 @@ export default async function EquipmentSettingsPage() {
             </div>
           </div>
         </div>
-        {canManage && <EquipmentDialog areas={areas} />}
+        <div className="flex flex-wrap items-center gap-2">
+          {canManage && equipment.length > 0 ? (
+            <Link
+              href="/settings/equipment/qr-sheet"
+              className="inline-flex h-10 items-center gap-2 rounded-2xl border border-[#dcdfed] bg-white px-4 text-[14px] font-medium text-[#3848c7] hover:bg-[#f5f6ff]"
+              title="Распечатать QR-наклейки для быстрой записи температуры с телефона"
+            >
+              <QrCode className="size-4" />
+              QR-наклейки
+            </Link>
+          ) : null}
+          {canManage && <EquipmentDialog areas={areas} />}
+        </div>
       </div>
 
       {/* Content */}
