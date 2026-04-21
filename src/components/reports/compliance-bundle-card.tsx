@@ -40,7 +40,18 @@ function buildPresets(): Preset[] {
     Date.UTC(now.getUTCFullYear(), quarterStartMonth + 3, 0)
   );
   const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const weekFrom = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6)
+  );
+  const weekTo = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
   return [
+    {
+      label: "По звонку инспектора (7 дней)",
+      from: ymd(weekFrom),
+      to: ymd(weekTo),
+    },
     { label: "Текущий месяц", from: ymd(thisMonthFrom), to: ymd(thisMonthTo) },
     { label: "Прошлый месяц", from: ymd(lastMonthFrom), to: ymd(lastMonthTo) },
     { label: "Текущий квартал", from: ymd(quarterFrom), to: ymd(quarterTo) },

@@ -5,6 +5,11 @@ import { db } from "@/lib/db";
 import { getActiveOrgId } from "@/lib/auth-helpers";
 import { hasFullWorkspaceAccess } from "@/lib/role-access";
 import { generateJournalDocumentPdf } from "@/lib/document-pdf";
+import {
+  buildCapaSummaryPdf,
+  buildRegulatorCoverPdf,
+  type RegulatorCapaRow,
+} from "@/lib/regulator-bundle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -176,6 +181,102 @@ export async function GET(request: Request) {
     `Итого: включено ${totals.included}, ошибок ${totals.failed}, всего документов ${documents.length}.`
   );
   zip.file(`ОТЧЁТ.txt`, manifestLines.join("\r\n"));
+
+  // --- CAPA за период (открытые к моменту сборки + закрытые в диапазоне)
+  const capaRowsRaw = await db.capaTicket.findMany({
+    where: {
+      organizationId,
+      OR: [
+        { status: { not: "closed" } },
+        {
+          AND: [
+            { status: "closed" },
+            { closedAt: { gte: from, lte: toEndOfDay } },
+          ],
+        },
+        { createdAt: { gte: from, lte: toEndOfDay } },
+      ],
+    },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    select: {
+      title: true,
+      priority: true,
+      status: true,
+      createdAt: true,
+      dueDate: true,
+      closedAt: true,
+      rootCause: true,
+      correctiveAction: true,
+      sourceType: true,
+      assignedToId: true,
+    },
+  });
+  const assigneeIds = Array.from(
+    new Set(
+      capaRowsRaw
+        .map((r) => r.assignedToId)
+        .filter((id): id is string => !!id)
+    )
+  );
+  const assigneeNames =
+    assigneeIds.length > 0
+      ? new Map(
+          (
+            await db.user.findMany({
+              where: { id: { in: assigneeIds } },
+              select: { id: true, name: true },
+            })
+          ).map((u) => [u.id, u.name])
+        )
+      : new Map<string, string>();
+  const capaRows: RegulatorCapaRow[] = capaRowsRaw.map((r) => ({
+    title: r.title,
+    priority: r.priority,
+    status: r.status,
+    createdAt: r.createdAt,
+    dueDate: r.dueDate,
+    closedAt: r.closedAt,
+    assignedToName: r.assignedToId
+      ? (assigneeNames.get(r.assignedToId) ?? null)
+      : null,
+    rootCause: r.rootCause,
+    correctiveAction: r.correctiveAction,
+  }));
+  const capaOpen = capaRows.filter((r) => r.status !== "closed").length;
+  const capaClosed = capaRows.filter((r) => r.status === "closed").length;
+  const temperatureAnomalies = capaRowsRaw.filter(
+    (r) => r.sourceType === "auto_temp_3days"
+  ).length;
+
+  try {
+    const capaPdf = buildCapaSummaryPdf({
+      organizationName: organization?.name ?? "—",
+      periodFrom: from,
+      periodTo: to,
+      rows: capaRows,
+    });
+    zip.file("CAPA.pdf", capaPdf);
+  } catch (err) {
+    console.error("[compliance-bundle] CAPA.pdf failed", err);
+  }
+
+  try {
+    const cover = buildRegulatorCoverPdf({
+      organizationName: organization?.name ?? "—",
+      periodFrom: from,
+      periodTo: to,
+      generatedAt: now,
+      journalsIncluded: totals.included,
+      journalsFailed: totals.failed,
+      capaOpen,
+      capaClosed,
+      temperatureAnomalies,
+      preparedBy: session.user.name ?? "",
+    });
+    zip.file("00_СВОДКА.pdf", cover);
+  } catch (err) {
+    console.error("[compliance-bundle] cover pdf failed", err);
+  }
 
   const archive = await zip.generateAsync({
     type: "nodebuffer",
