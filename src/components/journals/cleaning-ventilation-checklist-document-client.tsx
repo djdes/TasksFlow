@@ -43,6 +43,7 @@ import {
 } from "@/lib/cleaning-ventilation-checklist-document";
 import { toDateKey } from "@/lib/hygiene-document";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { CopyYesterdayButton } from "@/components/journals/copy-yesterday-button";
 import { FocusTodayScroller } from "@/components/journals/focus-today-scroller";
 import { isManagementRole } from "@/lib/user-roles";
 import { useMobileView } from "@/lib/use-mobile-view";
@@ -628,14 +629,17 @@ export function CleaningVentilationChecklistDocumentClient({
           </h1>
           <div className="flex items-center gap-3">
             {isActive ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSettingsOpen(true)}
-                className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[17px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
-              >
-                Настройки журнала
-              </Button>
+              <>
+                <CopyYesterdayButton documentId={documentId} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSettingsOpen(true)}
+                  className="h-11 rounded-2xl border-[#dcdfed] px-6 text-[17px] text-[#3848c7] shadow-none hover:bg-[#f5f6ff]"
+                >
+                  Настройки журнала
+                </Button>
+              </>
             ) : null}
           </div>
         </div>

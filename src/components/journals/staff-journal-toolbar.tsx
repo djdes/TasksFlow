@@ -23,6 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
 import { DocumentBackLink } from "@/components/journals/document-back-link";
+import { CopyYesterdayButton } from "@/components/journals/copy-yesterday-button";
 import {
   getHygienePositionLabel,
   getStaffJournalResponsibleTitleOptions,
@@ -449,6 +450,7 @@ export function StaffJournalToolbar({
               )}
               {status === "active" && (
                 <>
+                <CopyYesterdayButton documentId={documentId} />
                 <Button
                   type="button"
                   variant="outline"

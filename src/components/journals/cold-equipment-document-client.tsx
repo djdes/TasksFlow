@@ -54,6 +54,7 @@ import {
 } from "@/lib/hygiene-document";
 import { openDocumentPdf } from "@/lib/open-document-pdf";
 import { DocumentCloseButton } from "@/components/journals/document-close-button";
+import { CopyYesterdayButton } from "@/components/journals/copy-yesterday-button";
 import { FocusTodayScroller } from "@/components/journals/focus-today-scroller";
 
 import { toast } from "sonner";
@@ -742,6 +743,7 @@ export function ColdEquipmentDocumentClient({
 
             {status === "active" ? (
               <>
+              <CopyYesterdayButton documentId={documentId} />
               <Button
                 type="button"
                 variant="outline"
