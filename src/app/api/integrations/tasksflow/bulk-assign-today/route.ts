@@ -45,12 +45,29 @@ type JournalReport = {
   label: string;
   documentId: string | null;
   documentTitle: string | null;
+  documentAutoCreated?: boolean;
   created: number;
   alreadyLinked: number;
   skipped: number;
   errors: number;
   skipReason?: string;
 };
+
+function currentMonthBounds(now: Date): { from: Date; to: Date } {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  return {
+    from: new Date(Date.UTC(y, m, 1)),
+    to: new Date(Date.UTC(y, m + 1, 0)),
+  };
+}
+
+function monthLabel(now: Date): string {
+  return now.toLocaleDateString("ru-RU", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -159,21 +176,35 @@ export async function POST(request: Request) {
       continue;
     }
 
-    // First active document covering today.
-    const doc = await db.journalDocument.findFirst({
+    // First active document covering today. If none exists, auto-create
+    // a month-long document so the bulk-assign is actually useful — the
+    // whole point of «одним нажатием» is that the manager doesn't have
+    // to pre-seed documents for every daily journal.
+    const now = new Date();
+    let doc = await db.journalDocument.findFirst({
       where: {
         organizationId,
         status: "active",
         template: { code: tpl.code },
-        dateFrom: { lte: new Date() },
-        dateTo: { gte: new Date() },
+        dateFrom: { lte: now },
+        dateTo: { gte: now },
       },
       orderBy: { dateFrom: "desc" },
     });
     if (!doc) {
-      report.skipReason = "Нет активного документа на сегодня";
-      reports.push(report);
-      continue;
+      const bounds = currentMonthBounds(now);
+      doc = await db.journalDocument.create({
+        data: {
+          organizationId,
+          templateId: tpl.id,
+          title: `${tpl.name} · ${monthLabel(now)}`,
+          dateFrom: bounds.from,
+          dateTo: bounds.to,
+          status: "active",
+          config: {},
+        },
+      });
+      report.documentAutoCreated = true;
     }
     report.documentId = doc.id;
     report.documentTitle = doc.title;
@@ -297,9 +328,16 @@ export async function POST(request: Request) {
       acc.alreadyLinked += r.alreadyLinked;
       acc.skipped += r.skipped;
       acc.errors += r.errors;
+      if (r.documentAutoCreated) acc.documentsCreated += 1;
       return acc;
     },
-    { created: 0, alreadyLinked: 0, skipped: 0, errors: 0 }
+    {
+      created: 0,
+      alreadyLinked: 0,
+      skipped: 0,
+      errors: 0,
+      documentsCreated: 0,
+    }
   );
 
   if (summary.created > 0 || summary.alreadyLinked > 0 || summary.errors > 0) {

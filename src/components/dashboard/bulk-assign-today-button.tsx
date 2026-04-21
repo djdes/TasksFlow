@@ -10,8 +10,13 @@ type BulkAssignResult = {
   alreadyLinked: number;
   skipped: number;
   errors: number;
+  documentsCreated?: number;
   message?: string;
-  byJournal?: Array<{ label: string; skipReason?: string }>;
+  byJournal?: Array<{
+    label: string;
+    skipReason?: string;
+    documentAutoCreated?: boolean;
+  }>;
 };
 
 /**
@@ -51,10 +56,25 @@ export function BulkAssignTodayButton({
         return;
       }
       const result = data as BulkAssignResult;
-      if (result.created === 0 && result.alreadyLinked === 0) {
-        toast.success(
-          result.message ?? "Нечего отправлять — всё уже на заполнении"
-        );
+      const totals =
+        result.created + result.alreadyLinked + result.skipped + result.errors;
+
+      if (totals === 0) {
+        // Nothing was attempted at all. Surface the *actual* reason from
+        // the per-journal report instead of the meaningless «всё уже
+        // заполнено».
+        const withReason = (result.byJournal ?? []).filter((b) => b.skipReason);
+        if (withReason.length > 0) {
+          const firstReason = withReason[0].skipReason;
+          toast.error(
+            `Задачи не отправлены. Причина: ${firstReason}. Журналов затронуто: ${withReason.length}.`
+          );
+        } else {
+          toast.success(
+            result.message ??
+              "Нечего отправлять — все ежедневные журналы уже на заполнении."
+          );
+        }
       } else {
         const parts: string[] = [];
         if (result.created > 0) parts.push(`создано: ${result.created}`);
@@ -63,6 +83,11 @@ export function BulkAssignTodayButton({
         if (result.skipped > 0)
           parts.push(`без Telegram: ${result.skipped}`);
         if (result.errors > 0) parts.push(`ошибок: ${result.errors}`);
+        if (result.documentsCreated && result.documentsCreated > 0) {
+          parts.push(
+            `заведено документов: ${result.documentsCreated}`
+          );
+        }
         toast.success(`Задачи отправлены · ${parts.join(" · ")}`);
       }
       router.refresh();
