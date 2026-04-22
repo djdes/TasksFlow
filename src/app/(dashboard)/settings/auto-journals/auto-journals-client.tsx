@@ -146,11 +146,11 @@ export function AutoJournalsClient({ items }: Props) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       {/* LEFT — journals list */}
-      <section className="rounded-3xl border border-[#ececf4] bg-white p-6 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] md:p-7">
+      <section className="min-w-0 rounded-3xl border border-[#ececf4] bg-white p-4 shadow-[0_0_0_1px_rgba(240,240,250,0.45)] sm:p-6 md:p-7">
         <div className="flex flex-wrap items-center gap-3 border-b border-[#ececf4] pb-4">
-          <div className="relative min-w-[240px] flex-1">
+          <div className="relative w-full flex-1 sm:w-auto sm:min-w-[240px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9b9fb3]" />
             <Input
               value={search}
