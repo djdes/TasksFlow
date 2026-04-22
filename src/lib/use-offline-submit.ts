@@ -67,9 +67,11 @@ export function useOfflineQueue(): {
   flushNow: () => Promise<void>;
   busy: boolean;
 } {
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator === "undefined" ? true : navigator.onLine
-  );
+  // Важно: на первом рендере всегда `true` — иначе если клиент сейчас
+  // offline, navigator.onLine вернёт false, а серверный SSR отрендерил
+  // true → React ругается «Hydration failed». Реальное значение
+  // читаем в useEffect после монтирования.
+  const [online, setOnline] = useState<boolean>(true);
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
 
@@ -82,6 +84,12 @@ export function useOfflineQueue(): {
   }, []);
 
   useEffect(() => {
+    // Подхватываем реальное состояние сети уже после монтирования —
+    // так SSR и первый client-render совпадают, а если браузер offline,
+    // переключимся на следующем тике.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setOnline(false);
+    }
     void refresh();
     const unsub = subscribeQueueChange(() => void refresh());
     const onOnline = () => {
