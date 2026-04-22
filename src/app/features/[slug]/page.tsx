@@ -68,7 +68,7 @@ export default async function FeatureDetailPage({
       {/* BREADCRUMB */}
       <nav
         aria-label="breadcrumbs"
-        className="mx-auto flex max-w-[1200px] items-center gap-1.5 px-6 pb-2 text-[13px] text-[#6f7282]"
+        className="mx-auto flex max-w-[1200px] items-center gap-1 overflow-hidden px-4 pb-2 text-[12px] text-[#6f7282] sm:gap-1.5 sm:px-6 sm:text-[13px]"
       >
         <Link
           href="/"
@@ -87,7 +87,7 @@ export default async function FeatureDetailPage({
 
       {/* HERO */}
       <section className="mx-auto max-w-[1200px] px-4 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl bg-[#0b1024] px-6 py-14 text-white md:px-12 md:py-16">
+        <div className="relative overflow-hidden rounded-3xl bg-[#0b1024] px-5 py-10 text-white sm:px-6 sm:py-14 md:px-12 md:py-16">
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -left-24 -top-24 size-[380px] rounded-full bg-[#5566f6] opacity-40 blur-[120px]" />
             <div className="absolute -bottom-32 -right-32 size-[420px] rounded-full bg-[#7a5cff] opacity-30 blur-[140px]" />
@@ -96,10 +96,10 @@ export default async function FeatureDetailPage({
             <div className="inline-flex size-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur">
               <Icon className="size-7" />
             </div>
-            <h1 className="mt-5 max-w-[760px] text-[36px] font-semibold leading-[1.1] tracking-[-0.02em] md:text-[48px]">
+            <h1 className="mt-5 max-w-[760px] text-[clamp(1.625rem,6vw+0.5rem,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] [overflow-wrap:anywhere] hyphens-auto">
               {info.title}
             </h1>
-            <p className="mt-4 max-w-[720px] text-[16px] leading-[1.6] text-white/80 md:text-[18px]">
+            <p className="mt-4 max-w-[720px] text-[15px] leading-[1.6] text-white/80 sm:text-[16px] md:text-[18px]">
               {info.tagline}
             </p>
           </div>
