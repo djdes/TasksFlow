@@ -99,6 +99,14 @@ const settingsCards = [
     bg: "#ecfdf5",
   },
   {
+    title: "Журналы для сотрудников",
+    description: "Кто какие журналы видит и заполняет",
+    href: "/settings/journal-access",
+    icon: KeyRound,
+    color: "#5566f6",
+    bg: "#eef1ff",
+  },
+  {
     title: "Уведомления",
     description: "Telegram-бот, типы оповещений",
     href: "/settings/notifications",
