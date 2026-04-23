@@ -71,20 +71,19 @@ export async function generateJournalPDF(params: {
   doc.text(template.name, pageWidth / 2, 23, { align: "center" });
 
   doc.setFontSize(10);
-  const periodText = `Period: ${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+  const periodText = `Период: ${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
   doc.text(periodText, pageWidth / 2, 30, { align: "center" });
 
   // Build table columns: #, Date, fields..., Area, Filled by
-  const headRow: string[] = ["#", "Date"];
+  const headRow: string[] = ["№", "Дата"];
   for (const field of fields) {
-    // Skip equipmentId type fields in columns - we show equipment name separately
     if (field.type === "equipment") {
-      headRow.push("Equipment");
+      headRow.push("Оборудование");
     } else {
       headRow.push(field.label);
     }
   }
-  headRow.push("Area", "Filled by");
+  headRow.push("Цех/участок", "Кто заполнил");
 
   // Build table body
   const bodyRows: string[][] = entries.map((entry, index) => {
@@ -96,28 +95,49 @@ export async function generateJournalPDF(params: {
 
     for (const field of fields) {
       if (field.type === "equipment") {
-        row.push(entry.equipment?.name || "-");
+        row.push(entry.equipment?.name || "—");
       } else if (field.type === "boolean") {
         const val = data[field.key];
-        row.push(val === true ? "Da" : val === false ? "Net" : "-");
+        row.push(val === true ? "Да" : val === false ? "Нет" : "—");
       } else if (field.type === "select" && field.options) {
         const val = data[field.key] as string;
         const opt = field.options.find((o) => o.value === val);
-        row.push(opt ? opt.label : String(val || "-"));
+        row.push(opt ? opt.label : String(val || "—"));
       } else if (field.type === "date") {
         const val = data[field.key];
-        row.push(val ? formatDate(String(val)) : "-");
+        row.push(val ? formatDate(String(val)) : "—");
       } else {
         const val = data[field.key];
-        row.push(val != null ? String(val) : "-");
+        row.push(val != null ? String(val) : "—");
       }
     }
 
-    row.push(entry.area?.name || "-");
-    row.push(entry.filledBy.name);
+    row.push(entry.area?.name || "—");
+    row.push(entry.filledBy?.name || "—");
 
     return row;
   });
+
+  // Calculate column widths
+  const fixedColumns = 4; // #, Date, Area, Filled by
+  const fieldColumnCount = Math.max(fields.length, 1);
+  const totalColumns = fixedColumns + fieldColumnCount;
+  const availableWidth = pageWidth - 28; // 14mm margin each side
+  const fixedWidth = 18; // mm for fixed columns
+  const fieldWidth = Math.max(
+    20,
+    (availableWidth - fixedWidth * fixedColumns) / fieldColumnCount
+  );
+
+  const columnStyles: Record<number, { cellWidth?: number }> = {
+    0: { cellWidth: 10 }, // #
+    1: { cellWidth: 24 }, // Date
+    [totalColumns - 2]: { cellWidth: 28 }, // Area
+    [totalColumns - 1]: { cellWidth: 28 }, // Filled by
+  };
+  for (let i = 2; i < totalColumns - 2; i++) {
+    columnStyles[i] = { cellWidth: fieldWidth };
+  }
 
   // Draw the table
   autoTable(doc, {
@@ -128,17 +148,23 @@ export async function generateJournalPDF(params: {
     styles: {
       fontSize: 7,
       cellPadding: 2,
+      overflow: "linebreak",
+      valign: "middle",
+      lineColor: [0, 0, 0],
+      textColor: [0, 0, 0],
     },
     headStyles: {
       fillColor: [41, 128, 185],
       textColor: 255,
       fontStyle: "bold",
       fontSize: 7,
+      halign: "center",
     },
     alternateRowStyles: {
       fillColor: [245, 245, 245],
     },
-    margin: { top: 35, bottom: 25 },
+    columnStyles,
+    margin: { top: 35, bottom: 25, left: 14, right: 14 },
     didDrawPage: (data) => {
       // Footer on every page
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -146,7 +172,7 @@ export async function generateJournalPDF(params: {
       doc.setTextColor(128, 128, 128);
 
       const now = new Date();
-      const footerLeft = `Generated in HACCP-Online | ${formatDateTime(now)}`;
+      const footerLeft = `Сгенерировано в HACCP-Online | ${formatDateTime(now)}`;
       doc.text(footerLeft, 14, pageHeight - 10);
 
       const pageNum = `${data.pageNumber}`;
@@ -160,7 +186,7 @@ export async function generateJournalPDF(params: {
   // If no entries, add a note
   if (entries.length === 0) {
     doc.setFontSize(10);
-    doc.text("No records found for the selected period.", pageWidth / 2, 50, { align: "center" });
+    doc.text("За выбранный период записей не найдено.", pageWidth / 2, 50, { align: "center" });
   }
 
   // Return as Buffer
