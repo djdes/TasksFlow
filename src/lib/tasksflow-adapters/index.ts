@@ -30,6 +30,23 @@ import { equipmentCleaningAdapter } from "./equipment-cleaning";
 import { finishedProductAdapter } from "./finished-product";
 import { climateAdapter } from "./climate";
 import { perishableRejectionAdapter } from "./perishable-rejection";
+import { sanitationDayAdapter } from "./sanitation-day";
+import { equipmentMaintenanceAdapter } from "./equipment-maintenance";
+import { productWriteoffAdapter } from "./product-writeoff";
+import { equipmentCalibrationAdapter } from "./equipment-calibration";
+import { breakdownHistoryAdapter } from "./breakdown-history";
+import { accidentJournalAdapter } from "./accident-journal";
+import { acceptanceAdapter, rawMaterialAcceptanceAdapter } from "./acceptance";
+import { metalImpurityAdapter } from "./metal-impurity";
+import { ppeIssuanceAdapter } from "./ppe-issuance";
+import { disinfectantUsageAdapter } from "./disinfectant-usage";
+import { glassListAdapter } from "./glass-list";
+import { staffTrainingAdapter } from "./staff-training";
+import { trainingPlanAdapter } from "./training-plan";
+import { auditPlanAdapter } from "./audit-plan";
+import { auditProtocolAdapter } from "./audit-protocol";
+import { auditReportAdapter } from "./audit-report";
+import { traceabilityAdapter } from "./traceability";
 import { buildGenericAdapter } from "./generic";
 import type { JournalAdapter } from "./types";
 
@@ -46,6 +63,24 @@ const SPECIFIC_ADAPTERS: JournalAdapter[] = [
   finishedProductAdapter,
   climateAdapter,
   perishableRejectionAdapter,
+  sanitationDayAdapter,
+  equipmentMaintenanceAdapter,
+  productWriteoffAdapter,
+  equipmentCalibrationAdapter,
+  breakdownHistoryAdapter,
+  accidentJournalAdapter,
+  acceptanceAdapter,
+  rawMaterialAcceptanceAdapter,
+  metalImpurityAdapter,
+  ppeIssuanceAdapter,
+  disinfectantUsageAdapter,
+  glassListAdapter,
+  staffTrainingAdapter,
+  trainingPlanAdapter,
+  auditPlanAdapter,
+  auditProtocolAdapter,
+  auditReportAdapter,
+  traceabilityAdapter,
 ];
 
 const SPECIFIC_BY_CODE = new Map<string, JournalAdapter>(

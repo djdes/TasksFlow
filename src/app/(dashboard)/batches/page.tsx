@@ -124,10 +124,9 @@ export default async function BatchesPage({
       </div>
 
       {/* Table */}
-      <div className="-mx-4 sm:mx-0">
-      <div className="overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[840px] border-collapse text-[14px]">
+      <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 lg:overflow-visible">
+        <div className="min-w-[840px] overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+          <table className="w-full border-collapse text-[14px]">
             <thead>
               <tr className="border-b border-[#ececf4] bg-[#fafbff] text-left text-[12px] uppercase tracking-wider text-[#6f7282]">
                 <th className="px-5 py-3 font-medium">Код</th>
@@ -233,7 +232,6 @@ export default async function BatchesPage({
             </tbody>
           </table>
         </div>
-      </div>
       </div>
     </div>
   );

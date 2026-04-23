@@ -320,7 +320,7 @@ export function ProductWriteoffDocumentClient({
           </div>
         ) : null}
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
         <div className="mx-auto mt-8 min-w-[1100px] max-w-[1120px] space-y-8 print:mt-0 sm:min-w-0">
           <table className="w-full border-collapse text-[16px]">
             <tbody>

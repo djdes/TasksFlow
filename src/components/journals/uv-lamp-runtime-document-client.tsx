@@ -716,7 +716,7 @@ function SpecificationTable({ config, onEdit }: { config: UvRuntimeDocumentConfi
       <div className="mb-3 text-center text-[14px] font-bold">
         Спецификация ультрафиолетовой бактерицидной установки
       </div>
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0">
       <table className="w-full min-w-[640px] border-collapse text-[12px] sm:min-w-0">
         <tbody>
           <tr>
@@ -805,7 +805,7 @@ function MonthlySummaryTable({ monthlyData }: { monthlyData: { month: string; ho
       <div className="mb-3 text-center text-[14px] font-bold leading-tight">
         Суммарное количество отработанных часов бактерицидной установкой по месяцам
       </div>
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0">
       <table className="w-full min-w-[720px] border-collapse text-[12px] sm:min-w-0">
         <thead>
           <tr className="bg-[#f0f0f0]">

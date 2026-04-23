@@ -771,7 +771,7 @@ export function GlassControlDocumentClient(props: Props) {
           </label>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
         <div className="mx-auto mt-10 min-w-[1100px] max-w-[1160px] space-y-8 print:mt-6 sm:min-w-0">
           <table className="w-full border-collapse text-[16px]">
             <tbody>

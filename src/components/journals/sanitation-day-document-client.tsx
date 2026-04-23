@@ -676,7 +676,7 @@ export function SanitationDayDocumentClient({
       </h1>
 
       <section className="space-y-6 overflow-hidden rounded-[18px] border border-[#dadde9] bg-white p-4 print:overflow-visible print:border-0 sm:p-8 print:p-0">
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0">
         <table className="w-full min-w-[560px] border-collapse sm:min-w-0">
           <tbody>
             <tr>

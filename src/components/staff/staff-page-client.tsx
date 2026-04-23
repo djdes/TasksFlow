@@ -1194,7 +1194,7 @@ function WorkOffGrid(props: {
         Заполнить выходные дни из Айко
       </Button>
 
-      <div className="overflow-x-auto rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+      <div className="overflow-x-auto -mx-4 px-4 xl:mx-0 xl:px-0 xl:overflow-visible rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
         {props.employees.length === 0 ? (
           <p className="px-6 py-10 text-center text-[13px] text-[#9b9fb3]">
             Нет сотрудников. Добавьте хотя бы одного, чтобы управлять графиком.
@@ -1347,10 +1347,9 @@ function PeriodsTable(props: {
         Добавить
       </Button>
 
-      <div className="-mx-4 sm:mx-0">
-      <div className="overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[540px] text-[13px]">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
+        <div className="min-w-[540px] overflow-hidden rounded-2xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+          <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-[#f5f6ff]">
               <th className="w-[44px] px-3 py-2" />
@@ -1422,7 +1421,6 @@ function PeriodsTable(props: {
           </tbody>
         </table>
         </div>
-      </div>
       </div>
     </div>
   );

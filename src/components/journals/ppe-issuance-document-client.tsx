@@ -585,7 +585,7 @@ export function PpeIssuanceDocumentClient(props: Props) {
           </h1>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0">
         <table className="w-full min-w-[640px] border-collapse text-[15px] sm:min-w-0">
           <tbody>
             <tr>

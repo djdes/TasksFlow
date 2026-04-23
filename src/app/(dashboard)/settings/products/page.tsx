@@ -62,7 +62,7 @@ export default async function ProductsSettingsPage() {
           </div>
         </div>
         {canManage && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <ProductDialog />
             <ProductImportDialog />
           </div>

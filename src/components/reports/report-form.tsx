@@ -224,7 +224,7 @@ export function ReportForm({ templates, areas }: ReportFormProps) {
           )}
 
           {/* Submit buttons */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleDownload}
               disabled={isLoading || isLoadingExcel}

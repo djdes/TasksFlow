@@ -364,7 +364,7 @@ export function EquipmentCleaningDocumentClient({
       </div>
 
       <div className="space-y-6 overflow-hidden rounded-[20px] border bg-white p-4 sm:p-6">
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0">
         <table className="w-full min-w-[640px] border-collapse sm:min-w-0">
           <tbody>
             <tr>

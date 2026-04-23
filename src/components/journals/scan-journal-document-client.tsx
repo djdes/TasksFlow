@@ -39,7 +39,7 @@ export function ScanJournalDocumentClient({
         </div>
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
         <div className="min-w-[1100px] sm:min-w-0">
           <div className="overflow-hidden rounded-[16px] border border-[#dbe0f1] bg-white p-2">
             <img

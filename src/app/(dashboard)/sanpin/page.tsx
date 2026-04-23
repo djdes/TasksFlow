@@ -60,14 +60,14 @@ export default async function SanpinReferencePage() {
                       key={norm.id}
                       className="rounded-lg border p-4 space-y-2"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h3 className="min-w-0 font-semibold text-sm">
                           {norm.title}
                         </h3>
                         {norm.values && (
                           <Badge
                             variant="outline"
-                            className="shrink-0 font-mono text-xs"
+                            className="shrink-0 whitespace-normal break-all font-mono text-xs"
                           >
                             {norm.values}
                           </Badge>

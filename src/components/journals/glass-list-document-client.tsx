@@ -198,7 +198,7 @@ export function GlassListDocumentClient({
 
         <h1 className="mb-10 text-[clamp(1.5rem,2vw+1rem,2rem)] font-semibold tracking-[-0.02em] text-[#0b1024]">{title}</h1>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 lg:overflow-visible sm:px-0 print:mx-0 print:overflow-visible print:px-0">
         <div className="mx-auto min-w-[1100px] max-w-[1300px] space-y-8 sm:min-w-0">
           <table className="w-full border-collapse text-[16px]">
             <tbody>

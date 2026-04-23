@@ -68,10 +68,9 @@ export default async function CompetenciesPage() {
         ))}
       </div>
 
-      <div className="-mx-4 sm:mx-0">
-      <div className="overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-[14px]">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 md:overflow-visible">
+        <div className="min-w-[720px] overflow-hidden rounded-3xl border border-[#ececf4] bg-white shadow-[0_0_0_1px_rgba(240,240,250,0.45)]">
+          <table className="w-full text-[14px]">
             <thead>
               <tr className="border-b border-[#ececf4] bg-[#fafbff] text-[12px] uppercase tracking-wider text-[#6f7282]">
                 <th className="px-4 py-3 text-left font-medium">Сотрудник</th>
@@ -115,7 +114,6 @@ export default async function CompetenciesPage() {
             </tbody>
           </table>
         </div>
-      </div>
       </div>
     </div>
   );
