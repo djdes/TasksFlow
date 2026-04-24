@@ -15,6 +15,11 @@ import {
   normalizeTaskFormPayload,
   type WesetupCatalog,
 } from "@shared/wesetup-journal-mode";
+import {
+  getPublicTasksflowBaseUrl,
+  getPublicWesetupBaseUrl,
+  toPublicWesetupUrl,
+} from "./public-urls";
 
 // Настройка загрузки файлов
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1356,13 +1361,14 @@ export async function registerRoutes(
       if (!data?.url) {
         return res.status(502).json({ message: "No url in response" });
       }
-      // Tack on a return= parameter so the worker can bounce back to
-      // TasksFlow after submit without tapping anything extra.
-      const returnUrl =
-        (req.headers.origin as string | undefined) ||
-        `http://localhost:${process.env.PORT || 5001}/dashboard`;
-      const sep = data.url.includes("?") ? "&" : "?";
-      const finalUrl = `${data.url}${sep}return=${encodeURIComponent(
+      // Tack on a public return= parameter so the worker can bounce back to
+      // TasksFlow after submit. WeSetup may be called through localhost on the
+      // server, but the browser must never receive localhost in production.
+      const returnUrl = `${getPublicTasksflowBaseUrl(req)}/dashboard`;
+      const publicWesetupBaseUrl = getPublicWesetupBaseUrl(baseUrl);
+      const publicTaskFillUrl = toPublicWesetupUrl(data.url, publicWesetupBaseUrl);
+      const sep = publicTaskFillUrl.includes("?") ? "&" : "?";
+      const finalUrl = `${publicTaskFillUrl}${sep}return=${encodeURIComponent(
         returnUrl
       )}`;
       res.json({ url: finalUrl, token: data.token });
