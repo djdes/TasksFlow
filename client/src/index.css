@@ -120,6 +120,41 @@
 }
 
 @layer components {
+  /* ===== MOTION SYSTEM ===== */
+  .route-shell {
+    min-height: 100%;
+    animation: route-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .app-header {
+    animation: header-drop 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .app-content > * {
+    animation: content-rise 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .app-content > *:nth-child(2) {
+    animation-delay: 45ms;
+  }
+
+  .app-content > *:nth-child(3) {
+    animation-delay: 90ms;
+  }
+
+  .app-content > *:nth-child(n + 4) {
+    animation-delay: 120ms;
+  }
+
+  .motion-surface,
+  .grouped-section,
+  .task-card,
+  .bg-card\/80,
+  .bg-card.border {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 220px;
+  }
+
   /* ===== HEADER ===== */
   .app-header {
     @apply bg-primary text-white shadow-lg;
@@ -179,6 +214,7 @@
   /* ===== PROGRESS BAR ===== */
   .progress-card {
     @apply flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-xl px-3 py-2 mb-3 border border-gray-100;
+    transform-origin: top center;
   }
 
   .progress-bar-container {
@@ -187,6 +223,22 @@
 
   .progress-bar-fill {
     @apply h-full rounded-full transition-all duration-500 ease-out;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.35),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: progress-sheen 2.8s ease-in-out infinite;
   }
 
   .progress-bar-fill.in-progress {
@@ -251,14 +303,34 @@
   .task-card {
     @apply bg-white rounded-2xl p-5 shadow-sm border border-gray-100
            transition-all duration-200 cursor-pointer;
+    animation: card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center top;
+    will-change: transform, opacity;
   }
 
   .task-card:hover {
     @apply shadow-md border-gray-200 transform -translate-y-0.5;
+    box-shadow: 0 12px 28px rgba(11, 16, 36, 0.08);
   }
 
   .task-card:active {
     @apply scale-[0.99] shadow-sm;
+  }
+
+  .task-list .task-card:nth-child(2) {
+    animation-delay: 35ms;
+  }
+
+  .task-list .task-card:nth-child(3) {
+    animation-delay: 70ms;
+  }
+
+  .task-list .task-card:nth-child(4) {
+    animation-delay: 105ms;
+  }
+
+  .task-list .task-card:nth-child(n + 5) {
+    animation-delay: 130ms;
   }
 
   .task-card.completed {
@@ -277,6 +349,7 @@
 
   .task-checkbox.checked {
     @apply bg-green-500 border-green-500;
+    animation: check-pop 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .task-checkbox.checked:hover {
@@ -412,6 +485,7 @@
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50;
     padding-bottom: env(safe-area-inset-bottom, 0);
+    animation: nav-rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .bottom-nav-content {
@@ -421,10 +495,24 @@
   .bottom-nav-item {
     @apply flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-xl
            transition-all text-gray-400;
+    position: relative;
   }
 
   .bottom-nav-item.active {
     @apply text-primary;
+  }
+
+  .bottom-nav-item.active::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    width: 18px;
+    height: 3px;
+    border-radius: 999px;
+    background: hsl(var(--primary));
+    transform: translateX(-50%);
+    animation: nav-indicator 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .bottom-nav-item:not(.active):hover {
@@ -441,6 +529,7 @@
       @apply fixed left-0 top-0 bottom-0 right-auto w-60 border-t-0 border-r border-gray-200;
       padding-top: 80px;
       padding-bottom: 0;
+      animation-name: nav-slide-right;
     }
 
     .bottom-nav-content {
@@ -453,6 +542,16 @@
 
     .bottom-nav-item.active {
       @apply bg-blue-50;
+    }
+
+    .bottom-nav-item.active::after {
+      left: 6px;
+      top: 50%;
+      bottom: auto;
+      width: 3px;
+      height: 22px;
+      transform: translateY(-50%);
+      animation-name: nav-indicator-y;
     }
 
     .bottom-nav-item:not(.active):hover {
@@ -470,6 +569,7 @@
            shadow-lg shadow-primary/30 flex items-center justify-center
            hover:shadow-xl hover:shadow-primary/40 active:scale-95
            transition-all duration-200 z-40;
+    animation: fab-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
   }
 
   @media (min-width: 1024px) {
@@ -481,6 +581,7 @@
   /* ===== EMPTY STATE ===== */
   .empty-state {
     @apply flex flex-col items-center justify-center py-16 px-6 text-center;
+    animation: content-rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .empty-state-icon {
@@ -505,6 +606,7 @@
     @apply absolute left-4 right-4 bg-white rounded-2xl shadow-xl
            border border-gray-100 overflow-hidden z-50;
     top: calc(100% + 8px);
+    animation: dropdown-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .dropdown-item {
@@ -525,6 +627,15 @@
            transition-all duration-200 hover:bg-white/30 active:scale-95;
   }
 
+  .header-button:hover,
+  .bottom-nav-item:hover,
+  .task-action-btn:hover,
+  .empty-state-button:hover,
+  .ozon-btn:hover,
+  .things-button:hover {
+    transform: translateY(-1px);
+  }
+
   .header-button:disabled {
     @apply opacity-60;
   }
@@ -541,6 +652,7 @@
     @apply flex items-center gap-1.5 px-3 py-2 rounded-xl
            bg-gradient-to-r from-yellow-400/30 to-yellow-500/20
            border border-yellow-300/30 backdrop-blur-sm;
+    animation: badge-in 360ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
   }
 
   .bonus-badge-text {
@@ -659,6 +771,11 @@
            focus:border-primary focus:ring-2 focus:ring-primary/20
            transition-all placeholder:text-gray-400;
   }
+
+  .things-input:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 90, 255, 0.08);
+  }
 }
 
 @layer utilities {
@@ -737,6 +854,150 @@
 
 /* ===== GROUPED TASK LIST — year / month / day accordion ===== */
 
+@keyframes route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes header-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0.86);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes nav-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nav-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes nav-indicator {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+
+@keyframes nav-indicator-y {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scaleY(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scaleY(1);
+  }
+}
+
+@keyframes fab-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes progress-sheen {
+  0%,
+  38% {
+    transform: translateX(-100%);
+  }
+  70%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .grouped-task-list {
   display: flex;
   flex-direction: column;
@@ -749,10 +1010,13 @@
   border-radius: 20px;
   padding: 14px 14px 6px;
   box-shadow: 0 1px 2px rgba(11, 16, 36, 0.02);
+  animation: content-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
 }
 
 .grouped-section--completed {
   background: rgba(248, 249, 253, 0.85);
+  animation-delay: 80ms;
 }
 
 .grouped-section-header {
@@ -856,6 +1120,10 @@
   padding: 0 0 8px 2px;
 }
 
+.group-year[open] > .group-year-body {
+  animation: content-rise 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Month accordion */
 .group-month {
   margin: 4px 0;
@@ -901,6 +1169,10 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.group-month[open] > .group-month-body {
+  animation: content-rise 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Day header pill */
@@ -993,5 +1265,53 @@ details:not([open]) > summary .group-chevron {
   .group-month-body {
     padding-left: 6px;
     margin-left: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .route-shell,
+  .app-content > *,
+  .grouped-section,
+  .task-card,
+  .bottom-nav,
+  .fab-button {
+    animation-duration: 220ms;
+  }
+
+  .task-list .task-card:nth-child(n) {
+    animation-delay: 0ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .route-shell,
+  .app-header,
+  .app-content > *,
+  .grouped-section,
+  .task-card,
+  .bottom-nav,
+  .fab-button,
+  .bonus-badge {
+    animation: none !important;
+  }
+
+  .task-card,
+  .header-button:hover,
+  .bottom-nav-item:hover,
+  .task-action-btn:hover,
+  .empty-state-button:hover,
+  .ozon-btn:hover,
+  .things-button:hover,
+  .things-input:focus-visible {
+    transform: none !important;
   }
 }

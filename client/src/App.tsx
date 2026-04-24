@@ -47,25 +47,29 @@ function ScrollToTop() {
 }
 
 function Router() {
+  const [location] = useLocation();
+
   return (
     <>
       <ScrollToTop />
-      <Switch>
-        <Route path="/" component={Login} />
-        <Route path="/register" component={Register} />
-        <Route path="/register/company" component={RegisterCompany} />
-        <Route path="/register/user" component={RegisterUser} />
-        <Route path="/instructions" component={Instructions} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/settings" component={CompanySettings} />
-        <Route path="/admin/api-keys" component={ApiKeysPage} />
-        <Route path="/tasks/new" component={CreateTask} />
-        <Route path="/tasks/:id/edit" component={EditTask} />
-        <Route path="/workers/new" component={CreateWorker} />
-        <Route path="/workers/:id/edit" component={EditWorker} />
-        <Route component={NotFound} />
-      </Switch>
+      <div key={location} className="route-shell">
+        <Switch>
+          <Route path="/" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/register/company" component={RegisterCompany} />
+          <Route path="/register/user" component={RegisterUser} />
+          <Route path="/instructions" component={Instructions} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/settings" component={CompanySettings} />
+          <Route path="/admin/api-keys" component={ApiKeysPage} />
+          <Route path="/tasks/new" component={CreateTask} />
+          <Route path="/tasks/:id/edit" component={EditTask} />
+          <Route path="/workers/new" component={CreateWorker} />
+          <Route path="/workers/:id/edit" component={EditWorker} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
     </>
   );
 }
