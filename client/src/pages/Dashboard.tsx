@@ -193,7 +193,10 @@ export default function Dashboard() {
     // form admins use inside the WeSetup journal. No session
     // needed, auth via HMAC token we ask the backend to mint now.
     const category = (task as { category?: string | null }).category ?? "";
-    if (category.startsWith("WeSetup · ")) {
+    const hasJournalLink = Boolean(
+      (task as { journalLink?: string | null }).journalLink
+    );
+    if (hasJournalLink || category.startsWith("WeSetup · ")) {
       try {
         const response = await fetch(
           `/api/wesetup/task-fill-url?taskId=${taskId}`,

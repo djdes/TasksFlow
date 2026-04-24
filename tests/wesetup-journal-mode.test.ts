@@ -3,7 +3,9 @@ import {
   filterJournalRows,
   filterJournals,
   flattenJournalRows,
+  findTaskFormInCatalog,
   groupJournalRowsByDocument,
+  normalizeTaskFormPayload,
   resolveActiveJournal,
   resolveJournalUi,
 } from "@shared/wesetup-journal-mode";
@@ -126,6 +128,77 @@ describe("journal composer helpers", () => {
     expect(resolved.subjectLabel).toBe("РЎРѕС‚СЂСѓРґРЅРёРє");
     expect(resolved.documentLabel).toBe("Документ журнала");
     expect(resolved.submitLabel).toContain("Р·РґРѕСЂРѕРІСЊСЏ");
+  });
+});
+
+describe("task form helpers", () => {
+  const form = {
+    fields: [
+      {
+        type: "number",
+        key: "temperature",
+        label: "Температура",
+        required: true,
+        unit: "°C",
+      },
+    ],
+    submitLabel: "Записать",
+  };
+
+  it("normalizes wrapped, legacy, and direct task form payloads", () => {
+    expect(normalizeTaskFormPayload({ form })).toEqual({ form });
+    expect(normalizeTaskFormPayload({ taskForm: form })).toEqual({ form });
+    expect(normalizeTaskFormPayload(form)).toEqual({ form });
+    expect(normalizeTaskFormPayload({ form: null })).toEqual({ form: null });
+  });
+
+  it("finds task form by generic wesetup journal kind", () => {
+    const found = findTaskFormInCatalog(
+      {
+        journals: [
+          {
+            templateCode: "health_check",
+            label: "Журнал здоровья",
+            description: null,
+            iconName: null,
+            taskForm: form,
+            documents: [],
+          },
+        ],
+      },
+      "wesetup-health_check"
+    );
+
+    expect(found).toEqual(form);
+  });
+
+  it("keeps lookup stable for a 35 journal catalog", () => {
+    const catalog = {
+      journals: Array.from({ length: 35 }, (_, index) => ({
+        templateCode: `journal_${index + 1}`,
+        label: `Журнал ${index + 1}`,
+        description: null,
+        iconName: null,
+        taskForm: {
+          fields: [
+            {
+              type: index % 2 === 0 ? "text" : "number",
+              key: `value_${index + 1}`,
+              label: `Поле ${index + 1}`,
+              required: true,
+            },
+          ],
+        },
+        documents: [],
+      })),
+    };
+
+    for (let index = 0; index < 35; index += 1) {
+      expect(
+        findTaskFormInCatalog(catalog, `wesetup-journal_${index + 1}`)?.fields[0]
+          .key
+      ).toBe(`value_${index + 1}`);
+    }
   });
 });
 

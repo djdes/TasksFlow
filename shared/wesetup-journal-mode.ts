@@ -248,3 +248,65 @@ export function resolveJournalUi(
     ...(journal?.ui ?? {}),
   };
 }
+
+export function isTaskFormSchema(value: unknown): value is TaskFormSchema {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { fields?: unknown };
+  if (!Array.isArray(candidate.fields)) return false;
+  return candidate.fields.every((field) => {
+    if (!field || typeof field !== "object") return false;
+    const item = field as { type?: unknown; key?: unknown; label?: unknown };
+    return (
+      typeof item.type === "string" &&
+      typeof item.key === "string" &&
+      typeof item.label === "string"
+    );
+  });
+}
+
+/**
+ * WeSetup historically returned task form payloads in a few compatible
+ * shapes while the integration was moving from catalog-based forms to a
+ * dedicated /task-form endpoint. Normalize all of them to the frontend
+ * contract so older journals do not fail just because the wrapper differs.
+ */
+export function normalizeTaskFormPayload(
+  payload: unknown
+): { form: TaskFormSchema | null } | null {
+  if (payload === null) return { form: null };
+  if (!payload || typeof payload !== "object") return null;
+
+  const maybeWrapped = payload as { form?: unknown; taskForm?: unknown };
+  if ("form" in maybeWrapped) {
+    return maybeWrapped.form === null || isTaskFormSchema(maybeWrapped.form)
+      ? { form: maybeWrapped.form }
+      : null;
+  }
+  if ("taskForm" in maybeWrapped) {
+    return maybeWrapped.taskForm === null || isTaskFormSchema(maybeWrapped.taskForm)
+      ? { form: maybeWrapped.taskForm }
+      : null;
+  }
+  if (isTaskFormSchema(payload)) {
+    return { form: payload };
+  }
+  return null;
+}
+
+export function journalKindToTemplateCode(kind: string): string {
+  return kind.replace(/^wesetup-/i, "");
+}
+
+export function findTaskFormInCatalog(
+  catalog: WesetupCatalog | null | undefined,
+  journalKindOrTemplateCode: string | null | undefined
+): TaskFormSchema | null {
+  if (!catalog || !journalKindOrTemplateCode) return null;
+  const templateCode = journalKindToTemplateCode(journalKindOrTemplateCode);
+  const journal = catalog.journals.find(
+    (item) =>
+      item.templateCode === templateCode ||
+      `wesetup-${item.templateCode}` === journalKindOrTemplateCode
+  );
+  return journal?.taskForm ?? null;
+}

@@ -9,6 +9,12 @@ import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
+import { parseJournalLink } from "@shared/journal-link";
+import {
+  findTaskFormInCatalog,
+  normalizeTaskFormPayload,
+  type WesetupCatalog,
+} from "@shared/wesetup-journal-mode";
 
 // Настройка загрузки файлов
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1062,28 +1068,38 @@ export async function registerRoutes(
   // Каталог всех журналов (любого типа), которые WeSetup готов
   // предложить TasksFlow для привязки. Старый /cleaning-catalog
   // оставлен для обратной совместимости — внутри он ходит сюда же.
-  async function fetchWesetupJournalsCatalog() {
-    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
-    const key = process.env.WESETUP_API_KEY;
-    if (!baseUrl || !key) {
-      throw Object.assign(
-        new Error("WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env"),
-        { status: 503 }
-      );
-    }
+  type ResolvedWesetupTarget = {
+    baseUrl: string;
+    key: string;
+    companyId: number | null;
+    source: "company" | "env";
+  };
+  type WesetupTargetResult =
+    | ResolvedWesetupTarget
+    | { error: string; status: number };
+
+  async function fetchWesetupCatalogFromTarget(target: ResolvedWesetupTarget) {
     const upstream = await fetch(
-      `${baseUrl}/api/integrations/tasksflow/journals-catalog`,
+      `${target.baseUrl}/api/integrations/tasksflow/journals-catalog`,
       {
-        headers: { Authorization: `Bearer ${key}` },
+        headers: { Authorization: `Bearer ${target.key}` },
         cache: "no-store",
       }
     );
     return upstream;
   }
 
-  app.get("/api/wesetup/journals-catalog", requireAuth, requireAdmin, async (_req, res) => {
+  async function fetchWesetupJournalsCatalog(req: Request) {
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      throw Object.assign(new Error(target.error), { status: target.status });
+    }
+    return fetchWesetupCatalogFromTarget(target);
+  }
+
+  app.get("/api/wesetup/journals-catalog", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const upstream = await fetchWesetupJournalsCatalog();
+      const upstream = await fetchWesetupJournalsCatalog(req);
       const text = await upstream.text();
       res.status(upstream.status);
       res.setHeader(
@@ -1102,9 +1118,9 @@ export async function registerRoutes(
   // Backwards-compat shim: старая страница CreateTask.tsx звала
   // /cleaning-catalog. Теперь оборачиваем универсальный ответ так,
   // чтобы клиент, ожидающий старый формат, не падал.
-  app.get("/api/wesetup/cleaning-catalog", requireAuth, requireAdmin, async (_req, res) => {
+  app.get("/api/wesetup/cleaning-catalog", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const upstream = await fetchWesetupJournalsCatalog();
+      const upstream = await fetchWesetupJournalsCatalog(req);
       if (!upstream.ok) {
         const text = await upstream.text();
         res.status(upstream.status);
@@ -1169,9 +1185,7 @@ export async function registerRoutes(
    * legacy single-tenant `.env` values when the company row is null so
    * old deployments keep working.
    */
-  async function resolveWesetupTarget(
-    req: Express.Request
-  ): Promise<{ baseUrl: string; key: string } | { error: string; status: number }> {
+  async function resolveWesetupTarget(req: Request): Promise<WesetupTargetResult> {
     const userId = (req as any).session?.userId;
     let companyId: number | null = null;
     if (userId) {
@@ -1180,16 +1194,29 @@ export async function registerRoutes(
     }
     if (companyId) {
       const company = await storage.getCompanyById(companyId);
-      if (company?.wesetupApiKey && company.wesetupBaseUrl) {
+      const companyBaseUrl = company?.wesetupBaseUrl?.trim().replace(/\/+$/, "");
+      const companyKey = company?.wesetupApiKey?.trim();
+      if (companyBaseUrl && companyKey) {
         return {
-          baseUrl: company.wesetupBaseUrl.replace(/\/+$/, ""),
-          key: company.wesetupApiKey,
+          baseUrl: companyBaseUrl,
+          key: companyKey,
+          companyId,
+          source: "company",
+        };
+      }
+      if (companyBaseUrl || companyKey) {
+        return {
+          error:
+            "WeSetup-интеграция компании настроена не полностью: нужны и baseUrl, и apiKey.",
+          status: 503,
         };
       }
     }
-    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
-    const key = process.env.WESETUP_API_KEY;
-    if (baseUrl && key) return { baseUrl, key };
+    const baseUrl = process.env.WESETUP_BASE_URL?.trim().replace(/\/+$/, "");
+    const key = process.env.WESETUP_API_KEY?.trim();
+    if (baseUrl && key) {
+      return { baseUrl, key, companyId, source: "env" };
+    }
     return {
       error:
         "WeSetup-интеграция не настроена для этой компании. Добавьте wesetup_api_key в companies или WESETUP_API_KEY в .env.",
@@ -1249,6 +1276,35 @@ export async function registerRoutes(
     }
   });
 
+  function parseJsonOrUndefined(text: string): unknown | undefined {
+    if (!text.trim()) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function resolveTaskFormFromCatalog(
+    target: ResolvedWesetupTarget,
+    taskId: number
+  ): Promise<{ resolved: true; form: unknown | null } | { resolved: false }> {
+    const task = await storage.getTask(taskId);
+    const journalLink = parseJournalLink(task?.journalLink);
+    if (!journalLink) return { resolved: false };
+
+    const catalogResponse = await fetchWesetupCatalogFromTarget(target);
+    if (!catalogResponse.ok) return { resolved: false };
+    const catalogText = await catalogResponse.text();
+    const catalog = parseJsonOrUndefined(catalogText) as WesetupCatalog | undefined;
+    if (!catalog?.journals) return { resolved: false };
+
+    return {
+      resolved: true,
+      form: findTaskFormInCatalog(catalog, journalLink.kind),
+    };
+  }
+
   // Прокси для task-form: фронт задачи зовёт сюда,
   // когда сотруднику нужно показать форму заполнения перед
   // «Выполнено». Возвращает TaskFormSchema или null.
@@ -1258,8 +1314,8 @@ export async function registerRoutes(
       return res.status(target.status).json({ message: target.error });
     }
     const { baseUrl, key } = target;
-    const taskId = req.query.taskId;
-    if (!taskId) {
+    const taskId = Number(req.query.taskId);
+    if (!Number.isFinite(taskId) || taskId <= 0) {
       return res.status(400).json({ message: "taskId required" });
     }
     try {
@@ -1271,6 +1327,29 @@ export async function registerRoutes(
         }
       );
       const text = await upstream.text();
+      const parsed = parseJsonOrUndefined(text);
+      const normalized =
+        parsed === undefined ? null : normalizeTaskFormPayload(parsed);
+
+      if (upstream.ok) {
+        if (normalized) {
+          return res.status(upstream.status).json(normalized);
+        }
+        if (!text.trim()) {
+          return res.status(upstream.status).json({ form: null });
+        }
+        return res.status(502).json({
+          message: "WeSetup вернул task-form в неизвестном формате",
+        });
+      }
+
+      if ([404, 500, 502, 503].includes(upstream.status)) {
+        const fallback = await resolveTaskFormFromCatalog(target, taskId);
+        if (fallback.resolved) {
+          return res.json({ form: fallback.form });
+        }
+      }
+
       res.status(upstream.status);
       res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
       res.send(text);
@@ -1360,13 +1439,11 @@ export async function registerRoutes(
   // нам id уже созданной задачи. Мы не дублируем создание — ответ
   // содержит `tasksflowTaskId`, фронт просто рефрешит список.
   app.post("/api/wesetup/bind-row", requireAuth, requireAdmin, async (req, res) => {
-    const baseUrl = process.env.WESETUP_BASE_URL?.replace(/\/+$/, "");
-    const key = process.env.WESETUP_API_KEY;
-    if (!baseUrl || !key) {
-      return res.status(503).json({
-        message: "WESETUP_BASE_URL / WESETUP_API_KEY не настроены в .env",
-      });
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({ message: target.error });
     }
+    const { baseUrl, key } = target;
     try {
       const upstream = await fetch(
         `${baseUrl}/api/integrations/tasksflow/bind-row`,
