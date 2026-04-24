@@ -8,3 +8,4 @@ vite.config.ts.*
 nul
 logs/
 *.log
+.deploy-deps.sha256

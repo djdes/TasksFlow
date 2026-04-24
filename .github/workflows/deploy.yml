@@ -6,9 +6,14 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Deploy to server via SSH
@@ -19,36 +24,44 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            set -Eeuo pipefail
+
             export PATH="$HOME/.nvm/versions/node/v24.12.0/bin:$PATH"
+
             DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
-            # Диагностика что реально в secret (без раскрытия содержимого):
-            echo "DEPLOY_PATH length: ${#DEPLOY_PATH}"
-            echo "DEPLOY_PATH hex dump (первые/последние байты):"
-            echo -n "$DEPLOY_PATH" | head -c 10 | od -c | head -1
-            echo -n "$DEPLOY_PATH" | tail -c 10 | od -c | head -1
-            # Пробуем fallback-пути если DEPLOY_PATH с ошибкой:
-            for p in "$DEPLOY_PATH" /var/www/tasksflow/data/www/tasksflow.ru; do
-              if [ -d "$p" ] && [ -f "$p/package.json" ]; then
-                echo "Using working dir: $p"
-                cd "$p"
-                break
-              fi
-            done
-            pwd
-            [ -f package.json ] || { echo "FATAL: package.json не найден в $(pwd)"; exit 1; }
-            git pull origin main
+            if [ -z "$DEPLOY_PATH" ] || [ ! -f "$DEPLOY_PATH/package.json" ]; then
+              DEPLOY_PATH="/var/www/tasksflow/data/www/tasksflow.ru"
+            fi
+
+            cd "$DEPLOY_PATH"
+            [ -f package.json ] || { echo "FATAL: package.json not found in $(pwd)"; exit 1; }
+
+            echo ">>> pulling latest main"
+            git pull --ff-only origin main
             git log --oneline -1
-            npm install
-            # ВАЖНО: db:push убран из автодеплоя - он может удалять данные!
-            # Миграции БД выполнять ВРУЧНУЮ: npm run add-companies, npm run update-tasks
-            # Идемпотентная миграция api_keys (CREATE IF NOT EXISTS) — безопасна:
+
+            DEPS_STAMP=".deploy-deps.sha256"
+            DEPS_HASH="$(sha256sum package.json package-lock.json | sha256sum | awk '{print $1}')"
+            if [ ! -d node_modules ] || [ ! -f "$DEPS_STAMP" ] || [ "$(cat "$DEPS_STAMP")" != "$DEPS_HASH" ]; then
+              echo ">>> dependencies changed: npm ci"
+              npm ci --no-audit --fund=false --prefer-offline
+              echo "$DEPS_HASH" > "$DEPS_STAMP"
+            else
+              echo ">>> dependencies unchanged: skip npm ci"
+            fi
+
+            echo ">>> safe migrations"
             npm run create-api-keys-table || echo "api_keys migration failed (non-fatal)"
+
+            echo ">>> build"
             npm run build
-            ls -la dist/
-            grep -c "api-keys" dist/index.cjs || echo "api-keys not found in build"
-            # Если процесс отсутствует (удалён) — start, иначе restart:
-            pm2 describe tasksflow > /dev/null 2>&1 && pm2 restart tasksflow --update-env || pm2 start dist/index.cjs --name tasksflow --cwd "$DEPLOY_PATH"
-            pm2 save
+
+            echo ">>> reload app"
+            if pm2 describe tasksflow > /dev/null 2>&1; then
+              pm2 reload tasksflow --update-env || pm2 restart tasksflow --update-env
+            else
+              pm2 start dist/index.cjs --name tasksflow --cwd "$DEPLOY_PATH"
+              pm2 save
+            fi
+
             pm2 status
-            sleep 3
-            pm2 logs tasksflow --lines 30 --nostream || true
