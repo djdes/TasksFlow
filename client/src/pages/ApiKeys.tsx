@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Key, Copy, Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Key, Copy, Loader2, Plus, Trash2, CheckCircle2, PlugZap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -15,6 +15,8 @@ interface ApiKeyRow {
 	lastUsedAt: number;
 	revokedAt: number;
 }
+
+const WESETUP_PENDING_KEY_STORAGE = "tasksflow:pending-wesetup-api-key";
 
 function formatTs(ts: number): string {
 	if (!ts) return "—";
@@ -91,6 +93,16 @@ export default function ApiKeysPage() {
 		}
 	};
 
+	const handleUseForWesetup = (secret: string) => {
+		window.localStorage.setItem(WESETUP_PENDING_KEY_STORAGE, secret);
+		toast({
+			title: "Ключ подставим в настройках",
+			description: "Останется указать адрес WeSetup и сохранить.",
+		});
+		setJustCreated(null);
+		setLocation("/admin/settings");
+	};
+
 	if (authLoading) {
 		return <div className="flex items-center justify-center min-h-screen">
 			<Loader2 className="w-6 h-6 animate-spin" />
@@ -125,7 +137,7 @@ export default function ApiKeysPage() {
 					<div>
 						<h1 className="text-2xl font-bold">API ключи</h1>
 						<p className="text-sm text-muted-foreground">
-							Для интеграций со сторонними сервисами (managermagday и др.)
+							Ключи TasksFlow для интеграций. Тот же tfk_ ключ можно указать в WeSetup.
 						</p>
 					</div>
 				</div>
@@ -232,12 +244,16 @@ export default function ApiKeysPage() {
 							<h3 className="font-semibold text-lg">Ключ создан</h3>
 						</div>
 						<p className="text-sm text-muted-foreground mb-4">
-							Этот ключ показывается <strong>только один раз</strong>. Сохрани его сейчас — потом получить снова нельзя.
+							Этот ключ показывается <strong>только один раз</strong>. Его можно указать в WeSetup и использовать в TasksFlow для доступа к журналам.
 						</p>
 						<div className="bg-muted rounded p-3 font-mono text-sm break-all mb-4">
 							{justCreated.secret}
 						</div>
-						<div className="flex gap-2 justify-end">
+						<div className="flex flex-col gap-2 justify-end sm:flex-row">
+							<Button variant="outline" onClick={() => handleUseForWesetup(justCreated.secret)}>
+								<PlugZap className="w-4 h-4 mr-2" />
+								Использовать для WeSetup
+							</Button>
 							<Button variant="outline" onClick={() => handleCopy(justCreated.secret)}>
 								<Copy className="w-4 h-4 mr-2" />
 								Копировать

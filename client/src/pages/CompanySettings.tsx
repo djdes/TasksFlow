@@ -22,6 +22,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+const WESETUP_PENDING_KEY_STORAGE = "tasksflow:pending-wesetup-api-key";
+
 export default function CompanySettings() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
@@ -61,12 +63,24 @@ export default function CompanySettings() {
   // Заполняем форму при загрузке данных
   useEffect(() => {
     if (company) {
+      const pendingWesetupKey = window.localStorage.getItem(
+        WESETUP_PENDING_KEY_STORAGE
+      );
       setCompanyName(company.name || "");
       setCompanyEmail(company.email || "");
       setWesetupBaseUrl(company.wesetupBaseUrl || "");
-      setWesetupApiKey(company.wesetupApiKey || "");
+      setWesetupApiKey(pendingWesetupKey || company.wesetupApiKey || "");
+      if (pendingWesetupKey) {
+        setShowWesetupKey(true);
+        setWesetupHealth(null);
+        window.localStorage.removeItem(WESETUP_PENDING_KEY_STORAGE);
+        toast({
+          title: "Ключ подставлен",
+          description: "Проверьте адрес WeSetup и сохраните настройки.",
+        });
+      }
     }
-  }, [company]);
+  }, [company, toast]);
 
   useEffect(() => {
     if (user) {
@@ -129,7 +143,7 @@ export default function CompanySettings() {
     onSuccess: (data) => {
       setWesetupHealth(data);
       toast({
-        title: "WeSetup подключен",
+        title: "Доступ к WeSetup работает",
         description: `Журналов: ${data.journalsCount ?? 0}, форм: ${data.formsCount ?? 0}`,
       });
     },
@@ -140,7 +154,7 @@ export default function CompanySettings() {
       };
       setWesetupHealth(data);
       toast({
-        title: "WeSetup не отвечает",
+        title: "Нет доступа к WeSetup",
         description: data.message,
         variant: "destructive",
       });
@@ -203,7 +217,7 @@ export default function CompanySettings() {
     if (!wesetupApiKey.trim()) return;
     try {
       await navigator.clipboard.writeText(wesetupApiKey);
-      toast({ title: "Скопировано", description: "API ключ WeSetup в буфере" });
+      toast({ title: "Скопировано", description: "Ключ TasksFlow для WeSetup в буфере" });
     } catch {
       toast({
         title: "Ошибка",
@@ -303,10 +317,10 @@ export default function CompanySettings() {
                   <div>
                     <h3 className="text-sm font-semibold flex items-center gap-2">
                       <PlugZap className="w-4 h-4 text-primary" />
-                      Связь с WeSetup
+                      Доступ TasksFlow к журналам WeSetup
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Укажите адрес WeSetup и ключ интеграции. Для связки обычно используется tfk_ ключ из раздела API ключей TasksFlow, тот же ключ должен быть указан в WeSetup.
+                      Это не второй API. Здесь хранится адрес WeSetup и тот же tfk_ ключ TasksFlow, который указан в WeSetup для этой компании.
                     </p>
                   </div>
                   <span
@@ -317,8 +331,8 @@ export default function CompanySettings() {
                     }`}
                   >
                     {wesetupBaseUrl.trim() && wesetupApiKey.trim()
-                      ? "Подключено"
-                      : "Не подключено"}
+                      ? "Настроено"
+                      : "Не настроено"}
                   </span>
                 </div>
 
@@ -342,7 +356,7 @@ export default function CompanySettings() {
 
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
-                    API ключ WeSetup
+                    Ключ TasksFlow для WeSetup
                   </label>
                   <div className="flex gap-2">
                     <Input
@@ -352,7 +366,7 @@ export default function CompanySettings() {
                         setWesetupApiKey(e.target.value);
                         setWesetupHealth(null);
                       }}
-                      placeholder="tfk_... или ключ интеграции WeSetup"
+                      placeholder="tfk_..."
                       className="h-12 min-w-0 font-mono text-sm"
                       autoComplete="off"
                     />
@@ -383,16 +397,16 @@ export default function CompanySettings() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Без этой пары TasksFlow не сможет открыть журналы, создать journal-задачи и передать данные заполнения обратно в WeSetup.
+                    Этот ключ создаётся в разделе API ключей TasksFlow, вставляется в WeSetup и используется TasksFlow для обратного доступа к журналам.
                   </p>
                 </div>
 
                 <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="text-sm font-medium">Проверка связи</div>
+                      <div className="text-sm font-medium">Проверка доступа</div>
                       <div className="text-xs text-muted-foreground">
-                        TasksFlow запросит каталог журналов и посчитает доступные формы.
+                        TasksFlow запросит каталог журналов WeSetup этим tfk_ ключом.
                       </div>
                     </div>
                     <Button
