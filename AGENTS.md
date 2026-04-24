@@ -1,6 +1,4 @@
-# CLAUDE.md
-
-This file mirrors `AGENTS.md` for Claude-style agents. Keep both files aligned.
+# Agent Instructions
 
 ## Communication
 - Обращайся к пользователю как: "Мой Хозяин".
@@ -23,20 +21,9 @@ This file mirrors `AGENTS.md` for Claude-style agents. Keep both files aligned.
 - Если пользователь просит "запуш", после успешных проверок делай commit и `git push` в текущую рабочую ветку.
 - Никогда не используй destructive git-команды без прямого разрешения.
 
-## Project Commands
-```bash
-npm run dev
-npm run check
-npm run test
-npm run build
-npm start
-```
-
 ## Project Notes
 - TasksFlow: React + Express + TypeScript.
-- Frontend: `client/src`.
-- Backend: `server`.
-- Shared schemas: `shared`.
+- Основные команды: `npm run check`, `npm run test`, `npm run build`.
 - API сотрудников: `POST /api/users`; для интеграций должен работать API key через `Authorization: Bearer tfk_...`.
 - При проблемах WeSetup <-> TasksFlow проверяй обе стороны: WeSetup sync-код, TasksFlow API, нормализацию телефонов, формат payload, права API key и реальные ответы сервера.
 - Для бага "сотрудники не создались" нельзя ограничиваться UI. Нужно проверить сетевой запрос, server route, storage, валидацию телефона и уникальность пользователя в БД.
