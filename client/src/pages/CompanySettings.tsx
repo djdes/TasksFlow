@@ -3,7 +3,22 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Building2, Link2, Mail, PlugZap, User, Save, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Building2,
+  Copy,
+  Eye,
+  EyeOff,
+  Link2,
+  Loader2,
+  Mail,
+  PlugZap,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  User,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -18,6 +33,15 @@ export default function CompanySettings() {
   const [wesetupBaseUrl, setWesetupBaseUrl] = useState("");
   const [wesetupApiKey, setWesetupApiKey] = useState("");
   const [adminName, setAdminName] = useState("");
+  const [showWesetupKey, setShowWesetupKey] = useState(false);
+  const [wesetupHealth, setWesetupHealth] = useState<{
+    ok: boolean;
+    message?: string;
+    journalsCount?: number;
+    formsCount?: number;
+    assignableUsersCount?: number;
+    upstreamStatus?: number;
+  } | null>(null);
 
   // Получаем данные компании
   const { data: company, isLoading: companyLoading } = useQuery({
@@ -86,6 +110,43 @@ export default function CompanySettings() {
     },
   });
 
+  const checkWesetupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/wesetup/health", {
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => ({
+        ok: false,
+        message: "TasksFlow получил от сервера не JSON",
+      }));
+      if (!response.ok) {
+        throw Object.assign(new Error(data?.message || "Проверка WeSetup не прошла"), {
+          data,
+        });
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      setWesetupHealth(data);
+      toast({
+        title: "WeSetup подключен",
+        description: `Журналов: ${data.journalsCount ?? 0}, форм: ${data.formsCount ?? 0}`,
+      });
+    },
+    onError: (error: any) => {
+      const data = error?.data || {
+        ok: false,
+        message: error?.message || "Проверка WeSetup не прошла",
+      };
+      setWesetupHealth(data);
+      toast({
+        title: "WeSetup не отвечает",
+        description: data.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Мутация для обновления имени админа
   const updateAdminMutation = useMutation({
     mutationFn: async (data: { name: string }) => {
@@ -136,6 +197,20 @@ export default function CompanySettings() {
 
   const handleSaveAdmin = () => {
     updateAdminMutation.mutate({ name: adminName });
+  };
+
+  const handleCopyWesetupKey = async () => {
+    if (!wesetupApiKey.trim()) return;
+    try {
+      await navigator.clipboard.writeText(wesetupApiKey);
+      toast({ title: "Скопировано", description: "API ключ WeSetup в буфере" });
+    } catch {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скопировать ключ",
+        variant: "destructive",
+      });
+    }
   };
 
   // Проверка прав
@@ -231,7 +306,7 @@ export default function CompanySettings() {
                       Связь с WeSetup
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Сюда вставляется API ключ, созданный на стороне WeSetup.
+                      Укажите адрес WeSetup и ключ интеграции. Для связки обычно используется tfk_ ключ из раздела API ключей TasksFlow, тот же ключ должен быть указан в WeSetup.
                     </p>
                   </div>
                   <span
@@ -256,7 +331,10 @@ export default function CompanySettings() {
                   </label>
                   <Input
                     value={wesetupBaseUrl}
-                    onChange={(e) => setWesetupBaseUrl(e.target.value)}
+                    onChange={(e) => {
+                      setWesetupBaseUrl(e.target.value);
+                      setWesetupHealth(null);
+                    }}
                     placeholder="https://wesetup.ru"
                     className="h-12"
                   />
@@ -266,16 +344,98 @@ export default function CompanySettings() {
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     API ключ WeSetup
                   </label>
-                  <Input
-                    value={wesetupApiKey}
-                    onChange={(e) => setWesetupApiKey(e.target.value)}
-                    placeholder="Вставьте ключ из WeSetup"
-                    className="h-12 font-mono text-sm"
-                    autoComplete="off"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type={showWesetupKey ? "text" : "password"}
+                      value={wesetupApiKey}
+                      onChange={(e) => {
+                        setWesetupApiKey(e.target.value);
+                        setWesetupHealth(null);
+                      }}
+                      placeholder="tfk_... или ключ интеграции WeSetup"
+                      className="h-12 min-w-0 font-mono text-sm"
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      onClick={() => setShowWesetupKey((value) => !value)}
+                      aria-label={showWesetupKey ? "Скрыть ключ" : "Показать ключ"}
+                    >
+                      {showWesetupKey ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      onClick={handleCopyWesetupKey}
+                      disabled={!wesetupApiKey.trim()}
+                      aria-label="Скопировать ключ"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Без этой пары TasksFlow не сможет открыть журналы и формы заполнения.
+                    Без этой пары TasksFlow не сможет открыть журналы, создать journal-задачи и передать данные заполнения обратно в WeSetup.
                   </p>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Проверка связи</div>
+                      <div className="text-xs text-muted-foreground">
+                        TasksFlow запросит каталог журналов и посчитает доступные формы.
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => checkWesetupMutation.mutate()}
+                      disabled={checkWesetupMutation.isPending}
+                      className="h-10 shrink-0"
+                    >
+                      {checkWesetupMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Проверить
+                    </Button>
+                  </div>
+
+                  {wesetupHealth ? (
+                    <div
+                      className={`flex items-start gap-3 rounded-xl p-3 text-sm ${
+                        wesetupHealth.ok
+                          ? "bg-green-500/10 text-green-700"
+                          : "bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {wesetupHealth.ok ? (
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      )}
+                      <div>
+                        <div className="font-medium">
+                          {wesetupHealth.ok ? "Связь работает" : "Связь не работает"}
+                        </div>
+                        <div className="mt-1">
+                          {wesetupHealth.ok
+                            ? `Журналов: ${wesetupHealth.journalsCount ?? 0}, форм: ${wesetupHealth.formsCount ?? 0}, сотрудников: ${wesetupHealth.assignableUsersCount ?? 0}`
+                            : wesetupHealth.message || "Проверьте URL и ключ."}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

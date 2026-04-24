@@ -44,9 +44,7 @@ export function useCreateTask() {
         price: data.price !== undefined ? Number(data.price) : 0,
       };
 
-      console.log("useCreateTask - payload:", payload);
       const validated = api.tasks.create.input.parse(payload);
-      console.log("useCreateTask - validated:", validated);
       
       const res = await fetch(api.tasks.create.path, {
         method: api.tasks.create.method,
@@ -84,9 +82,7 @@ export function useUpdateTask() {
         price: updates.price !== undefined ? Number(updates.price) : undefined,
       };
 
-      console.log("useUpdateTask - payload:", payload);
       const validated = api.tasks.update.input.parse(payload);
-      console.log("useUpdateTask - validated:", validated);
       const url = buildUrl(api.tasks.update.path, { id });
       
       const res = await fetch(url, {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import {
   normalizeTaskFormPayload,
   type TaskFormFieldOption,
@@ -63,73 +64,85 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   const [loading, setLoading] = useState(false);
   const [schema, setSchema] = useState<RuntimeTaskFormSchema | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
+  const loadForm = useCallback(async () => {
     setLoading(true);
-    fetch(`/api/wesetup/task-form?taskId=${taskId}`, {
-      credentials: "include",
-    })
-      .then(async (r) => {
-        const data = await r.json().catch(() => null);
-        if (!r.ok) {
-          throw new Error(data?.message || `task-form ${r.status}`);
+    setSchema(null);
+    setValues({});
+    setLoadError(null);
+    try {
+      const response = await fetch(`/api/wesetup/task-form?taskId=${taskId}`, {
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || `task-form ${response.status}`);
+      }
+      const normalized = normalizeTaskFormPayload(data);
+      if (!normalized) {
+        throw new Error("WeSetup вернул форму в неизвестном формате");
+      }
+      if (!normalized.form) {
+        setLoadError(
+          "У этой задачи нет структурированной журнальной формы. Закройте окно и отметьте задачу обычной кнопкой."
+        );
+        return;
+      }
+
+      const form = normalized.form as RuntimeTaskFormSchema;
+      setSchema(form);
+      // Pre-fill with defaults.
+      const initial: Record<string, unknown> = {};
+      for (const field of form.fields) {
+        if (field.type === "boolean") {
+          initial[field.key] = field.defaultValue ?? false;
+        } else if (
+          field.type === "multiselect" ||
+          field.type === "checkbox-group"
+        ) {
+          initial[field.key] = Array.isArray(field.defaultValue)
+            ? field.defaultValue
+            : [];
+        } else if (field.type === "number") {
+          initial[field.key] =
+            field.defaultValue === undefined || field.defaultValue === ""
+              ? null
+              : Number(field.defaultValue);
+        } else if (field.type === "select" && field.defaultValue) {
+          initial[field.key] = field.defaultValue;
+        } else {
+          initial[field.key] =
+            field.defaultValue === undefined ? "" : field.defaultValue;
         }
-        return data;
-      })
-      .then((data: unknown) => {
-        const normalized = normalizeTaskFormPayload(data);
-        if (!normalized) {
-          throw new Error("WeSetup вернул форму в неизвестном формате");
-        }
-        if (!normalized.form) {
-          toast({
-            title: "Форма недоступна",
-            description: "Эта задача без журнальной формы — отметьте кнопкой «Выполнено».",
-          });
-          onOpenChange(false);
-          return;
-        }
-        const form = normalized.form as RuntimeTaskFormSchema;
-        setSchema(form);
-        // Pre-fill with defaults.
-        const initial: Record<string, unknown> = {};
-        for (const field of form.fields) {
-          if (field.type === "boolean") {
-            initial[field.key] = field.defaultValue ?? false;
-          } else if (
-            field.type === "multiselect" ||
-            field.type === "checkbox-group"
-          ) {
-            initial[field.key] = Array.isArray(field.defaultValue)
-              ? field.defaultValue
-              : [];
-          } else if (field.type === "number") {
-            initial[field.key] =
-              field.defaultValue === undefined || field.defaultValue === ""
-                ? null
-                : Number(field.defaultValue);
-          } else if (field.type === "select" && field.defaultValue) {
-            initial[field.key] = field.defaultValue;
-          } else {
-            initial[field.key] =
-              field.defaultValue === undefined ? "" : field.defaultValue;
-          }
-        }
-        setValues(initial);
-      })
-      .catch((err) => {
-        toast({
-          title: "Ошибка",
-          description: err?.message || "Не удалось загрузить форму",
-          variant: "destructive",
-        });
-        onOpenChange(false);
-      })
-      .finally(() => setLoading(false));
-  }, [open, taskId]);
+      }
+      setValues(initial);
+    } catch (err: any) {
+      const raw = err?.message || "Не удалось загрузить форму";
+      setLoadError(
+        /fetch failed|network|Failed to fetch|ECONNREFUSED|ENOTFOUND/i.test(raw)
+          ? "Не удалось связаться с WeSetup. Проверьте соединение и повторите попытку."
+          : raw
+      );
+      toast({
+        title: "Ошибка",
+        description: raw,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [taskId, toast]);
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmOpen(false);
+      return;
+    }
+    void loadForm();
+  }, [open, loadForm]);
 
   const readyToSubmit = useMemo(() => {
     if (!schema) return false;
@@ -139,6 +152,10 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       if (Array.isArray(v) && v.length === 0) return false;
       if (typeof v === "number" && Number.isNaN(v)) return false;
       if (v === null || v === undefined || v === "") return false;
+      if (field.type === "number" && typeof v === "number") {
+        if (typeof field.min === "number" && v < field.min) return false;
+        if (typeof field.max === "number" && v > field.max) return false;
+      }
     }
     return true;
   }, [schema, values]);
@@ -148,6 +165,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   }
 
   async function doSubmit() {
+    if (!readyToSubmit) return;
     setSubmitting(true);
     try {
       const response = await fetch("/api/wesetup/complete-with-values", {
@@ -207,6 +225,25 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
             <div className="px-6 py-10 text-center text-sm text-muted-foreground">
               Загружаем форму…
             </div>
+          ) : loadError ? (
+            <div className="space-y-4 px-6 py-8 text-sm">
+              <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-destructive">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <div className="font-semibold">Форма не загрузилась</div>
+                  <div className="mt-1 text-destructive/90">{loadError}</div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void loadForm()}
+                className="h-11 rounded-xl"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Повторить
+              </Button>
+            </div>
           ) : schema ? (
             <div className="space-y-4 px-6 pb-4">
               {schema.intro ? (
@@ -233,13 +270,15 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
             >
               Отмена
             </Button>
-            <Button
-              disabled={!readyToSubmit || submitting}
-              onClick={() => setConfirmOpen(true)}
-              className="h-12 rounded-xl px-6 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
-            >
-              {schema?.submitLabel ?? "Выполнено"}
-            </Button>
+            {!loadError && (
+              <Button
+                disabled={!readyToSubmit || submitting || loading}
+                onClick={() => setConfirmOpen(true)}
+                className="h-12 rounded-xl px-6 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+              >
+                {schema?.submitLabel ?? "Выполнено"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

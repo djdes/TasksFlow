@@ -27,7 +27,8 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Слишком много запросов, попробуйте позже" },
-  skip: (req) => req.path === "/api/health", // Пропускаем health check
+  skip: (req) =>
+    req.path === "/health" || req.originalUrl === "/api/health",
   validate: false as any, // Полностью отключаем валидацию
 });
 
@@ -41,8 +42,8 @@ const authLimiter = rateLimit({
   validate: false as any, // Полностью отключаем валидацию
 });
 
-// Применяем общий rate limiter
-app.use(generalLimiter);
+// Применяем общий rate limiter только к API: SPA/assets не должны съедать лимит.
+app.use("/api", generalLimiter);
 
 // Применяем строгий лимит для авторизации
 app.use("/api/auth/login", authLimiter);

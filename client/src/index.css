@@ -299,6 +299,16 @@
   /* Task badges */
   .task-badge {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .task-badge span,
+  .worker-info span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .task-badge.price {
@@ -325,6 +335,8 @@
 
   .worker-info {
     @apply flex items-center gap-1.5 text-sm text-gray-500;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* Task actions */
@@ -335,6 +347,52 @@
   .task-action-btn {
     @apply w-9 h-9 rounded-xl flex items-center justify-center text-gray-400
            hover:bg-gray-100 hover:text-gray-600 transition-all;
+  }
+
+  @media (max-width: 480px) {
+    .task-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .task-card > div {
+      gap: 10px;
+    }
+
+    .task-checkbox {
+      width: 30px;
+      height: 30px;
+    }
+
+    .task-title {
+      font-size: 15px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .task-meta {
+      gap: 6px;
+    }
+
+    .task-badge {
+      max-width: 180px;
+      padding: 4px 7px;
+      border-radius: 8px;
+    }
+
+    .worker-info {
+      max-width: 180px;
+      font-size: 12px;
+    }
+
+    .task-actions {
+      gap: 0;
+    }
+
+    .task-action-btn {
+      width: 32px;
+      height: 32px;
+    }
   }
 
   .task-action-btn:hover {
@@ -923,5 +981,17 @@ details:not([open]) > summary .group-chevron {
     flex-direction: column !important;
     grid-template-columns: none !important;
     gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .grouped-section {
+    padding: 10px 10px 6px;
+    border-radius: 16px;
+  }
+
+  .group-month-body {
+    padding-left: 6px;
+    margin-left: 6px;
   }
 }

@@ -132,12 +132,13 @@ export default function ApiKeysPage() {
 
 				<div className="bg-card border rounded-lg p-4 mb-6">
 					<h2 className="font-semibold mb-3">Создать новый ключ</h2>
-					<div className="flex gap-2">
+					<div className="flex flex-col gap-2 sm:flex-row">
 						<Input
 							value={newName}
 							onChange={(e) => setNewName(e.target.value)}
-							placeholder="Название (например: magday-backend)"
+							placeholder="Название ключа"
 							maxLength={100}
+							className="min-w-0"
 							onKeyDown={(e) => {
 								if (e.key === "Enter" && newName.trim() && !createMutation.isPending) {
 									createMutation.mutate(newName.trim());
@@ -147,6 +148,7 @@ export default function ApiKeysPage() {
 						<Button
 							onClick={() => createMutation.mutate(newName.trim())}
 							disabled={!newName.trim() || createMutation.isPending}
+							className="w-full sm:w-auto"
 						>
 							{createMutation.isPending
 								? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -172,7 +174,7 @@ export default function ApiKeysPage() {
 					) : (
 						<div className="divide-y">
 							{keys.map((k) => (
-								<div key={k.id} className="p-4 flex items-center gap-4">
+								<div key={k.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2 mb-1">
 											<span className="font-medium">{k.name}</span>
@@ -197,6 +199,7 @@ export default function ApiKeysPage() {
 										<Button
 											variant="outline"
 											size="sm"
+											className="w-full sm:w-auto"
 											onClick={() => {
 												if (confirm(`Отозвать ключ «${k.name}»?\n\nВсе интеграции с ним сразу перестанут работать.`)) {
 													revokeMutation.mutate(k.id);

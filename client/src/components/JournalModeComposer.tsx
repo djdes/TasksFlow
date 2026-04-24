@@ -1,4 +1,4 @@
-import { CheckCircle2, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Users } from "lucide-react";
 
 import { JournalStepCard } from "@/components/JournalStepCard";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ type JournalModeComposerProps = {
   onDocumentChange: (value: string) => void;
   onTitleChange: (value: string) => void;
   onWorkersChange: (values: string[]) => void;
+  onCatalogRetry: () => void;
   onSubmit: () => void;
 };
 
@@ -115,6 +116,7 @@ export function JournalModeComposer({
   onDocumentChange,
   onTitleChange,
   onWorkersChange,
+  onCatalogRetry,
   onSubmit,
 }: JournalModeComposerProps) {
   if (catalogLoading) {
@@ -128,7 +130,23 @@ export function JournalModeComposer({
   if (catalogError) {
     return (
       <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {catalogError}
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">Не удалось загрузить журналы WeSetup</div>
+            <div className="mt-1 text-destructive/90">{catalogError}</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCatalogRetry}
+              className="mt-3 border-destructive/30 bg-background text-destructive hover:bg-destructive/10"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Повторить
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

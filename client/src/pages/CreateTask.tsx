@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { useUsers } from "@/hooks/use-users";
@@ -119,29 +119,53 @@ export default function CreateTask() {
   // the effect when error/loading state flips back. Otherwise React
   // hot-loops requests until the dev rate-limit kills the server.
   const catalogAttemptedRef = useRef(false);
-  useEffect(() => {
-    if (mode !== "journal") return;
-    if (catalogAttemptedRef.current) return;
+
+  const loadJournalCatalog = useCallback(async (force = false) => {
+    if (!force && catalogAttemptedRef.current) return;
     catalogAttemptedRef.current = true;
     setCatalogLoading(true);
     setCatalogError(null);
-    fetch("/api/wesetup/journals-catalog", { credentials: "include" })
-      .then(async (r) => {
-        if (!r.ok) {
-          const data = await r.json().catch(() => null);
-          throw new Error(data?.message || `WeSetup ${r.status}`);
-        }
-        return (await r.json()) as WesetupCatalog;
-      })
-      .then((data) => {
-        setCatalog(data);
-        if (data.journals.length > 0) {
-          setActiveJournal(data.journals[0].templateCode);
-        }
-      })
-      .catch((err) => setCatalogError(err.message || "Ошибка загрузки"))
-      .finally(() => setCatalogLoading(false));
-  }, [mode]);
+
+    try {
+      const response = await fetch("/api/wesetup/journals-catalog", {
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            `WeSetup вернул HTTP ${response.status}. Проверьте адрес и API ключ.`
+        );
+      }
+      if (!data || !Array.isArray(data.journals)) {
+        throw new Error("WeSetup вернул каталог журналов в неизвестном формате.");
+      }
+      const nextCatalog = data as WesetupCatalog;
+      setCatalog(nextCatalog);
+      if (nextCatalog.journals.length > 0) {
+        setActiveJournal((current) =>
+          nextCatalog.journals.some((journal) => journal.templateCode === current)
+            ? current
+            : nextCatalog.journals[0].templateCode
+        );
+      }
+    } catch (err: any) {
+      setCatalog(null);
+      const raw = err?.message || "Ошибка загрузки каталогов WeSetup";
+      setCatalogError(
+        /fetch failed|network|Failed to fetch|ECONNREFUSED|ENOTFOUND/i.test(raw)
+          ? "Не удалось связаться с WeSetup. Проверьте адрес, API ключ и доступность сервера."
+          : raw
+      );
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "journal") return;
+    void loadJournalCatalog();
+  }, [mode, loadJournalCatalog]);
 
   const visibleJournals = useMemo(
     () => filterJournals(catalog?.journals ?? [], journalSearch),
@@ -252,8 +276,8 @@ export default function CreateTask() {
 
   useEffect(() => {
     if (!activeJournalData) {
-      setSelectedDocId("");
-      setSelectedRowKeys([]);
+      setSelectedDocId((current) => (current ? "" : current));
+      setSelectedRowKeys((current) => (current.length > 0 ? [] : current));
       return;
     }
     const documentIds = new Set(
@@ -267,10 +291,10 @@ export default function CreateTask() {
         .filter((item) => item.document.documentId === selectedDocId)
         .map((item) => item.row.rowKey)
     );
-    const kept = selectedRowKeys.filter((key) => validRowKeys.has(key));
-    if (kept.length !== selectedRowKeys.length) {
-      setSelectedRowKeys(kept);
-    }
+    setSelectedRowKeys((current) => {
+      const kept = current.filter((key) => validRowKeys.has(key));
+      return kept.length === current.length ? current : kept;
+    });
     if (!activeJournalSupportsRowMode && journalTaskMode !== "free") {
       setJournalTaskMode("free");
     }
@@ -280,7 +304,6 @@ export default function CreateTask() {
     activeJournalSupportsRowMode,
     journalTaskMode,
     selectedDocId,
-    selectedRowKeys,
   ]);
 
   useEffect(() => {
@@ -721,6 +744,7 @@ export default function CreateTask() {
                 onDocumentChange={setSelectedDocId}
                 onTitleChange={setJournalTaskTitle}
                 onWorkersChange={setJournalWorkerUserIds}
+                onCatalogRetry={() => void loadJournalCatalog(true)}
                 onSubmit={onJournalSubmit}
               />
             </>

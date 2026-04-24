@@ -8,6 +8,8 @@ import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
+import { Input } from "@/components/ui/input";
+import { api } from "@shared/routes";
 import type { Task } from "@shared/schema";
 import {
   CheckCircle2,
@@ -30,7 +32,8 @@ import {
   RefreshCw,
   Menu,
   X,
-  User
+  User,
+  Search
 } from "lucide-react";
 import {
   Select,
@@ -71,6 +74,7 @@ export default function Dashboard() {
   const [journalTaskId, setJournalTaskId] = useState<number | null>(null);
   const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [duplicateTask, setDuplicateTask] = useState<Task | null>(null);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -99,8 +103,8 @@ export default function Dashboard() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    await queryClient.invalidateQueries({ queryKey: ["users"] });
+    await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
@@ -146,7 +150,7 @@ export default function Dashboard() {
     return true;
   };
 
-  const filteredTasks = user?.isAdmin
+  const baseFilteredTasks = user?.isAdmin
     ? tasks
         .filter(task => {
           if (filterByUserId === "all") return true;
@@ -165,6 +169,22 @@ export default function Dashboard() {
           if (filterByCategory === "uncategorized") return !(task as any).category;
           return (task as any).category === filterByCategory;
         });
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredTasks = normalizedSearch
+    ? baseFilteredTasks.filter((task) => {
+        const haystack = [
+          task.title,
+          (task as any).description,
+          (task as any).category,
+          getUserName(task.workerId),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(normalizedSearch);
+      })
+    : baseFilteredTasks;
 
   const completedCount = filteredTasks.filter(t => t.isCompleted).length;
   const totalCount = filteredTasks.length;
@@ -237,12 +257,12 @@ export default function Dashboard() {
   };
 
   const handleTaskUpdate = (updatedTask: typeof tasks[0]) => {
-    queryClient.setQueryData(["tasks"], (oldTasks: typeof tasks | undefined) => {
+    queryClient.setQueryData([api.tasks.list.path], (oldTasks: typeof tasks | undefined) => {
       if (!oldTasks) return [];
       return oldTasks.map(task => task.id === updatedTask.id ? updatedTask : task);
     });
     setSelectedTask(updatedTask);
-    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
   };
 
   // Loading state
@@ -355,9 +375,19 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Filters - only for admin */}
-        {user?.isAdmin && (
+        {/* Filters */}
+        {(user?.isAdmin || categories.length > 0 || tasks.length > 6) && (
           <div className="filters-bar">
+            <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск задач"
+                className="h-10 rounded-xl border-gray-200 bg-white pl-9 text-sm"
+              />
+            </div>
+
             {categories.length > 0 && (
               <Select value={filterByCategory} onValueChange={setFilterByCategory}>
                 <SelectTrigger className="h-10 w-auto min-w-[140px] rounded-xl text-sm font-medium bg-white border-gray-200">
@@ -376,21 +406,23 @@ export default function Dashboard() {
               </Select>
             )}
 
-            <Select value={filterByUserId} onValueChange={setFilterByUserId}>
-              <SelectTrigger className="h-10 w-auto min-w-[150px] rounded-xl text-sm font-medium bg-white border-gray-200">
-                <User className="w-4 h-4 mr-1.5 text-gray-400" />
-                <SelectValue placeholder="Исполнитель" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все сотрудники</SelectItem>
-                <SelectItem value="unassigned">Не назначенные</SelectItem>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id.toString()}>
-                    {u.name || u.phone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {user?.isAdmin && (
+              <Select value={filterByUserId} onValueChange={setFilterByUserId}>
+                <SelectTrigger className="h-10 w-auto min-w-[150px] rounded-xl text-sm font-medium bg-white border-gray-200">
+                  <User className="w-4 h-4 mr-1.5 text-gray-400" />
+                  <SelectValue placeholder="Исполнитель" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все сотрудники</SelectItem>
+                  <SelectItem value="unassigned">Не назначенные</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id.toString()}>
+                      {u.name || u.phone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         )}
 
@@ -507,7 +539,7 @@ export default function Dashboard() {
             // Same key useTasks() subscribes to — was using wrong key
             // before, dashboard didn't refetch after journal submit
             // and task card stayed «не выполнено» visually.
-            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+            queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
           }}
         />
       ) : null}

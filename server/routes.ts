@@ -467,10 +467,6 @@ export async function registerRoutes(
       // Фильтруем по компании (session-user или api key)
       const companyId = await getCompanyIdFromReq(req);
       const tasks = await storage.getTasks(companyId ?? undefined);
-      console.log("GET /api/tasks - tasks count:", tasks.length);
-      tasks.forEach((task, index) => {
-        console.log(`Task ${index + 1}: id=${task.id}, title=${task.title}, photoUrl=${task.photoUrl}, isCompleted=${task.isCompleted}`);
-      });
       res.json(tasks);
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
@@ -484,7 +480,6 @@ export async function registerRoutes(
       if (!task) {
         return res.status(404).json({ message: 'Задача не найдена' });
       }
-      console.log("GET /api/tasks/:id - task:", task);
       res.json(task);
     } catch (err: any) {
       console.error('Error fetching task:', err);
@@ -494,9 +489,7 @@ export async function registerRoutes(
 
   app.post(api.tasks.create.path, requireAdminOrApiKey, async (req, res) => {
     try {
-      console.log("POST /api/tasks - req.body:", req.body);
       const input = api.tasks.create.input.parse(req.body);
-      console.log("POST /api/tasks - parsed input:", input);
       // companyId — из session-user или api key
       const companyId = await getCompanyIdFromReq(req);
       if (!companyId) {
@@ -506,7 +499,6 @@ export async function registerRoutes(
         ...input,
         companyId,
       });
-      console.log("POST /api/tasks - created task:", task);
       res.status(201).json(task);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -587,16 +579,12 @@ export async function registerRoutes(
         }
 
         const photoUrl = `/uploads/${req.file.filename}`;
-        console.log("Uploading photo for task:", taskId, "photoUrl:", photoUrl);
-
         // Добавляем новое фото в массив
         const newPhotoUrls = [...currentPhotos, photoUrl];
         const updatedTask = await storage.updateTask(taskId, {
           photoUrls: newPhotoUrls,
           photoUrl: photoUrl // Для обратной совместимости, храним последнее фото
         });
-        console.log("Updated task:", updatedTask);
-
         if (!updatedTask) {
           return res.status(500).json({ message: "Ошибка обновления задачи" });
         }
@@ -634,9 +622,7 @@ export async function registerRoutes(
         }
 
         const examplePhotoUrl = `/uploads/${req.file.filename}`;
-        console.log("Uploading example photo for task:", taskId, "examplePhotoUrl:", examplePhotoUrl);
         const updatedTask = await storage.updateTask(taskId, { examplePhotoUrl });
-        console.log("Updated task with example photo:", updatedTask);
 
         if (!updatedTask) {
           return res.status(500).json({ message: "Ошибка обновления задачи" });
@@ -669,7 +655,6 @@ export async function registerRoutes(
       const photoPath = path.join(process.cwd(), task.examplePhotoUrl);
       try {
         await unlink(photoPath);
-        console.log("Deleted example photo file:", photoPath);
       } catch (unlinkErr: any) {
         console.error("Error deleting example photo file:", unlinkErr);
       }
@@ -718,7 +703,6 @@ export async function registerRoutes(
         const photoPath = path.join(process.cwd(), photoUrlToDelete);
         try {
           await unlink(photoPath);
-          console.log("Deleted photo file:", photoPath);
         } catch (unlinkErr: any) {
           console.error("Error deleting photo file:", unlinkErr);
         }
@@ -753,7 +737,6 @@ export async function registerRoutes(
         const photoPath = path.join(process.cwd(), photoUrl);
         try {
           await unlink(photoPath);
-          console.log("Deleted photo file:", photoPath);
         } catch (unlinkErr: any) {
           console.error("Error deleting photo file:", unlinkErr);
         }
@@ -764,7 +747,6 @@ export async function registerRoutes(
         const photoPath = path.join(process.cwd(), task.photoUrl);
         try {
           await unlink(photoPath);
-          console.log("Deleted legacy photo file:", photoPath);
         } catch (unlinkErr: any) {
           console.error("Error deleting legacy photo file:", unlinkErr);
         }
@@ -828,7 +810,6 @@ export async function registerRoutes(
       // Если у задачи есть стоимость и исполнитель, добавляем к балансу
       if (task.price && task.price > 0 && task.workerId) {
         await storage.updateUserBalance(task.workerId, task.price);
-        console.log(`Added ${task.price} to user ${task.workerId} balance for completing task ${taskId}`);
       }
 
       // Отправляем email на email компании с прикрепленными фото (если есть)
@@ -864,7 +845,6 @@ export async function registerRoutes(
       // Если задача была выполнена и имела стоимость, вычитаем из баланса
       if (task.isCompleted && task.price && task.price > 0 && task.workerId) {
         await storage.updateUserBalance(task.workerId, -task.price);
-        console.log(`Subtracted ${task.price} from user ${task.workerId} balance for uncompleting task ${taskId}`);
       }
 
       const updatedTask = await storage.updateTask(taskId, { isCompleted: false });
@@ -894,9 +874,7 @@ export async function registerRoutes(
 
   app.post(api.users.create.path, requireAdminOrApiKey, async (req, res) => {
     try {
-      console.log("Create user request body:", req.body);
       const input = api.users.create.input.parse(req.body);
-      console.log("Parsed input:", input);
 
       // Проверяем, существует ли пользователь
       const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
@@ -922,7 +900,6 @@ export async function registerRoutes(
       res.status(201).json(user);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        console.log("Zod validation error:", err.errors);
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
@@ -976,7 +953,6 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ message: "Пользователь не найден" });
       }
-      console.log(`Reset balance for user ${userId}`);
       res.json(user);
     } catch (err: any) {
       console.error("Error resetting user balance:", err);
@@ -1011,7 +987,6 @@ export async function registerRoutes(
       }
 
       await storage.deleteUser(userId);
-      console.log(`User ${userId} deleted by admin ${req.session.userId}`);
       res.json({ success: true });
     } catch (err: any) {
       console.error("Error deleting user:", err);
@@ -1068,7 +1043,6 @@ export async function registerRoutes(
         companyId,
         createdByUserId: req.session.userId,
       });
-      console.log(`[api-key] created id=${created.id} name="${created.name}" by_user=${req.session.userId} company=${companyId}`);
       res.json({
         id: created.id,
         name: created.name,
@@ -1097,7 +1071,6 @@ export async function registerRoutes(
         return res.json({ ok: true, already: true });
       }
       await storage.revokeApiKey(id);
-      console.log(`[api-key] revoked id=${id} by_user=${req.session?.userId} company=${companyId}`);
       res.json({ ok: true });
     } catch (err) {
       console.error("[api-keys] revoke failed", err);
@@ -1135,6 +1108,26 @@ export async function registerRoutes(
     return upstream;
   }
 
+  function extractUpstreamMessage(payload: unknown): string | null {
+    if (!payload || typeof payload !== "object") return null;
+    const data = payload as { message?: unknown; error?: unknown };
+    if (typeof data.message === "string" && data.message.trim()) {
+      return data.message;
+    }
+    if (typeof data.error === "string" && data.error.trim()) {
+      return data.error;
+    }
+    return null;
+  }
+
+  function normalizeWesetupNetworkError(err: unknown): string {
+    const message = err instanceof Error ? err.message : String(err || "");
+    if (/fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET/i.test(message)) {
+      return "WeSetup недоступен. Проверьте адрес, ключ и доступность сервера.";
+    }
+    return message || "Network error";
+  }
+
   async function fetchWesetupJournalsCatalog(req: Request) {
     const target = await resolveWesetupTarget(req);
     if ("error" in target) {
@@ -1156,7 +1149,7 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[wesetup-proxy] journals-catalog failed", err);
       res.status(err?.status || 502).json({
-        message: err?.message || "Network error",
+        message: normalizeWesetupNetworkError(err),
       });
     }
   });
@@ -1212,7 +1205,7 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[wesetup-proxy] cleaning-catalog (compat) failed", err);
       res.status(err?.status || 502).json({
-        message: err?.message || "Network error",
+        message: normalizeWesetupNetworkError(err),
       });
     }
   });
@@ -1270,6 +1263,58 @@ export async function registerRoutes(
     };
   }
 
+  app.get("/api/wesetup/health", requireAuth, requireAdmin, async (req, res) => {
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({
+        ok: false,
+        message: target.error,
+      });
+    }
+
+    try {
+      const upstream = await fetchWesetupCatalogFromTarget(target);
+      const text = await upstream.text();
+      const parsed = parseJsonOrUndefined(text);
+      const upstreamMessage = extractUpstreamMessage(parsed);
+
+      if (!upstream.ok) {
+        return res.status(upstream.status === 401 || upstream.status === 403 ? 401 : 502).json({
+          ok: false,
+          upstreamStatus: upstream.status,
+          message:
+            upstreamMessage ||
+            `WeSetup вернул HTTP ${upstream.status}. Проверьте ключ и адрес интеграции.`,
+        });
+      }
+
+      const catalog = parsed as Partial<WesetupCatalog> | undefined;
+      if (!catalog || !Array.isArray(catalog.journals)) {
+        return res.status(502).json({
+          ok: false,
+          upstreamStatus: upstream.status,
+          message: "WeSetup ответил не каталогом журналов TasksFlow.",
+        });
+      }
+
+      res.json({
+        ok: true,
+        source: target.source,
+        baseUrl: target.baseUrl,
+        journalsCount: catalog.journals.length,
+        formsCount: catalog.journals.filter((journal) => Boolean(journal.taskForm)).length,
+        assignableUsersCount: Array.isArray(catalog.assignableUsers)
+          ? catalog.assignableUsers.length
+          : 0,
+      });
+    } catch (err) {
+      res.status(502).json({
+        ok: false,
+        message: normalizeWesetupNetworkError(err),
+      });
+    }
+  });
+
   app.get("/api/wesetup/task-fill-url", requireAuth, async (req, res) => {
     const target = await resolveWesetupTarget(req);
     if ("error" in target) {
@@ -1302,7 +1347,12 @@ export async function registerRoutes(
         );
         return res.send(text);
       }
-      const data = JSON.parse(text) as { url?: string; token?: string };
+      const data = parseJsonOrUndefined(text) as { url?: string; token?: string } | undefined;
+      if (!data) {
+        return res.status(502).json({
+          message: "WeSetup вернул не JSON при создании ссылки заполнения.",
+        });
+      }
       if (!data?.url) {
         return res.status(502).json({ message: "No url in response" });
       }
@@ -1318,7 +1368,7 @@ export async function registerRoutes(
       res.json({ url: finalUrl, token: data.token });
     } catch (err: any) {
       console.error("[wesetup-proxy] task-fill-url failed", err);
-      res.status(502).json({ message: err?.message || "Network error" });
+      res.status(502).json({ message: normalizeWesetupNetworkError(err) });
     }
   });
 
@@ -1384,6 +1434,10 @@ export async function registerRoutes(
         if (!text.trim()) {
           return res.status(upstream.status).json({ form: null });
         }
+        const fallback = await resolveTaskFormFromCatalog(target, taskId);
+        if (fallback.resolved) {
+          return res.json({ form: fallback.form });
+        }
         return res.status(502).json({
           message: "WeSetup вернул task-form в неизвестном формате",
         });
@@ -1401,7 +1455,7 @@ export async function registerRoutes(
       res.send(text);
     } catch (err: any) {
       console.error("[wesetup-proxy] task-form failed", err);
-      res.status(502).json({ message: err?.message || "Network error" });
+      res.status(502).json({ message: normalizeWesetupNetworkError(err) });
     }
   });
 
@@ -1475,7 +1529,7 @@ export async function registerRoutes(
       res.send(text);
     } catch (err: any) {
       console.error("[wesetup-proxy] complete failed", err);
-      res.status(502).json({ message: err?.message || "Network error" });
+      res.status(502).json({ message: normalizeWesetupNetworkError(err) });
     }
   });
 
@@ -1513,7 +1567,7 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[wesetup-proxy] bind-row failed", err);
       res.status(502).json({
-        message: `Не удалось связать с журналом WeSetup: ${err?.message || "network error"}`,
+        message: `Не удалось связать с журналом WeSetup: ${normalizeWesetupNetworkError(err)}`,
       });
     }
   });
