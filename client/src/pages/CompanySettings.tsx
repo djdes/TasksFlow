@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Building2, Mail, User, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, Link2, Mail, PlugZap, User, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -15,6 +15,8 @@ export default function CompanySettings() {
 
   const [companyName, setCompanyName] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
+  const [wesetupBaseUrl, setWesetupBaseUrl] = useState("");
+  const [wesetupApiKey, setWesetupApiKey] = useState("");
   const [adminName, setAdminName] = useState("");
 
   // Получаем данные компании
@@ -37,6 +39,8 @@ export default function CompanySettings() {
     if (company) {
       setCompanyName(company.name || "");
       setCompanyEmail(company.email || "");
+      setWesetupBaseUrl(company.wesetupBaseUrl || "");
+      setWesetupApiKey(company.wesetupApiKey || "");
     }
   }, [company]);
 
@@ -48,7 +52,12 @@ export default function CompanySettings() {
 
   // Мутация для обновления компании
   const updateCompanyMutation = useMutation({
-    mutationFn: async (data: { name: string; email: string }) => {
+    mutationFn: async (data: {
+      name: string;
+      email: string;
+      wesetupBaseUrl: string;
+      wesetupApiKey: string;
+    }) => {
       const response = await fetch("/api/companies/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -120,6 +129,8 @@ export default function CompanySettings() {
     updateCompanyMutation.mutate({
       name: companyName,
       email: companyEmail,
+      wesetupBaseUrl,
+      wesetupApiKey,
     });
   };
 
@@ -210,6 +221,62 @@ export default function CompanySettings() {
                 <p className="text-xs text-muted-foreground mt-2">
                   На этот адрес будут приходить уведомления о выполненных задачах с фото
                 </p>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <PlugZap className="w-4 h-4 text-primary" />
+                      Связь с WeSetup
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Сюда вставляется API ключ, созданный на стороне WeSetup.
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                      wesetupBaseUrl.trim() && wesetupApiKey.trim()
+                        ? "bg-green-500/10 text-green-700"
+                        : "bg-amber-500/10 text-amber-700"
+                    }`}
+                  >
+                    {wesetupBaseUrl.trim() && wesetupApiKey.trim()
+                      ? "Подключено"
+                      : "Не подключено"}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    <div className="flex items-center gap-2">
+                      <Link2 className="w-4 h-4 text-muted-foreground" />
+                      Адрес WeSetup
+                    </div>
+                  </label>
+                  <Input
+                    value={wesetupBaseUrl}
+                    onChange={(e) => setWesetupBaseUrl(e.target.value)}
+                    placeholder="https://wesetup.ru"
+                    className="h-12"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    API ключ WeSetup
+                  </label>
+                  <Input
+                    value={wesetupApiKey}
+                    onChange={(e) => setWesetupApiKey(e.target.value)}
+                    placeholder="Вставьте ключ из WeSetup"
+                    className="h-12 font-mono text-sm"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Без этой пары TasksFlow не сможет открыть журналы и формы заполнения.
+                  </p>
+                </div>
               </div>
 
               <Button

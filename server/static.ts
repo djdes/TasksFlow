@@ -25,6 +25,10 @@ export function serveStatic(app: Express) {
     }
   }));
 
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ message: "API endpoint not found" });
+  });
+
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

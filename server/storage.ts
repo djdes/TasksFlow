@@ -11,12 +11,18 @@ import { workers, tasks, users, companies, apiKeys, type Worker, type InsertWork
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 
+type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
+  email?: string | null;
+  wesetupBaseUrl?: string | null;
+  wesetupApiKey?: string | null;
+};
+
 /** Интерфейс хранилища данных */
 export interface IStorage {
   // Companies
   createCompany(company: InsertCompany): Promise<Company>;
   getCompanyById(id: number): Promise<Company | undefined>;
-  updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined>;
+  updateCompany(id: number, company: UpdateCompanyData): Promise<Company | undefined>;
 
   // Users
   getUserByPhone(phone: string): Promise<User | undefined>;
@@ -88,7 +94,7 @@ export class DatabaseStorage implements IStorage {
    * @param company - Данные для обновления
    * @returns Обновлённая компания или undefined
    */
-  async updateCompany(id: number, company: Partial<InsertCompany>): Promise<Company | undefined> {
+  async updateCompany(id: number, company: UpdateCompanyData): Promise<Company | undefined> {
     await db.update(companies).set(company).where(eq(companies.id, id));
     const [updated] = await db.select().from(companies).where(eq(companies.id, id));
     return updated || undefined;

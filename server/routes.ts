@@ -297,16 +297,62 @@ export async function registerRoutes(
         return res.status(400).json({ message: 'Компания не найдена' });
       }
 
-      const { name, email } = req.body;
+      const updateCompanySchema = z.object({
+        name: z.string().trim().min(1, "Название компании обязательно"),
+        email: z
+          .string()
+          .trim()
+          .optional()
+          .nullable()
+          .transform((value) => (value ? value : null)),
+        wesetupBaseUrl: z
+          .string()
+          .trim()
+          .optional()
+          .nullable()
+          .transform((value) =>
+            value === undefined ? undefined : value ? value.replace(/\/+$/, "") : null
+          )
+          .refine(
+            (value) =>
+              value === null ||
+              value === undefined ||
+              /^https?:\/\/[^/\s]+/i.test(value),
+            "Адрес WeSetup должен начинаться с http:// или https://"
+          ),
+        wesetupApiKey: z
+          .string()
+          .trim()
+          .optional()
+          .nullable()
+          .transform((value) =>
+            value === undefined ? undefined : value ? value : null
+          ),
+      });
 
-      if (!name || name.trim() === '') {
-        return res.status(400).json({ message: 'Название компании обязательно' });
+      const parsed = updateCompanySchema.safeParse(req.body);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        return res.status(400).json({
+          message: issue?.message || "Некорректные данные компании",
+          field: issue?.path.join("."),
+        });
       }
 
-      const company = await storage.updateCompany(user.companyId, {
-        name: name.trim(),
-        email: email?.trim() || null,
-      });
+      const { name, email, wesetupBaseUrl, wesetupApiKey } = parsed.data;
+      const updateData: {
+        name: string;
+        email: string | null;
+        wesetupBaseUrl?: string | null;
+        wesetupApiKey?: string | null;
+      } = {
+        name,
+        email,
+      };
+      if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
+      if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
+
+      const company = await storage.updateCompany(user.companyId, updateData);
 
       res.json(company);
     } catch (err: any) {
