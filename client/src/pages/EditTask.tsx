@@ -305,26 +305,26 @@ export default function EditTask() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="max-w-2xl mx-auto p-8">
-        <div className="mb-8">
+    <div className="page-screen">
+      <div className="page-container page-container--narrow">
+        <div className="page-header">
           <button
             onClick={() => setLocation("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors group"
+            className="page-back group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="page-icon">
               <Edit className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Редактировать задачу</h1>
+            <h1 className="page-title">Редактировать задачу</h1>
           </div>
-          <p className="text-muted-foreground text-sm ml-[60px]">Измените информацию о задаче</p>
+          <p className="page-subtitle sm:ml-[60px]">Измените информацию о задаче</p>
         </div>
 
-        <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-8">
+        <div className="content-panel">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField

@@ -202,28 +202,28 @@ export default function AdminUsers() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="mb-8">
+    <div className="page-screen">
+      <div className="page-container">
+        <div className="page-header">
           <button
             onClick={() => setLocation("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors group"
+            className="page-back group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="page-icon">
               <Users className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Управление пользователями</h1>
+            <h1 className="page-title">Управление пользователями</h1>
           </div>
-          <p className="text-muted-foreground text-sm ml-[60px]">Добавьте новых пользователей в систему</p>
+          <p className="page-subtitle sm:ml-[60px]">Добавьте новых пользователей в систему</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Форма добавления пользователя */}
-          <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-8">
+          <div className="content-panel">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
               Добавить пользователя
@@ -316,7 +316,7 @@ export default function AdminUsers() {
           </div>
 
           {/* Список пользователей */}
-          <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-8">
+          <div className="content-panel">
             <h2 className="text-xl font-semibold mb-6">Список пользователей</h2>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">

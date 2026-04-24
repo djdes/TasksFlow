@@ -599,26 +599,26 @@ export default function CreateTask() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="mx-auto max-w-4xl p-4 sm:p-8">
-        <div className="mb-8">
+    <div className="page-screen">
+      <div className="page-container">
+        <div className="page-header">
           <button
             onClick={() => setLocation("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors group"
+            className="page-back group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="page-icon">
               <Plus className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Новая задача</h1>
+            <h1 className="page-title">Новая задача</h1>
           </div>
-          <p className="text-muted-foreground text-sm ml-[60px]">Создайте новую задачу и назначьте исполнителя</p>
+          <p className="page-subtitle sm:ml-[60px]">Создайте новую задачу и назначьте исполнителя</p>
         </div>
 
-        <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-5 sm:p-8">
+        <div className="content-panel">
           {/* Mode toggle: Free vs Journal */}
           <div className="mb-6 flex flex-col gap-2 sm:flex-row">
             <button

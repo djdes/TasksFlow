@@ -121,28 +121,28 @@ export default function ApiKeysPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-background p-4 md:p-8">
-			<div className="max-w-4xl mx-auto">
+		<div className="page-screen">
+			<div className="page-container">
 				<Button
 					variant="ghost"
 					onClick={() => setLocation("/admin/settings")}
-					className="mb-4"
+					className="page-back"
 				>
 					<ArrowLeft className="w-4 h-4 mr-2" />
 					Назад к настройкам
 				</Button>
 
-				<div className="flex items-center gap-3 mb-6">
+				<div className="page-header flex items-center gap-3">
 					<Key className="w-8 h-8 text-primary" />
 					<div>
-						<h1 className="text-2xl font-bold">API ключи</h1>
-						<p className="text-sm text-muted-foreground">
+						<h1 className="page-title">API ключи</h1>
+						<p className="page-subtitle">
 							Ключи TasksFlow для интеграций. Тот же tfk_ ключ можно указать в WeSetup.
 						</p>
 					</div>
 				</div>
 
-				<div className="bg-card border rounded-lg p-4 mb-6">
+				<div className="content-panel mb-6">
 					<h2 className="font-semibold mb-3">Создать новый ключ</h2>
 					<div className="flex flex-col gap-2 sm:flex-row">
 						<Input
@@ -170,7 +170,7 @@ export default function ApiKeysPage() {
 					</div>
 				</div>
 
-				<div className="bg-card border rounded-lg overflow-hidden">
+				<div className="content-panel overflow-hidden !p-0">
 					<div className="p-4 border-b">
 						<h2 className="font-semibold">Ключи ({keys.length})</h2>
 					</div>
@@ -236,7 +236,7 @@ export default function ApiKeysPage() {
 					onClick={() => setJustCreated(null)}
 				>
 					<div
-						className="bg-background border rounded-lg p-6 max-w-lg w-full"
+						className="content-panel max-w-lg w-full"
 						onClick={(e) => e.stopPropagation()}
 					>
 						<div className="flex items-center gap-2 mb-3">

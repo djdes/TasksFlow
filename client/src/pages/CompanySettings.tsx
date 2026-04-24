@@ -252,21 +252,21 @@ export default function CompanySettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="max-w-2xl mx-auto p-6 md:p-8">
-        <div className="mb-8">
+    <div className="page-screen">
+      <div className="page-container page-container--narrow">
+        <div className="page-header">
           <button
             onClick={() => setLocation("/dashboard")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors group"
+            className="page-back group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="page-icon">
               <Building2 className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h1 className="page-title">
               Настройки компании
             </h1>
           </div>
@@ -274,7 +274,7 @@ export default function CompanySettings() {
 
         <div className="space-y-6">
           {/* Настройки компании */}
-          <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-6 md:p-8">
+          <div className="content-panel">
             <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-primary" />
               Данные компании
@@ -474,7 +474,7 @@ export default function CompanySettings() {
           </div>
 
           {/* Настройки администратора */}
-          <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-xl p-6 md:p-8">
+          <div className="content-panel">
             <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
               Ваш профиль

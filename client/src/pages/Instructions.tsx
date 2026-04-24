@@ -3,7 +3,7 @@ import { ArrowLeft, Building2, UserPlus, ArrowRight, Smartphone, ListTodo, Camer
 
 export default function Instructions() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary to-primary/90">
+    <div className="auth-screen">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
@@ -12,25 +12,25 @@ export default function Instructions() {
       </div>
 
       {/* Header */}
-      <div className="relative pt-12 pb-8 px-6">
+      <div className="auth-hero">
         <div className="max-w-2xl mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-6">
+          <Link href="/" className="auth-back">
             <ArrowLeft className="w-5 h-5" />
             <span>Назад</span>
           </Link>
 
-          <h1 className="text-3xl font-bold text-white mb-3">
+          <h1 className="auth-title font-bold">
             Как это работает
           </h1>
-          <p className="text-white/70">
+          <p className="auth-subtitle">
             Простая система управления ежедневными задачами
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="relative flex-1 bg-background rounded-t-[40px] px-6 pt-10 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-        <div className="max-w-2xl mx-auto space-y-10">
+      <div className="auth-card !max-w-2xl">
+        <div className="space-y-10">
 
           {/* Section: For Company */}
           <section>

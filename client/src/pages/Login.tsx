@@ -104,7 +104,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary to-primary/90">
+    <div className="auth-screen">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
@@ -115,11 +115,11 @@ export default function Login() {
       </div>
 
       {/* Header */}
-      <div className="relative pt-20 pb-12 px-6 text-center">
+      <div className="auth-hero text-center">
         {/* Premium Icon - larger */}
-        <div className="relative w-36 h-36 mx-auto mb-8">
+        <div className="relative w-28 h-28 mx-auto mb-6 md:w-32 md:h-32">
           {/* Outer glow */}
-          <div className="absolute -inset-4 rounded-[32px] bg-gradient-to-br from-yellow-300/20 via-white/20 to-white/5 blur-2xl animate-pulse" />
+          <div className="absolute -inset-3 rounded-[28px] bg-white/15 blur-2xl" />
           {/* Inner glow */}
           <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/30 to-white/10 blur-xl" />
           {/* Main container */}
@@ -146,13 +146,13 @@ export default function Login() {
             <Star className="absolute bottom-3 left-3 w-4 h-4 text-yellow-200/80 drop-shadow-lg" />
           </div>
         </div>
-        <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">
+        <h1 className="auth-title font-black drop-shadow-sm">
           Контроль производственных процессов
         </h1>
       </div>
 
       {/* Form Card */}
-      <div className="relative flex-1 bg-background rounded-t-[40px] px-8 pt-12 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <div className="auth-card">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-md mx-auto">
             <FormField

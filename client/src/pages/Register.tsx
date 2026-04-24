@@ -8,7 +8,7 @@ export default function Register() {
   const phone = params.get("phone") || "";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary to-primary/90">
+    <div className="auth-screen">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
@@ -17,30 +17,30 @@ export default function Register() {
       </div>
 
       {/* Header */}
-      <div className="relative pt-12 pb-10 px-6">
+      <div className="auth-hero">
         <div className="max-w-md mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-8">
+          <Link href="/" className="auth-back">
             <ArrowLeft className="w-5 h-5" />
             <span>Назад</span>
           </Link>
 
-          <h1 className="text-3xl font-bold text-white mb-3">
+          <h1 className="auth-title font-bold">
             Регистрация
           </h1>
-          <p className="text-white/70">
+          <p className="auth-subtitle">
             Выберите тип регистрации
           </p>
         </div>
       </div>
 
       {/* Options Card */}
-      <div className="relative flex-1 bg-background rounded-t-[40px] px-6 pt-10 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <div className="auth-card">
         <div className="max-w-md mx-auto flex flex-col gap-6">
           {/* Create Company */}
           <Link href={phone ? `/register/company?phone=${encodeURIComponent(phone)}` : "/register/company"}>
-            <div className="p-5 rounded-2xl border border-border bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 cursor-pointer group">
+            <div className="choice-row group">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300">
+                <div className="choice-icon">
                   <Building2 className="w-8 h-8 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -58,9 +58,9 @@ export default function Register() {
 
           {/* Join Company */}
           <Link href={phone ? `/register/user?phone=${encodeURIComponent(phone)}` : "/register/user"}>
-            <div className="p-5 rounded-2xl border border-border bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 cursor-pointer group">
+            <div className="choice-row group">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 flex items-center justify-center group-hover:from-emerald-500/30 group-hover:to-emerald-500/20 transition-all duration-300">
+                <div className="choice-icon text-emerald-600 bg-emerald-500/10">
                   <UserPlus className="w-8 h-8 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
