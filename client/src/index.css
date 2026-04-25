@@ -396,12 +396,6 @@
       height: 68px;
     }
 
-    .has-sidebar .app-header {
-      @apply fixed top-0 z-50;
-      left: 240px;
-      right: 0;
-    }
-
     .app-header-content {
       @apply px-8;
     }
@@ -410,17 +404,12 @@
   /* ===== MAIN LAYOUT ===== */
   .app-layout {
     @apply min-h-screen bg-background;
-    padding-bottom: 72px;
+    padding-bottom: 0;
   }
 
   @media (min-width: 1024px) {
     .app-layout {
       padding-bottom: 0;
-    }
-
-    .app-layout.has-sidebar {
-      padding-top: 68px;
-      padding-left: 240px;
     }
   }
 
@@ -833,7 +822,7 @@
 
   /* ===== FAB ===== */
   .fab-button {
-    @apply fixed bottom-20 right-4 w-14 h-14 rounded-full bg-primary text-white
+    @apply fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-white
            shadow-lg shadow-primary/30 flex items-center justify-center
            hover:shadow-xl hover:shadow-primary/40 active:scale-95
            transition-all duration-200 z-40;

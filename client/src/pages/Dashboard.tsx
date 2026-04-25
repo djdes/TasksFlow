@@ -284,7 +284,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={`app-layout ${user?.isAdmin ? 'has-sidebar' : ''}`}>
+    <div className="app-layout">
       {/* Header */}
       <header className="app-header relative">
         <div className="app-header-content">
@@ -515,42 +515,6 @@ export default function Dashboard() {
         >
           <Plus className="w-7 h-7" />
         </button>
-      )}
-
-      {/* Bottom Navigation */}
-      {user?.isAdmin && (
-        <nav className="bottom-nav">
-          <div className="bottom-nav-content">
-            <button className="bottom-nav-item active">
-              <Home className="w-5 h-5" />
-              <span>Главная</span>
-            </button>
-
-            <button
-              className="bottom-nav-item"
-              onClick={() => setLocation("/admin/users")}
-            >
-              <User className="w-5 h-5" />
-              <span>Сотрудники</span>
-            </button>
-
-            <button
-              className="bottom-nav-item"
-              onClick={() => setLocation("/admin/settings")}
-            >
-              <Settings className="w-5 h-5" />
-              <span>Настройки</span>
-            </button>
-
-            <button
-              className="bottom-nav-item"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Выход</span>
-            </button>
-          </div>
-        </nav>
       )}
 
       {/* Dialogs */}
