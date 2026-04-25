@@ -880,11 +880,43 @@
     }
 
     .auth-hero {
-      padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+      padding-top: max(1rem, env(safe-area-inset-top, 0px));
+      padding-bottom: 1rem;
+    }
+
+    /* На узком/коротком экране ужимаем premium-icon: w-28 h-28 (112px)
+       занимали слишком много, после ввода телефона пользователь не
+       видел кнопку «Войти» без скролла. Уменьшаем до 80px и -mb. */
+    .auth-hero > div:first-child,
+    .auth-hero > .relative {
+      width: 80px !important;
+      height: 80px !important;
+      margin-bottom: 1rem !important;
+    }
+    .auth-title {
+      font-size: clamp(1.25rem, 5.5vw, 1.5rem);
+      line-height: 1.2;
     }
 
     .auth-card {
       border-radius: 1.25rem 1.25rem 0 0;
+      padding: 1.25rem;
+    }
+    /* Tighter form на мобиле: вместо space-y-8 (32px) — 20px,
+       input короче (56px вместо 64px), кнопка 14 (vs 16). */
+    .auth-card form {
+      gap: 1.25rem !important;
+    }
+    .auth-card form > * + * {
+      margin-top: 1.25rem !important;
+    }
+    .auth-card form input[type="tel"] {
+      height: 3.5rem !important;
+      font-size: 1.375rem !important;
+    }
+    .auth-card form button[type="submit"] {
+      height: 3.5rem !important;
+      font-size: 1.05rem !important;
     }
 
     .choice-row {
@@ -1970,21 +2002,25 @@ details:not([open]) > summary .group-chevron {
   }
 }
 
-/* Theme-row внутри dropdown-menu — лейбл «Тема» + компактные пилюли. */
+/* Theme-row внутри dropdown-menu — Palette-иконка + лейбл «Тема»
+   + компактные пилюли справа. Делает строку похожей на остальные
+   menu-items (с иконкой слева), но с control-ом справа вместо
+   action'а на клик. Доступно ВСЕМ юзерам, не только admin. */
 .dropdown-theme-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
 }
 .dropdown-theme-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: #6b7280;
+  color: #0f172a;
+  flex: 1;
+  min-width: 0;
 }
 .dark .dropdown-theme-label {
-  color: #a8aecf;
+  color: #e9ecf6;
 }
 
 /* ===== THEME SWITCHER (3-pill переключатель) =====
@@ -2057,19 +2093,64 @@ details:not([open]) > summary .group-chevron {
   color: #e9ecf6;
 }
 
-/* Header — вместо bg-primary с mesh оставляем тот же gradient mesh,
-   но чуть более насыщенный; работает и в light, и в dark. Тёмная
-   тема просто получает чуть другие тени. */
+/* Header в dark-теме: глубокий midnight с мягкой aurora. Ярко-индиго
+   из light-темы плохо сочетался с #0b1024 фоном страницы — резкая
+   ступенька. Здесь shapка сама почти-чёрная (#0e1326 → #131934) с
+   тонкой horizon-полосой aurora-glow внизу для премиальности.
+   Нет больше grid-mesh ::after — он красив на ярком, но на тёмном
+   создаёт визуальный шум. */
 .dark .app-header {
+  background:
+    /* aurora справа сверху — мягкий violet */
+    radial-gradient(
+      120% 100% at 90% 0%,
+      rgba(122, 92, 255, 0.32) 0%,
+      transparent 60%
+    ),
+    /* aurora слева снизу — indigo */
+    radial-gradient(
+      120% 100% at 10% 100%,
+      rgba(85, 102, 246, 0.28) 0%,
+      transparent 55%
+    ),
+    /* база — глубокий midnight с тонким верхне-нижним gradient */
+    linear-gradient(180deg, #0e1326 0%, #131934 100%);
   box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
-    0 14px 36px -22px rgba(0, 0, 0, 0.85);
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 14px 32px -20px rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+/* Скрываем grid-mesh из light-темы — на dark он визуально шумит */
+.dark .app-header::after {
+  opacity: 0;
+}
+/* Тонкая горизонт-линия — aurora glow внизу шапки, отделяет
+   шапку от content без жёсткого border'а. */
+.dark .app-header::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(111, 126, 255, 0.45),
+    rgba(122, 92, 255, 0.45),
+    transparent
+  );
+  pointer-events: none;
 }
 
-/* Header-button (refresh, hamburger) — на тёмном header'е остаются
-   светлыми, но фон при hover мягче. */
+/* Header-button — slightly translucent, aurora-aware на dark */
+.dark .header-button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
 .dark .header-button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* App-content background и текст */
@@ -2445,32 +2526,100 @@ details:not([open]) > summary .group-chevron {
   color: #e9ecf6;
 }
 
-/* Auth screen (Login / Register) */
+/* Auth screen (Login / Register) — premium dark с aurora и
+   плавным переходом, без жёсткого split на 42% как в light. */
 .dark .auth-screen {
-  background: linear-gradient(180deg, #0b1024 0%, #161c33 100%);
+  background:
+    /* aurora справа сверху */
+    radial-gradient(
+      80% 60% at 90% 0%,
+      rgba(122, 92, 255, 0.32) 0%,
+      transparent 60%
+    ),
+    /* aurora слева сверху */
+    radial-gradient(
+      70% 55% at 5% 10%,
+      rgba(85, 102, 246, 0.28) 0%,
+      transparent 55%
+    ),
+    /* база — глубокий midnight градиент */
+    linear-gradient(180deg, #0b1024 0%, #0e1226 60%, #11142a 100%);
 }
+/* Sparkles/Star decorations в hero — оставляем, но делаем их ярче
+   чтобы читалось на тёмном */
+.dark .auth-screen .lucide-star,
+.dark .auth-screen .lucide-sparkles {
+  color: rgba(251, 191, 36, 0.85) !important;
+}
+/* Premium icon wrapper в hero — на тёмном glass становится ещё
+   красивее, увеличиваем opacity и делаем border-glow */
+.dark .auth-hero .border-white\/40 {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.02)
+  ) !important;
+  box-shadow:
+    0 0 0 1px rgba(111, 126, 255, 0.25) inset,
+    0 12px 32px -8px rgba(122, 92, 255, 0.45);
+}
+/* Card снизу — поднимаем с тонким aurora-border сверху и
+   фоном немного светлее screen для слоистости */
 .dark .auth-card {
-  background: #161c33;
-  border-color: rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(22, 28, 51, 0.96) 0%,
+      rgba(20, 25, 47, 0.99) 100%
+    );
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   color: #e9ecf6;
+  box-shadow: 0 -24px 48px -16px rgba(0, 0, 0, 0.55);
+}
+/* Тонкая aurora-полоса сверху auth-card — отделяет от hero */
+.dark .auth-card::before {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(111, 126, 255, 0.45),
+    rgba(122, 92, 255, 0.45),
+    transparent
+  );
+  pointer-events: none;
 }
 .dark .auth-title {
   color: #e9ecf6;
+  text-shadow: 0 0 24px rgba(111, 126, 255, 0.25);
 }
 .dark .auth-card label,
 .dark .auth-card .text-foreground {
   color: #e9ecf6;
 }
 .dark .auth-card input {
-  background: #0d1228;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e9ecf6;
+  background: #0c1024 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9ecf6 !important;
+}
+.dark .auth-card input::placeholder {
+  color: #6b7395 !important;
 }
 .dark .auth-card input:focus {
-  border-color: #6f7eff;
+  border-color: #6f7eff !important;
+  box-shadow: 0 0 0 3px rgba(111, 126, 255, 0.18) !important;
 }
 .dark .auth-card .ozon-btn-primary {
-  background: linear-gradient(135deg, #6f7eff, #5566f6);
+  background: linear-gradient(135deg, #7a87ff, #5566f6);
+  box-shadow: 0 12px 32px -8px rgba(85, 102, 246, 0.5);
+}
+.dark .auth-card .ozon-btn-primary:hover {
+  background: linear-gradient(135deg, #8c98ff, #6171f8);
 }
 .dark .auth-card .text-muted-foreground {
   color: #8b91b3;

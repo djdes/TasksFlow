@@ -36,7 +36,8 @@ import {
   Menu,
   X,
   User,
-  Search
+  Search,
+  Palette
 } from "lucide-react";
 import {
   Select,
@@ -441,7 +442,11 @@ export default function Dashboard() {
               </>
             )}
             <div className="dropdown-divider" />
+            {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
+                Лежит между общим разделом и Выходом, чтобы любой
+                воркер мог переключить под себя. */}
             <div className="dropdown-theme-row">
+              <Palette className="w-5 h-5 text-primary" />
               <span className="dropdown-theme-label">Тема</span>
               <ThemeSwitcher compact />
             </div>
