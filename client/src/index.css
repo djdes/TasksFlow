@@ -603,6 +603,19 @@
     @apply bg-green-100 text-green-700;
   }
 
+  /* Bonus за «единичные» журнальные задачи — выделяется среди прочих
+     бейджей золотистым градиентом и лёгким свечением, чтобы рабочий
+     сразу видел: тут есть премия, можно «забрать» задачу первым. */
+  .task-badge.bonus {
+    @apply text-yellow-900 font-semibold;
+    background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    box-shadow: 0 1px 6px -2px rgba(217, 119, 6, 0.4);
+  }
+  .task-badge.bonus svg {
+    color: #b45309;
+  }
+
   .task-badge.category {
     @apply bg-blue-100 text-blue-700;
   }

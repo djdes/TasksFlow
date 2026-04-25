@@ -9,6 +9,7 @@ import {
   Coins,
   Copy,
   Edit2,
+  Sparkles,
   Tag,
   Trash2,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import {
   type DayGroup,
   type YearGroup,
 } from "@/lib/group-tasks";
+import { getJournalBonus } from "@/lib/journal-bonus";
 
 const WEEK_DAY_SHORT_NAMES: Record<number, string> = {
   0: "Вс",
@@ -88,6 +90,14 @@ export function GroupedTaskList(props: Props) {
       .weekDays;
     const monthDay = (task as unknown as { monthDay?: number | null })
       .monthDay;
+    // Для журнальных «единичных» задач (single-fillMode) — отдельный
+    // бонусный бейдж, чтобы выделялся среди обычного price-зелёного.
+    // Не показываем уже-выполненным карточкам: бонус начисляется при
+    // выполнении, и держать яркий бейдж после завершения визуально
+    // неаккуратно.
+    const journalBonus = !isCompleted
+      ? getJournalBonus(task as unknown as { journalLink?: string | null })
+      : null;
 
     return (
       <div
@@ -125,6 +135,12 @@ export function GroupedTaskList(props: Props) {
                 <div className="task-badge price">
                   <Coins className="w-3.5 h-3.5" />
                   <span>+{priceValue} ₽</span>
+                </div>
+              )}
+              {journalBonus !== null && !hasPrice && (
+                <div className="task-badge bonus" title="Премия за журнал">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>+{journalBonus} ₽</span>
                 </div>
               )}
               {categoryValue && (
