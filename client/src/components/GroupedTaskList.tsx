@@ -189,7 +189,13 @@ export function GroupedTaskList(props: Props) {
                   <div className="worker-avatar">
                     {getUserInitials(task.workerId)}
                   </div>
-                  <span>{shortName(task.workerId)}</span>
+                  {/* Полное ФИО для admin/manager: «Иванов Сергей»
+                      вместо просто «Иванов». Раньше показывали
+                      только фамилию (shortName), но руководителю
+                      удобнее видеть кому именно выдана задача
+                      целиком — особенно когда у сотрудников
+                      одинаковые фамилии. */}
+                  <span>{getUserName(task.workerId)}</span>
                 </div>
               )}
               {isJournal && !isCompleted && (
@@ -479,9 +485,15 @@ export function GroupedTaskList(props: Props) {
             ? "?"
             : getUserInitials(section.workerId);
           return (
+            // Default-collapsed: при много-сотрудниковой бригаде
+            // развёрнутые секции занимают экраны, до нужного
+            // приходится долго листать. Теперь руководитель сам
+            // открывает того, кого хочет проверить. Исключение —
+            // «Без исполнителя» оставляем default-open, чтобы не
+            // упустить незаназначенные задачи.
             <details
               key={section.key}
-              open
+              open={isUnassigned}
               className="worker-section"
             >
               <summary className="worker-section-header">
