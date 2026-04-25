@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
+import { StatHero } from "@/components/StatHero";
 import { Input } from "@/components/ui/input";
 import { api } from "@shared/routes";
 import type { Task } from "@shared/schema";
@@ -330,85 +332,138 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Dropdown menu */}
-        {isMenuOpen && (
-          <div className="dropdown-menu animate-fade-in">
-            <button
-              className="dropdown-item w-full"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setLocation("/dashboard");
+        {/* Dropdown menu — плавный spring-вход с лёгким стаггером
+            для пунктов, чтобы открытие меню ощущалось «дорого». */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              key="menu"
+              className="dropdown-menu"
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+              transition={{
+                type: "spring",
+                stiffness: 420,
+                damping: 32,
+                mass: 0.6,
               }}
             >
-              <Home className="w-5 h-5 text-primary" />
-              <span className="font-medium">Главная</span>
-            </button>
-            {user.isAdmin && (
-              <>
-                <button
-                  className="dropdown-item w-full"
-                  onClick={() => {
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.04 } },
+                }}
+              >
+                {[
+                  {
+                    label: "Главная",
+                    icon: Home,
+                    onClick: () => {
+                      setIsMenuOpen(false);
+                      setLocation("/dashboard");
+                    },
+                    show: true,
+                  },
+                  {
+                    label: "Создать задачу",
+                    icon: Plus,
+                    onClick: () => {
+                      setIsMenuOpen(false);
+                      setLocation("/tasks/new");
+                    },
+                    show: Boolean(user.isAdmin),
+                  },
+                  {
+                    label: "Сотрудники",
+                    icon: User,
+                    onClick: () => {
+                      setIsMenuOpen(false);
+                      setLocation("/admin/users");
+                    },
+                    show: Boolean(user.isAdmin),
+                  },
+                  {
+                    label: "Настройки",
+                    icon: Settings,
+                    onClick: () => {
+                      setIsMenuOpen(false);
+                      setLocation("/admin/settings");
+                    },
+                    show: Boolean(user.isAdmin),
+                  },
+                ]
+                  .filter((item) => item.show)
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <motion.button
+                        key={item.label}
+                        type="button"
+                        className="dropdown-item w-full"
+                        onClick={item.onClick}
+                        variants={{
+                          hidden: { opacity: 0, x: -6 },
+                          visible: { opacity: 1, x: 0 },
+                        }}
+                      >
+                        <Icon className="w-5 h-5 text-primary" />
+                        <span className="font-medium">{item.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                <div className="dropdown-divider" />
+                <motion.button
+                  type="button"
+                  className="dropdown-item danger w-full"
+                  variants={{
+                    hidden: { opacity: 0, x: -6 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
+                  onClick={async () => {
                     setIsMenuOpen(false);
-                    setLocation("/tasks/new");
+                    await logout();
+                    setLocation("/");
                   }}
                 >
-                  <Plus className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Создать задачу</span>
-                </button>
-                <button
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/users");
-                  }}
-                >
-                  <User className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Сотрудники</span>
-                </button>
-                <button
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/settings");
-                  }}
-                >
-                  <Settings className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Настройки</span>
-                </button>
-              </>
-            )}
-            <div className="dropdown-divider" />
-            <button
-              className="dropdown-item danger w-full"
-              onClick={async () => {
-                setIsMenuOpen(false);
-                await logout();
-                setLocation("/");
-              }}
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Выход</span>
-            </button>
-          </div>
-        )}
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium">Выход</span>
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Content */}
       <main className="app-content">
-        {/* Compact Progress Bar */}
+        {/* Hero stats: то, что видит сотрудник в первую очередь —
+            сколько ещё надо сделать, сколько закрыто, кто опередил,
+            и баланс премии. Заменяет минималистичный progress-card. */}
         {totalCount > 0 && (
-          <div className="progress-card">
-            <span className="progress-text">{completedCount}/{totalCount}</span>
-            <div className="progress-bar-container">
-              <div
-                className={`progress-bar-fill ${isAllCompleted ? 'completed' : 'in-progress'}`}
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <span className={`progress-percentage ${isAllCompleted ? 'text-green-600' : 'text-gray-700'}`}>
-              {progressPercent}%
-            </span>
-          </div>
+          <StatHero
+            isAdmin={Boolean(user?.isAdmin)}
+            totalCount={totalCount}
+            completedCount={
+              filteredTasks.filter(
+                (t) =>
+                  t.isCompleted &&
+                  ((t as { claimedByWorkerId?: number | null })
+                    .claimedByWorkerId ?? null) === null
+              ).length
+            }
+            claimedCount={
+              filteredTasks.filter(
+                (t) =>
+                  t.isCompleted &&
+                  ((t as { claimedByWorkerId?: number | null })
+                    .claimedByWorkerId ?? null) !== null
+              ).length
+            }
+            bonusBalance={(user as { bonusBalance?: number }).bonusBalance ?? 0}
+            onBonusClick={() => setIsBonusInfoOpen(true)}
+          />
         )}
 
         {/* Filters */}
@@ -516,14 +571,25 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* FAB for admin */}
+      {/* FAB for admin — spring entrance, активный pulse-glow,
+          tap-springback. Один CTA-якорь для главного действия. */}
       {user?.isAdmin && filteredTasks.length > 0 && (
-        <button
+        <motion.button
           onClick={() => setLocation("/tasks/new")}
           className="fab-button"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: "spring",
+            stiffness: 320,
+            damping: 22,
+            delay: 0.35,
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.93 }}
         >
           <Plus className="w-7 h-7" />
-        </button>
+        </motion.button>
       )}
 
       {/* Dialogs */}

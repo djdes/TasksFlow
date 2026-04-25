@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
   Calendar,
   CalendarDays,
@@ -21,6 +22,40 @@ import {
   type YearGroup,
 } from "@/lib/group-tasks";
 import { getJournalBonus } from "@/lib/journal-bonus";
+
+const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
+
+/**
+ * Staggered-вход для карточек внутри одного дня. Лёгкая каскадная
+ * анимация делает первый paint ощутимо «премиальнее», но мы не
+ * перебиваем тяжёлым motion-обёрткам поведение задачи (клики
+ * остаются мгновенными — анимирована только маунт-фаза).
+ */
+const dayContainer: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.045, delayChildren: 0.03 },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.32, ease: EASE_OUT_QUINT as unknown as number[] },
+  },
+};
+
+/** Плавный коллапс секций (Выполненные / Сделано другими). */
+const collapseVariants: Variants = {
+  hidden: { opacity: 0, height: 0, transition: { duration: 0.24 } },
+  visible: {
+    opacity: 1,
+    height: "auto",
+    transition: { duration: 0.36, ease: EASE_OUT_QUINT as unknown as number[] },
+  },
+};
 
 const WEEK_DAY_SHORT_NAMES: Record<number, string> = {
   0: "Вс",
@@ -274,7 +309,18 @@ export function GroupedTaskList(props: Props) {
           <span className="group-day-label">{day.dayLabel}</span>
           <span className="group-day-count">{day.tasks.length}</span>
         </div>
-        <div className="task-list">{day.tasks.map(cardRenderer)}</div>
+        <motion.div
+          className="task-list"
+          variants={dayContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {day.tasks.map((task) => (
+            <motion.div key={task.id} variants={cardVariants}>
+              {cardRenderer(task)}
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     );
   }
@@ -367,15 +413,26 @@ export function GroupedTaskList(props: Props) {
             {completedTasks.length}
           </span>
         </button>
-        {completedOpen ? (
-          showCompletedEmpty ? (
-            <div className="grouped-empty">
-              Выполненных пока нет — будут появляться здесь по дням.
-            </div>
-          ) : (
-            completedGroups.map((g) => renderYearGroup(g))
-          )
-        ) : null}
+        <AnimatePresence initial={false}>
+          {completedOpen ? (
+            <motion.div
+              key="completed-body"
+              variants={collapseVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              style={{ overflow: "hidden" }}
+            >
+              {showCompletedEmpty ? (
+                <div className="grouped-empty">
+                  Выполненных пока нет — будут появляться здесь по дням.
+                </div>
+              ) : (
+                completedGroups.map((g) => renderYearGroup(g))
+              )}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </section>
 
       {hasClaimed && (
@@ -396,16 +453,27 @@ export function GroupedTaskList(props: Props) {
               {claimedByOthersTasks.length}
             </span>
           </button>
-          {claimedOpen ? (
-            showClaimedEmpty ? (
-              <div className="grouped-empty">
-                Тут появятся задачи, которые забрал другой сотрудник
-                раньше тебя — премию получает первый.
-              </div>
-            ) : (
-              claimedGroups.map((g) => renderYearGroup(g, renderClaimedCard))
-            )
-          ) : null}
+          <AnimatePresence initial={false}>
+            {claimedOpen ? (
+              <motion.div
+                key="claimed-body"
+                variants={collapseVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                style={{ overflow: "hidden" }}
+              >
+                {showClaimedEmpty ? (
+                  <div className="grouped-empty">
+                    Тут появятся задачи, которые забрал другой сотрудник
+                    раньше тебя — премию получает первый.
+                  </div>
+                ) : (
+                  claimedGroups.map((g) => renderYearGroup(g, renderClaimedCard))
+                )}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </section>
       )}
     </div>
