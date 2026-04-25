@@ -43,46 +43,22 @@ export type TaskFormFieldOption = {
   code?: string;
 };
 
-export type TaskFormField =
-  | {
-      type: "text";
-      key: string;
-      label: string;
-      required?: boolean;
-      placeholder?: string;
-      multiline?: boolean;
-      maxLength?: number;
-    }
-  | {
-      type: "number";
-      key: string;
-      label: string;
-      required?: boolean;
-      unit?: string;
-      min?: number;
-      max?: number;
-      step?: number;
-    }
-  | {
-      type: "boolean";
-      key: string;
-      label: string;
-      defaultValue?: boolean;
-    }
-  | {
-      type: "select";
-      key: string;
-      label: string;
-      required?: boolean;
-      options: TaskFormFieldOption[];
-      defaultValue?: string;
-    }
-  | {
-      type: "date";
-      key: string;
-      label: string;
-      required?: boolean;
-    };
+export type TaskFormField = {
+  type: string;
+  key: string;
+  label: string;
+  required?: boolean;
+  placeholder?: string;
+  multiline?: boolean;
+  maxLength?: number;
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: TaskFormFieldOption[];
+  defaultValue?: unknown;
+  helpText?: string;
+};
 
 export type TaskFormSchema = {
   intro?: string;
@@ -250,18 +226,147 @@ export function resolveJournalUi(
 }
 
 export function isTaskFormSchema(value: unknown): value is TaskFormSchema {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as { fields?: unknown };
-  if (!Array.isArray(candidate.fields)) return false;
-  return candidate.fields.every((field) => {
-    if (!field || typeof field !== "object") return false;
-    const item = field as { type?: unknown; key?: unknown; label?: unknown };
-    return (
-      typeof item.type === "string" &&
-      typeof item.key === "string" &&
-      typeof item.label === "string"
-    );
-  });
+  return normalizeTaskFormSchema(value) !== null;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function normalizeFieldType(type: string, hasOptions: boolean): string {
+  const normalized = type.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (["string", "input", "short-text"].includes(normalized)) return "text";
+  if (["textarea", "long-text", "multiline", "comment", "comments"].includes(normalized)) {
+    return "textarea";
+  }
+  if (["int", "integer", "float", "decimal", "numeric", "currency", "money"].includes(normalized)) {
+    return "number";
+  }
+  if (["bool", "checkbox", "switch", "yes-no", "yesno"].includes(normalized)) {
+    return hasOptions ? "checkbox-group" : "boolean";
+  }
+  if (["dropdown", "enum", "choice", "choices"].includes(normalized)) return "select";
+  if (["multi-select", "multiple", "multiple-select", "checklist"].includes(normalized)) {
+    return "multiselect";
+  }
+  if (["datetime-local", "date-time", "datetime"].includes(normalized)) return "datetime";
+  return normalized || "text";
+}
+
+function normalizeTaskFormOption(option: unknown): TaskFormFieldOption | null {
+  if (typeof option === "string" || typeof option === "number" || typeof option === "boolean") {
+    const value = String(option);
+    return { value, label: value };
+  }
+  if (!option || typeof option !== "object") return null;
+
+  const item = option as Record<string, unknown>;
+  const rawValue =
+    item.value ??
+    item.id ??
+    item.key ??
+    item.code ??
+    item.name ??
+    item.label ??
+    item.title;
+  const rawLabel =
+    item.label ??
+    item.title ??
+    item.name ??
+    item.text ??
+    item.value ??
+    item.code ??
+    rawValue;
+  const value =
+    rawValue === undefined || rawValue === null ? undefined : String(rawValue);
+  const label =
+    rawLabel === undefined || rawLabel === null ? undefined : String(rawLabel);
+  if (!value || !label) return null;
+  const code = stringValue(item.code);
+  return { value, label, ...(code ? { code } : {}) };
+}
+
+function normalizeTaskFormField(field: unknown): TaskFormField | null {
+  if (!field || typeof field !== "object") return null;
+  const item = field as Record<string, unknown>;
+  const rawKey = item.key ?? item.name ?? item.id ?? item.field ?? item.fieldName;
+  const key = rawKey === undefined || rawKey === null ? undefined : String(rawKey).trim();
+  if (!key) return null;
+
+  const rawOptions = Array.isArray(item.options)
+    ? item.options
+    : Array.isArray(item.choices)
+      ? item.choices
+      : Array.isArray(item.values)
+        ? item.values
+        : [];
+  const options = rawOptions
+    .map(normalizeTaskFormOption)
+    .filter((option): option is TaskFormFieldOption => Boolean(option));
+  const rawType = stringValue(item.type) ?? (options.length > 0 ? "select" : "text");
+  const type = normalizeFieldType(rawType, options.length > 0);
+  const label =
+    stringValue(item.label) ??
+    stringValue(item.title) ??
+    stringValue(item.caption) ??
+    stringValue(item.name) ??
+    key;
+  const defaultValue = item.defaultValue ?? item.default ?? item.value;
+  const maxLength = numberValue(item.maxLength ?? item.max_length);
+  const min = numberValue(item.min);
+  const max = numberValue(item.max);
+  const step = numberValue(item.step);
+  const unit = stringValue(item.unit);
+  const placeholder = stringValue(item.placeholder);
+  const helpText = stringValue(item.helpText ?? item.hint ?? item.description);
+
+  return {
+    type,
+    key,
+    label,
+    ...(typeof item.required === "boolean" ? { required: item.required } : {}),
+    ...(placeholder ? { placeholder } : {}),
+    ...(item.multiline === true || type === "textarea" ? { multiline: true } : {}),
+    ...(maxLength !== undefined ? { maxLength } : {}),
+    ...(unit ? { unit } : {}),
+    ...(min !== undefined ? { min } : {}),
+    ...(max !== undefined ? { max } : {}),
+    ...(step !== undefined ? { step } : {}),
+    ...(options.length > 0 ? { options } : {}),
+    ...(defaultValue !== undefined ? { defaultValue } : {}),
+    ...(helpText ? { helpText } : {}),
+  };
+}
+
+export function normalizeTaskFormSchema(value: unknown): TaskFormSchema | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  const rawFields = Array.isArray(candidate.fields)
+    ? candidate.fields
+    : Array.isArray(candidate.items)
+      ? candidate.items
+      : [];
+  if (!rawFields.length) return null;
+  const fields = rawFields
+    .map(normalizeTaskFormField)
+    .filter((field): field is TaskFormField => Boolean(field));
+  if (fields.length !== rawFields.length || fields.length === 0) return null;
+  const intro = stringValue(candidate.intro ?? candidate.description ?? candidate.hint);
+  const submitLabel = stringValue(candidate.submitLabel ?? candidate.submit_label);
+  return {
+    ...(intro ? { intro } : {}),
+    fields,
+    ...(submitLabel ? { submitLabel } : {}),
+  };
 }
 
 /**
@@ -278,19 +383,17 @@ export function normalizeTaskFormPayload(
 
   const maybeWrapped = payload as { form?: unknown; taskForm?: unknown };
   if ("form" in maybeWrapped) {
-    return maybeWrapped.form === null || isTaskFormSchema(maybeWrapped.form)
-      ? { form: maybeWrapped.form }
-      : null;
+    if (maybeWrapped.form === null) return { form: null };
+    const form = normalizeTaskFormSchema(maybeWrapped.form);
+    return form ? { form } : null;
   }
   if ("taskForm" in maybeWrapped) {
-    return maybeWrapped.taskForm === null || isTaskFormSchema(maybeWrapped.taskForm)
-      ? { form: maybeWrapped.taskForm }
-      : null;
+    if (maybeWrapped.taskForm === null) return { form: null };
+    const form = normalizeTaskFormSchema(maybeWrapped.taskForm);
+    return form ? { form } : null;
   }
-  if (isTaskFormSchema(payload)) {
-    return { form: payload };
-  }
-  return null;
+  const form = normalizeTaskFormSchema(payload);
+  return form ? { form } : null;
 }
 
 export function journalKindToTemplateCode(kind: string): string {

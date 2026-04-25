@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import {
   normalizeTaskFormPayload,
-  type TaskFormFieldOption,
+  type TaskFormField,
   type TaskFormSchema,
 } from "@shared/wesetup-journal-mode";
 
@@ -32,21 +32,7 @@ type Props = {
   onCompleted?: () => void;
 };
 
-type RuntimeTaskFormField = {
-  type: string;
-  key: string;
-  label: string;
-  required?: boolean;
-  placeholder?: string;
-  multiline?: boolean;
-  maxLength?: number;
-  unit?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  options?: TaskFormFieldOption[];
-  defaultValue?: unknown;
-};
+type RuntimeTaskFormField = TaskFormField;
 
 type RuntimeTaskFormSchema = Omit<TaskFormSchema, "fields"> & {
   fields: RuntimeTaskFormField[];
@@ -97,25 +83,33 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       // Pre-fill with defaults.
       const initial: Record<string, unknown> = {};
       for (const field of form.fields) {
+        const defaultValue = field.defaultValue;
         if (field.type === "boolean") {
-          initial[field.key] = field.defaultValue ?? false;
+          initial[field.key] =
+            typeof defaultValue === "boolean"
+              ? defaultValue
+              : defaultValue === "true"
+                ? true
+                : false;
         } else if (
           field.type === "multiselect" ||
           field.type === "checkbox-group"
         ) {
-          initial[field.key] = Array.isArray(field.defaultValue)
-            ? field.defaultValue
+          initial[field.key] = Array.isArray(defaultValue)
+            ? defaultValue
+            : typeof defaultValue === "string" && defaultValue
+              ? defaultValue.split(",").map((item) => item.trim()).filter(Boolean)
             : [];
         } else if (field.type === "number") {
           initial[field.key] =
-            field.defaultValue === undefined || field.defaultValue === ""
+            defaultValue === undefined || defaultValue === ""
               ? null
-              : Number(field.defaultValue);
-        } else if (field.type === "select" && field.defaultValue) {
-          initial[field.key] = field.defaultValue;
+              : Number(defaultValue);
+        } else if ((field.type === "select" || field.type === "radio") && defaultValue) {
+          initial[field.key] = String(defaultValue);
         } else {
           initial[field.key] =
-            field.defaultValue === undefined ? "" : field.defaultValue;
+            defaultValue === undefined ? "" : defaultValue;
         }
       }
       setValues(initial);
@@ -151,6 +145,10 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       const v = values[field.key];
       if (Array.isArray(v) && v.length === 0) return false;
       if (typeof v === "number" && Number.isNaN(v)) return false;
+      if (field.type === "file" || field.type === "photo" || field.type === "image") {
+        if (!v || typeof v !== "object") return false;
+        continue;
+      }
       if (v === null || v === undefined || v === "") return false;
       if (field.type === "number" && typeof v === "number") {
         if (typeof field.min === "number" && v < field.min) return false;
@@ -336,9 +334,21 @@ function FieldInput({
     <span className="ml-1 text-destructive">*</span>
   ) : null;
   const options = Array.isArray(field.options) ? field.options : [];
+  const hint = field.helpText ? (
+    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+      {field.helpText}
+    </p>
+  ) : null;
 
   switch (field.type) {
+    case "hidden":
+      return null;
     case "text":
+    case "email":
+    case "tel":
+    case "phone":
+    case "url":
+    case "password":
     case "textarea":
       return (
         <div>
@@ -357,6 +367,17 @@ function FieldInput({
             />
           ) : (
             <Input
+              type={
+                field.type === "email"
+                  ? "email"
+                  : field.type === "url"
+                    ? "url"
+                    : field.type === "tel" || field.type === "phone"
+                      ? "tel"
+                      : field.type === "password"
+                        ? "password"
+                        : "text"
+              }
               value={(value as string) ?? ""}
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholder}
@@ -364,6 +385,7 @@ function FieldInput({
               className="things-input"
             />
           )}
+          {hint}
         </div>
       );
     case "number":
@@ -390,6 +412,7 @@ function FieldInput({
             step={field.step}
             className="things-input text-lg font-semibold tabular-nums"
           />
+          {hint}
         </div>
       );
     case "boolean":
@@ -401,6 +424,7 @@ function FieldInput({
             className="size-5"
           />
           <span className="text-base font-medium">{field.label}</span>
+          {hint}
         </label>
       );
     case "select":
@@ -443,6 +467,7 @@ function FieldInput({
               className="things-input"
             />
           )}
+          {hint}
         </div>
       );
     case "radio":
@@ -476,6 +501,7 @@ function FieldInput({
               );
             })}
           </div>
+          {hint}
         </div>
       );
     case "multiselect":
@@ -513,6 +539,7 @@ function FieldInput({
               );
             })}
           </div>
+          {hint}
         </div>
       );
     }
@@ -538,6 +565,47 @@ function FieldInput({
             onChange={(e) => onChange(e.target.value)}
             className="things-input text-base"
           />
+          {hint}
+        </div>
+      );
+    case "file":
+    case "photo":
+    case "image":
+      return (
+        <div>
+          <label className={labelCls}>
+            {field.label}
+            {requiredMark}
+          </label>
+          <Input
+            type="file"
+            accept={
+              field.type === "photo" || field.type === "image"
+                ? "image/*"
+                : undefined
+            }
+            className="things-input h-auto py-3"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) {
+                onChange(null);
+                return;
+              }
+              const dataUrl = await readFileAsDataUrl(file);
+              onChange({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                dataUrl,
+              });
+            }}
+          />
+          {value && typeof value === "object" && "name" in value ? (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {(value as { name?: string }).name}
+            </p>
+          ) : null}
+          {hint}
         </div>
       );
     default:
@@ -572,9 +640,19 @@ function FieldInput({
               className="things-input"
             />
           )}
+          {hint}
         </div>
       );
   }
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function formatValue(field: RuntimeTaskFormField, value: unknown): string {
@@ -588,6 +666,11 @@ function formatValue(field: RuntimeTaskFormField, value: unknown): string {
         return opt ? `${opt.code ? opt.code + " — " : ""}${opt.label}` : String(item);
       })
       .join(", ");
+  }
+  if (typeof value === "object") {
+    const file = value as { name?: unknown };
+    if (typeof file.name === "string") return file.name;
+    return JSON.stringify(value);
   }
   switch (field.type) {
     case "boolean":

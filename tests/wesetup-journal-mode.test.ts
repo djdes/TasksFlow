@@ -152,6 +152,65 @@ describe("task form helpers", () => {
     expect(normalizeTaskFormPayload({ form: null })).toEqual({ form: null });
   });
 
+  it("normalizes tolerant form shapes used by different journals", () => {
+    expect(
+      normalizeTaskFormPayload({
+        taskForm: {
+          description: "Проверка",
+          submit_label: "Записать",
+          items: [
+            {
+              type: "dropdown",
+              name: "result",
+              title: "Результат",
+              required: true,
+              options: ["Норма", "Отклонение"],
+            },
+            {
+              type: "checkbox",
+              id: "confirmed",
+              label: "Проверено",
+              default: "true",
+            },
+            {
+              type: "datetime-local",
+              key: "checked_at",
+              label: "Время проверки",
+            },
+          ],
+        },
+      })
+    ).toEqual({
+      form: {
+        intro: "Проверка",
+        submitLabel: "Записать",
+        fields: [
+          {
+            type: "select",
+            key: "result",
+            label: "Результат",
+            required: true,
+            options: [
+              { value: "Норма", label: "Норма" },
+              { value: "Отклонение", label: "Отклонение" },
+            ],
+          },
+          {
+            type: "boolean",
+            key: "confirmed",
+            label: "Проверено",
+            defaultValue: "true",
+          },
+          {
+            type: "datetime",
+            key: "checked_at",
+            label: "Время проверки",
+          },
+        ],
+      },
+    });
+  });
+
   it("finds task form by generic wesetup journal kind", () => {
     const found = findTaskFormInCatalog(
       {
