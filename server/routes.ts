@@ -10,9 +10,12 @@ import { sendTaskCompletedEmail } from "./mail";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 import { parseJournalLink } from "@shared/journal-link";
+import type { JournalLink } from "@shared/journal-link";
 import {
   findTaskFormInCatalog,
+  journalKindToTemplateCode,
   normalizeTaskFormPayload,
+  type TaskFormSchema,
   type WesetupCatalog,
 } from "@shared/wesetup-journal-mode";
 import {
@@ -1409,10 +1412,62 @@ export async function registerRoutes(
     const catalogText = await catalogResponse.text();
     const catalog = parseJsonOrUndefined(catalogText) as WesetupCatalog | undefined;
     if (!catalog?.journals) return { resolved: false };
+    const templateCode = journalKindToTemplateCode(journalLink.kind);
+    const journal = catalog.journals.find(
+      (item) =>
+        item.templateCode === templateCode ||
+        `wesetup-${item.templateCode}` === journalLink.kind
+    );
+    const form = findTaskFormInCatalog(catalog, journalLink.kind);
 
     return {
       resolved: true,
-      form: findTaskFormInCatalog(catalog, journalLink.kind),
+      form: form ?? createGenericJournalTaskForm(journalLink, journal?.label),
+    };
+  }
+
+  function createGenericJournalTaskForm(
+    journalLink: JournalLink,
+    journalLabel?: string | null
+  ): TaskFormSchema {
+    const templateCode = journalKindToTemplateCode(journalLink.kind);
+    return {
+      intro: journalLabel
+        ? `WeSetup пока не передал структуру формы для журнала «${journalLabel}». Можно подтвердить выполнение и оставить комментарий.`
+        : "WeSetup пока не передал структуру формы для этого журнала. Можно подтвердить выполнение и оставить комментарий.",
+      fields: [
+        {
+          type: "hidden",
+          key: "journalCode",
+          label: "Код журнала",
+          defaultValue: templateCode,
+        },
+        {
+          type: "hidden",
+          key: "documentId",
+          label: "Документ",
+          defaultValue: journalLink.documentId,
+        },
+        {
+          type: "hidden",
+          key: "rowKey",
+          label: "Строка",
+          defaultValue: journalLink.rowKey,
+        },
+        {
+          type: "boolean",
+          key: "completed",
+          label: "Работа выполнена",
+          defaultValue: true,
+        },
+        {
+          type: "textarea",
+          key: "comment",
+          label: "Комментарий",
+          placeholder: "Что сделано / замечания",
+        },
+      ],
+      submitLabel: "Отправить в WeSetup",
     };
   }
 
@@ -1443,15 +1498,15 @@ export async function registerRoutes(
         parsed === undefined ? null : normalizeTaskFormPayload(parsed);
 
       if (upstream.ok) {
-        if (normalized) {
+        if (normalized?.form) {
           return res.status(upstream.status).json(normalized);
-        }
-        if (!text.trim()) {
-          return res.status(upstream.status).json({ form: null });
         }
         const fallback = await resolveTaskFormFromCatalog(target, taskId);
         if (fallback.resolved) {
           return res.json({ form: fallback.form });
+        }
+        if (normalized || !text.trim()) {
+          return res.status(upstream.status).json({ form: null });
         }
         return res.status(502).json({
           message: "WeSetup вернул task-form в неизвестном формате",

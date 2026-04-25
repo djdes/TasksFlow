@@ -411,5 +411,14 @@ export function findTaskFormInCatalog(
       item.templateCode === templateCode ||
       `wesetup-${item.templateCode}` === journalKindOrTemplateCode
   );
-  return journal?.taskForm ?? null;
+  if (!journal) return null;
+
+  const rawJournal = journal as CatalogJournal & {
+    task_form?: unknown;
+    form?: unknown;
+  };
+  const rawForm =
+    rawJournal.taskForm ?? rawJournal.task_form ?? rawJournal.form ?? null;
+  if (rawForm === null) return null;
+  return normalizeTaskFormSchema(rawForm);
 }

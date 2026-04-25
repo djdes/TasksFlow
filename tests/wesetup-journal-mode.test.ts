@@ -231,6 +231,47 @@ describe("task form helpers", () => {
     expect(found).toEqual(form);
   });
 
+  it("finds and normalizes catalog form aliases", () => {
+    const found = findTaskFormInCatalog(
+      {
+        journals: [
+          {
+            templateCode: "fryer_oil",
+            label: "Журнал учета использования фритюрных жиров",
+            description: null,
+            iconName: null,
+            task_form: {
+              items: [
+                {
+                  type: "dropdown",
+                  name: "oil_state",
+                  title: "Состояние масла",
+                  options: ["Норма", "Замена"],
+                },
+              ],
+            },
+            documents: [],
+          },
+        ],
+      } as any,
+      "wesetup-fryer_oil"
+    );
+
+    expect(found).toEqual({
+      fields: [
+        {
+          type: "select",
+          key: "oil_state",
+          label: "Состояние масла",
+          options: [
+            { value: "Норма", label: "Норма" },
+            { value: "Замена", label: "Замена" },
+          ],
+        },
+      ],
+    });
+  });
+
   it("keeps lookup stable for a 35 journal catalog", () => {
     const catalog = {
       journals: Array.from({ length: 35 }, (_, index) => ({

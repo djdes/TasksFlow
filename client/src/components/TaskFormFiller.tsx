@@ -204,6 +204,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     if (!schema) return "";
     const parts: string[] = [];
     for (const field of schema.fields) {
+      if (field.type === "hidden") continue;
       const v = values[field.key];
       parts.push(`${field.label}: ${formatValue(field, v)}`);
     }
