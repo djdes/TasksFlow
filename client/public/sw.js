@@ -3,10 +3,13 @@
  * Обеспечивает оффлайн работу и кеширование
  */
 
-const CACHE_NAME = "tasksflow-v1";
+const CACHE_NAME = "tasksflow-v2";
+// Не кешируем "/" и "/dashboard" — это HTML-страницы, ссылающиеся на хешированные
+// /assets/index-*.js. Если закэшировать старый index.html, после нового деплоя
+// старый bundle уже не существует на сервере и nginx-fallback отдаёт HTML с
+// MIME text/html вместо application/javascript → "Failed to load module script".
+// Кешируем только manifest и иконки.
 const STATIC_ASSETS = [
-  "/",
-  "/dashboard",
   "/manifest.json",
 ];
 
@@ -40,65 +43,62 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch event - стратегия Network First для API, Cache First для статики
+// Fetch event:
+//   - HTML / навигация       → Network First (никогда не показываем старый index.html
+//                              со ссылкой на исчезнувший /assets/index-*.js)
+//   - /api/*                  → Network First (всегда свежие данные)
+//   - /assets/* (immutable)   → Cache First   (хешированные имена, экономим трафик)
+//   - всё остальное           → Network only
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Пропускаем non-GET запросы
-  if (request.method !== "GET") {
-    return;
-  }
+  if (request.method !== "GET") return;
+  if (url.origin !== self.location.origin) return;
 
-  // API запросы - Network First
-  if (url.pathname.startsWith("/api/")) {
+  const isNavigate =
+    request.mode === "navigate" ||
+    (request.headers.get("accept") || "").includes("text/html");
+
+  if (isNavigate) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Кешируем успешные GET запросы к API
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Если сеть недоступна, пробуем из кеша
-          return caches.match(request);
-        })
+      fetch(request).catch(() => caches.match("/manifest.json"))
     );
     return;
   }
 
-  // Статические файлы и страницы - Cache First, потом Network
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Обновляем кеш в фоне
-        fetch(request).then((response) => {
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
           if (response.ok) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, response);
-            });
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
-        });
-        return cachedResponse;
-      }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
-      // Если нет в кеше, идем в сеть
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return response;
-      });
-    })
-  );
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // По умолчанию — просто проксируем сеть.
 });
 
 // Push notifications (для будущего использования)
