@@ -76,8 +76,16 @@ type Props = {
    *  выполнить уже нельзя — показываем как «архив», без действий. */
   claimedByOthersTasks?: Task[];
   isAdmin: boolean;
+  /** Группировка верхнего уровня по сотруднику (вместо по дате).
+   *  Полезно админу/руководителю чтобы сразу видеть кто что не сделал.
+   *  Воркеру никогда не показываем этот режим. */
+  groupByWorker?: boolean;
+  onToggleGroupByWorker?: () => void;
   getUserInitials: (workerId: number | null) => string;
   getUserName: (workerId: number | null) => string;
+  /** Короткая форма имени для admin-карточек (фамилия). Если не
+   *  передана, фоллбек на getUserName. */
+  getUserShortName?: (workerId: number | null) => string;
   onTaskClick: (task: Task) => void;
   onToggleComplete: (taskId: number, e?: React.MouseEvent) => void;
   onEdit: (taskId: number) => void;
@@ -99,14 +107,18 @@ export function GroupedTaskList(props: Props) {
     completedTasks,
     claimedByOthersTasks = [],
     isAdmin,
+    groupByWorker = false,
+    onToggleGroupByWorker,
     getUserInitials,
     getUserName,
+    getUserShortName,
     onTaskClick,
     onToggleComplete,
     onEdit,
     onDuplicate,
     onDelete,
   } = props;
+  const shortName = getUserShortName ?? getUserName;
 
   const activeGroups = useMemo(
     () => groupTasksByDate(activeTasks, "createdAt"),
@@ -173,11 +185,11 @@ export function GroupedTaskList(props: Props) {
 
             <div className="task-meta">
               {isAdmin && task.workerId && (
-                <div className="worker-info">
+                <div className="worker-info" title={getUserName(task.workerId)}>
                   <div className="worker-avatar">
                     {getUserInitials(task.workerId)}
                   </div>
-                  <span>{getUserName(task.workerId)}</span>
+                  <span>{shortName(task.workerId)}</span>
                 </div>
               )}
               {isJournal && !isCompleted && (
@@ -406,19 +418,126 @@ export function GroupedTaskList(props: Props) {
   const hasClaimed = claimedByOthersTasks.length > 0;
   const showClaimedEmpty = claimedGroups.length === 0;
 
+  /**
+   * Группировка активных задач по сотруднику — для админа/руководителя.
+   * Каждый раздел — один воркер с подсчётом «осталось N» в шапке.
+   * Внутри сохраняем разрезание по дням (как в обычном режиме), но
+   * только для подмножества данного воркера. Это то самое «вижу что
+   * у Иванова 3, у Петрова 5» из ТЗ.
+   *
+   * Сотрудники без задач не показываются. Несortированные (workerId=null)
+   * собраны в отдельный «Без исполнителя» — туда видны задачи, у которых
+   * админ ещё не назначил воркера (типичный кейс при создании новой).
+   */
+  const activeWorkerSections = useMemo(() => {
+    if (!groupByWorker) return [];
+    const byWorker = new Map<number | "unassigned", Task[]>();
+    for (const t of activeTasks) {
+      const key = t.workerId ?? ("unassigned" as const);
+      const list = byWorker.get(key) ?? [];
+      list.push(t);
+      byWorker.set(key, list);
+    }
+    const sections = Array.from(byWorker.entries()).map(([key, list]) => ({
+      key: String(key),
+      workerId: key === "unassigned" ? null : (key as number),
+      tasks: list,
+      groups: groupTasksByDate(list, "createdAt"),
+    }));
+    sections.sort((a, b) => {
+      // unassigned всегда сверху — это «надо назначить»
+      if (a.workerId === null) return -1;
+      if (b.workerId === null) return 1;
+      // больше задач — выше: руководителю в первую очередь видно
+      // «у кого затыкает»
+      if (b.tasks.length !== a.tasks.length)
+        return b.tasks.length - a.tasks.length;
+      return getUserName(a.workerId).localeCompare(
+        getUserName(b.workerId),
+        "ru"
+      );
+    });
+    return sections;
+  }, [activeTasks, groupByWorker, getUserName]);
+
+  function renderActiveByWorker() {
+    if (activeWorkerSections.length === 0) {
+      return (
+        <div className="grouped-empty">
+          Все задачи на сегодня закрыты — респект!
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2">
+        {activeWorkerSections.map((section) => {
+          const isUnassigned = section.workerId === null;
+          const fullName = isUnassigned
+            ? "Без исполнителя"
+            : getUserName(section.workerId);
+          const initials = isUnassigned
+            ? "?"
+            : getUserInitials(section.workerId);
+          return (
+            <details
+              key={section.key}
+              open
+              className="worker-section"
+            >
+              <summary className="worker-section-header">
+                <ChevronDown className="group-chevron w-4 h-4" />
+                <div
+                  className={`worker-avatar ${
+                    isUnassigned ? "worker-avatar--unassigned" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  {initials}
+                </div>
+                <span className="worker-section-name">{fullName}</span>
+                <span className="worker-section-count">
+                  {section.tasks.length}
+                </span>
+              </summary>
+              <div className="worker-section-body">
+                {section.groups.map((g) => renderYearGroup(g))}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="grouped-task-list">
       <section className="grouped-section">
-        <div className="grouped-section-header">
+        <div className="grouped-section-header grouped-section-header--toolbar">
           <h2 className="grouped-section-title">Активные</h2>
           <span className="grouped-section-count">
             {activeTasks.length}
           </span>
+          {isAdmin && onToggleGroupByWorker ? (
+            <button
+              type="button"
+              onClick={onToggleGroupByWorker}
+              className="group-mode-toggle"
+              title={
+                groupByWorker
+                  ? "Сейчас группировка по сотруднику — переключить на дату"
+                  : "Сейчас по дате — переключить на группировку по сотруднику"
+              }
+            >
+              {groupByWorker ? "По сотруднику" : "По дате"}
+            </button>
+          ) : null}
         </div>
-        {showActiveEmpty ? (
+        {showActiveEmpty && !groupByWorker ? (
           <div className="grouped-empty">
             Все задачи на сегодня закрыты — респект!
           </div>
+        ) : groupByWorker ? (
+          renderActiveByWorker()
         ) : (
           activeGroups.map((g) => renderYearGroup(g))
         )}

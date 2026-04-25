@@ -82,6 +82,11 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
+  // Режим группировки списка для админа: по дате (default — старое
+  // поведение) или по сотруднику. Воркер видит только свои задачи,
+  // ему этот тогл не нужен. У админа дефолт включён, чтобы сразу
+  // видно было «у Иванова 3 невыполненных, у Петрова 5».
+  const [groupByWorker, setGroupByWorker] = useState(true);
 
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
@@ -122,11 +127,33 @@ export default function Dashboard() {
     return foundUser ? (foundUser.name || foundUser.phone) : "Неизвестный";
   };
 
+  /**
+   * Короткая форма для бейджа исполнителя на карточке. Запросом
+   * руководителя «вижу название задачи и фамилию» — на карточке
+   * показываем только фамилию из «Имя Фамилия» (или 1-е слово
+   * если ФИО без пробела). Полное имя остаётся в группировке
+   * по сотруднику и в админ-таблицах.
+   */
+  const getUserShortName = (userId: number | null) => {
+    if (!userId) return "Не назначен";
+    const foundUser = users.find(u => u.id === userId);
+    if (!foundUser) return "Неизвестный";
+    const full = (foundUser.name || foundUser.phone).trim();
+    if (!full) return foundUser.phone;
+    const parts = full.split(/\s+/);
+    return parts.length >= 2 ? parts[parts.length - 1] : parts[0];
+  };
+
   const getUserInitials = (userId: number | null) => {
     if (!userId) return "?";
     const foundUser = users.find(u => u.id === userId);
     if (!foundUser) return "?";
-    const name = foundUser.name || foundUser.phone;
+    const name = (foundUser.name || foundUser.phone).trim();
+    const parts = name.split(/\s+/);
+    if (parts.length >= 2) {
+      // Иванов Сергей → ИС вместо ИВ. Корректнее для русских имён.
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
     return name.slice(0, 2).toUpperCase();
   };
 
@@ -552,8 +579,11 @@ export default function Dashboard() {
                 ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) !== null
             )}
             isAdmin={Boolean(user?.isAdmin)}
+            groupByWorker={Boolean(user?.isAdmin) && groupByWorker}
+            onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
             getUserInitials={getUserInitials}
             getUserName={getUserName}
+            getUserShortName={getUserShortName}
             onTaskClick={handleTaskClick}
             onToggleComplete={toggleTaskComplete}
             onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
