@@ -3,7 +3,7 @@ import type { Server } from "http";
 import multer from "multer";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
-import { storage } from "./storage";
+import { storage, DatabaseStorage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
@@ -475,7 +475,30 @@ export async function registerRoutes(
       // Фильтруем по компании (session-user или api key)
       const companyId = await getCompanyIdFromReq(req);
       const tasks = await storage.getTasks(companyId ?? undefined);
-      res.json(tasks);
+
+      // Manager-scope фильтр (Phase 2 hierarchy):
+      //   • Админ или API key → видит всё (return as is)
+      //   • Не-админ с managedWorkerIds → видит задачи своих
+      //     подчинённых + свои собственные
+      //   • Не-админ без scope → видит ТОЛЬКО свои (старое поведение
+      //     для обычного воркера; в TasksFlow раньше клиент сам
+      //     фильтровал, теперь дублируем на сервере для безопасности
+      //     — клиентский фильтр можно обойти)
+      if (req.apiKey) return res.json(tasks);
+      const userId = req.session?.userId;
+      if (!userId) return res.json(tasks);
+      const me = await storage.getUserById(userId);
+      if (!me) return res.json([]);
+      if (me.isAdmin) return res.json(tasks);
+
+      const managed = DatabaseStorage.parseManagedWorkerIds(me.managedWorkerIds);
+      if (managed === null) {
+        // Обычный воркер — только свои
+        return res.json(tasks.filter((t) => t.workerId === userId));
+      }
+      const allowed = new Set<number>(managed);
+      allowed.add(userId); // свои задачи руководитель тоже видит
+      res.json(tasks.filter((t) => t.workerId !== null && allowed.has(t.workerId)));
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
       res.status(500).json({ message: 'Ошибка загрузки задач', error: err.message });
@@ -908,10 +931,67 @@ export async function registerRoutes(
       // Фильтруем по компании (session или API key)
       const companyId = await getCompanyIdFromReq(req);
       const users = await storage.getAllUsers(companyId ?? undefined);
-      res.json(users);
+
+      // Manager-scope: при создании задачи руководитель видит в
+      // worker-dropdown только своих подчинённых. Админу — всё, как
+      // и раньше. Сам себя руководитель тоже видит (может назначить
+      // задачу себе). Без apiKey — для CI/syncs пропускаем фильтр.
+      if (req.apiKey) return res.json(users);
+      const userId = req.session?.userId;
+      if (!userId) return res.json(users);
+      const me = users.find((u) => u.id === userId);
+      if (!me || me.isAdmin) return res.json(users);
+
+      const managed = DatabaseStorage.parseManagedWorkerIds(me.managedWorkerIds);
+      if (managed === null) {
+        // Обычный воркер — только себя
+        return res.json(users.filter((u) => u.id === userId));
+      }
+      const allowed = new Set<number>(managed);
+      allowed.add(userId);
+      res.json(users.filter((u) => allowed.has(u.id)));
     } catch (err: any) {
       console.error('Error fetching users:', err);
       res.status(500).json({ message: 'Ошибка загрузки пользователей', error: err.message });
+    }
+  });
+
+  /**
+   * PUT /api/admin/users/:id/managed-workers
+   *
+   * Body: { workerIds: number[] }
+   *
+   * Только apiKey — это write-side для WeSetup ↔ TasksFlow синхронизации.
+   * Никаких юзерских action'ов из UI. WeSetup пушит сюда массив TF
+   * user IDs, которыми руководит этот человек, после каждого изменения
+   * /settings/staff-hierarchy на стороне WeSetup.
+   *
+   * Сессионных админов не пускаем намеренно — иерархия живёт в WeSetup,
+   * чтобы не было двух источников истины. Если бы тут разрешили
+   * руками править — ушли бы из синка после следующего push'а из
+   * WeSetup, и пользователь бы не понял.
+   */
+  app.put("/api/admin/users/:id/managed-workers", requireApiKey, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      if (!Number.isFinite(userId) || userId <= 0) {
+        return res.status(400).json({ message: "Bad userId" });
+      }
+      const body = req.body as { workerIds?: unknown };
+      const list = Array.isArray(body?.workerIds)
+        ? body.workerIds.filter(
+            (n): n is number => typeof n === "number" && Number.isFinite(n) && n > 0
+          )
+        : null;
+      if (list === null) {
+        return res.status(400).json({ message: "workerIds must be number[]" });
+      }
+      const updated = await storage.setManagedWorkers(userId, list);
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      res.json({ ok: true, count: list.length });
+    } catch (err: any) {
+      console.error('[managed-workers] failed', err);
+      res.status(500).json({ message: 'Ошибка сохранения иерархии', error: err.message });
     }
   });
 

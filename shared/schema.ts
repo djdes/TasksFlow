@@ -24,6 +24,17 @@ export const users = mysqlTable("users", {
   createdAt: int("created_at").notNull().default(0),
   bonusBalance: int("bonus_balance").notNull().default(0), // Баланс дополнительной премии
   companyId: int("company_id"), // FK на companies
+  // JSON-массив id воркеров, которыми этот пользователь руководит.
+  // Пустой массив или NULL = у пользователя нет подчинённых.
+  // Заполняется WeSetup'ом при изменении ManagerScope (там источник
+  // истины для иерархии); TasksFlow только хранит и фильтрует.
+  // На основе этого:
+  //   • /api/tasks возвращает только задачи воркеров из списка
+  //     (плюс свои) — для не-админов с подчинёнными
+  //   • /api/users возвращает только этих воркеров + себя
+  //   • При создании задачи можно назначить только их
+  // Админ (isAdmin=true) игнорирует это поле и видит всё.
+  managedWorkerIds: text("managed_worker_ids"),
 });
 
 export const workers = mysqlTable("workers", {

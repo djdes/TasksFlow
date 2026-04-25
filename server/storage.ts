@@ -33,6 +33,7 @@ export interface IStorage {
   setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined>;
   updateUserBalance(id: number, amount: number): Promise<User | undefined>;
   resetUserBalance(id: number): Promise<User | undefined>;
+  setManagedWorkers(userId: number, workerIds: number[]): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
 
   // Workers
@@ -190,6 +191,46 @@ export class DatabaseStorage implements IStorage {
 
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  /**
+   * Установить список подчинённых для пользователя. Зеркалирует
+   * WeSetup ManagerScope: один админ может редактировать иерархию
+   * на стороне WeSetup, она пушится сюда.
+   *
+   * Семантика хранения:
+   *   • NULL / "" → у пользователя нет подчинённых (обычный воркер)
+   *   • "[]" → пустой список — означает «есть scope, но никого нет»;
+   *      в /api/tasks такой пользователь видит только свои задачи
+   *      (фильтр workerId in [] всегда отфильтровывает всё)
+   *   • "[1,2,3]" → видит задачи воркеров 1/2/3 + свои
+   */
+  async setManagedWorkers(
+    userId: number,
+    workerIds: number[]
+  ): Promise<User | undefined> {
+    const cleaned = Array.from(new Set(workerIds.filter((n) => Number.isInteger(n) && n > 0)));
+    await db
+      .update(users)
+      .set({ managedWorkerIds: JSON.stringify(cleaned) })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user || undefined;
+  }
+
+  /**
+   * Распарсить managed_worker_ids в массив. Робастно к мусору в
+   * колонке (старые записи могут быть NULL или пустой строкой).
+   */
+  static parseManagedWorkerIds(raw: string | null | undefined): number[] | null {
+    if (raw === null || raw === undefined || raw === "") return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      return parsed.filter((n) => typeof n === "number" && Number.isInteger(n));
+    } catch {
+      return null;
+    }
   }
 
   /** Сброс баланса пользователя до 0 (вызывается админом после выплаты) */
