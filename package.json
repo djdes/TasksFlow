@@ -18,7 +18,8 @@
     "update-tasks": "tsx script/update-tasks-table.ts",
     "reset-tasks": "tsx script/reset-recurring-tasks.ts",
     "add-companies": "tsx script/add-companies.ts",
-    "create-api-keys-table": "tsx script/create-api-keys-table.ts"
+    "create-api-keys-table": "tsx script/create-api-keys-table.ts",
+    "add-claim-col": "tsx script/_add-claim-col.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

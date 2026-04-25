@@ -48,6 +48,14 @@ export interface IStorage {
   createTask(task: InsertTask & { companyId?: number }): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<void>;
+  claimSiblingTasks(args: {
+    sourceTaskId: number;
+    documentId: string;
+    journalKind: string;
+    claimedByWorkerId: number;
+    companyId: number | null;
+    completedAt: number;
+  }): Promise<number>;
 
   // API Keys
   createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
@@ -262,6 +270,7 @@ export class DatabaseStorage implements IStorage {
       journalLink: tasks.journalLink,
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
+      claimedByWorkerId: tasks.claimedByWorkerId,
     }).from(tasks);
 
     const result = companyId
@@ -296,6 +305,7 @@ export class DatabaseStorage implements IStorage {
       journalLink: tasks.journalLink,
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
+      claimedByWorkerId: tasks.claimedByWorkerId,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
@@ -349,6 +359,7 @@ export class DatabaseStorage implements IStorage {
       journalLink: tasks.journalLink,
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
+      claimedByWorkerId: tasks.claimedByWorkerId,
     }).from(tasks).where(eq(tasks.id, insertId));
     return {
       ...task,
@@ -414,6 +425,7 @@ export class DatabaseStorage implements IStorage {
       journalLink: tasks.journalLink,
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
+      claimedByWorkerId: tasks.claimedByWorkerId,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
@@ -425,6 +437,74 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: number): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  /**
+   * «Claim race-for-bonus»: помечаем sibling-задачи как выполненные
+   * победителем. Sibling определяется как другая task с тем же
+   * `journalLink.documentId + kind`, в той же компании, не выполненная,
+   * принадлежащая другому воркеру. Премию им НЕ начисляем — это
+   * сделает caller только для самой задачи.
+   *
+   * Возвращает количество захваченных задач (для логов / уведомлений).
+   *
+   * Реализация: тянем потенциальных кандидатов (журнальные задачи той
+   * же компании), фильтруем в коде — JSON-блоб `journal_link` хранится
+   * как TEXT, фильтр через JSON_EXTRACT в MySQL добавит нагрузку и
+   * сделает миграцию платформо-зависимой. Кандидатов мало (≤ N
+   * сотрудников за день), цикл дешёвый.
+   */
+  async claimSiblingTasks(args: {
+    sourceTaskId: number;
+    documentId: string;
+    journalKind: string;
+    claimedByWorkerId: number;
+    companyId: number | null;
+    completedAt: number;
+  }): Promise<number> {
+    const candidates = await db
+      .select({
+        id: tasks.id,
+        workerId: tasks.workerId,
+        isCompleted: tasks.isCompleted,
+        journalLink: tasks.journalLink,
+        claimedByWorkerId: tasks.claimedByWorkerId,
+      })
+      .from(tasks)
+      .where(
+        args.companyId !== null
+          ? and(eq(tasks.companyId, args.companyId), eq(tasks.isCompleted, false))
+          : eq(tasks.isCompleted, false)
+      );
+
+    let claimed = 0;
+    for (const candidate of candidates) {
+      if (candidate.id === args.sourceTaskId) continue;
+      if (!candidate.journalLink) continue;
+      if (candidate.claimedByWorkerId !== null) continue;
+      let parsed: any;
+      try {
+        parsed = JSON.parse(candidate.journalLink);
+      } catch {
+        continue;
+      }
+      if (
+        parsed?.documentId !== args.documentId ||
+        parsed?.kind !== args.journalKind
+      ) {
+        continue;
+      }
+      await db
+        .update(tasks)
+        .set({
+          isCompleted: true,
+          completedAt: args.completedAt,
+          claimedByWorkerId: args.claimedByWorkerId,
+        })
+        .where(eq(tasks.id, candidate.id));
+      claimed += 1;
+    }
+    return claimed;
   }
 
   // ===================== API KEYS =====================

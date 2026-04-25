@@ -36,17 +36,31 @@ export const NO_BONUS_JOURNAL_CODES = new Set<string>([
  * Возвращает сумму бонуса (в рублях) для задачи или null, если задача
  * не из WeSetup-журнала или из списка «без бонуса».
  *
- * Источник кода журнала — `journalLink.kind` вида `wesetup-<code>`.
- * Free-mode задачи без journalLink бонуса не дают.
+ * Приоритет источника:
+ *   1. `journalLink.bonusAmountKopecks` — настраивается менеджером
+ *      в /settings/journal-bonuses на стороне WeSetup. Это и есть
+ *      источник истины.
+ *   2. `task.price` — для свободных (не журнальных) задач, где админ
+ *      сам ставит «стоимость». Этот fallback не учитывается тут — есть
+ *      отдельный price-бейдж в GroupedTaskList.
+ *   3. `JOURNAL_BONUS_RUB` (50 ₽) — древний legacy-фоллбек для задач,
+ *      созданных до того как journalLink начал нести bonusAmountKopecks.
+ *
+ * Журналы из NO_BONUS_JOURNAL_CODES не дают бейдж даже если в kopecks
+ * случайно > 0 (защита от опечатки в настройках).
  */
 export function getJournalBonus(task: {
   journalLink?: string | null;
 }): number | null {
   const link = parseJournalLink(task.journalLink ?? null);
   if (!link) return null;
-  // kind: "wesetup-<code>"; срезаем префикс.
   const code = link.kind.replace(/^wesetup-/i, "").toLowerCase();
   if (!code) return null;
   if (NO_BONUS_JOURNAL_CODES.has(code)) return null;
+
+  if (typeof link.bonusAmountKopecks === "number") {
+    if (link.bonusAmountKopecks <= 0) return null;
+    return Math.round(link.bonusAmountKopecks / 100);
+  }
   return JOURNAL_BONUS_RUB;
 }

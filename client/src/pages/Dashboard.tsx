@@ -489,7 +489,16 @@ export default function Dashboard() {
         ) : (
           <GroupedTaskList
             activeTasks={filteredTasks.filter((t) => !t.isCompleted)}
-            completedTasks={filteredTasks.filter((t) => Boolean(t.isCompleted))}
+            completedTasks={filteredTasks.filter(
+              (t) =>
+                Boolean(t.isCompleted) &&
+                ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) === null
+            )}
+            claimedByOthersTasks={filteredTasks.filter(
+              (t) =>
+                Boolean(t.isCompleted) &&
+                ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) !== null
+            )}
             isAdmin={Boolean(user?.isAdmin)}
             getUserInitials={getUserInitials}
             getUserName={getUserName}

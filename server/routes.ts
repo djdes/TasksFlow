@@ -820,6 +820,41 @@ export async function registerRoutes(
         await storage.updateUserBalance(task.workerId, task.price);
       }
 
+      // Race-for-bonus: если задача журнальная и с премией, помечаем
+      // sibling-задачи (тот же documentId+kind, другие воркеры,
+      // невыполненные) как «забранные» победителем — они переедут в
+      // раздел «Сделано другими» в дашборде.
+      const journalLink = parseJournalLink(task.journalLink);
+      const hasBonus = (task.price ?? 0) > 0 ||
+        (journalLink?.bonusAmountKopecks ?? 0) > 0;
+      if (
+        journalLink &&
+        hasBonus &&
+        task.workerId &&
+        !journalLink.isFreeText
+      ) {
+        try {
+          const claimed = await storage.claimSiblingTasks({
+            sourceTaskId: task.id,
+            documentId: journalLink.documentId,
+            journalKind: journalLink.kind,
+            claimedByWorkerId: task.workerId,
+            companyId: task.companyId ?? null,
+            completedAt: Math.floor(Date.now() / 1000),
+          });
+          if (claimed > 0) {
+            console.log(
+              `[claim] task ${task.id} claimed ${claimed} sibling(s) for ${journalLink.kind}/${journalLink.documentId}`
+            );
+          }
+        } catch (claimErr) {
+          // Не валим основной /complete если claim не прошёл — задача
+          // выполнена, баланс начислен; sibling-claim это «приятный
+          // бонус» UX'а, а не critical path.
+          console.error("[claim] failed", claimErr);
+        }
+      }
+
       // Отправляем email на email компании с прикрепленными фото (если есть)
       const worker = task.workerId ? await storage.getUserById(task.workerId) : null;
       const workerName = worker?.name || worker?.phone || "Неизвестный";

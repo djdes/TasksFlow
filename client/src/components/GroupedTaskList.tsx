@@ -9,6 +9,7 @@ import {
   Coins,
   Copy,
   Edit2,
+  Lock,
   Sparkles,
   Tag,
   Trash2,
@@ -34,6 +35,10 @@ const WEEK_DAY_SHORT_NAMES: Record<number, string> = {
 type Props = {
   activeTasks: Task[];
   completedTasks: Task[];
+  /** Задачи, выполненные другим сотрудником в рамках race-for-bonus
+   *  (claimedByWorkerId !== null). Текущему пользователю эти задачи
+   *  выполнить уже нельзя — показываем как «архив», без действий. */
+  claimedByOthersTasks?: Task[];
   isAdmin: boolean;
   getUserInitials: (workerId: number | null) => string;
   getUserName: (workerId: number | null) => string;
@@ -56,6 +61,7 @@ export function GroupedTaskList(props: Props) {
   const {
     activeTasks,
     completedTasks,
+    claimedByOthersTasks = [],
     isAdmin,
     getUserInitials,
     getUserName,
@@ -74,8 +80,13 @@ export function GroupedTaskList(props: Props) {
     () => groupTasksByDate(completedTasks, "completedAt"),
     [completedTasks]
   );
+  const claimedGroups = useMemo(
+    () => groupTasksByDate(claimedByOthersTasks, "completedAt"),
+    [claimedByOthersTasks]
+  );
 
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [claimedOpen, setClaimedOpen] = useState(false);
 
   function renderTaskCard(task: Task) {
     const isCompleted = Boolean(task.isCompleted);
@@ -211,7 +222,48 @@ export function GroupedTaskList(props: Props) {
     );
   }
 
-  function renderDay(day: DayGroup) {
+  function renderClaimedCard(task: Task) {
+    const claimedByWorkerId =
+      (task as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null;
+    const claimerName = getUserName(claimedByWorkerId);
+    const claimerInitials = getUserInitials(claimedByWorkerId);
+    const journalBonus = getJournalBonus(task as { journalLink?: string | null });
+
+    return (
+      <div key={task.id} className="task-card task-card--claimed">
+        <div className="flex items-start gap-3">
+          <div className="task-checkbox task-checkbox--claimed">
+            <Lock className="w-4 h-4" />
+          </div>
+          <div className="task-content">
+            <h3 className="task-title">{task.title}</h3>
+            <div className="task-meta">
+              <div className="task-badge claimed">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Сделал {claimerName}</span>
+              </div>
+              {journalBonus !== null && (
+                <div className="task-badge claimed-bonus">
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>−{journalBonus} ₽</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="worker-avatar worker-avatar--sm" title={claimerName}>
+              {claimerInitials}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderDay(
+    day: DayGroup,
+    cardRenderer: (task: Task) => JSX.Element = renderTaskCard
+  ) {
     return (
       <div key={day.dayKey} className="group-day">
         <div
@@ -222,7 +274,7 @@ export function GroupedTaskList(props: Props) {
           <span className="group-day-label">{day.dayLabel}</span>
           <span className="group-day-count">{day.tasks.length}</span>
         </div>
-        <div className="task-list">{day.tasks.map(renderTaskCard)}</div>
+        <div className="task-list">{day.tasks.map(cardRenderer)}</div>
       </div>
     );
   }
@@ -239,7 +291,10 @@ export function GroupedTaskList(props: Props) {
    * keep the tree uncontrolled (native browser state), we use defaultOpen
    * via `open` only on initial render.
    */
-  function renderYearGroup(year: YearGroup) {
+  function renderYearGroup(
+    year: YearGroup,
+    cardRenderer: (task: Task) => JSX.Element = renderTaskCard
+  ) {
     return (
       <details
         key={year.yearKey}
@@ -264,7 +319,7 @@ export function GroupedTaskList(props: Props) {
                 <span className="group-month-count">{month.totalTasks}</span>
               </summary>
               <div className="group-month-body">
-                {month.days.map(renderDay)}
+                {month.days.map((day) => renderDay(day, cardRenderer))}
               </div>
             </details>
           ))}
@@ -275,6 +330,8 @@ export function GroupedTaskList(props: Props) {
 
   const showActiveEmpty = activeGroups.length === 0;
   const showCompletedEmpty = completedGroups.length === 0;
+  const hasClaimed = claimedByOthersTasks.length > 0;
+  const showClaimedEmpty = claimedGroups.length === 0;
 
   return (
     <div className="grouped-task-list">
@@ -290,7 +347,7 @@ export function GroupedTaskList(props: Props) {
             Все задачи на сегодня закрыты — респект!
           </div>
         ) : (
-          activeGroups.map(renderYearGroup)
+          activeGroups.map((g) => renderYearGroup(g))
         )}
       </section>
 
@@ -316,10 +373,41 @@ export function GroupedTaskList(props: Props) {
               Выполненных пока нет — будут появляться здесь по дням.
             </div>
           ) : (
-            completedGroups.map(renderYearGroup)
+            completedGroups.map((g) => renderYearGroup(g))
           )
         ) : null}
       </section>
+
+      {hasClaimed && (
+        <section className="grouped-section grouped-section--claimed">
+          <button
+            type="button"
+            onClick={() => setClaimedOpen((v) => !v)}
+            className="grouped-section-header grouped-section-header--clickable"
+          >
+            <ChevronDown
+              className={`group-chevron w-4 h-4 ${
+                claimedOpen ? "" : "group-chevron--collapsed"
+              }`}
+            />
+            <Lock className="w-4 h-4 grouped-section-icon" />
+            <h2 className="grouped-section-title">Сделано другими</h2>
+            <span className="grouped-section-count">
+              {claimedByOthersTasks.length}
+            </span>
+          </button>
+          {claimedOpen ? (
+            showClaimedEmpty ? (
+              <div className="grouped-empty">
+                Тут появятся задачи, которые забрал другой сотрудник
+                раньше тебя — премию получает первый.
+              </div>
+            ) : (
+              claimedGroups.map((g) => renderYearGroup(g, renderClaimedCard))
+            )
+          ) : null}
+        </section>
+      )}
     </div>
   );
 }

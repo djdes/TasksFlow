@@ -27,6 +27,14 @@ export const wesetupJournalLinkSchema = z.object({
   label: z.string().optional().nullable(),
   /** Отличает свободную журнальную задачу от привязки к adapter row. */
   isFreeText: z.boolean().optional(),
+  /**
+   * Сумма премии за выполнение в копейках. Когда > 0 и задача
+   * fan-out-нута на нескольких сотрудников — это «race-for-bonus»:
+   * первый кто выполнит, забирает премию, остальные получают
+   * `claimedByWorkerId` и уезжают в «Сделано другими» в Dashboard.
+   * Опционально для совместимости со старыми задачами без этого поля.
+   */
+  bonusAmountKopecks: z.number().int().nonnegative().optional(),
 });
 
 export const journalLinkSchema = wesetupJournalLinkSchema;

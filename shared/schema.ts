@@ -59,6 +59,14 @@ export const tasks = mysqlTable("tasks", {
   // predating this migration get 0 which the client renders as «раньше».
   createdAt: int("created_at").notNull().default(0),
   completedAt: int("completed_at"),
+  // ID воркера, который «забрал» эту задачу выполнив свой
+  // sibling-таск (то же documentId+kind+день, см. journalLink).
+  // Когда задача с премией fan-out-нута на N человек, первый кто
+  // выполнит — у остальных N-1 этот столбец заполняется его id, а
+  // isCompleted ставится в true (без начисления премии им).
+  // Карточки с claimedByWorkerId уезжают в раздел «Сделано другими».
+  // NULL = выполнено самостоятельно (или не выполнено).
+  claimedByWorkerId: int("claimed_by_worker_id"),
 });
 
 export const insertUserSchema = z.object({

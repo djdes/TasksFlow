@@ -616,6 +616,21 @@
     color: #b45309;
   }
 
+  /* «Сделал коллега» — нейтральный бейдж имени забравшего, без яркого
+     акцента: задача не твоя, премию ты не получишь. Подсказка, не
+     подсветка. */
+  .task-badge.claimed {
+    @apply bg-slate-100 text-slate-600;
+  }
+  /* Минус-сумма — красно-оранжевый намёк «не твои деньги». Чисто
+     визуальная семантика, никакой реальной транзакции. */
+  .task-badge.claimed-bonus {
+    @apply bg-rose-50 text-rose-600;
+  }
+  .task-badge.claimed-bonus svg {
+    color: #f43f5e;
+  }
+
   .task-badge.category {
     @apply bg-blue-100 text-blue-700;
   }
@@ -1289,6 +1304,62 @@
 .grouped-section--completed {
   background: rgba(248, 249, 253, 0.85);
   animation-delay: 80ms;
+}
+
+/* «Сделано другими» — отдельный архив для race-for-bonus задач,
+   которые забрал коллега. Холоднее обычного «Выполнено», чтобы
+   не путалось со своими успехами. */
+.grouped-section--claimed {
+  background: rgba(241, 245, 249, 0.7);
+  animation-delay: 120ms;
+}
+
+.grouped-section--claimed .grouped-section-count {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.grouped-section--claimed .grouped-section-icon {
+  color: #94a3b8;
+}
+
+/* Disabled-стиль карточки, забранной коллегой: дим, никаких
+   action-ов, чек-слот заменён замком. */
+.task-card--claimed {
+  opacity: 0.72;
+  cursor: default;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+.task-card--claimed:hover {
+  transform: none;
+  box-shadow: none;
+}
+.task-card--claimed .task-title {
+  color: #475569;
+}
+
+.task-checkbox--claimed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #64748b;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.worker-avatar--sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .grouped-section-header {
