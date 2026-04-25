@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
+  BookOpen,
   Calendar,
   CalendarDays,
   Camera,
@@ -144,6 +145,14 @@ export function GroupedTaskList(props: Props) {
     const journalBonus = !isCompleted
       ? getJournalBonus(task as unknown as { journalLink?: string | null })
       : null;
+    // Журнальная задача (привязана к WeSetup-документу) — даёт
+    // воркеру понять «клик откроет журнальную форму», а не диалог.
+    // Раньше клик по карточке всегда открывал TaskViewDialog, что
+    // путало: кружок вёл в журнал, блок — в «другую форму».
+    const isJournal = Boolean(
+      (task as { journalLink?: string | null }).journalLink ||
+        (categoryValue ?? "").startsWith("WeSetup · ")
+    );
 
     return (
       <div
@@ -169,6 +178,15 @@ export function GroupedTaskList(props: Props) {
                     {getUserInitials(task.workerId)}
                   </div>
                   <span>{getUserName(task.workerId)}</span>
+                </div>
+              )}
+              {isJournal && !isCompleted && (
+                <div
+                  className="task-badge journal"
+                  title="Журнальная форма WeSetup"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Журнал</span>
                 </div>
               )}
               {requiresPhoto && !isCompleted && (
@@ -247,8 +265,17 @@ export function GroupedTaskList(props: Props) {
                 </button>
               </div>
             ) : (
-              <div className="task-arrow">
-                <ChevronRight className="w-5 h-5" />
+              <div
+                className={`task-arrow ${
+                  isJournal && !isCompleted ? "task-arrow--journal" : ""
+                }`}
+                aria-hidden="true"
+              >
+                {isJournal && !isCompleted ? (
+                  <BookOpen className="w-5 h-5" />
+                ) : (
+                  <ChevronRight className="w-5 h-5" />
+                )}
               </div>
             )}
           </div>

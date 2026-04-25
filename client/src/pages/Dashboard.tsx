@@ -193,7 +193,53 @@ export default function Dashboard() {
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
 
+  /**
+   * Открыть журнальную форму на стороне WeSetup (или fallback inline).
+   * Используется и при клике по карточке, и при клике по кружку
+   * для journal-задач — UX единообразный, не зависит от того, куда
+   * именно ткнул сотрудник.
+   */
+  const openJournalForm = async (taskId: number) => {
+    try {
+      const response = await fetch(
+        `/api/wesetup/task-fill-url?taskId=${taskId}`,
+        { credentials: "include" }
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.url) {
+        throw new Error(data?.message || `task-fill-url ${response.status}`);
+      }
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error("[dashboard] task-fill-url failed", err);
+      // Fallback — inline-форма, чтобы сотрудник всё равно мог
+      // выполнить задачу, даже если WeSetup временно недоступен.
+      setJournalTaskId(taskId);
+    }
+  };
+
+  const isJournalTask = (task: typeof tasks[0]): boolean => {
+    const category = (task as { category?: string | null }).category ?? "";
+    const hasJournalLink = Boolean(
+      (task as { journalLink?: string | null }).journalLink
+    );
+    return hasJournalLink || category.startsWith("WeSetup · ");
+  };
+
+  /**
+   * Клик по самой карточке. Раньше всегда открывал TaskViewDialog —
+   * для журнальных задач это была «не та» форма, у воркера сбивалось
+   * представление: кружок ведёт на одно, блок на другое. Теперь:
+   *   • Журнальная незакрытая задача → журнальная форма (то же что
+   *     даёт кружок) — единый контракт «один тап = одно действие».
+   *   • Свободная незакрытая задача → диалог (там photo + comment).
+   *   • Любая закрытая задача → диалог (просмотр / отмена).
+   */
   const handleTaskClick = (task: typeof tasks[0]) => {
+    if (!task.isCompleted && isJournalTask(task)) {
+      void openJournalForm(task.id);
+      return;
+    }
     setSelectedTask(task);
     setIsTaskDialogOpen(true);
   };
@@ -210,31 +256,8 @@ export default function Dashboard() {
       return;
     }
 
-    // Journal-bound tasks: redirect the worker to WeSetup's public
-    // `/task-fill/<taskId>` page — there they see the SAME add-row
-    // form admins use inside the WeSetup journal. No session
-    // needed, auth via HMAC token we ask the backend to mint now.
-    const category = (task as { category?: string | null }).category ?? "";
-    const hasJournalLink = Boolean(
-      (task as { journalLink?: string | null }).journalLink
-    );
-    if (hasJournalLink || category.startsWith("WeSetup · ")) {
-      try {
-        const response = await fetch(
-          `/api/wesetup/task-fill-url?taskId=${taskId}`,
-          { credentials: "include" }
-        );
-        const data = await response.json().catch(() => null);
-        if (!response.ok || !data?.url) {
-          throw new Error(data?.message || `task-fill-url ${response.status}`);
-        }
-        window.location.href = data.url;
-      } catch (err: any) {
-        console.error("[dashboard] task-fill-url failed", err);
-        // Fallback — just open the old inline form so the worker can
-        // still complete the task even if WeSetup is down.
-        setJournalTaskId(taskId);
-      }
+    if (isJournalTask(task)) {
+      await openJournalForm(taskId);
       return;
     }
 
@@ -332,105 +355,79 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Dropdown menu — плавный spring-вход с лёгким стаггером
-            для пунктов, чтобы открытие меню ощущалось «дорого». */}
+        {/* Dropdown menu — AnimatePresence только для exit-анимации;
+            вход и transform отдан CSS-keyframe `dropdown-in`, чтобы
+            не было конфликта inline-transform с CSS-animation. */}
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
               key="menu"
               className="dropdown-menu"
-              initial={{ opacity: 0, y: -8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              transition={{
-                type: "spring",
-                stiffness: 420,
-                damping: 32,
-                mass: 0.6,
-              }}
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.16 } }}
             >
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.04 } },
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setLocation("/dashboard");
                 }}
               >
-                {[
-                  {
-                    label: "Главная",
-                    icon: Home,
-                    onClick: () => {
-                      setIsMenuOpen(false);
-                      setLocation("/dashboard");
-                    },
-                    show: true,
-                  },
-                  {
-                    label: "Создать задачу",
-                    icon: Plus,
-                    onClick: () => {
+                <Home className="w-5 h-5 text-primary" />
+                <span className="font-medium">Главная</span>
+              </button>
+              {user.isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    className="dropdown-item w-full"
+                    onClick={() => {
                       setIsMenuOpen(false);
                       setLocation("/tasks/new");
-                    },
-                    show: Boolean(user.isAdmin),
-                  },
-                  {
-                    label: "Сотрудники",
-                    icon: User,
-                    onClick: () => {
+                    }}
+                  >
+                    <Plus className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Создать задачу</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item w-full"
+                    onClick={() => {
                       setIsMenuOpen(false);
                       setLocation("/admin/users");
-                    },
-                    show: Boolean(user.isAdmin),
-                  },
-                  {
-                    label: "Настройки",
-                    icon: Settings,
-                    onClick: () => {
+                    }}
+                  >
+                    <User className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Сотрудники</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item w-full"
+                    onClick={() => {
                       setIsMenuOpen(false);
                       setLocation("/admin/settings");
-                    },
-                    show: Boolean(user.isAdmin),
-                  },
-                ]
-                  .filter((item) => item.show)
-                  .map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <motion.button
-                        key={item.label}
-                        type="button"
-                        className="dropdown-item w-full"
-                        onClick={item.onClick}
-                        variants={{
-                          hidden: { opacity: 0, x: -6 },
-                          visible: { opacity: 1, x: 0 },
-                        }}
-                      >
-                        <Icon className="w-5 h-5 text-primary" />
-                        <span className="font-medium">{item.label}</span>
-                      </motion.button>
-                    );
-                  })}
-                <div className="dropdown-divider" />
-                <motion.button
-                  type="button"
-                  className="dropdown-item danger w-full"
-                  variants={{
-                    hidden: { opacity: 0, x: -6 },
-                    visible: { opacity: 1, x: 0 },
-                  }}
-                  onClick={async () => {
-                    setIsMenuOpen(false);
-                    await logout();
-                    setLocation("/");
-                  }}
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span className="font-medium">Выход</span>
-                </motion.button>
-              </motion.div>
+                    }}
+                  >
+                    <Settings className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Настройки</span>
+                  </button>
+                </>
+              )}
+              <div className="dropdown-divider" />
+              <button
+                type="button"
+                className="dropdown-item danger w-full"
+                onClick={async () => {
+                  setIsMenuOpen(false);
+                  await logout();
+                  setLocation("/");
+                }}
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-medium">Выход</span>
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
