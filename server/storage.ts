@@ -30,6 +30,7 @@ export interface IStorage {
   getUserById(id: number): Promise<User | undefined>;
   getAllUsers(companyId?: number): Promise<User[]>;
   updateUser(id: number, user: UpdateUser): Promise<User | undefined>;
+  setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined>;
   updateUserBalance(id: number, amount: number): Promise<User | undefined>;
   resetUserBalance(id: number): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
@@ -151,6 +152,12 @@ export class DatabaseStorage implements IStorage {
       phone: normalizedPhone,
       name: updateUser.name ?? null,
     }).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined> {
+    await db.update(users).set({ isAdmin }).where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }

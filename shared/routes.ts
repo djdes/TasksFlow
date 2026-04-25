@@ -48,7 +48,11 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/users',
-      input: insertUserSchema.pick({ phone: true, name: true }),
+      input: insertUserSchema
+        .pick({ phone: true, name: true, isAdmin: true })
+        .extend({
+          role: z.enum(["admin", "manager", "employee", "worker"]).optional(),
+        }),
       responses: {
         201: z.custom<typeof users.$inferSelect>(),
         400: errorSchemas.validation,

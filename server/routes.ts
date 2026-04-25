@@ -880,25 +880,34 @@ export async function registerRoutes(
   app.post(api.users.create.path, requireAdminOrApiKey, async (req, res) => {
     try {
       const input = api.users.create.input.parse(req.body);
+      const requestedAdmin =
+        input.isAdmin === true ||
+        input.role === "admin" ||
+        input.role === "manager";
 
       // Проверяем, существует ли пользователь
       const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
+
       const existingUser = await storage.getUserByPhone(normalizedPhone);
       if (existingUser) {
+        if (existingUser.companyId === companyId && requestedAdmin && !existingUser.isAdmin) {
+          const promoted = await storage.setUserAdmin(existingUser.id, true);
+          return res.json(promoted || existingUser);
+        }
         return res.status(400).json({
           message: "Пользователь с таким номером уже существует",
           field: "phone",
         });
       }
 
-      const companyId = await getCompanyIdFromReq(req);
-      if (!companyId) {
-        return res.status(400).json({ message: "Company не определена" });
-      }
       const user = await storage.createUser({
-        ...input,
         phone: normalizedPhone,
-        isAdmin: false, // API всегда создаёт только обычных сотрудников.
+        name: input.name,
+        isAdmin: requestedAdmin,
         companyId,
       });
 
