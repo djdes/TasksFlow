@@ -10,6 +10,7 @@ import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { StatHero } from "@/components/StatHero";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
 import { api } from "@shared/routes";
 import type { Task } from "@shared/schema";
@@ -439,6 +440,11 @@ export default function Dashboard() {
                 </button>
               </>
             )}
+            <div className="dropdown-divider" />
+            <div className="dropdown-theme-row">
+              <span className="dropdown-theme-label">Тема</span>
+              <ThemeSwitcher compact />
+            </div>
             <div className="dropdown-divider" />
             <button
               type="button"

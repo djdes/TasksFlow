@@ -13,12 +13,14 @@ import {
   Link2,
   Loader2,
   Mail,
+  Palette,
   PlugZap,
   RefreshCw,
   Save,
   ShieldCheck,
   User,
 } from "lucide-react";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -273,6 +275,28 @@ export default function CompanySettings() {
         </div>
 
         <div className="space-y-6">
+          {/* Тема оформления — личная настройка устройства, живёт в
+              localStorage. Не привязана к компании, поэтому отдельным
+              блоком сверху. По умолчанию = «Авто» (как в браузере). */}
+          <div className="content-panel">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="flex items-center gap-3">
+                <div className="page-icon" style={{ width: 40, height: 40 }}>
+                  <Palette className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold">Тема оформления</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Тёмная экономит батарею и легче глазам вечером
+                  </p>
+                </div>
+              </div>
+              <div className="ml-auto">
+                <ThemeSwitcher />
+              </div>
+            </div>
+          </div>
+
           {/* Настройки компании */}
           <div className="content-panel">
             <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">

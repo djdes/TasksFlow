@@ -1969,3 +1969,550 @@ details:not([open]) > summary .group-chevron {
     transform: none !important;
   }
 }
+
+/* Theme-row внутри dropdown-menu — лейбл «Тема» + компактные пилюли. */
+.dropdown-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+}
+.dropdown-theme-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.dark .dropdown-theme-label {
+  color: #a8aecf;
+}
+
+/* ===== THEME SWITCHER (3-pill переключатель) =====
+   Используется в меню и в CompanySettings. Активная пилюля
+   primary, неактивные — почти прозрачные. */
+.theme-switcher {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+.theme-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.theme-switcher-btn:hover {
+  color: #0f172a;
+  background: rgba(15, 23, 42, 0.04);
+}
+.theme-switcher-btn.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, #6f7eff, #5566f6);
+  box-shadow: 0 4px 12px -4px rgba(85, 102, 246, 0.55);
+}
+.theme-switcher--compact .theme-switcher-btn {
+  padding: 6px 8px;
+}
+
+/* ============================================================
+   ===                  DARK THEME OVERRIDES                ===
+   ============================================================
+   Все переопределения тёмной темы собраны единым блоком в конце
+   файла, чтобы:
+     • Не трогать существующие light-стили (нужны как «прошлый
+       дизайн», который пользователь просил оставить)
+     • Иметь один очевидный point-of-truth для тёмного варианта
+     • Дёшево добавлять/удалять полностью
+
+   Активируется классом `.dark` на <html> (см. ThemeProvider +
+   anti-flash <script> в client/index.html).
+
+   Палитра:
+     bg-base       #0b1024  глубокий night-sky фон страницы
+     bg-surface    #161c33  обычная карточка, чуть приподнятая
+     bg-elevated   #1e2547  hover/selected, ещё выше
+     bg-soft       #232b52  для активных pill'ов и аккордеонов
+     border-soft   rgba(255,255,255,0.08)
+     border-strong rgba(255,255,255,0.16)
+     text-primary  #e9ecf6  off-white, мягко глазам
+     text-secondary #a8aecf
+     text-muted    #6b7395
+     accent        #6f7eff  чуть светлее indigo для контраста
+============================================================ */
+
+.dark body,
+.dark #root {
+  background: #0b1024;
+  color: #e9ecf6;
+}
+
+/* Header — вместо bg-primary с mesh оставляем тот же gradient mesh,
+   но чуть более насыщенный; работает и в light, и в dark. Тёмная
+   тема просто получает чуть другие тени. */
+.dark .app-header {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 14px 36px -22px rgba(0, 0, 0, 0.85);
+}
+
+/* Header-button (refresh, hamburger) — на тёмном header'е остаются
+   светлыми, но фон при hover мягче. */
+.dark .header-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* App-content background и текст */
+.dark .app-layout {
+  background: #0b1024;
+  color: #e9ecf6;
+}
+
+/* Stat-hero плитки */
+.dark .stat-tile {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.015)
+  );
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 24px -16px rgba(0, 0, 0, 0.55);
+}
+.dark .stat-tile-label {
+  color: #a8aecf;
+}
+.dark .stat-tile-value {
+  color: #e9ecf6;
+}
+.dark .stat-tile-suffix,
+.dark .stat-tile-hint {
+  color: #8b91b3;
+}
+/* В тёмной теме градиент-fill плитки делаем более насыщенным,
+   опираясь на CSS-варианты shadcn primary/success/amber. */
+.dark .stat-tile.bg-gradient-to-br.from-primary\/12 {
+  background: linear-gradient(
+    180deg,
+    rgba(111, 126, 255, 0.18),
+    rgba(111, 126, 255, 0.06)
+  );
+}
+.dark .stat-tile.bg-gradient-to-br.from-emerald-500\/12 {
+  background: linear-gradient(
+    180deg,
+    rgba(52, 211, 153, 0.18),
+    rgba(52, 211, 153, 0.06)
+  );
+}
+.dark .stat-tile.bg-gradient-to-br.from-amber-400\/15 {
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.22),
+    rgba(251, 191, 36, 0.08)
+  );
+}
+.dark .stat-tile.bg-gradient-to-br.from-slate-200\/40 {
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.16),
+    rgba(148, 163, 184, 0.06)
+  );
+}
+
+/* Filters bar (поиск + категория + исполнитель) */
+.dark .filters-bar input,
+.dark .filters-bar [role="combobox"] {
+  background: #161c33 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9ecf6 !important;
+}
+.dark .filters-bar input::placeholder {
+  color: #6b7395;
+}
+
+/* Task cards */
+.dark .task-card {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e9ecf6;
+}
+.dark .task-card:hover {
+  background: #1c2340;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+.dark .task-card.completed {
+  background: #11162a;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.dark .task-title {
+  color: #e9ecf6;
+}
+.dark .task-card.completed .task-title {
+  color: #6b7395;
+}
+
+/* Task badges — нейтральные тёмные, акценты сохраняют семантику */
+.dark .task-badge.price {
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
+}
+.dark .task-badge.category {
+  background: rgba(99, 102, 241, 0.18);
+  color: #c4b5fd;
+}
+.dark .task-badge.photo {
+  background: rgba(251, 146, 60, 0.18);
+  color: #fdba74;
+}
+.dark .task-badge.schedule {
+  background: rgba(255, 255, 255, 0.06);
+  color: #a8aecf;
+}
+.dark .task-badge.bonus {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1a1505;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 1px 8px -2px rgba(251, 191, 36, 0.55);
+}
+.dark .task-badge.bonus svg {
+  color: #1a1505;
+}
+.dark .task-badge.journal {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c4b5fd;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+.dark .task-badge.journal svg {
+  color: #c4b5fd;
+}
+.dark .task-arrow {
+  background: rgba(255, 255, 255, 0.05);
+  color: #6b7395;
+}
+.dark .task-arrow--journal {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c4b5fd;
+}
+.dark .task-badge.claimed {
+  background: rgba(255, 255, 255, 0.08);
+  color: #a8aecf;
+}
+.dark .task-badge.claimed-bonus {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+}
+
+/* Worker info на карточке */
+.dark .worker-info {
+  color: #a8aecf;
+}
+.dark .worker-avatar {
+  background: linear-gradient(135deg, #6f7eff, #5566f6);
+  color: #fff;
+}
+
+/* Task actions (admin) */
+.dark .task-action-btn {
+  color: #a8aecf;
+}
+.dark .task-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e9ecf6;
+}
+.dark .task-action-btn.delete:hover {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fca5a5;
+}
+
+/* Grouped sections */
+.dark .grouped-section {
+  background: rgba(22, 28, 51, 0.7);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.02) inset;
+}
+.dark .grouped-section--completed {
+  background: rgba(17, 22, 42, 0.8);
+}
+.dark .grouped-section--claimed {
+  background: rgba(13, 17, 33, 0.8);
+}
+.dark .grouped-section-title {
+  color: #e9ecf6;
+}
+.dark .grouped-section-count {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c4b5fd;
+}
+.dark .grouped-section--completed .grouped-section-count {
+  background: rgba(255, 255, 255, 0.08);
+  color: #a8aecf;
+}
+.dark .grouped-section--claimed .grouped-section-count {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8b91b3;
+}
+.dark .grouped-section--claimed .grouped-section-icon {
+  color: #6b7395;
+}
+.dark .grouped-empty {
+  color: #8b91b3;
+}
+
+/* Group-by-mode toggle (между «По дате» и «По сотруднику») */
+.dark .group-mode-toggle {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.32);
+  color: #c4b5fd;
+}
+.dark .group-mode-toggle:hover {
+  background: rgba(99, 102, 241, 0.28);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+/* Worker section в режиме «по сотруднику» */
+.dark .worker-section {
+  background: rgba(22, 28, 51, 0.55);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .worker-section[open] {
+  background: #161c33;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 4px 16px -10px rgba(0, 0, 0, 0.55);
+}
+.dark .worker-section-name {
+  color: #e9ecf6;
+}
+.dark .worker-section-count {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c4b5fd;
+}
+
+/* Group year/month/day заголовки */
+.dark .group-year-header,
+.dark .group-month-header,
+.dark .group-day-header {
+  color: #a8aecf;
+}
+.dark .group-year-label,
+.dark .group-month-label,
+.dark .group-day-label {
+  color: #e9ecf6;
+}
+.dark .group-day-header--today .group-day-label {
+  color: #c4b5fd;
+}
+.dark .group-year-count,
+.dark .group-month-count,
+.dark .group-day-count {
+  background: rgba(255, 255, 255, 0.06);
+  color: #a8aecf;
+}
+
+/* Claimed cards (выполнено коллегой) */
+.dark .task-card--claimed {
+  background: rgba(13, 17, 33, 0.6);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+.dark .task-card--claimed .task-title {
+  color: #6b7395;
+}
+.dark .task-checkbox--claimed {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #6b7395;
+}
+.dark .worker-avatar--sm {
+  background: rgba(255, 255, 255, 0.08);
+  color: #a8aecf;
+}
+.dark .worker-avatar--unassigned {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1a1505;
+}
+
+/* Task checkbox */
+.dark .task-checkbox {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.dark .task-checkbox.checked {
+  background: #6f7eff;
+  border-color: #6f7eff;
+}
+
+/* Dropdown menu */
+.dark .dropdown-menu {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e9ecf6;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 16px 48px -16px rgba(0, 0, 0, 0.7);
+}
+.dark .dropdown-item {
+  color: #e9ecf6;
+}
+.dark .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.dark .dropdown-item.danger {
+  color: #fca5a5;
+}
+.dark .dropdown-item.danger:hover {
+  background: rgba(244, 63, 94, 0.15);
+}
+.dark .dropdown-item svg.text-primary {
+  color: #c4b5fd !important;
+}
+.dark .dropdown-divider {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Bottom nav (на мобильных, если живёт где-то) */
+.dark .bottom-nav {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .bottom-nav-item {
+  color: #6b7395;
+}
+.dark .bottom-nav-item.active {
+  color: #c4b5fd;
+}
+
+/* Empty state */
+.dark .empty-state-icon {
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(111, 126, 255, 0.2),
+    rgba(122, 92, 255, 0.08)
+  );
+  box-shadow: 0 0 0 1px rgba(111, 126, 255, 0.2);
+  color: #c4b5fd;
+}
+.dark .empty-state-icon svg {
+  color: #c4b5fd;
+}
+.dark .empty-state-icon::after {
+  border-color: rgba(111, 126, 255, 0.32);
+}
+.dark .empty-state-title {
+  color: #e9ecf6;
+}
+.dark .empty-state-text {
+  color: #a8aecf;
+}
+.dark .empty-state-button {
+  background: #5566f6;
+}
+.dark .empty-state-button:hover {
+  background: #4a5bf0;
+}
+
+/* FAB */
+.dark .fab-button {
+  background: linear-gradient(135deg, #6f7eff, #5566f6);
+  box-shadow:
+    0 16px 32px -10px rgba(85, 102, 246, 0.55),
+    0 4px 12px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Bonus badge в шапке */
+.dark .bonus-badge {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.32),
+    rgba(245, 158, 11, 0.18)
+  );
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.dark .bonus-info-dialog {
+  background: #161c33;
+  color: #e9ecf6;
+}
+
+/* Auth screen (Login / Register) */
+.dark .auth-screen {
+  background: linear-gradient(180deg, #0b1024 0%, #161c33 100%);
+}
+.dark .auth-card {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #e9ecf6;
+}
+.dark .auth-title {
+  color: #e9ecf6;
+}
+.dark .auth-card label,
+.dark .auth-card .text-foreground {
+  color: #e9ecf6;
+}
+.dark .auth-card input {
+  background: #0d1228;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e9ecf6;
+}
+.dark .auth-card input:focus {
+  border-color: #6f7eff;
+}
+.dark .auth-card .ozon-btn-primary {
+  background: linear-gradient(135deg, #6f7eff, #5566f6);
+}
+.dark .auth-card .text-muted-foreground {
+  color: #8b91b3;
+}
+
+/* Dialogs (TaskViewDialog, DuplicateTaskDialog, BonusInfoDialog) */
+.dark [role="dialog"] {
+  background: #161c33;
+  color: #e9ecf6;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Tab indicators в nested filter UI */
+.dark [role="combobox"] {
+  background: #161c33 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9ecf6 !important;
+}
+
+/* Progress bar */
+.dark .progress-card {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .progress-bar-container {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Theme switcher в dark-теме */
+.dark .theme-switcher {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.dark .theme-switcher-btn {
+  color: #a8aecf;
+}
+.dark .theme-switcher-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e9ecf6;
+}
+
+/* ============================================================
+   ===              END DARK THEME OVERRIDES                ===
+   ============================================================ */
+
