@@ -289,8 +289,7 @@ export default function Dashboard() {
       <header className="app-header relative">
         <div className="app-header-content">
           <div className="flex items-center gap-3">
-            {/* Menu button for non-admin */}
-            {!user.isAdmin && (
+            {/* Menu button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="header-button"
@@ -298,7 +297,6 @@ export default function Dashboard() {
               >
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-            )}
 
             {/* Refresh button */}
             <button
@@ -332,8 +330,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Dropdown menu for non-admin */}
-        {!user.isAdmin && isMenuOpen && (
+        {/* Dropdown menu */}
+        {isMenuOpen && (
           <div className="dropdown-menu animate-fade-in">
             <button
               className="dropdown-item w-full"
@@ -345,6 +343,40 @@ export default function Dashboard() {
               <Home className="w-5 h-5 text-primary" />
               <span className="font-medium">Главная</span>
             </button>
+            {user.isAdmin && (
+              <>
+                <button
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/tasks/new");
+                  }}
+                >
+                  <Plus className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Создать задачу</span>
+                </button>
+                <button
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/users");
+                  }}
+                >
+                  <User className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Сотрудники</span>
+                </button>
+                <button
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/settings");
+                  }}
+                >
+                  <Settings className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Настройки</span>
+                </button>
+              </>
+            )}
             <div className="dropdown-divider" />
             <button
               className="dropdown-item danger w-full"
