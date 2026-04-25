@@ -405,7 +405,12 @@
       ),
       linear-gradient(135deg, #4a5bf0 0%, #5566f6 50%, #6b7af8 100%);
     position: relative;
-    overflow: hidden;
+    /* НЕ ставить overflow: hidden! Dropdown-menu — child этого
+       header'а с position:absolute и top: calc(100% + 8px), при
+       overflow:hidden он клипуется ЗА пределами header'а и
+       визуально становится невидимым. Декоративный grid-mesh
+       (::after) и так контейнерится своим mask-image, ему
+       overflow не нужен. */
   }
   .app-header::after {
     content: "";
