@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -382,82 +382,78 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Dropdown menu — AnimatePresence только для exit-анимации;
-            вход и transform отдан CSS-keyframe `dropdown-in`, чтобы
-            не было конфликта inline-transform с CSS-animation. */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              key="menu"
-              className="dropdown-menu"
-              initial={false}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -6, transition: { duration: 0.16 } }}
+        {/* Dropdown menu — простой conditional render. Раньше был
+            обёрнут в AnimatePresence+motion.div, но motion'овский
+            inline-style.opacity/transform конфликтовал с CSS-keyframe
+            `dropdown-in` так, что меню вообще не появлялось. Эту
+            обёртку дважды чинил, не помогало — целиком убрал. CSS
+            анимирует вход (180ms fade+slide), exit мгновенный — UX
+            небольшая потеря ради надёжности. */}
+        {isMenuOpen && (
+          <div className="dropdown-menu">
+            <button
+              type="button"
+              className="dropdown-item w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setLocation("/dashboard");
+              }}
             >
-              <button
-                type="button"
-                className="dropdown-item w-full"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setLocation("/dashboard");
-                }}
-              >
-                <Home className="w-5 h-5 text-primary" />
-                <span className="font-medium">Главная</span>
-              </button>
-              {user.isAdmin && (
-                <>
-                  <button
-                    type="button"
-                    className="dropdown-item w-full"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setLocation("/tasks/new");
-                    }}
-                  >
-                    <Plus className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Создать задачу</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="dropdown-item w-full"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setLocation("/admin/users");
-                    }}
-                  >
-                    <User className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Сотрудники</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="dropdown-item w-full"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setLocation("/admin/settings");
-                    }}
-                  >
-                    <Settings className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Настройки</span>
-                  </button>
-                </>
-              )}
-              <div className="dropdown-divider" />
-              <button
-                type="button"
-                className="dropdown-item danger w-full"
-                onClick={async () => {
-                  setIsMenuOpen(false);
-                  await logout();
-                  setLocation("/");
-                }}
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Выход</span>
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <Home className="w-5 h-5 text-primary" />
+              <span className="font-medium">Главная</span>
+            </button>
+            {user.isAdmin && (
+              <>
+                <button
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/tasks/new");
+                  }}
+                >
+                  <Plus className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Создать задачу</span>
+                </button>
+                <button
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/users");
+                  }}
+                >
+                  <User className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Сотрудники</span>
+                </button>
+                <button
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/settings");
+                  }}
+                >
+                  <Settings className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Настройки</span>
+                </button>
+              </>
+            )}
+            <div className="dropdown-divider" />
+            <button
+              type="button"
+              className="dropdown-item danger w-full"
+              onClick={async () => {
+                setIsMenuOpen(false);
+                await logout();
+                setLocation("/");
+              }}
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Выход</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
