@@ -337,7 +337,10 @@ export default function Dashboard() {
           <div className="dropdown-menu animate-fade-in">
             <button
               className="dropdown-item w-full"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => {
+                setIsMenuOpen(false);
+                setLocation("/dashboard");
+              }}
             >
               <Home className="w-5 h-5 text-primary" />
               <span className="font-medium">Главная</span>
@@ -345,9 +348,10 @@ export default function Dashboard() {
             <div className="dropdown-divider" />
             <button
               className="dropdown-item danger w-full"
-              onClick={() => {
+              onClick={async () => {
                 setIsMenuOpen(false);
-                logout();
+                await logout();
+                setLocation("/");
               }}
             >
               <LogOut className="w-5 h-5" />
