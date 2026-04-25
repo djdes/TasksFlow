@@ -84,11 +84,36 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
-  // Режим группировки списка для админа: по дате (default — старое
-  // поведение) или по сотруднику. Воркер видит только свои задачи,
-  // ему этот тогл не нужен. У админа дефолт включён, чтобы сразу
-  // видно было «у Иванова 3 невыполненных, у Петрова 5».
+  // Режим группировки списка для админа/руководителя: по дате
+  // (default — старое поведение) или по сотруднику. Воркер видит
+  // только свои задачи, ему этот тогл не нужен. У управленца дефолт
+  // включён, чтобы сразу видно было «у Иванова 3 невыполненных,
+  // у Петрова 5».
   const [groupByWorker, setGroupByWorker] = useState(true);
+
+  // Tier-3 модель прав:
+  //   • admin (isAdmin=true) — полный доступ, видит всё
+  //   • manager (managedWorkerIds задан) — видит свои+подчинённых,
+  //     может создавать/редактировать задачи в scope
+  //   • worker (managedWorkerIds=null) — только свои задачи, ничего
+  //     не создаёт/не правит
+  // managedWorkerIds лежит в user-record в TasksFlow и пушится с
+  // WeSetup из ManagerScope (см. /settings/staff-hierarchy на
+  // WeSetup-стороне).
+  const hasManagedWorkers = (() => {
+    if (!user) return false;
+    const raw = (user as { managedWorkerIds?: string | null })
+      .managedWorkerIds;
+    if (!raw) return false;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed);
+    } catch {
+      return false;
+    }
+  })();
+  const isManager = Boolean(user && !user.isAdmin && hasManagedWorkers);
+  const canManageTasks = Boolean(user?.isAdmin) || isManager;
 
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
@@ -404,19 +429,28 @@ export default function Dashboard() {
               <Home className="w-5 h-5 text-primary" />
               <span className="font-medium">Главная</span>
             </button>
+            {/* «Создать задачу» — admin + manager (руководитель
+                может создавать задачи своим подчинённым). Серверный
+                scope-check валидирует workerId на POST. */}
+            {canManageTasks && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setLocation("/tasks/new");
+                }}
+              >
+                <Plus className="w-5 h-5 text-primary" />
+                <span className="font-medium">Создать задачу</span>
+              </button>
+            )}
+            {/* «Сотрудники» и «Настройки компании» — только админ.
+                Руководителю эти страницы не нужны: списком своих
+                подчинённых он управляет на стороне WeSetup
+                (/settings/staff-hierarchy). */}
             {user.isAdmin && (
               <>
-                <button
-                  type="button"
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/tasks/new");
-                  }}
-                >
-                  <Plus className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Создать задачу</span>
-                </button>
                 <button
                   type="button"
                   className="dropdown-item w-full"
@@ -555,14 +589,14 @@ export default function Dashboard() {
               <Inbox className="w-12 h-12 text-gray-400" />
             </div>
             <h3 className="empty-state-title">
-              {user?.isAdmin ? "Нет задач" : "Задач на сегодня нет"}
+              {canManageTasks ? "Нет задач" : "Задач на сегодня нет"}
             </h3>
             <p className="empty-state-text">
-              {user?.isAdmin
+              {canManageTasks
                 ? "Создайте первую задачу для начала работы"
                 : "Отдохните или проверьте расписание позже"}
             </p>
-            {user?.isAdmin && (
+            {canManageTasks && (
               <button
                 onClick={() => setLocation("/tasks/new")}
                 className="empty-state-button"
@@ -585,8 +619,8 @@ export default function Dashboard() {
                 Boolean(t.isCompleted) &&
                 ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) !== null
             )}
-            isAdmin={Boolean(user?.isAdmin)}
-            groupByWorker={Boolean(user?.isAdmin) && groupByWorker}
+            isAdmin={canManageTasks}
+            groupByWorker={canManageTasks && groupByWorker}
             onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
             getUserInitials={getUserInitials}
             getUserName={getUserName}
@@ -605,9 +639,11 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* FAB for admin — spring entrance, активный pulse-glow,
-          tap-springback. Один CTA-якорь для главного действия. */}
-      {user?.isAdmin && filteredTasks.length > 0 && (
+      {/* FAB для admin/manager — spring entrance, pulse-glow,
+          tap-springback. Один CTA-якорь для создания задачи.
+          Руководитель сможет назначать только своим подчинённым
+          (server-side scope-check на POST /api/tasks). */}
+      {canManageTasks && filteredTasks.length > 0 && (
         <motion.button
           onClick={() => setLocation("/tasks/new")}
           className="fab-button"

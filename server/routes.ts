@@ -88,6 +88,62 @@ async function requireAdminOrApiKey(req: Request, res: Response, next: NextFunct
   return requireAdmin(req, res, next);
 }
 
+/**
+ * Аутентификация: API key, ИЛИ session admin, ИЛИ session non-admin
+ * с managedWorkerIds (т.е. руководитель). Используется на task
+ * create/update/delete — раньше требовал admin, но шеф-повар теперь
+ * может создавать задачи своим поварам и не может — техам.
+ *
+ * Конкретный scope-check (workerId in managed?) делается в самом
+ * хендлере, потому что только он знает payload. Здесь только
+ * фильтрует «совсем без прав на создание».
+ */
+async function requireAdminOrManagerOrApiKey(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (extractBearerKey(req)) {
+    return requireApiKey(req, res, next);
+  }
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Требуется авторизация" });
+  }
+  const user = await storage.getUserById(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ message: "Пользователь не найден" });
+  }
+  if (user.isAdmin) {
+    return next();
+  }
+  const managed = DatabaseStorage.parseManagedWorkerIds(user.managedWorkerIds);
+  if (Array.isArray(managed)) {
+    return next(); // даже пустой [] — это «руководитель», просто без подчинённых
+  }
+  return res
+    .status(403)
+    .json({ message: "Только админ или руководитель может управлять задачами" });
+}
+
+/**
+ * Проверка: может ли user назначать задачи указанному workerId.
+ *   • admin — всегда да
+ *   • manager (managedWorkerIds set) — только если worker в scope
+ *     или это он сам
+ *   • обычный воркер — только себе
+ */
+function canAssignToWorker(
+  user: { id: number; isAdmin: boolean; managedWorkerIds: string | null },
+  targetWorkerId: number | null | undefined
+): boolean {
+  if (user.isAdmin) return true;
+  if (!targetWorkerId) return false; // нельзя оставить «без исполнителя» если ты не админ
+  if (targetWorkerId === user.id) return true;
+  const m2 = DatabaseStorage.parseManagedWorkerIds(user.managedWorkerIds);
+  if (!Array.isArray(m2)) return false;
+  return m2.includes(targetWorkerId);
+}
+
 // Аутентификация: либо session (любой user), либо API key.
 async function requireAuthOrApiKey(req: Request, res: Response, next: NextFunction) {
   if (extractBearerKey(req)) {
@@ -518,7 +574,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.tasks.create.path, requireAdminOrApiKey, async (req, res) => {
+  app.post(api.tasks.create.path, requireAdminOrManagerOrApiKey, async (req, res) => {
     try {
       const input = api.tasks.create.input.parse(req.body);
       // companyId — из session-user или api key
@@ -526,6 +582,20 @@ export async function registerRoutes(
       if (!companyId) {
         return res.status(400).json({ message: "Company не определена" });
       }
+
+      // Scope-check: руководитель может назначать задачи только своим
+      // подчинённым. Админ и API key пропускаются.
+      if (!req.apiKey && req.session?.userId) {
+        const me = await storage.getUserById(req.session.userId);
+        if (me && !me.isAdmin) {
+          if (!canAssignToWorker(me, input.workerId ?? null)) {
+            return res.status(403).json({
+              message: "Можно назначать задачи только своим подчинённым",
+            });
+          }
+        }
+      }
+
       const task = await storage.createTask({
         ...input,
         companyId,
@@ -543,9 +613,30 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.tasks.update.path, requireAdminOrApiKey, async (req, res) => {
+  app.put(api.tasks.update.path, requireAdminOrManagerOrApiKey, async (req, res) => {
     try {
       const input = api.tasks.update.input.parse(req.body);
+
+      // Scope-check для руководителя на edit:
+      //   • Текущий workerId задачи должен быть в его scope
+      //   • Если пытаются переназначить — новый workerId тоже в scope
+      if (!req.apiKey && req.session?.userId) {
+        const me = await storage.getUserById(req.session.userId);
+        if (me && !me.isAdmin) {
+          const existing = await storage.getTask(Number(req.params.id));
+          if (!existing) return res.status(404).json({ message: "Задача не найдена" });
+          if (
+            !canAssignToWorker(me, existing.workerId ?? null) ||
+            (input.workerId !== undefined &&
+              !canAssignToWorker(me, input.workerId))
+          ) {
+            return res.status(403).json({
+              message: "Можно редактировать только задачи своих подчинённых",
+            });
+          }
+        }
+      }
+
       const task = await storage.updateTask(Number(req.params.id), input);
       if (!task) {
         return res.status(404).json({ message: 'Задача не найдена' });
@@ -563,8 +654,22 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.tasks.delete.path, requireAdminOrApiKey, async (req, res) => {
+  app.delete(api.tasks.delete.path, requireAdminOrManagerOrApiKey, async (req, res) => {
     try {
+      // Scope-check на delete — те же правила, что и на edit.
+      if (!req.apiKey && req.session?.userId) {
+        const me = await storage.getUserById(req.session.userId);
+        if (me && !me.isAdmin) {
+          const existing = await storage.getTask(Number(req.params.id));
+          if (!existing) return res.status(404).json({ message: "Задача не найдена" });
+          if (!canAssignToWorker(me, existing.workerId ?? null)) {
+            return res.status(403).json({
+              message: "Можно удалять только задачи своих подчинённых",
+            });
+          }
+        }
+      }
+
       await storage.deleteTask(Number(req.params.id));
       res.status(204).send();
     } catch (err: any) {
