@@ -69,26 +69,26 @@ const TONE_STYLES: Record<
 > = {
   primary: {
     bg: "from-primary/12 to-primary/6 border-primary/15",
-    iconBg: "bg-primary/15",
-    iconColor: "text-primary",
+    iconBg: "bg-primary/15 dark:bg-primary/25",
+    iconColor: "text-primary dark:text-[#a8b3ff]",
     ring: "ring-primary/30",
   },
   success: {
     bg: "from-emerald-500/12 to-emerald-500/5 border-emerald-500/20",
-    iconBg: "bg-emerald-500/15",
-    iconColor: "text-emerald-600",
+    iconBg: "bg-emerald-500/15 dark:bg-emerald-500/25",
+    iconColor: "text-emerald-600 dark:text-emerald-300",
     ring: "ring-emerald-400/30",
   },
   amber: {
     bg: "from-amber-400/15 to-amber-500/8 border-amber-400/25",
-    iconBg: "bg-amber-400/20",
-    iconColor: "text-amber-700",
+    iconBg: "bg-amber-400/20 dark:bg-amber-400/30",
+    iconColor: "text-amber-700 dark:text-amber-300",
     ring: "ring-amber-400/35",
   },
   slate: {
-    bg: "from-slate-200/40 to-slate-100/40 border-slate-300/50",
-    iconBg: "bg-slate-200/60",
-    iconColor: "text-slate-600",
+    bg: "from-slate-200/40 to-slate-100/40 border-slate-300/50 dark:border-white/10",
+    iconBg: "bg-slate-200/60 dark:bg-white/10",
+    iconColor: "text-slate-600 dark:text-slate-300",
     ring: "ring-slate-300/50",
   },
 };

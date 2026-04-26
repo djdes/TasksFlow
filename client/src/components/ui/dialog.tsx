@@ -44,7 +44,12 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-3 top-3 p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 z-10">
+      {/* Close-кнопка должна быть видима И на цветной шапке (TaskViewDialog
+          с градиентным header'ом — там фон тёмный) И на белом dialog'е без
+          шапки (Edit/Create/Duplicate). Раньше bg-white/20 на белом было
+          почти прозрачным. Делаем полу-чёрный fallback + позволяем
+          переопределить через data-attribute (см. dialog-close-on-color). */}
+      <DialogPrimitive.Close className="dialog-close-button absolute right-3 top-3 p-1.5 rounded-lg bg-black/10 text-foreground hover:bg-black/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 z-10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

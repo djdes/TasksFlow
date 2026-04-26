@@ -555,20 +555,20 @@ export default function Dashboard() {
         {/* Filters */}
         {(user?.isAdmin || categories.length > 0 || tasks.length > 6) && (
           <div className="filters-bar">
-            <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <div className="relative w-full flex-1 sm:min-w-[220px] sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Поиск задач"
-                className="h-10 rounded-xl border-gray-200 bg-white pl-9 text-sm"
+                className="h-10 w-full rounded-xl border-input bg-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             {categories.length > 0 && (
               <Select value={filterByCategory} onValueChange={setFilterByCategory}>
-                <SelectTrigger className="h-10 w-auto min-w-[140px] rounded-xl text-sm font-medium bg-white border-gray-200">
-                  <Tag className="w-4 h-4 mr-1.5 text-gray-400" />
+                <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]">
+                  <Tag className="w-4 h-4 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="Категория" />
                 </SelectTrigger>
                 <SelectContent>
@@ -585,8 +585,8 @@ export default function Dashboard() {
 
             {user?.isAdmin && (
               <Select value={filterByUserId} onValueChange={setFilterByUserId}>
-                <SelectTrigger className="h-10 w-auto min-w-[150px] rounded-xl text-sm font-medium bg-white border-gray-200">
-                  <User className="w-4 h-4 mr-1.5 text-gray-400" />
+                <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[150px]">
+                  <User className="w-4 h-4 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="Исполнитель" />
                 </SelectTrigger>
                 <SelectContent>
@@ -607,7 +607,7 @@ export default function Dashboard() {
         {filteredTasks.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">
-              <Inbox className="w-12 h-12 text-gray-400" />
+              <Inbox className="w-12 h-12 text-muted-foreground dark:text-[#c4b5fd]" />
             </div>
             <h3 className="empty-state-title">
               {canManageTasks ? "Нет задач" : "Задач на сегодня нет"}

@@ -278,27 +278,27 @@ export function TaskViewDialog({
             <button
               type="button"
               onClick={() => setIsExamplePhotoFullscreen(true)}
-              className="flex items-center gap-2 w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors"
+              className="flex items-center gap-2 w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:border-blue-400/30"
             >
-              <ImageIcon className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">Посмотреть пример фото</span>
+              <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-200">Посмотреть пример фото</span>
             </button>
           )}
 
           {/* Photo upload section */}
           {(currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-2xl p-4 border border-orange-200/60">
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-2xl p-4 border border-orange-200/60 dark:from-orange-500/12 dark:to-amber-500/8 dark:border-orange-400/25">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center">
-                    <Camera className="w-4 h-4 text-orange-600" />
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center dark:from-orange-500/30 dark:to-amber-500/20">
+                    <Camera className="w-4 h-4 text-orange-600 dark:text-orange-300" />
                   </div>
                   <span className="text-sm font-semibold text-foreground">Фото результата</span>
                 </div>
                 {photoUrls.length === 0 ? (
-                  <span className="text-xs text-orange-600 font-semibold bg-orange-100 px-2.5 py-1 rounded-full">обязательно</span>
+                  <span className="text-xs text-orange-600 font-semibold bg-orange-100 px-2.5 py-1 rounded-full dark:bg-orange-500/20 dark:text-orange-300">обязательно</span>
                 ) : (
-                  <span className="text-xs text-emerald-600 font-semibold bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-xs text-emerald-600 font-semibold bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1 dark:bg-emerald-500/20 dark:text-emerald-300">
                     <Check className="w-3 h-3" />
                     {photoUrls.length}/10
                   </span>
@@ -348,7 +348,7 @@ export function TaskViewDialog({
                   />
                   <label
                     htmlFor="photo-upload"
-                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-orange-300 bg-white/80 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-all active:scale-[0.99]`}
+                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-orange-300 bg-white/80 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-all active:scale-[0.99] dark:border-orange-400/40 dark:bg-white/5 dark:hover:border-orange-300/60 dark:hover:bg-orange-500/10`}
                   >
                     {preview ? (
                       <div className="relative w-full h-full">
@@ -365,8 +365,8 @@ export function TaskViewDialog({
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <div className={`${photoUrls.length > 0 ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center`}>
-                          <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-orange-500`} />
+                        <div className={`${photoUrls.length > 0 ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center dark:from-orange-500/25 dark:to-amber-500/15`}>
+                          <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-orange-500 dark:text-orange-300`} />
                         </div>
                         <div className="text-left">
                           <p className="text-sm font-semibold text-foreground">
@@ -386,9 +386,9 @@ export function TaskViewDialog({
 
           {/* User comment field */}
           {canComplete && !currentTask.isCompleted && (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-4 border border-slate-200/60">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-4 border border-slate-200/60 dark:from-white/5 dark:to-white/[0.02] dark:border-white/10">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center dark:from-primary/30 dark:to-primary/15">
                   <MessageSquare className="w-4 h-4 text-primary" />
                 </div>
                 <div>
@@ -400,7 +400,7 @@ export function TaskViewDialog({
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}
                 placeholder="Напишите комментарий к задаче..."
-                className="min-h-[100px] resize-none bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 rounded-xl text-sm placeholder:text-slate-400"
+                className="min-h-[100px] resize-none bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 rounded-xl text-sm placeholder:text-slate-400 dark:bg-[#161c33] dark:border-white/10 dark:text-foreground dark:placeholder:text-[#6b7395]"
               />
             </div>
           )}
@@ -417,7 +417,7 @@ export function TaskViewDialog({
                 // с auto-prefilled значениями).
                 <button
                   onClick={() => onComplete()}
-                  className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm"
+                  className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm dark:from-white/8 dark:to-white/5 dark:hover:from-white/12 dark:hover:to-white/8 dark:border-white/10"
                 >
                   <RotateCcw className="w-5 h-5" />
                   {Boolean((currentTask as { journalLink?: string | null }).journalLink)
@@ -442,7 +442,7 @@ export function TaskViewDialog({
             )}
             <button
               onClick={() => onOpenChange(false)}
-              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-2xl font-medium transition-all"
+              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-2xl font-medium transition-all dark:hover:bg-white/5"
             >
               Закрыть
             </button>

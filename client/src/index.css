@@ -481,6 +481,19 @@
     margin-bottom: 14px;
   }
 
+  /* Совсем узкие экраны (<360px — старый iPhone SE / Galaxy A02): две
+     плитки в ряд становятся ~140px каждая, числа схлопываются. На таких
+     телефонах одна колонка читается лучше, чем гордая «сетка». */
+  @media (max-width: 359px) {
+    .stat-hero {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .stat-tile {
+      padding: 12px 12px 10px;
+    }
+  }
+
   @media (min-width: 720px) {
     .stat-hero {
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -633,9 +646,12 @@
     @apply text-sm font-semibold min-w-[36px] text-right;
   }
 
-  /* ===== FILTERS ===== */
+  /* ===== FILTERS =====
+     На телефонах filters-bar складывается в колонку, чтобы поиск и
+     селекты не зажимались до неюзабельных 80–100px и не перекрывали
+     иконки. На планшете+ — снова в ряд. */
   .filters-bar {
-    @apply flex flex-wrap gap-2 mb-4;
+    @apply flex flex-col gap-2 mb-4 sm:flex-row sm:flex-wrap;
   }
 
   .filter-button {
@@ -2263,7 +2279,10 @@ details:not([open]) > summary .group-chevron {
   color: #e9ecf6;
 }
 .dark .task-card.completed .task-title {
-  color: #6b7395;
+  /* Раньше #6b7395 на #11162a — ~2.5:1, ниже WCAG AA. Теперь
+     a8aecf — даёт ~5.2:1, но всё ещё муто-серый, чтобы не смотрелось
+     активнее, чем незавершённые задачи. */
+  color: #a8aecf;
 }
 
 /* Task badges — нейтральные тёмные, акценты сохраняют семантику */
@@ -2667,6 +2686,20 @@ details:not([open]) > summary .group-chevron {
 }
 .dark .progress-bar-container {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* Close-кнопка в Dialog'е — когда первый ребёнок DialogContent имеет
+   градиентный фон (TaskViewDialog header), показываем светлую вариацию
+   close-button'а: bg-white/20 как раньше. На обычных белых dialog'ах
+   используется по-чёрному. Селектор работает через :has — у нас нет
+   chrome <100, mobile/safari тоже умеют. Если ругается — fallback дают
+   родительские tailwind-классы выше. */
+[role="dialog"]:has(> .bg-gradient-to-r:first-child) .dialog-close-button {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+[role="dialog"]:has(> .bg-gradient-to-r:first-child) .dialog-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Theme switcher в dark-теме */
