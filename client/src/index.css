@@ -275,12 +275,19 @@
 
   .auth-card {
     position: relative;
-    flex: 1;
+    /* flex: 1 раньше растягивал карточку до низа экрана — на узких/коротких
+       мобилах с короткой формой получался гигантский тёмный пустой блок
+       НИЖЕ контента (см. скрин юзера). margin-top: auto оставляет нужный
+       поведение «карточка прижата к низу», но при этом карточка хагает
+       свой контент и не имеет внутреннего пустого пространства. */
+    margin-top: auto;
+    margin-left: auto;
+    margin-right: auto;
     width: min(100%, 34rem);
-    margin: 0 auto;
     border-radius: 1.5rem 1.5rem 0 0;
     background: hsl(var(--background));
     padding: clamp(1.25rem, 4vw, 2rem);
+    padding-bottom: calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -18px 45px rgba(11, 16, 36, 0.14);
   }
 
@@ -569,15 +576,25 @@
   }
 
   .stat-tile-label {
-    font-size: 11px;
+    /* clamp на 320px → 10px, на 720+ → 11px. Не сжимаем сильнее, иначе
+       uppercase 0.06em label станет нечитаемым. */
+    font-size: clamp(10px, 0.9vw + 7px, 11px);
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #64748b;
+    /* Ellipsize длинные подписи вместо переноса — для «Сегодня»/«Сделано»
+       это не нужно, но «Опередили коллеги» в slate-tone могло переноситься
+       и ломать высоту тайла. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .stat-tile-value {
-    font-size: 28px;
+    /* На 320px фикс 28px не помещался в ~140px тайл — числа от 100+
+       обрезались. clamp 22px → 28px смягчает. */
+    font-size: clamp(22px, 4.5vw + 8px, 28px);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -586,14 +603,14 @@
   }
 
   .stat-tile-suffix {
-    font-size: 16px;
+    font-size: clamp(13px, 1.5vw + 7px, 16px);
     font-weight: 600;
     color: #64748b;
     margin-left: 2px;
   }
 
   .stat-tile-hint {
-    font-size: 12px;
+    font-size: clamp(11px, 0.6vw + 9px, 12px);
     color: #6b7280;
     margin-top: 4px;
     font-weight: 500;
