@@ -311,13 +311,19 @@ export default function Dashboard() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    if (task.isCompleted) {
-      uncompleteTask.mutate(taskId);
+    // Для журнальной задачи кружок ВСЕГДА открывает форму:
+    //   - active → пустая форма (или с defaults адаптера) → submit complete
+    //   - completed → форма prefilled значениями из журнала → submit
+    //     перезаписывает данные, задача остаётся выполненной
+    // Это убирает рассинхрон uncomplete/complete в WeSetup и даёт юзеру
+    // привычное «открыть и посмотреть/поправить что было записано».
+    if (isJournalTask(task)) {
+      await openJournalForm(taskId);
       return;
     }
 
-    if (isJournalTask(task)) {
-      await openJournalForm(taskId);
+    if (task.isCompleted) {
+      uncompleteTask.mutate(taskId);
       return;
     }
 
