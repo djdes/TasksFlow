@@ -171,6 +171,12 @@ export default function Dashboard() {
     return parts.length >= 2 ? parts[parts.length - 1] : parts[0];
   };
 
+  const getUserPosition = (userId: number | null) => {
+    if (!userId) return null;
+    const foundUser = users.find(u => u.id === userId);
+    return (foundUser as { position?: string | null } | undefined)?.position ?? null;
+  };
+
   const getUserInitials = (userId: number | null) => {
     if (!userId) return "?";
     const foundUser = users.find(u => u.id === userId);
@@ -625,6 +631,7 @@ export default function Dashboard() {
             getUserInitials={getUserInitials}
             getUserName={getUserName}
             getUserShortName={getUserShortName}
+            getUserPosition={getUserPosition}
             onTaskClick={handleTaskClick}
             onToggleComplete={toggleTaskComplete}
             onEdit={(id) => setLocation(`/tasks/${id}/edit`)}

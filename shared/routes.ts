@@ -49,7 +49,7 @@ export const api = {
       method: 'POST' as const,
       path: '/api/users',
       input: insertUserSchema
-        .pick({ phone: true, name: true, isAdmin: true })
+        .pick({ phone: true, name: true, isAdmin: true, position: true })
         .extend({
           role: z.enum(["admin", "manager", "employee", "worker"]).optional(),
         }),

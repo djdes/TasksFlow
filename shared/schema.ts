@@ -35,6 +35,11 @@ export const users = mysqlTable("users", {
   //   • При создании задачи можно назначить только их
   // Админ (isAdmin=true) игнорирует это поле и видит всё.
   managedWorkerIds: text("managed_worker_ids"),
+  // Должность сотрудника. Заполняется WeSetup'ом при createUser
+  // (передаётся в payload вместе с phone и name). Используется UI
+  // Dashboard для отображения «ФИО · Должность» и для сортировки
+  // секций группы-по-сотруднику.
+  position: varchar("position", { length: 120 }),
 });
 
 export const workers = mysqlTable("workers", {
@@ -91,6 +96,7 @@ export const insertUserSchema = z.object({
   ),
   name: z.string().optional(),
   isAdmin: z.boolean().optional().default(false),
+  position: z.string().trim().max(120).optional().nullable(),
 });
 
 export const updateUserSchema = z.object({
@@ -102,6 +108,7 @@ export const updateUserSchema = z.object({
     "Неверный формат номера телефона (формат: +7XXXXXXXXX или +7XXXXXXXXXX)"
   ),
   name: z.string().nullable().optional(),
+  position: z.string().trim().max(120).nullable().optional(),
 });
 
 export const loginSchema = z.object({

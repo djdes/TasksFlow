@@ -1631,6 +1631,19 @@
   color: #0b1024;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worker-section-position {
+  font-weight: 500;
+  color: #6f7282;
+  font-size: 13px;
+}
+
+.dark .worker-section-position {
+  color: rgba(202, 207, 224, 0.78);
 }
 
 .worker-section-count {

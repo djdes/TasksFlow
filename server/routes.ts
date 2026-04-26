@@ -1117,6 +1117,16 @@ export async function registerRoutes(
 
       const existingUser = await storage.getUserByPhone(normalizedPhone);
       if (existingUser) {
+        // Если повторный create передал position — обновляем должность
+        // на месте (idempotent merge: WeSetup может прокинуть свежее
+        // значение из своей JobPosition без полного rebuild).
+        if (
+          input.position !== undefined &&
+          existingUser.companyId === companyId &&
+          (input.position ?? null) !== (existingUser.position ?? null)
+        ) {
+          await storage.setUserPosition(existingUser.id, input.position ?? null);
+        }
         if (existingUser.companyId === companyId && requestedAdmin && !existingUser.isAdmin) {
           const promoted = await storage.setUserAdmin(existingUser.id, true);
           return res.json(promoted || existingUser);
@@ -1132,6 +1142,7 @@ export async function registerRoutes(
         name: input.name,
         isAdmin: requestedAdmin,
         companyId,
+        position: input.position ?? null,
       });
 
       res.status(201).json(user);

@@ -86,6 +86,10 @@ type Props = {
   /** Короткая форма имени для admin-карточек (фамилия). Если не
    *  передана, фоллбек на getUserName. */
   getUserShortName?: (workerId: number | null) => string;
+  /** Должность сотрудника для отображения «ФИО · Должность» в
+   *  group-by-worker секциях и сортировки.  Если не передана —
+   *  должность не показывается, сортировка только по имени. */
+  getUserPosition?: (workerId: number | null) => string | null;
   onTaskClick: (task: Task) => void;
   onToggleComplete: (taskId: number, e?: React.MouseEvent) => void;
   onEdit: (taskId: number) => void;
@@ -112,6 +116,7 @@ export function GroupedTaskList(props: Props) {
     getUserInitials,
     getUserName,
     getUserShortName,
+    getUserPosition,
     onTaskClick,
     onToggleComplete,
     onEdit,
@@ -454,17 +459,29 @@ export function GroupedTaskList(props: Props) {
       // unassigned всегда сверху — это «надо назначить»
       if (a.workerId === null) return -1;
       if (b.workerId === null) return 1;
-      // больше задач — выше: руководителю в первую очередь видно
-      // «у кого затыкает»
-      if (b.tasks.length !== a.tasks.length)
-        return b.tasks.length - a.tasks.length;
+      // Если есть getUserPosition — сортируем по должности (alphabetical),
+      // потом по имени. Это даёт наглядную группировку по ролям:
+      // сначала Администратор смены, потом Бариста, потом Бармен и т.д.
+      // (раньше сортировка была «больше задач — выше», но при 50
+      // сотрудниках нулевые задачи мешались среди ненулевых).
+      if (getUserPosition) {
+        const pa = (getUserPosition(a.workerId) ?? "—").toLowerCase();
+        const pb = (getUserPosition(b.workerId) ?? "—").toLowerCase();
+        const cmp = pa.localeCompare(pb, "ru");
+        if (cmp !== 0) return cmp;
+      } else {
+        // Старое поведение для tenant'ов без position-данных:
+        // больше задач — выше.
+        if (b.tasks.length !== a.tasks.length)
+          return b.tasks.length - a.tasks.length;
+      }
       return getUserName(a.workerId).localeCompare(
         getUserName(b.workerId),
         "ru"
       );
     });
     return sections;
-  }, [activeTasks, groupByWorker, getUserName]);
+  }, [activeTasks, groupByWorker, getUserName, getUserPosition]);
 
   function renderActiveByWorker() {
     if (activeWorkerSections.length === 0) {
@@ -484,6 +501,9 @@ export function GroupedTaskList(props: Props) {
           const initials = isUnassigned
             ? "?"
             : getUserInitials(section.workerId);
+          const position = isUnassigned
+            ? null
+            : getUserPosition?.(section.workerId) ?? null;
           return (
             // Default-collapsed: при много-сотрудниковой бригаде
             // развёрнутые секции занимают экраны, до нужного
@@ -506,7 +526,15 @@ export function GroupedTaskList(props: Props) {
                 >
                   {initials}
                 </div>
-                <span className="worker-section-name">{fullName}</span>
+                <span className="worker-section-name">
+                  {fullName}
+                  {position ? (
+                    <span className="worker-section-position">
+                      {" · "}
+                      {position}
+                    </span>
+                  ) : null}
+                </span>
                 <span className="worker-section-count">
                   {section.tasks.length}
                 </span>

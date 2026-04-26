@@ -31,6 +31,7 @@ export interface IStorage {
   getAllUsers(companyId?: number): Promise<User[]>;
   updateUser(id: number, user: UpdateUser): Promise<User | undefined>;
   setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined>;
+  setUserPosition(id: number, position: string | null): Promise<User | undefined>;
   updateUserBalance(id: number, amount: number): Promise<User | undefined>;
   resetUserBalance(id: number): Promise<User | undefined>;
   setManagedWorkers(userId: number, workerIds: number[]): Promise<User | undefined>;
@@ -157,10 +158,25 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: number, updateUser: UpdateUser): Promise<User | undefined> {
     const normalizedPhone = updateUser.phone.replace(/\s+/g, "").replace(/-/g, "");
-    await db.update(users).set({
+    const patch: Record<string, unknown> = {
       phone: normalizedPhone,
       name: updateUser.name ?? null,
-    }).where(eq(users.id, id));
+    };
+    if (updateUser.position !== undefined) {
+      patch.position = updateUser.position ?? null;
+    }
+    await db.update(users).set(patch).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  /**
+   * Точечное обновление должности (используется в POST /api/users
+   * для existing user'ов: повторный create с position обновляет
+   * её, если поменялась). Чтобы не требовать менять phone/name.
+   */
+  async setUserPosition(id: number, position: string | null): Promise<User | undefined> {
+    await db.update(users).set({ position }).where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }

@@ -54,6 +54,7 @@ jobs:
             npm run create-api-keys-table || echo "api_keys migration failed (non-fatal)"
             npm run add-claim-col || echo "claim col migration failed (non-fatal)"
             npm run add-managed-workers-col || echo "managed-workers col migration failed (non-fatal)"
+            npm run add-position-col || echo "position col migration failed (non-fatal)"
 
             echo ">>> build"
             npm run build

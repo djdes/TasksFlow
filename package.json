@@ -20,7 +20,8 @@
     "add-companies": "tsx script/add-companies.ts",
     "create-api-keys-table": "tsx script/create-api-keys-table.ts",
     "add-claim-col": "tsx script/_add-claim-col.ts",
-    "add-managed-workers-col": "tsx script/_add-managed-workers-col.ts"
+    "add-managed-workers-col": "tsx script/_add-managed-workers-col.ts",
+    "add-position-col": "tsx script/_add-position-col.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
