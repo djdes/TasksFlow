@@ -409,12 +409,20 @@ export function TaskViewDialog({
           <div className="flex flex-col gap-2.5 pt-2">
             {canComplete && (
               currentTask.isCompleted ? (
+                // Журнальные задачи нельзя «вернуть в работу» —
+                // запись в журнале не должна стираться обратным
+                // toggle'ом. Вместо этого открываем форму редактирования
+                // (callback onComplete на стороне Dashboard
+                // распознаёт журнальную задачу и открывает task-fill-url
+                // с auto-prefilled значениями).
                 <button
                   onClick={() => onComplete()}
                   className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm"
                 >
                   <RotateCcw className="w-5 h-5" />
-                  Вернуть в работу
+                  {Boolean((currentTask as { journalLink?: string | null }).journalLink)
+                    ? "Изменить данные"
+                    : "Вернуть в работу"}
                 </button>
               ) : (
                 <button

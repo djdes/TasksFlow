@@ -336,15 +336,24 @@ export default function Dashboard() {
   };
 
   const handleTaskComplete = (comment?: string) => {
-    if (selectedTask) {
-      if (selectedTask.isCompleted) {
-        uncompleteTask.mutate(selectedTask.id);
-      } else {
-        completeTask.mutate({ id: selectedTask.id, comment });
-      }
+    if (!selectedTask) return;
+    // Журнальная задача (active или completed) — всегда открываем форму
+    // task-fill. Из выполненных её нельзя вернуть в работу: compliance —
+    // запись в журнале не должна стираться обратным toggle'ом, можно
+    // только редактировать (или удалить администратором).
+    if (isJournalTask(selectedTask)) {
+      void openJournalForm(selectedTask.id);
       setIsTaskDialogOpen(false);
       setSelectedTask(null);
+      return;
     }
+    if (selectedTask.isCompleted) {
+      uncompleteTask.mutate(selectedTask.id);
+    } else {
+      completeTask.mutate({ id: selectedTask.id, comment });
+    }
+    setIsTaskDialogOpen(false);
+    setSelectedTask(null);
   };
 
   const handleTaskUpdate = (updatedTask: typeof tasks[0]) => {
