@@ -273,6 +273,32 @@
     color: hsl(var(--primary-foreground));
   }
 
+  /* Premium icon на auth-screen — единый scalable wrapper с
+     proportionally sized internal glyph + декоративными sparkle/star.
+     Размер контейнера clamp'ится: 88px на узких мобилах, 128px на
+     планшетах+. Glyph всегда 50% от контейнера. */
+  .auth-hero-icon {
+    width: clamp(5.5rem, 8.5vw + 4rem, 8rem);
+    height: clamp(5.5rem, 8.5vw + 4rem, 8rem);
+    aspect-ratio: 1 / 1;
+  }
+  .auth-hero-icon-glyph {
+    width: 50%;
+    height: 50%;
+  }
+  .auth-hero-icon-sparkle-tr {
+    top: 12%;
+    right: 12%;
+    width: 22%;
+    height: 22%;
+  }
+  .auth-hero-icon-sparkle-bl {
+    bottom: 14%;
+    left: 14%;
+    width: 16%;
+    height: 16%;
+  }
+
   .auth-card {
     position: relative;
     /* flex: 1 раньше растягивал карточку до низа экрана — на узких/коротких
@@ -917,13 +943,13 @@
       padding-bottom: 1rem;
     }
 
-    /* На узком/коротком экране ужимаем premium-icon: w-28 h-28 (112px)
-       занимали слишком много, после ввода телефона пользователь не
-       видел кнопку «Войти» без скролла. Уменьшаем до 80px и -mb. */
-    .auth-hero > div:first-child,
-    .auth-hero > .relative {
-      width: 80px !important;
-      height: 80px !important;
+    /* Premium-icon на узком/коротком экране ужимаем чтобы кнопка
+       «Войти» влезала без скролла. Селектор — конкретно
+       .auth-hero-icon (одна обёртка), не «:first-child», который
+       сломался бы при добавлении других элементов в auth-hero. */
+    .auth-hero-icon {
+      width: 5rem !important;
+      height: 5rem !important;
       margin-bottom: 1rem !important;
     }
     .auth-title {

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Circle, Sparkles, Star } from "lucide-react";
+import { ClipboardCheck, Sparkles, Star } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -122,9 +122,15 @@ export default function Login() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
       >
-        {/* Premium Icon - larger */}
+        {/* Premium Icon — одна большая ClipboardCheck, чисто
+            масштабируемая. Раньше внутри стеклянного контейнера была
+            композиция из 3 строк CheckCircle (32px каждая, gap-3 — суммарно
+            ~120px), которая на mobile-shrink-е контейнера до 80px
+            обрезалась и выглядела как «полумесяц со звёздочками». Теперь
+            один центральный glyph занимает 50% от ширины контейнера и
+            одинаково хорошо смотрится на 80px / 112px / 128px. */}
         <motion.div
-          className="relative w-28 h-28 mx-auto mb-6 md:w-32 md:h-32"
+          className="auth-hero-icon relative mx-auto mb-6"
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{
@@ -138,28 +144,18 @@ export default function Login() {
           <div className="absolute -inset-3 rounded-[28px] bg-white/15 blur-2xl" />
           {/* Inner glow */}
           <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/30 to-white/10 blur-xl" />
-          {/* Main container */}
+          {/* Glass container */}
           <div className="relative w-full h-full rounded-[28px] bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-md border border-white/40 shadow-2xl flex items-center justify-center overflow-hidden">
-            {/* Animated shine effect */}
+            {/* Shine sweep */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
-            {/* Task list visual - larger */}
-            <div className="relative flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-8 h-8 text-white drop-shadow-lg" strokeWidth={2.5} />
-                <div className="w-14 h-2.5 rounded-full bg-white/70" />
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-8 h-8 text-white drop-shadow-lg" strokeWidth={2.5} />
-                <div className="w-10 h-2.5 rounded-full bg-white/60" />
-              </div>
-              <div className="flex items-center gap-3">
-                <Circle className="w-8 h-8 text-white/60 drop-shadow-lg" strokeWidth={2} />
-                <div className="w-16 h-2.5 rounded-full bg-white/40" />
-              </div>
-            </div>
-            {/* Sparkles - multiple */}
-            <Sparkles className="absolute top-3 right-3 w-6 h-6 text-yellow-300 drop-shadow-lg animate-pulse" />
-            <Star className="absolute bottom-3 left-3 w-4 h-4 text-yellow-200/80 drop-shadow-lg" />
+            {/* Один центральный glyph — размер задан в CSS через 50% контейнера */}
+            <ClipboardCheck
+              className="auth-hero-icon-glyph relative text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+              strokeWidth={1.8}
+            />
+            {/* Декоративные акценты — позиционируются от размера контейнера */}
+            <Sparkles className="auth-hero-icon-sparkle-tr absolute text-yellow-300 drop-shadow-lg animate-pulse" />
+            <Star className="auth-hero-icon-sparkle-bl absolute text-yellow-200/80 drop-shadow-lg" />
           </div>
         </motion.div>
         <motion.h1
