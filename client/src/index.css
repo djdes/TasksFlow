@@ -1083,6 +1083,14 @@
   .empty-state {
     @apply flex flex-col items-center justify-center py-16 px-6 text-center;
     animation: content-rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    /* QA: empty-state имел дефолтный pointer-events: auto и перехватывал
+       клики у dropdown-меню, открытого над ним (см. FEATURES_AND_AUTOMATION
+       баг #3). Кнопка «Создать задачу» внутри empty-state остаётся
+       кликабельной благодаря pointer-events: auto на детях. */
+    pointer-events: none;
+  }
+  .empty-state > * {
+    pointer-events: auto;
   }
 
   /* Иконка с мягким градиентом вместо плоского серого круга — даёт
