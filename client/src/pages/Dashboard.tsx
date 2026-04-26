@@ -79,6 +79,13 @@ export default function Dashboard() {
   const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // Таб «Мои задачи» / «Общие задачи смены» / «Все».
+  // - personal: задачи лично сотруднику (закрепленные за ним)
+  // - shared:   общие журналы смены (приёмки, бракераж, жалобы) —
+  //              можно дописывать N раз за день
+  // - all:      по умолчанию показываем всё; если в выборке нет
+  //              shared-задач — табы скрываются.
+  const [taskTab, setTaskTab] = useState<"all" | "personal" | "shared">("all");
   const [duplicateTask, setDuplicateTask] = useState<Task | null>(null);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -232,9 +239,29 @@ export default function Dashboard() {
           return (task as any).category === filterByCategory;
         });
 
+  // Подсчёт задач по scope ДО применения фильтра — чтобы табы
+  // показывали реальное число (а не отфильтрованное по выбранному
+  // табу). Так юзер видит «у меня 5 общих задач, перейду к ним».
+  const scopeCounts = baseFilteredTasks.reduce(
+    (acc, task) => {
+      const scope = getTaskScope(task);
+      if (scope === "shared") acc.shared += 1;
+      else acc.personal += 1;
+      return acc;
+    },
+    { personal: 0, shared: 0 }
+  );
+  const hasSharedTasks = scopeCounts.shared > 0;
+
+  // Применяем scope-фильтр (только если табы реально показываются).
+  const scopeFilteredTasks =
+    hasSharedTasks && taskTab !== "all"
+      ? baseFilteredTasks.filter((task) => getTaskScope(task) === taskTab)
+      : baseFilteredTasks;
+
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredTasks = normalizedSearch
-    ? baseFilteredTasks.filter((task) => {
+    ? scopeFilteredTasks.filter((task) => {
         const haystack = [
           task.title,
           (task as any).description,
@@ -246,7 +273,7 @@ export default function Dashboard() {
           .toLowerCase();
         return haystack.includes(normalizedSearch);
       })
-    : baseFilteredTasks;
+    : scopeFilteredTasks;
 
   const completedCount = filteredTasks.filter(t => t.isCompleted).length;
   const totalCount = filteredTasks.length;
@@ -284,6 +311,24 @@ export default function Dashboard() {
       (task as { journalLink?: string | null }).journalLink
     );
     return hasJournalLink || category.startsWith("WeSetup · ");
+  };
+
+  /**
+   * Парсит journalLink JSON и возвращает taskScope ('personal' | 'shared').
+   * Не journal-задачи и старые задачи без taskScope считаются 'personal'
+   * (back-compat). WeSetup кладёт taskScope в journalLink с 2026-04-26.
+   */
+  const getTaskScope = (
+    task: typeof tasks[0]
+  ): "personal" | "shared" => {
+    const raw = (task as { journalLink?: string | null }).journalLink;
+    if (!raw) return "personal";
+    try {
+      const parsed = JSON.parse(raw) as { taskScope?: string };
+      return parsed.taskScope === "shared" ? "shared" : "personal";
+    } catch {
+      return "personal";
+    }
   };
 
   /**
@@ -551,6 +596,40 @@ export default function Dashboard() {
             onBonusClick={() => setIsBonusInfoOpen(true)}
           />
         )}
+
+        {/* Scope tabs — show only when there are shared tasks (event-log
+            journals like acceptance, complaints). Personal-only orgs
+            never see these tabs (no extra clutter). */}
+        {hasSharedTasks ? (
+          <div className="scope-tabs">
+            <button
+              type="button"
+              onClick={() => setTaskTab("all")}
+              className={`scope-tab ${taskTab === "all" ? "scope-tab-active" : ""}`}
+            >
+              Все
+              <span className="scope-tab-count">
+                {scopeCounts.personal + scopeCounts.shared}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTaskTab("personal")}
+              className={`scope-tab ${taskTab === "personal" ? "scope-tab-active" : ""}`}
+            >
+              Мои задачи
+              <span className="scope-tab-count">{scopeCounts.personal}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTaskTab("shared")}
+              className={`scope-tab ${taskTab === "shared" ? "scope-tab-active" : ""}`}
+            >
+              Общие задачи смены
+              <span className="scope-tab-count">{scopeCounts.shared}</span>
+            </button>
+          </div>
+        ) : null}
 
         {/* Filters */}
         {(user?.isAdmin || categories.length > 0 || tasks.length > 6) && (

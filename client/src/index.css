@@ -689,6 +689,32 @@
     @apply text-sm font-semibold min-w-[36px] text-right;
   }
 
+  /* ===== SCOPE TABS =====
+     Два таба «Мои задачи» / «Общие задачи смены» — показываются
+     только если в выборке есть shared-задачи (event-log журналы из
+     WeSetup: приёмки, бракераж, жалобы). На светлой теме — серые
+     pills, активный indigo-tinted. */
+  .scope-tabs {
+    @apply flex gap-1.5 mb-3 -mx-1 overflow-x-auto px-1;
+    scroll-snap-type: x mandatory;
+  }
+  .scope-tab {
+    @apply inline-flex shrink-0 items-center gap-2 rounded-xl border border-input bg-background px-3.5 py-2 text-sm font-medium text-muted-foreground transition-all;
+    scroll-snap-align: start;
+  }
+  .scope-tab:hover {
+    @apply text-foreground border-primary/40;
+  }
+  .scope-tab-active {
+    @apply bg-primary/10 border-primary/50 text-primary;
+  }
+  .scope-tab-count {
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground;
+  }
+  .scope-tab-active .scope-tab-count {
+    @apply bg-primary/20 text-primary;
+  }
+
   /* ===== FILTERS =====
      На телефонах filters-bar складывается в колонку, чтобы поиск и
      селекты не зажимались до неюзабельных 80–100px и не перекрывали
@@ -2301,6 +2327,32 @@ details:not([open]) > summary .group-chevron {
 }
 .dark .filters-bar input::placeholder {
   color: #6b7395;
+}
+
+/* Scope tabs — на тёмной теме больше контраста и aurora-glow на active */
+.dark .scope-tab {
+  background: #161c33;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #a8aecf;
+}
+.dark .scope-tab:hover {
+  background: #1c2340;
+  color: #e9ecf6;
+  border-color: rgba(111, 126, 255, 0.4);
+}
+.dark .scope-tab-active {
+  background: rgba(111, 126, 255, 0.15);
+  border-color: rgba(111, 126, 255, 0.5);
+  color: #a8b3ff;
+  box-shadow: 0 0 0 1px rgba(111, 126, 255, 0.25);
+}
+.dark .scope-tab-count {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8b91b3;
+}
+.dark .scope-tab-active .scope-tab-count {
+  background: rgba(111, 126, 255, 0.25);
+  color: #a8b3ff;
 }
 
 /* Task cards */
