@@ -1280,6 +1280,29 @@ export async function registerRoutes(
         companyId,
         createdByUserId: req.session.userId,
       });
+
+      // Автоматическое обратное подключение TF → WeSetup. Когда админ
+      // создаёт первый TFK-ключ, прописываем его же как
+      // wesetupApiKey + дефолтный wesetupBaseUrl=https://wesetup.ru.
+      // Без этого юзер при попытке открыть task-form видит «WeSetup-
+      // интеграция не настроена для этой компании» и формы журналов
+      // не работают.
+      try {
+        const company = await storage.getCompanyById(companyId);
+        if (company && (!company.wesetupApiKey || !company.wesetupBaseUrl)) {
+          await storage.updateCompany(companyId, {
+            wesetupApiKey: company.wesetupApiKey ?? plaintext,
+            wesetupBaseUrl:
+              company.wesetupBaseUrl ?? "https://wesetup.ru",
+          });
+        }
+      } catch (bridgeErr) {
+        console.warn(
+          "[api-keys] wesetup bridge auto-setup failed (non-fatal)",
+          bridgeErr,
+        );
+      }
+
       res.json({
         id: created.id,
         name: created.name,
