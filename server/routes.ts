@@ -1023,6 +1023,37 @@ export async function registerRoutes(
         return res.status(500).json({ message: "Ошибка обновления задачи" });
       }
 
+      // Если задача журнальная — синхронизируем reopen в WeSetup, чтобы
+      // link.remoteStatus стал "active". Иначе при повторном /complete
+      // WeSetup-сторона ещё считает задачу completed, и UI ведёт себя
+      // непредсказуемо («уже выполнял» / задача мгновенно возвращается).
+      if (task.journalLink) {
+        try {
+          const target = await resolveWesetupTarget(req);
+          if (!("error" in target)) {
+            const { baseUrl, key } = target;
+            await fetch(`${baseUrl}/api/integrations/tasksflow/complete`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${key}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                taskId,
+                isCompleted: false,
+                values: {},
+              }),
+              cache: "no-store",
+            });
+          }
+        } catch (err) {
+          console.warn(
+            "[uncomplete] WeSetup reopen sync failed (non-fatal)",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
+
       res.json(updatedTask);
     } catch (err: any) {
       console.error("Error uncompleting task:", err);
