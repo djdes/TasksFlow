@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import multer from "multer";
 import path from "path";
+import crypto from "node:crypto";
 import { existsSync, mkdirSync } from "fs";
 import { storage, DatabaseStorage } from "./storage";
 import { api } from "@shared/routes";
@@ -1188,6 +1189,61 @@ export async function registerRoutes(
       }
       console.error('Error creating user:', err);
       res.status(500).json({ message: 'Ошибка создания пользователя', error: err.message });
+    }
+  });
+
+  // ============================================================
+  // Invitations: QR-приглашения сотрудников
+  // ============================================================
+  // Админ нажимает «Сгенерировать QR» → создаётся invitations row,
+  // отдаётся ссылка вида /join/<token>. Сотрудник открывает её,
+  // вводит имя+телефон, попадает в кабинет. Подробности — spec
+  // docs/superpowers/specs/2026-04-28-invitations-qr-design.md.
+
+  app.post(api.invitations.create.path, requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const input = api.invitations.create.input.parse(req.body);
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
+      const adminId = req.session.userId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Нет сессии" });
+      }
+
+      const isAdmin = input.role === "admin" || input.role === "manager";
+      const token = crypto.randomBytes(32).toString("base64url");
+
+      const inv = await storage.createInvitation({
+        token,
+        companyId,
+        createdByUserId: adminId,
+        position: input.position ?? null,
+        isAdmin,
+      });
+
+      const baseUrl = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") ||
+        `${req.protocol}://${req.get("host")}`;
+      const url = `${baseUrl}/join/${inv.token}`;
+
+      res.status(201).json({
+        id: inv.id,
+        token: inv.token,
+        url,
+        position: inv.position,
+        isAdmin: inv.isAdmin,
+        createdAt: inv.createdAt,
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error creating invitation:", err);
+      res.status(500).json({ message: "Ошибка создания приглашения", error: err.message });
     }
   });
 
