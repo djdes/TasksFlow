@@ -20,9 +20,28 @@ async function createTables() {
   });
 
   try {
+    // SAFETY GUARD после инцидента 28.04.2026: этот скрипт уничтожил
+    // prod БД (DROP TABLE users → cascade'ом потеряли всё). Теперь
+    // проверяем — если в таблице больше 0 строк, ОТКАЗЫВАЕМСЯ
+    // дропать. Чтобы заведомо запустить пересоздание — поставьте
+    // `FORCE_DROP=1 npm run setup-db` (это ручная подтверждённая
+    // операция, не делайте на проде без мысль).
+    const [existing] = await connection
+      .execute<any[]>("SELECT COUNT(*) AS n FROM `users`")
+      .catch(() => [[{ n: 0 }]] as any);
+    const existingCount = (existing as any[])[0]?.n ?? 0;
+    if (existingCount > 0 && process.env.FORCE_DROP !== "1") {
+      throw new Error(
+        `ABORT: таблица users содержит ${existingCount} строк. Скрипт ` +
+          `setup-db больше не дропает существующие таблицы. Если ` +
+          `действительно нужно пересоздать — сделайте mysqldump и запустите ` +
+          `с FORCE_DROP=1.`
+      );
+    }
+
     // Удаляем старую таблицу users если она существует
     await connection.execute("DROP TABLE IF EXISTS `users`");
-    
+
     // Создаем новую таблицу users
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS \`users\` (
