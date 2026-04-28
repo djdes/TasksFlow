@@ -14,6 +14,7 @@ import {
   companies,
   apiKeys,
   webhookDeliveries,
+  invitations,
   type Worker,
   type InsertWorker,
   type Task,
@@ -27,9 +28,10 @@ import {
   type InsertApiKey,
   type WebhookDelivery,
   type InsertWebhookDelivery,
+  type Invitation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, lte, asc } from "drizzle-orm";
+import { eq, and, desc, lte, asc, isNull } from "drizzle-orm";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
@@ -87,6 +89,21 @@ export interface IStorage {
   revokeApiKey(id: number): Promise<void>;
   updateApiKeyLastUsed(id: number, ts: number): Promise<void>;
   countActiveApiKeysByCompany(companyId: number): Promise<number>;
+
+  // Invitations
+  createInvitation(data: {
+    token: string;
+    companyId: number;
+    createdByUserId: number;
+    position: string | null;
+    isAdmin: boolean;
+  }): Promise<Invitation>;
+  getInvitationById(id: number): Promise<Invitation | undefined>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  getInvitationsByCompany(companyId: number, includeAll: boolean): Promise<Invitation[]>;
+  /** Атомарный mark-as-used. Возвращает true если успели первыми. */
+  markInvitationUsed(id: number, usedByUserId: number): Promise<boolean>;
+  revokeInvitation(id: number): Promise<Invitation | undefined>;
 }
 
 /** Реализация хранилища с MySQL через Drizzle ORM */
@@ -687,6 +704,97 @@ export class DatabaseStorage implements IStorage {
         updatedAt: now,
       })
       .where(eq(webhookDeliveries.id, input.id));
+  }
+
+  // ===================== INVITATIONS =====================
+
+  async createInvitation(data: {
+    token: string;
+    companyId: number;
+    createdByUserId: number;
+    position: string | null;
+    isAdmin: boolean;
+  }): Promise<Invitation> {
+    const now = Math.floor(Date.now() / 1000);
+    const [result] = await db.insert(invitations).values({
+      token: data.token,
+      companyId: data.companyId,
+      createdByUserId: data.createdByUserId,
+      position: data.position,
+      isAdmin: data.isAdmin,
+      createdAt: now,
+    });
+    const insertId = (result as any).insertId;
+    const [row] = await db.select().from(invitations).where(eq(invitations.id, insertId));
+    if (!row) throw new Error("Failed to create invitation");
+    return row;
+  }
+
+  async getInvitationById(id: number): Promise<Invitation | undefined> {
+    const [row] = await db.select().from(invitations).where(eq(invitations.id, id));
+    return row || undefined;
+  }
+
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    const [row] = await db.select().from(invitations).where(eq(invitations.token, token));
+    return row || undefined;
+  }
+
+  async getInvitationsByCompany(companyId: number, includeAll: boolean): Promise<Invitation[]> {
+    if (includeAll) {
+      return await db
+        .select()
+        .from(invitations)
+        .where(eq(invitations.companyId, companyId))
+        .orderBy(desc(invitations.createdAt));
+    }
+    return await db
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.companyId, companyId),
+          isNull(invitations.usedAt),
+          isNull(invitations.revokedAt),
+        ),
+      )
+      .orderBy(desc(invitations.createdAt));
+  }
+
+  /**
+   * Атомарно помечает приглашение как использованное.
+   * Возвращает true если получилось, false — если кто-то уже использовал
+   * или приглашение отозвано (race condition при параллельных accept'ах).
+   */
+  async markInvitationUsed(id: number, usedByUserId: number): Promise<boolean> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await db
+      .update(invitations)
+      .set({ usedAt: now, usedByUserId })
+      .where(
+        and(
+          eq(invitations.id, id),
+          isNull(invitations.usedAt),
+          isNull(invitations.revokedAt),
+        ),
+      );
+    const affected = (result as any).affectedRows ?? (result as any)[0]?.affectedRows ?? 0;
+    return affected > 0;
+  }
+
+  async revokeInvitation(id: number): Promise<Invitation | undefined> {
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .update(invitations)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(invitations.id, id),
+          isNull(invitations.revokedAt),
+          isNull(invitations.usedAt),
+        ),
+      );
+    return await this.getInvitationById(id);
   }
 }
 
