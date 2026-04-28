@@ -431,48 +431,6 @@ export async function registerRoutes(
   });
 
   // Обновить имя текущего пользователя (для админа - собственное имя)
-  /**
-   * Self-deletion: текущий user удаляет свой аккаунт.
-   * Если он единственный admin company — отказываем (нужно сначала
-   * назначить другого admin'а, иначе компания останется без управления).
-   * Сессия после успеха уничтожается.
-   */
-  app.delete("/api/auth/me", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        return res.status(404).json({ message: "Пользователь не найден" });
-      }
-
-      if (user.isAdmin && user.companyId) {
-        const allAdmins = await storage.getUsersByCompany(user.companyId);
-        const otherAdmins = allAdmins.filter(
-          (u) => u.isAdmin && u.id !== userId
-        );
-        if (otherAdmins.length === 0) {
-          return res.status(400).json({
-            message:
-              "Нельзя удалить аккаунт — вы единственный администратор компании. " +
-              "Сначала назначьте другого администратора в /admin/users.",
-          });
-        }
-      }
-
-      await storage.deleteUser(userId);
-      req.session.destroy(() => {
-        res.clearCookie("connect.sid");
-        res.json({ success: true });
-      });
-    } catch (err: any) {
-      console.error("Error deleting own account:", err);
-      res.status(500).json({
-        message: "Ошибка удаления аккаунта",
-        error: err?.message,
-      });
-    }
-  });
-
   app.put("/api/auth/me", requireAuth, async (req, res) => {
     try {
       const { name } = req.body;
