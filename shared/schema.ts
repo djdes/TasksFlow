@@ -246,3 +246,30 @@ export const webhookDeliveries = mysqlTable("webhook_deliveries", {
 export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
 export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
 
+// Приглашения сотрудников через QR-код. Админ генерит запись, отдаёт
+// сотруднику QR/ссылку вида /join/<token>. По accept'у создаётся User
+// в companyId приглашения с уже выставленными position/isAdmin.
+// Активным считается приглашение с usedAt IS NULL AND revokedAt IS NULL.
+// Без TTL — живёт пока его не использовали или не отозвали.
+export const invitations = mysqlTable("invitations", {
+  id: int("id").primaryKey().autoincrement(),
+  // base64url, 32 байта энтропии (256 бит). Колонка varchar(64) с запасом.
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  companyId: int("company_id").notNull(),
+  createdByUserId: int("created_by_user_id").notNull(),
+  // Опционально предзадаётся админом при генерации QR.
+  position: varchar("position", { length: 120 }),
+  // true если при генерации админ выбрал role=admin или role=manager
+  // (та же логика "requestedAdmin", что в POST /api/users).
+  isAdmin: boolean("is_admin").notNull().default(false),
+  // Unix sec; NULL пока не использовали.
+  usedAt: int("used_at"),
+  usedByUserId: int("used_by_user_id"),
+  // Unix sec; NULL пока не отозвали.
+  revokedAt: int("revoked_at"),
+  createdAt: int("created_at").notNull().default(0),
+});
+
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = typeof invitations.$inferInsert;
+
