@@ -1283,6 +1283,28 @@ export async function registerRoutes(
     }
   });
 
+  // Публичная: превью приглашения по токену.
+  // Намеренно не отдаём id/companyId/createdByUserId/isAdmin —
+  // только то, что нужно показать сотруднику на форме регистрации.
+  app.get("/api/invitations/by-token/:token", async (req, res) => {
+    try {
+      const inv = await storage.getInvitationByToken(req.params.token);
+      if (!inv) return res.json({ valid: false, reason: "not_found" });
+      if (inv.revokedAt) return res.json({ valid: false, reason: "revoked" });
+      if (inv.usedAt) return res.json({ valid: false, reason: "used" });
+      const company = await storage.getCompanyById(inv.companyId);
+      if (!company) return res.json({ valid: false, reason: "not_found" });
+      res.json({
+        valid: true,
+        companyName: company.name,
+        position: inv.position,
+      });
+    } catch (err: any) {
+      console.error("Error reading invitation:", err);
+      res.status(500).json({ message: "Ошибка чтения приглашения" });
+    }
+  });
+
   app.put(api.users.update.path, requireAuth, requireAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);
