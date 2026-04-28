@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertWorkerSchema, insertTaskSchema, insertUserSchema, updateUserSchema, loginSchema, workers, tasks, users } from './schema';
+import { insertWorkerSchema, insertTaskSchema, insertUserSchema, updateUserSchema, loginSchema, workers, tasks, users, invitations, type Invitation } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -66,6 +66,68 @@ export const api = {
         200: z.custom<typeof users.$inferSelect>(),
         400: errorSchemas.validation,
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  invitations: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/invitations',
+      responses: {
+        200: z.array(z.custom<Invitation>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/invitations',
+      input: z.object({
+        position: z.string().trim().min(1).max(120).nullable().optional(),
+        role: z.enum(['admin', 'manager', 'employee']).optional(),
+      }),
+      responses: {
+        201: z.object({
+          id: z.number(),
+          token: z.string(),
+          url: z.string(),
+          position: z.string().nullable(),
+          isAdmin: z.boolean(),
+          createdAt: z.number(),
+        }),
+        400: errorSchemas.validation,
+      },
+    },
+    revoke: {
+      method: 'POST' as const,
+      path: '/api/invitations/:id/revoke',
+      responses: {
+        200: z.custom<Invitation>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    preview: {
+      method: 'GET' as const,
+      path: '/api/invitations/by-token/:token',
+      responses: {
+        200: z.union([
+          z.object({ valid: z.literal(false), reason: z.enum(['not_found', 'used', 'revoked']) }),
+          z.object({ valid: z.literal(true), companyName: z.string(), position: z.string().nullable() }),
+        ]),
+      },
+    },
+    accept: {
+      method: 'POST' as const,
+      path: '/api/invitations/by-token/:token/accept',
+      input: z.object({
+        phone: z.string().min(1),
+        name: z.string().trim().min(1),
+      }),
+      responses: {
+        201: z.object({
+          user: z.custom<typeof users.$inferSelect>(),
+          company: z.object({ id: z.number(), name: z.string() }),
+        }),
+        400: errorSchemas.validation,
       },
     },
   },
