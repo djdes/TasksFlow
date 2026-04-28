@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ClipboardCheck, Sparkles, Star } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +18,7 @@ import { z } from "zod";
 import { loginSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/lib/queryClient";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const formSchema = loginSchema;
 
@@ -186,49 +186,7 @@ export default function Login() {
                     Номер телефона
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="xxx xxx xx xx"
-                      className="h-16 text-2xl font-semibold tracking-wider border-2 border-border rounded-2xl px-6 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card shadow-sm"
-                      value={field.value}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        // Убираем +7 в начале если есть
-                        let cleaned = value.replace(/^\+?7?/, "");
-                        // Оставляем только цифры
-                        let digits = cleaned.replace(/\D/g, "");
-                        // Если первая цифра 7 (ввод начали с 7 или вставили номер типа 79991234567)
-                        if (digits.startsWith("7") && digits.length > 1) {
-                          digits = digits.slice(1);
-                        }
-                        // Ограничиваем до 10 цифр
-                        const limitedDigits = digits.slice(0, 10);
-                        field.onChange("+7" + limitedDigits);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Backspace") {
-                          const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                          if (cursorPos <= 2) {
-                            e.preventDefault();
-                            return;
-                          }
-                        }
-                        if (e.key === "Delete") {
-                          const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                          if (cursorPos < 2) {
-                            e.preventDefault();
-                            return;
-                          }
-                        }
-                      }}
-                      onFocus={(e) => {
-                        if (field.value === "+7" || field.value === "") {
-                          setTimeout(() => {
-                            e.target.setSelectionRange(2, 2);
-                          }, 0);
-                        }
-                      }}
-                    />
+                    <PhoneInput value={field.value} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage className="text-sm mt-2" />
                 </FormItem>
