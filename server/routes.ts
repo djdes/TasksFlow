@@ -1247,6 +1247,42 @@ export async function registerRoutes(
     }
   });
 
+  app.get(api.invitations.list.path, requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) return res.json([]);
+      const includeAll = req.query.includeAll === "true";
+      const list = await storage.getInvitationsByCompany(companyId, includeAll);
+      res.json(list);
+    } catch (err: any) {
+      console.error("Error listing invitations:", err);
+      res.status(500).json({ message: "Ошибка загрузки приглашений", error: err.message });
+    }
+  });
+
+  app.post("/api/invitations/:id/revoke", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ message: "Некорректный id" });
+      }
+      const adminCompanyId = await getCompanyIdFromReq(req);
+      const inv = await storage.getInvitationById(id);
+      // 404 — и для чужой компании, и для несуществующего id (не подтверждаем существование).
+      if (!inv || inv.companyId !== adminCompanyId) {
+        return res.status(404).json({ message: "Приглашение не найдено" });
+      }
+      if (inv.usedAt || inv.revokedAt) {
+        return res.status(400).json({ message: "Приглашение уже неактивно" });
+      }
+      const updated = await storage.revokeInvitation(id);
+      res.json(updated);
+    } catch (err: any) {
+      console.error("Error revoking invitation:", err);
+      res.status(500).json({ message: "Ошибка отзыва приглашения", error: err.message });
+    }
+  });
+
   app.put(api.users.update.path, requireAuth, requireAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);

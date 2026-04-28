@@ -143,3 +143,93 @@ describe("POST /api/invitations", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("GET /api/invitations", () => {
+  it("возвращает только активные по умолчанию", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationsByCompany.mockResolvedValue([
+      {
+        id: 1,
+        token: "t1",
+        companyId: 42,
+        createdByUserId: 10,
+        position: null,
+        isAdmin: false,
+        usedAt: null,
+        usedByUserId: null,
+        revokedAt: null,
+        createdAt: 2,
+      },
+    ] satisfies Invitation[]);
+
+    const { app } = await buildApp({ sessionUserId: 10 });
+    const res = await request(app).get("/api/invitations");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(storage.getInvitationsByCompany).toHaveBeenCalledWith(42, false);
+  });
+
+  it("?includeAll=true прокидывается в storage", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationsByCompany.mockResolvedValue([]);
+    const { app } = await buildApp({ sessionUserId: 10 });
+    await request(app).get("/api/invitations?includeAll=true");
+    expect(storage.getInvitationsByCompany).toHaveBeenCalledWith(42, true);
+  });
+});
+
+describe("POST /api/invitations/:id/revoke", () => {
+  const ACTIVE: Invitation = {
+    id: 5,
+    token: "x",
+    companyId: 42,
+    createdByUserId: 10,
+    position: null,
+    isAdmin: false,
+    usedAt: null,
+    usedByUserId: null,
+    revokedAt: null,
+    createdAt: 1,
+  };
+
+  it("отзывает собственное активное приглашение", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationById.mockResolvedValue(ACTIVE);
+    storage.revokeInvitation.mockResolvedValue({ ...ACTIVE, revokedAt: 999 });
+
+    const { app } = await buildApp({ sessionUserId: 10 });
+    const res = await request(app).post("/api/invitations/5/revoke");
+
+    expect(res.status).toBe(200);
+    expect(res.body.revokedAt).toBe(999);
+  });
+
+  it("чужой компании → 404", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationById.mockResolvedValue({ ...ACTIVE, companyId: 999 });
+    const { app } = await buildApp({ sessionUserId: 10 });
+    const res = await request(app).post("/api/invitations/5/revoke");
+    expect(res.status).toBe(404);
+  });
+
+  it("уже использованное → 400", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationById.mockResolvedValue({
+      ...ACTIVE,
+      usedAt: 100,
+      usedByUserId: 7,
+    });
+    const { app } = await buildApp({ sessionUserId: 10 });
+    const res = await request(app).post("/api/invitations/5/revoke");
+    expect(res.status).toBe(400);
+  });
+
+  it("уже отозванное → 400", async () => {
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getInvitationById.mockResolvedValue({ ...ACTIVE, revokedAt: 50 });
+    const { app } = await buildApp({ sessionUserId: 10 });
+    const res = await request(app).post("/api/invitations/5/revoke");
+    expect(res.status).toBe(400);
+  });
+});
