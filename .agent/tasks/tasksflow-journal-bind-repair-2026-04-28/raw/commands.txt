@@ -1,0 +1,8 @@
+TasksFlow:
+- npm run check => PASS
+- npx vitest run tests/wesetup-journal-mode.test.ts => PASS (13 tests)
+- npm run build => PASS (warnings only: existing bundle/import.meta warnings)
+
+Wesetup.ru:
+- npx eslint src/lib/tasksflow-auth.ts src/app/api/integrations/tasksflow/complete/route.ts src/app/api/integrations/tasksflow/task-fill-token/route.ts src/app/api/integrations/tasksflow/task-form/route.ts => PASS
+- npx tsc --noEmit --pretty false => BLOCKED by existing src/app/api/root/impersonate/route.ts TS2740

@@ -9,7 +9,10 @@ import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
-import { parseJournalLink } from "@shared/journal-link";
+import {
+  getJournalLinkIntegrationId,
+  parseJournalLink,
+} from "@shared/journal-link";
 import type { JournalLink } from "@shared/journal-link";
 import {
   findTaskFormInCatalog,
@@ -1626,6 +1629,10 @@ export async function registerRoutes(
     if (!Number.isFinite(taskId) || taskId <= 0) {
       return res.status(400).json({ message: "Bad taskId" });
     }
+    const task = await storage.getTask(taskId);
+    const journalLinkIntegrationId = getJournalLinkIntegrationId(
+      task?.journalLink
+    );
     try {
       const upstream = await fetch(
         `${baseUrl}/api/integrations/tasksflow/task-fill-token`,
@@ -1635,7 +1642,12 @@ export async function registerRoutes(
             Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ taskId }),
+          body: JSON.stringify({
+            taskId,
+            ...(journalLinkIntegrationId
+              ? { integrationId: journalLinkIntegrationId }
+              : {}),
+          }),
           cache: "no-store",
         }
       );
@@ -1768,22 +1780,45 @@ export async function registerRoutes(
     if (!Number.isFinite(taskId) || taskId <= 0) {
       return res.status(400).json({ message: "taskId required" });
     }
+    let task: Awaited<ReturnType<typeof storage.getTask>>;
     try {
-      const upstream = await fetch(
-        `${baseUrl}/api/integrations/tasksflow/task-form?taskId=${encodeURIComponent(String(taskId))}`,
-        {
-          headers: { Authorization: `Bearer ${key}` },
-          cache: "no-store",
-        }
+      task = await storage.getTask(taskId);
+      const journalLinkIntegrationId = getJournalLinkIntegrationId(
+        task?.journalLink
       );
+      const upstreamUrl = new URL(
+        `${baseUrl}/api/integrations/tasksflow/task-form`
+      );
+      upstreamUrl.searchParams.set("taskId", String(taskId));
+      if (journalLinkIntegrationId) {
+        upstreamUrl.searchParams.set("integrationId", journalLinkIntegrationId);
+      }
+      const upstream = await fetch(upstreamUrl, {
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+      });
       const text = await upstream.text();
       const parsed = parseJsonOrUndefined(text);
       const normalized =
         parsed === undefined ? null : normalizeTaskFormPayload(parsed);
+      const parsedObject =
+        parsed && typeof parsed === "object"
+          ? (parsed as Record<string, unknown>)
+          : null;
+      const upstreamJournalCode =
+        typeof parsedObject?.journalCode === "string"
+          ? parsedObject.journalCode
+          : null;
 
       if (upstream.ok) {
         if (normalized?.form) {
           return res.status(upstream.status).json(normalized);
+        }
+        if (normalized && !upstreamJournalCode) {
+          return res.status(404).json({
+            message:
+              "Задача не связана со строкой журнала WeSetup. Создайте журнальную задачу заново через режим WeSetup.",
+          });
         }
         const fallback = await resolveTaskFormFromCatalog(target, taskId);
         if (fallback.resolved) {
@@ -1849,10 +1884,16 @@ export async function registerRoutes(
       return res.status(500).json({ message: "Ошибка проверки прав" });
     }
 
+    const completeJournalLinkIntegrationId = getJournalLinkIntegrationId(
+      (await storage.getTask(taskId))?.journalLink
+    );
     const completePayload = {
       taskId,
       isCompleted: Boolean(isCompleted ?? true),
       values: values ?? {},
+      ...(completeJournalLinkIntegrationId
+        ? { integrationId: completeJournalLinkIntegrationId }
+        : {}),
     };
     const completeUrl = `${baseUrl}/api/integrations/tasksflow/complete`;
     try {

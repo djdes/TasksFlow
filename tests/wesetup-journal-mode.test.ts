@@ -9,7 +9,10 @@ import {
   resolveActiveJournal,
   resolveJournalUi,
 } from "@shared/wesetup-journal-mode";
-import { parseJournalLink } from "../shared/journal-link";
+import {
+  getJournalLinkIntegrationId,
+  parseJournalLink,
+} from "../shared/journal-link";
 
 const catalog = {
   journals: [
@@ -317,5 +320,25 @@ describe("journal link parsing", () => {
     const parsed = parseJournalLink(raw);
     expect(parsed).not.toBeNull();
     expect(parsed?.kind).toBe("wesetup-health_check");
+  });
+
+  it("extracts integration id for any wesetup journal kind", () => {
+    const kinds = [
+      "wesetup-equipment_calibration",
+      "wesetup-health_check",
+      "wesetup-audit_plan",
+    ];
+
+    for (const kind of kinds) {
+      const raw = JSON.stringify({
+        kind,
+        baseUrl: "https://wesetup.ru",
+        integrationId: `int-${kind}`,
+        documentId: "doc-1",
+        rowKey: "row-1",
+      });
+
+      expect(getJournalLinkIntegrationId(raw)).toBe(`int-${kind}`);
+    }
   });
 });

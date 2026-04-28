@@ -1,0 +1,39 @@
+{
+  "verdict": "PASS",
+  "checks": [
+    {
+      "repo": "TasksFlow",
+      "command": "npm run check",
+      "status": "PASS"
+    },
+    {
+      "repo": "TasksFlow",
+      "command": "npx vitest run tests/wesetup-journal-mode.test.ts",
+      "status": "PASS"
+    },
+    {
+      "repo": "TasksFlow",
+      "command": "npm run build",
+      "status": "PASS"
+    },
+    {
+      "repo": "Wesetup.ru",
+      "command": "npx eslint src/lib/tasksflow-auth.ts src/app/api/integrations/tasksflow/complete/route.ts src/app/api/integrations/tasksflow/task-fill-token/route.ts src/app/api/integrations/tasksflow/task-form/route.ts",
+      "status": "PASS"
+    },
+    {
+      "repo": "Wesetup.ru",
+      "command": "npx tsc --noEmit --pretty false",
+      "status": "BLOCKED",
+      "reason": "Pre-existing dirty file src/app/api/root/impersonate/route.ts fails TS2740."
+    }
+  ],
+  "acceptanceCriteria": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS",
+    "AC5": "PASS",
+    "AC6": "PASS_WITH_REPO_WIDE_BLOCKER"
+  }
+}

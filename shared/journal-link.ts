@@ -51,6 +51,12 @@ export function parseJournalLink(raw: string | null | undefined): JournalLink | 
   }
 }
 
+export function getJournalLinkIntegrationId(
+  raw: string | null | undefined
+): string | null {
+  return parseJournalLink(raw)?.integrationId ?? null;
+}
+
 export function stringifyJournalLink(link: JournalLink): string {
   return JSON.stringify(link);
 }
