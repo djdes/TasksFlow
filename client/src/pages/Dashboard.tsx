@@ -37,7 +37,8 @@ import {
   X,
   User,
   Search,
-  Palette
+  Palette,
+  QrCode
 } from "lucide-react";
 import {
   Select,
@@ -528,6 +529,17 @@ export default function Dashboard() {
                 >
                   <User className="w-5 h-5 text-primary" />
                   <span className="font-medium">Сотрудники</span>
+                </button>
+                <button
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/invitations");
+                  }}
+                >
+                  <QrCode className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Приглашения</span>
                 </button>
                 <button
                   type="button"

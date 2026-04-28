@@ -20,6 +20,7 @@ import EditWorker from "@/pages/EditWorker";
 import AdminUsers from "@/pages/AdminUsers";
 import CompanySettings from "@/pages/CompanySettings";
 import ApiKeysPage from "@/pages/ApiKeys";
+import Invitations from "@/pages/Invitations";
 import NotFound from "@/pages/not-found";
 
 // Disable browser's automatic scroll restoration
@@ -64,6 +65,7 @@ function Router() {
           <Route path="/admin/users" component={AdminUsers} />
           <Route path="/admin/settings" component={CompanySettings} />
           <Route path="/admin/api-keys" component={ApiKeysPage} />
+          <Route path="/admin/invitations" component={Invitations} />
           <Route path="/tasks/new" component={CreateTask} />
           <Route path="/tasks/:id/edit" component={EditTask} />
           <Route path="/workers/new" component={CreateWorker} />
