@@ -98,6 +98,7 @@ describe("POST /api/users with API key", () => {
         name: "Иван",
         isAdmin: false,
         companyId: 42,
+        position: null,
       });
       expect(response.body).toMatchObject({
         id: 77,
@@ -152,6 +153,7 @@ describe("POST /api/users with API key", () => {
       name: "Менеджер",
       isAdmin: true,
       companyId: 42,
+      position: null,
     });
     expect(response.body).toMatchObject({
       id: 78,
