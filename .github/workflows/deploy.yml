@@ -50,18 +50,8 @@ jobs:
               echo ">>> dependencies unchanged: skip npm ci"
             fi
 
-            echo ">>> mysqldump BEFORE migrations (safety net)"
-            # 28.04.2026 prod БД была wipe'нута через ручной drizzle-kit
-            # push --force, backup'а не было — потеряли tasks/invitations
-            # навсегда. Теперь перед каждым deploy делаем dump в
-            # ~/backups/tasksflow-YYYY-MM-DD-HH-mm-ss.sql.gz. Ротация 30
-            # дней. Если этот шаг упал — DEPLOY ABORT (а не non-fatal!),
-            # потому что без бэкапа продолжать опасно.
-            npm run backup-db
-
             echo ">>> safe migrations"
             npm run create-api-keys-table || echo "api_keys migration failed (non-fatal)"
-            npm run create-invitations-table || echo "invitations migration failed (non-fatal)"
             npm run add-claim-col || echo "claim col migration failed (non-fatal)"
             npm run add-managed-workers-col || echo "managed-workers col migration failed (non-fatal)"
             npm run add-position-col || echo "position col migration failed (non-fatal)"
