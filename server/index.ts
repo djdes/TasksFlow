@@ -92,25 +92,60 @@ if (!existsSync(uploadsDir)) {
 app.use("/uploads", express.static(uploadsDir));
 
 // Health check endpoint (до логирования запросов)
-app.get("/api/health", async (req, res) => {
+//
+// Формат совместим с WeSetup `/api/health` — те же поля `ok`,
+// `db`, `dbLatencyMs`, `buildSha`, `uptimeSec`, `now`. WeSetup
+// пингует этот endpoint каждые 5 минут и показывает «зелёный/
+// жёлтый/красный» в /settings/integrations/tasksflow на основе
+// последнего ответа (см. P1#5 в docs/THREAD_TASKSFLOW.md).
+//
+// Build SHA читаем из `.build-sha` файла (пишется CI при деплое).
+// Если файла нет — это dev-окружение, отдаём "dev".
+let cachedBuildSha: string | null = null;
+function readBuildSha(): string {
+  if (cachedBuildSha !== null) return cachedBuildSha;
   try {
-    // Проверяем подключение к БД простым запросом
-    await db.execute("SELECT 1" as any);
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-    });
-  } catch (err) {
-    logger.error({ err }, "Health check failed - database connection error");
-    res.status(503).json({
-      status: "unhealthy",
-      timestamp: new Date().toISOString(),
-      error: "Database connection failed",
-    });
+    const { readFileSync } = require("fs") as typeof import("fs");
+    cachedBuildSha = readFileSync(
+      path.join(process.cwd(), ".build-sha"),
+      "utf-8",
+    ).trim();
+  } catch {
+    cachedBuildSha = "dev";
   }
-});
+  return cachedBuildSha as string;
+}
+
+async function healthHandler(_req: Request, res: Response) {
+  const startedAt = Date.now();
+  let dbStatus: "ok" | "error" = "ok";
+  let dbLatencyMs = 0;
+  let dbError: string | undefined;
+  try {
+    await db.execute("SELECT 1" as any);
+    dbLatencyMs = Date.now() - startedAt;
+  } catch (err) {
+    dbStatus = "error";
+    dbError = err instanceof Error ? err.message : "unknown";
+    logger.error({ err }, "Health check failed - database connection error");
+  }
+
+  const httpStatus = dbStatus === "ok" ? 200 : 503;
+  res.status(httpStatus).json({
+    ok: dbStatus === "ok",
+    db: dbStatus,
+    dbLatencyMs,
+    ...(dbError ? { dbError } : {}),
+    buildSha: readBuildSha(),
+    uptimeSec: Math.round(process.uptime()),
+    now: new Date().toISOString(),
+  });
+}
+
+app.get("/api/health", healthHandler);
+// Alias без `/api` — для load-balancer probes и для обратной совместимости
+// с потребителями, ожидающими «прямой» URL вида GET /health.
+app.get("/health", healthHandler);
 
 // HTTP request logging
 app.use((req, res, next) => {
