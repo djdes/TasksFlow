@@ -7,9 +7,29 @@
  * но возвращаются как массивы (парсинг при чтении, сериализация при записи)
  */
 
-import { workers, tasks, users, companies, apiKeys, type Worker, type InsertWorker, type Task, type InsertTask, type User, type InsertUser, type UpdateUser, type Company, type InsertCompany, type ApiKey, type InsertApiKey } from "@shared/schema";
+import {
+  workers,
+  tasks,
+  users,
+  companies,
+  apiKeys,
+  webhookDeliveries,
+  type Worker,
+  type InsertWorker,
+  type Task,
+  type InsertTask,
+  type User,
+  type InsertUser,
+  type UpdateUser,
+  type Company,
+  type InsertCompany,
+  type ApiKey,
+  type InsertApiKey,
+  type WebhookDelivery,
+  type InsertWebhookDelivery,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, lte, asc } from "drizzle-orm";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
@@ -605,6 +625,68 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select().from(apiKeys)
       .where(and(eq(apiKeys.companyId, companyId), eq(apiKeys.revokedAt, 0)));
     return rows.length;
+  }
+
+  // Webhook deliveries — очередь повторных доставок POST'ов в WeSetup.
+  // См. shared/schema.ts комментарий к webhookDeliveries для деталей
+  // backoff-лестницы. Storage даёт только CRUD; политика retry —
+  // в server/index.ts (worker).
+
+  async enqueueWebhookDelivery(input: {
+    taskId: number;
+    eventType: "complete" | "uncomplete";
+    targetUrl: string;
+    apiKey: string;
+    payload: string;
+    nextRetryAt: number;
+  }): Promise<WebhookDelivery> {
+    const now = Math.floor(Date.now() / 1000);
+    const insert: InsertWebhookDelivery = {
+      taskId: input.taskId,
+      eventType: input.eventType,
+      targetUrl: input.targetUrl,
+      apiKey: input.apiKey,
+      payload: input.payload,
+      attempts: 0,
+      status: 0,
+      nextRetryAt: input.nextRetryAt,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const [r] = await db.insert(webhookDeliveries).values(insert);
+    const id = r.insertId;
+    const [row] = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
+    return row;
+  }
+
+  /** Pull pending deliveries due for retry. */
+  async listPendingWebhookDeliveries(limit: number, now: number): Promise<WebhookDelivery[]> {
+    return await db
+      .select()
+      .from(webhookDeliveries)
+      .where(and(eq(webhookDeliveries.status, 0), lte(webhookDeliveries.nextRetryAt, now)))
+      .orderBy(asc(webhookDeliveries.nextRetryAt))
+      .limit(limit);
+  }
+
+  async markWebhookDeliveryAttempt(input: {
+    id: number;
+    attempts: number;
+    status: 0 | 1 | 2 | 3;
+    nextRetryAt: number;
+    lastError: string | null;
+  }): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .update(webhookDeliveries)
+      .set({
+        attempts: input.attempts,
+        status: input.status,
+        nextRetryAt: input.nextRetryAt,
+        lastError: input.lastError,
+        updatedAt: now,
+      })
+      .where(eq(webhookDeliveries.id, input.id));
   }
 }
 

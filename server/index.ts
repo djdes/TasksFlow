@@ -10,6 +10,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { logger, httpLogger } from "./logger";
 import { db } from "./db";
+import { processPendingDeliveries } from "./webhook-queue";
 
 const app = express();
 const httpServer = createServer(app);
@@ -246,6 +247,28 @@ process.on("unhandledRejection", (reason, promise) => {
       logger.info({ port }, "Server listening");
     },
   );
+
+  // Webhook delivery worker — каждые 30 секунд тянет до 50 pending
+  // доставок чьё nextRetryAt уже наступило. Backoff и max attempts
+  // живут в server/webhook-queue.ts.
+  //
+  // Single-instance assumption: TasksFlow деплоится в одном процессе,
+  // так что race на одной строке невозможен. Если когда-нибудь поедем
+  // на multi-instance — добавить SELECT … FOR UPDATE SKIP LOCKED.
+  setInterval(() => {
+    processPendingDeliveries()
+      .then((stats) => {
+        if (stats.processed > 0) {
+          logger.info({ ...stats }, "[webhook-queue] tick");
+        }
+      })
+      .catch((err: unknown) => {
+        logger.error(
+          { err: err instanceof Error ? err.message : String(err) },
+          "[webhook-queue] tick failed",
+        );
+      });
+  }, 30_000);
 })();
 
 // Export for potential testing

@@ -1027,28 +1027,27 @@ export async function registerRoutes(
       // link.remoteStatus стал "active". Иначе при повторном /complete
       // WeSetup-сторона ещё считает задачу completed, и UI ведёт себя
       // непредсказуемо («уже выполнял» / задача мгновенно возвращается).
+      //
+      // attemptOrEnqueue делает первую попытку синхронно; на сетевой
+      // сбой / 5xx — кладёт в webhook_deliveries и worker ретраит
+      // по backoff-лестнице. Раньше был fire-and-forget с одним retry
+      // и terral lost data при downtime (см. P1#6).
       if (task.journalLink) {
         try {
           const target = await resolveWesetupTarget(req);
           if (!("error" in target)) {
-            const { baseUrl, key } = target;
-            await fetch(`${baseUrl}/api/integrations/tasksflow/complete`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${key}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                taskId,
-                isCompleted: false,
-                values: {},
-              }),
-              cache: "no-store",
+            const { attemptOrEnqueue } = await import("./webhook-queue");
+            await attemptOrEnqueue({
+              taskId,
+              eventType: "uncomplete",
+              targetUrl: `${target.baseUrl}/api/integrations/tasksflow/complete`,
+              apiKey: target.key,
+              payload: { taskId, isCompleted: false, values: {} },
             });
           }
         } catch (err) {
           console.warn(
-            "[uncomplete] WeSetup reopen sync failed (non-fatal)",
+            "[uncomplete] WeSetup reopen sync enqueue failed (non-fatal)",
             err instanceof Error ? err.message : err,
           );
         }
@@ -1850,23 +1849,22 @@ export async function registerRoutes(
       return res.status(500).json({ message: "Ошибка проверки прав" });
     }
 
+    const completePayload = {
+      taskId,
+      isCompleted: Boolean(isCompleted ?? true),
+      values: values ?? {},
+    };
+    const completeUrl = `${baseUrl}/api/integrations/tasksflow/complete`;
     try {
-      const upstream = await fetch(
-        `${baseUrl}/api/integrations/tasksflow/complete`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            taskId,
-            isCompleted: Boolean(isCompleted ?? true),
-            values: values ?? {},
-          }),
-          cache: "no-store",
-        }
-      );
+      const upstream = await fetch(completeUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(completePayload),
+        cache: "no-store",
+      });
       const text = await upstream.text();
       if (upstream.ok) {
         // Also mark the local TF task as completed so dashboard's 1/4
@@ -1878,13 +1876,74 @@ export async function registerRoutes(
         } catch (err) {
           console.error("[wesetup-proxy] local complete mirror failed", err);
         }
+      } else if (upstream.status >= 500 || upstream.status === 408 || upstream.status === 429) {
+        // 5xx/408/429 — WeSetup временно недоступен. Кладём в очередь
+        // чтобы worker дотащил данные сотрудника позже (см. P1#6).
+        // Локально TF-task уже отметим выполненным, чтобы dashboard
+        // обновился сразу — иначе сотрудник видит «не сохранено» и
+        // тапает повторно, плодя дубли.
+        try {
+          await storage.updateTask(taskId, {
+            isCompleted: Boolean(isCompleted ?? true),
+          });
+        } catch {
+          /* non-fatal */
+        }
+        try {
+          const { attemptOrEnqueue } = await import("./webhook-queue");
+          await attemptOrEnqueue({
+            taskId,
+            eventType: "complete",
+            targetUrl: completeUrl,
+            apiKey: key,
+            payload: completePayload,
+          });
+        } catch (enqueueErr) {
+          console.error(
+            "[wesetup-proxy] failed to enqueue complete for retry",
+            enqueueErr,
+          );
+        }
       }
       res.status(upstream.status);
       res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
       res.send(text);
     } catch (err: any) {
+      // Network error / timeout — упстрим лежит. Сохраняем delivery
+      // в очередь, локально таск отмечаем как выполненный, и отдаём
+      // юзеру 202 Accepted с пояснением.
       console.error("[wesetup-proxy] complete failed", err);
-      res.status(502).json({ message: normalizeWesetupNetworkError(err) });
+      try {
+        await storage.updateTask(taskId, {
+          isCompleted: Boolean(isCompleted ?? true),
+        });
+      } catch {
+        /* non-fatal */
+      }
+      try {
+        const { attemptOrEnqueue } = await import("./webhook-queue");
+        await attemptOrEnqueue({
+          taskId,
+          eventType: "complete",
+          targetUrl: completeUrl,
+          apiKey: key,
+          payload: completePayload,
+        });
+        return res.status(202).json({
+          message:
+            "WeSetup временно недоступен. Задача сохранена локально, " +
+            "данные досинхронизируются автоматически.",
+          queued: true,
+        });
+      } catch (enqueueErr) {
+        console.error(
+          "[wesetup-proxy] failed to enqueue complete after network error",
+          enqueueErr,
+        );
+        return res
+          .status(502)
+          .json({ message: normalizeWesetupNetworkError(err) });
+      }
     }
   });
 

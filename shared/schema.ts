@@ -201,3 +201,48 @@ export const apiKeys = mysqlTable("api_keys", {
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
 
+// Очередь повторных доставок webhook'ов в WeSetup. Когда таск
+// закрывается / открывается обратно, TasksFlow отправляет POST
+// /api/integrations/tasksflow/complete на WeSetup. Если WeSetup
+// не отвечает (5xx, timeout, network error) — раньше мы делали
+// один retry и забывали. Теперь наполняем очередь, и worker
+// в server/index.ts ретраит по экспоненциальной лестнице:
+//   попытка 0  — мгновенная (POST в обработчике)
+//   попытка 1  — через 5 мин
+//   попытка 2  — через 15 мин
+//   попытка 3  — через 1 час
+//   попытка 4  — через 6 часов
+//   попытка 5  — через 24 часа
+//   после 5    — status=2 (failed), уведомляем admin'а через лог
+//
+// status: 0=pending, 1=delivered, 2=failed_permanent, 3=cancelled
+export const webhookDeliveries = mysqlTable("webhook_deliveries", {
+  id: int("id").primaryKey().autoincrement(),
+  // taskId не FK — task может быть удалён, но журнальный delivery всё ещё нужно завершить
+  taskId: int("task_id").notNull(),
+  // "complete" или "uncomplete" — управляет какую `isCompleted`
+  // отдавать в payload при retry'е (для отображения в логе).
+  eventType: varchar("event_type", { length: 20 }).notNull(),
+  // Frozen target: если org перенастроит интеграцию между retry'ями,
+  // мы всё равно пытаемся доставить туда, куда задача шла изначально.
+  targetUrl: varchar("target_url", { length: 500 }).notNull(),
+  // Plaintext API key — TasksFlow и так хранит ключи в clear, кроме того
+  // Wesetup verify через проверку bearer'а в БД. Без копии не получится
+  // ретраить если ключ отозван — но это «правильно failed», т.к.
+  // отозванный ключ должен отвалиться.
+  apiKey: varchar("api_key", { length: 255 }).notNull(),
+  // JSON payload который отдадим в WeSetup body.
+  payload: text("payload").notNull(),
+  attempts: int("attempts").notNull().default(0),
+  status: int("status").notNull().default(0),
+  // Unix-ms когда можно ретраить. Worker делает SELECT … WHERE
+  // status=0 AND nextRetryAt <= now() ORDER BY nextRetryAt LIMIT 50.
+  nextRetryAt: int("next_retry_at").notNull(),
+  lastError: text("last_error"),
+  createdAt: int("created_at").notNull().default(0),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
+
