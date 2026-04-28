@@ -313,14 +313,15 @@ export default function Dashboard() {
     return hasJournalLink || category.startsWith("WeSetup · ");
   };
 
-  /**
-   * Парсит journalLink JSON и возвращает taskScope ('personal' | 'shared').
-   * Не journal-задачи и старые задачи без taskScope считаются 'personal'
-   * (back-compat). WeSetup кладёт taskScope в journalLink с 2026-04-26.
-   */
-  const getTaskScope = (
+  // getTaskScope — function declaration (а не const arrow), потому что
+  // используется в `scopeCounts` reduce'е выше по файлу. const-arrow
+  // не hoisted и в TDZ давал «can't access lexical declaration … before
+  // initialization» при первом рендере (см. ErrorBoundary screenshot
+  // 2026-04-28). Function declaration hoisted в начало enclosing scope —
+  // безопасно вызывать раньше визуального места объявления.
+  function getTaskScope(
     task: typeof tasks[0]
-  ): "personal" | "shared" => {
+  ): "personal" | "shared" {
     const raw = (task as { journalLink?: string | null }).journalLink;
     if (!raw) return "personal";
     try {
@@ -329,7 +330,7 @@ export default function Dashboard() {
     } catch {
       return "personal";
     }
-  };
+  }
 
   /**
    * Клик по самой карточке. Раньше всегда открывал TaskViewDialog —
