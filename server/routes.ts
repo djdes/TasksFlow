@@ -446,8 +446,8 @@ export async function registerRoutes(
       }
 
       if (user.isAdmin && user.companyId) {
-        const allAdmins = await storage.getUsersByCompany(user.companyId);
-        const otherAdmins = allAdmins.filter(
+        const allUsers = await storage.getAllUsers(user.companyId);
+        const otherAdmins = allUsers.filter(
           (u) => u.isAdmin && u.id !== userId
         );
         if (otherAdmins.length === 0) {
