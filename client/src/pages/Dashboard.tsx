@@ -576,6 +576,37 @@ export default function Dashboard() {
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Выход</span>
             </button>
+            <button
+              type="button"
+              className="dropdown-item danger w-full"
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    "Удалить аккаунт безвозвратно? Все ваши данные пропадут. " +
+                      "Это действие нельзя отменить."
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  const r = await fetch("/api/auth/me", { method: "DELETE" });
+                  const d = await r.json().catch(() => ({}));
+                  if (!r.ok) {
+                    alert(d?.message || "Не удалось удалить аккаунт");
+                    return;
+                  }
+                  setIsMenuOpen(false);
+                  setLocation("/");
+                  // Hard reload чтобы сбросить React Query кеш и context.
+                  window.location.href = "/";
+                } catch {
+                  alert("Ошибка сети при удалении аккаунта");
+                }
+              }}
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Удалить аккаунт</span>
+            </button>
           </div>
         )}
       </header>
