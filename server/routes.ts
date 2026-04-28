@@ -3,6 +3,7 @@ import type { Server } from "http";
 import multer from "multer";
 import path from "path";
 import crypto from "node:crypto";
+import rateLimit from "express-rate-limit";
 import { existsSync, mkdirSync } from "fs";
 import { storage, DatabaseStorage } from "./storage";
 import { api } from "@shared/routes";
@@ -1282,6 +1283,19 @@ export async function registerRoutes(
       res.status(500).json({ message: "Ошибка отзыва приглашения", error: err.message });
     }
   });
+
+  // Публичные ручки приглашений: 30 запросов/минуту с IP. Защита от
+  // перебора токенов чисто символическая — энтропия 256 бит и так
+  // делает перебор нереальным, но это бесплатно. Применяется ко всему
+  // /api/invitations/by-token/* (preview + accept).
+  const inviteAcceptLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Слишком много запросов, попробуйте через минуту" },
+  });
+  app.use("/api/invitations/by-token", inviteAcceptLimiter);
 
   // Публичная: превью приглашения по токену.
   // Намеренно не отдаём id/companyId/createdByUserId/isAdmin —
