@@ -122,3 +122,132 @@ describe("GET /api/invitations/by-token/:token", () => {
     expect(res.body.id).toBeUndefined();
   });
 });
+
+describe("POST /api/invitations/by-token/:token/accept", () => {
+  const NEW_USER: User = {
+    id: 77,
+    phone: "+79990001122",
+    name: "Иван",
+    isAdmin: false,
+    createdAt: 1,
+    bonusBalance: 0,
+    companyId: 42,
+    managedWorkerIds: null,
+    position: "Курьер",
+  };
+
+  it("happy path: создаёт юзера, метит приглашение, возвращает company", async () => {
+    storage.getInvitationByToken.mockResolvedValue(ACTIVE);
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue(NEW_USER);
+    storage.markInvitationUsed.mockResolvedValue(true);
+    storage.getCompanyById.mockResolvedValue(COMPANY);
+
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.id).toBe(77);
+    expect(res.body.company).toEqual({ id: 42, name: "ООО Ромашка" });
+    expect(storage.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "+79990001122",
+        name: "Иван",
+        companyId: 42,
+        isAdmin: false,
+        position: "Курьер",
+      }),
+    );
+    expect(storage.markInvitationUsed).toHaveBeenCalledWith(1, 77);
+  });
+
+  it("isAdmin приглашения копируется в createUser", async () => {
+    storage.getInvitationByToken.mockResolvedValue({
+      ...ACTIVE,
+      isAdmin: true,
+      position: null,
+    });
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue({ ...NEW_USER, isAdmin: true, position: null });
+    storage.markInvitationUsed.mockResolvedValue(true);
+    storage.getCompanyById.mockResolvedValue(COMPANY);
+    const { app } = await buildApp();
+    await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(storage.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ isAdmin: true, position: null }),
+    );
+  });
+
+  it("несуществующий токен → 400 reason:not_found", async () => {
+    storage.getInvitationByToken.mockResolvedValue(undefined);
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/nope/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(res.status).toBe(400);
+    expect(res.body.reason).toBe("not_found");
+  });
+
+  it("отозванное → 400 reason:revoked", async () => {
+    storage.getInvitationByToken.mockResolvedValue({ ...ACTIVE, revokedAt: 5 });
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(res.body.reason).toBe("revoked");
+  });
+
+  it("телефон занят → 400 phone, приглашение НЕ помечается used", async () => {
+    storage.getInvitationByToken.mockResolvedValue(ACTIVE);
+    storage.getUserByPhone.mockResolvedValue({ ...NEW_USER });
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe("phone");
+    expect(storage.markInvitationUsed).not.toHaveBeenCalled();
+    expect(storage.createUser).not.toHaveBeenCalled();
+  });
+
+  it("race: markInvitationUsed=false → откат createUser, 400 reason:used", async () => {
+    storage.getInvitationByToken
+      .mockResolvedValueOnce(ACTIVE)
+      .mockResolvedValueOnce({ ...ACTIVE, usedAt: 100, usedByUserId: 999 });
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue(NEW_USER);
+    storage.markInvitationUsed.mockResolvedValue(false);
+    storage.deleteUser.mockResolvedValue(undefined);
+
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.reason).toBe("used");
+    expect(storage.deleteUser).toHaveBeenCalledWith(77);
+  });
+
+  it("нормализует телефон с пробелами и дефисами", async () => {
+    storage.getInvitationByToken.mockResolvedValue(ACTIVE);
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue(NEW_USER);
+    storage.markInvitationUsed.mockResolvedValue(true);
+    storage.getCompanyById.mockResolvedValue(COMPANY);
+
+    const { app } = await buildApp();
+    await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+7 999 000-11-22", name: "Иван" });
+
+    expect(storage.getUserByPhone).toHaveBeenCalledWith("+79990001122");
+    expect(storage.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: "+79990001122" }),
+    );
+  });
+});

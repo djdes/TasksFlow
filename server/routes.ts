@@ -1305,6 +1305,79 @@ export async function registerRoutes(
     }
   });
 
+  // Публичная: принять приглашение, создать User, авто-логин.
+  // Race-protected: атомарный markInvitationUsed; если не успели —
+  // откатываем созданного юзера и определяем причину повторным чтением.
+  app.post("/api/invitations/by-token/:token/accept", async (req, res) => {
+    try {
+      const input = api.invitations.accept.input.parse(req.body);
+
+      const inv = await storage.getInvitationByToken(req.params.token);
+      if (!inv) {
+        return res.status(400).json({ reason: "not_found", message: "Ссылка не найдена" });
+      }
+      if (inv.revokedAt) {
+        return res.status(400).json({ reason: "revoked", message: "Приглашение отозвано" });
+      }
+      if (inv.usedAt) {
+        return res.status(400).json({ reason: "used", message: "Приглашение уже использовано" });
+      }
+
+      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const existing = await storage.getUserByPhone(normalizedPhone);
+      if (existing) {
+        // НЕ помечаем приглашение как used — пусть человек попробует
+        // другой телефон по той же ссылке.
+        return res.status(400).json({
+          message: "Пользователь с таким номером уже существует",
+          field: "phone",
+        });
+      }
+
+      const user = await storage.createUser({
+        phone: normalizedPhone,
+        name: input.name,
+        isAdmin: inv.isAdmin,
+        companyId: inv.companyId,
+        position: inv.position,
+      });
+
+      const ok = await storage.markInvitationUsed(inv.id, user.id);
+      if (!ok) {
+        // Race: пока создавали юзера, кто-то опередил или приглашение
+        // отозвали. Откатываем юзера, определяем причину повторным чтением.
+        await storage.deleteUser(user.id);
+        const refreshed = await storage.getInvitationByToken(req.params.token);
+        const reason = refreshed?.revokedAt ? "revoked" : "used";
+        return res.status(400).json({
+          reason,
+          message: reason === "used"
+            ? "Приглашение уже использовано"
+            : "Приглашение отозвано",
+        });
+      }
+
+      const company = await storage.getCompanyById(inv.companyId);
+      req.session.userId = user.id;
+
+      res.status(201).json({
+        user,
+        company: company
+          ? { id: company.id, name: company.name }
+          : { id: inv.companyId, name: "" },
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error accepting invitation:", err);
+      res.status(500).json({ message: "Ошибка регистрации", error: err.message });
+    }
+  });
+
   app.put(api.users.update.path, requireAuth, requireAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);
