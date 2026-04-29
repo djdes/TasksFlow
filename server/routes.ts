@@ -1648,6 +1648,22 @@ export async function registerRoutes(
    * миграции add-api-key-encrypted И env API_KEY_REVEAL_SECRET задан.
    * Для старых ключей возвращаем 410 Gone с инструкцией про rotate.
    */
+  // Rate-limit на reveal-эндпоинт: даже у админа есть лимит на
+  // распаковку plaintext-ключей (защита от случайной утечки сессии
+  // — атакующий не сможет дёрнуть reveal на каждом id за минуту).
+  const revealLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10, // 10 reveal'ов на 15 мин на IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      message:
+        "Слишком много попыток открыть ключ за последние 15 минут. Подождите.",
+    },
+    validate: false as never,
+  });
+  app.use("/api/api-keys/:id/reveal", revealLimiter);
+
   app.post("/api/api-keys/:id/reveal", requireAuth, requireAdmin, async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -1787,14 +1803,37 @@ export async function registerRoutes(
    * случаев когда юзер вписал tfk_… вручную ещё до миграции.
    */
   async function syncCompanyWesetupBridge(companyId: number): Promise<void> {
+    const company = await storage.getCompanyById(companyId);
+    if (!company) return;
+
     const keys = await storage.listApiKeysByCompany(companyId);
     const candidates = keys
       .filter((k) => (!k.revokedAt || k.revokedAt === 0) && k.keyEncrypted)
       .sort((a, b) => b.createdAt - a.createdAt);
     const top = candidates[0];
+
     if (!top || !top.keyEncrypted) {
-      return; // Нечего подставлять — оставляем как есть.
+      // Нечего подставлять. Дополнительно проверяем что текущий
+      // wesetupApiKey ХОТЯ БЫ соответствует какому-то активному
+      // hash'у. Если нет — обнуляем bridge: иначе WeSetup продолжит
+      // дёргать TF с отозванным ключом и получать тихие 401.
+      const activeKeys = keys.filter(
+        (k) => !k.revokedAt || k.revokedAt === 0
+      );
+      if (company.wesetupApiKey) {
+        const matchesActive = activeKeys.some(
+          (k) => k.keyHash === hashApiKey(company.wesetupApiKey as string)
+        );
+        if (!matchesActive) {
+          await storage.updateCompany(companyId, {
+            wesetupApiKey: null,
+            wesetupBaseUrl: company.wesetupBaseUrl,
+          });
+        }
+      }
+      return;
     }
+
     let plaintext: string;
     try {
       plaintext = decryptApiKey(top.keyEncrypted);
@@ -1802,8 +1841,6 @@ export async function registerRoutes(
       console.warn("[bridge-sync] decrypt failed for key id=%s", top.id, err);
       return;
     }
-    const company = await storage.getCompanyById(companyId);
-    if (!company) return;
     if (
       company.wesetupApiKey === plaintext &&
       company.wesetupBaseUrl &&

@@ -33,13 +33,27 @@ export function extractBearerKey(req: Request): string | null {
  * SESSION_SECRET ротируется, encrypted ключи становятся нечитаемы —
  * используем «Перевыпустить» для миграции.
  */
+let warnedSessionFallback = false;
+
 function resolveRevealSecret(): string | null {
-	const candidates = [
-		process.env.API_KEY_REVEAL_SECRET,
-		process.env.SESSION_SECRET,
-	];
-	for (const s of candidates) {
-		if (s && s.length >= 16) return s;
+	const explicit = process.env.API_KEY_REVEAL_SECRET;
+	if (explicit && explicit.length >= 16) return explicit;
+	const fallback = process.env.SESSION_SECRET;
+	if (fallback && fallback.length >= 16) {
+		// Один раз за процесс ругаемся в лог: SESSION_SECRET ротация
+		// невидимо инвалидирует все encrypted-ключи. Прод должен
+		// явно задать API_KEY_REVEAL_SECRET (любая стойкая строка
+		// ≥16 символов, отличная от session-секрета).
+		if (!warnedSessionFallback) {
+			console.warn(
+				"[api-key-crypto] WARNING: API_KEY_REVEAL_SECRET не задан — " +
+					"использую SESSION_SECRET как fallback. При ротации " +
+					"SESSION_SECRET все 'Показать ключ' перестанут работать. " +
+					"Задайте API_KEY_REVEAL_SECRET в env (≥16 символов).",
+			);
+			warnedSessionFallback = true;
+		}
+		return fallback;
 	}
 	return null;
 }
