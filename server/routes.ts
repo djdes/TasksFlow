@@ -662,6 +662,20 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Company не определена" });
       }
 
+      // Multi-tenant scope: workerId должен принадлежать той же компании.
+      // Иначе админ компании A мог бы создать задачу со ссылкой на
+      // worker'а компании B — задача попадёт в task-list компании A
+      // с broken workerId, либо в список «моих задач» worker'а B
+      // (зависит от фильтра).
+      if (input.workerId != null) {
+        const worker = await storage.getUserById(input.workerId);
+        if (!worker || worker.companyId !== companyId) {
+          return res.status(404).json({
+            message: "Сотрудник не найден",
+          });
+        }
+      }
+
       // Scope-check: руководитель может назначать задачи только своим
       // подчинённым. Админ и API key пропускаются.
       if (!req.apiKey && req.session?.userId) {
@@ -706,6 +720,19 @@ export async function registerRoutes(
       const callerCompanyId = await getCompanyIdFromReq(req);
       if (callerCompanyId !== null && existing.companyId !== callerCompanyId) {
         return res.status(404).json({ message: "Задача не найдена" });
+      }
+
+      // Multi-tenant scope: если переназначаем workerId — новый
+      // worker должен быть в той же компании. Иначе можно «отправить»
+      // задачу чужому юзеру.
+      if (input.workerId != null && input.workerId !== existing.workerId) {
+        const newWorker = await storage.getUserById(input.workerId);
+        if (
+          !newWorker ||
+          (callerCompanyId !== null && newWorker.companyId !== callerCompanyId)
+        ) {
+          return res.status(404).json({ message: "Сотрудник не найден" });
+        }
       }
 
       // Scope-check для руководителя на edit:
