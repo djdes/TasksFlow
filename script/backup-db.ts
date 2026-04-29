@@ -13,6 +13,7 @@
 
 import "dotenv/config";
 import { execFile, spawn } from "node:child_process";
+import fs from "node:fs";
 import { mkdir, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -66,7 +67,6 @@ async function main() {
     const gz = spawn("gzip", ["-c"], {
       stdio: [dump.stdout!, "pipe", "inherit"],
     });
-    const fs = require("node:fs");
     const out = fs.createWriteStream(file);
     gz.stdout!.pipe(out);
     gz.on("error", reject);
