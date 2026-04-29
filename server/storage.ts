@@ -31,7 +31,7 @@ import {
   type Invitation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, lte, asc, isNull } from "drizzle-orm";
+import { eq, and, desc, lte, asc, isNull, sql } from "drizzle-orm";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
@@ -236,12 +236,20 @@ export class DatabaseStorage implements IStorage {
    * await storage.updateUserBalance(userId, -100);
    */
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
-    const [existingUser] = await db.select().from(users).where(eq(users.id, id));
-    if (!existingUser) return undefined;
-
-    const newBalance = (existingUser.bonusBalance || 0) + amount;
-    await db.update(users).set({ bonusBalance: newBalance }).where(eq(users.id, id));
-
+    // Атомарный SQL-инкремент. Раньше было read-modify-write — два
+    // concurrent /api/tasks/:id/complete могли потерять одно
+    // начисление: оба читали balance=100, оба считали 100+50, оба
+    // писали 150 (вместо 200). Worker не получал деньги за выполненную
+    // задачу.
+    //
+    // COALESCE на null balance чтобы legacy-юзеры с NULL не сломали
+    // сложение (NULL + N = NULL в SQL).
+    await db
+      .update(users)
+      .set({
+        bonusBalance: sql`COALESCE(${users.bonusBalance}, 0) + ${amount}`,
+      })
+      .where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
