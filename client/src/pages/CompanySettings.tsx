@@ -336,19 +336,24 @@ export default function CompanySettings() {
                 </p>
               </div>
 
-              {/* Скрыто из UI 2026-04-29 — основной flow идёт через
-                  WeSetup mini-app (race-claim + verifications), этот
-                  обратный канал в большинстве случаев не нужен и сбивает
-                  менеджеров. Значения wesetupBaseUrl + wesetupApiKey
-                  остаются в БД — server-side endpoints (journals-catalog,
-                  task-form, complete) продолжают работать с ранее
-                  сохранёнными credentials. Чтобы вернуть UI — убрать
-                  style display:none. */}
-              <div
-                style={{ display: "none" }}
-                aria-hidden="true"
+              {/* Был скрыт 2026-04-29 ради «mini-app основной flow».
+                  Возвращён 2026-04-29 (по запросу владельца): «все
+                  фишечки должны работать в TasksFlow». Без явного UI
+                  невозможно сменить wesetupBaseUrl или ключ если
+                  компания переехала / ключ ротировали — приходилось
+                  лезть в SQL. Теперь снова видим, плюс есть
+                  /admin/integrations с триггерами sync.
+
+                  Авто-bridge (создание первого tfk_ → подставляется
+                  как wesetupApiKey) продолжает работать — здесь блок
+                  полезен только для override / debug. */}
+              <details
                 className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4"
+                open={!company?.wesetupApiKey}
               >
+                <summary className="cursor-pointer text-sm font-medium">
+                  Доступ TasksFlow к журналам WeSetup (расширенные настройки)
+                </summary>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -487,7 +492,7 @@ export default function CompanySettings() {
                     </div>
                   ) : null}
                 </div>
-              </div>
+              </details>
 
               <Button
                 onClick={handleSaveCompany}
@@ -575,6 +580,23 @@ export default function CompanySettings() {
                   onClick={() => setLocation("/admin/api-keys")}
                 >
                   Управлять
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg border p-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Интеграция с WeSetup</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Статус, синхронизация сотрудников/задач/иерархии, очередь доставок
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/admin/integrations")}
+                >
+                  Открыть
                 </Button>
               </div>
             </div>

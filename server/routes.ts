@@ -2423,5 +2423,151 @@ export async function registerRoutes(
     }
   });
 
+  // ===================== WESETUP SYNC PROXIES =====================
+  // Триггер-кнопки в /admin/integrations звонят сюда вместо WeSetup
+  // напрямую: TF держит креды (wesetupBaseUrl + wesetupApiKey per
+  // company), и сотруднику без доступа к админке WeSetup проще
+  // дёрнуть синхронизацию из родного TF UI. Все четыре эндпоинта —
+  // тонкие proxy: метод+тело форвардятся как есть, ответ возвращаем
+  // без обработки. Логика — на стороне WeSetup.
+  //
+  // sync-users      WeSetup ↔ TF user mapping (двусторонне с P1#4)
+  // sync-tasks      WeSetup pull выполненных задач из TF
+  // sync-hierarchy  ManagerScope → managedWorkerIds на воркерах
+  // bulk-assign-today  массово создать задачи на сегодня по журналам
+  // links           таблица WeSetup↔TF user link (для просмотра)
+  async function proxyToWesetup(
+    req: Request,
+    res: Response,
+    path: string,
+    method: "GET" | "POST",
+  ) {
+    const target = await resolveWesetupTarget(req);
+    if ("error" in target) {
+      return res.status(target.status).json({ message: target.error });
+    }
+    const { baseUrl, key } = target;
+    try {
+      const upstream = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${key}`,
+          ...(method === "POST"
+            ? { "Content-Type": "application/json" }
+            : {}),
+        },
+        body: method === "POST" ? JSON.stringify(req.body || {}) : undefined,
+        cache: "no-store",
+      });
+      const text = await upstream.text();
+      res.status(upstream.status);
+      res.setHeader(
+        "Content-Type",
+        upstream.headers.get("content-type") || "application/json",
+      );
+      res.send(text);
+    } catch (err: any) {
+      console.error(`[wesetup-proxy] ${path} failed`, err);
+      res.status(502).json({
+        message: normalizeWesetupNetworkError(err),
+      });
+    }
+  }
+
+  app.post("/api/wesetup/sync-users", requireAuth, requireAdmin, (req, res) =>
+    proxyToWesetup(req, res, "/api/integrations/tasksflow/sync-users", "POST"),
+  );
+  app.post("/api/wesetup/sync-tasks", requireAuth, requireAdmin, (req, res) =>
+    proxyToWesetup(req, res, "/api/integrations/tasksflow/sync-tasks", "POST"),
+  );
+  app.post(
+    "/api/wesetup/sync-hierarchy",
+    requireAuth,
+    requireAdmin,
+    (req, res) =>
+      proxyToWesetup(req, res, "/api/integrations/tasksflow/sync-hierarchy", "POST"),
+  );
+  app.post(
+    "/api/wesetup/bulk-assign-today",
+    requireAuth,
+    requireAdmin,
+    (req, res) =>
+      proxyToWesetup(
+        req,
+        res,
+        "/api/integrations/tasksflow/bulk-assign-today",
+        "POST",
+      ),
+  );
+  app.get("/api/wesetup/links", requireAuth, requireAdmin, (req, res) =>
+    proxyToWesetup(req, res, "/api/integrations/tasksflow/links", "GET"),
+  );
+
+  // ===================== WEBHOOK QUEUE DASHBOARD =====================
+  // Видимая статистика очереди отложенных доставок (см. webhook-queue.ts).
+  // Без этого админ не знает «у нас что-то завязло» — данные сотрудников
+  // могут лежать пол-дня и никто не заметит.
+  app.get(
+    "/api/admin/webhook-queue/stats",
+    requireAuth,
+    requireAdmin,
+    async (_req, res) => {
+      try {
+        const { db } = await import("./db");
+        const { webhookDeliveries } = await import("@shared/schema");
+        const { sql } = await import("drizzle-orm");
+        const rows = await db
+          .select({
+            status: webhookDeliveries.status,
+            count: sql<number>`count(*)`,
+          })
+          .from(webhookDeliveries)
+          .groupBy(webhookDeliveries.status);
+        const stats = { pending: 0, delivered: 0, failed: 0, cancelled: 0 };
+        for (const r of rows) {
+          if (r.status === 0) stats.pending = Number(r.count);
+          else if (r.status === 1) stats.delivered = Number(r.count);
+          else if (r.status === 2) stats.failed = Number(r.count);
+          else if (r.status === 3) stats.cancelled = Number(r.count);
+        }
+        // Top-N последних failed — чтобы админ видел что именно не уехало.
+        const recentFailed = await db
+          .select()
+          .from(webhookDeliveries)
+          .where(sql`${webhookDeliveries.status} = 2`)
+          .orderBy(sql`${webhookDeliveries.updatedAt} desc`)
+          .limit(20);
+        res.json({
+          stats,
+          recentFailed: recentFailed.map((d) => ({
+            id: d.id,
+            taskId: d.taskId,
+            eventType: d.eventType,
+            attempts: d.attempts,
+            lastError: d.lastError,
+            updatedAt: d.updatedAt,
+          })),
+        });
+      } catch (err) {
+        // Если таблицы ещё нет (миграция не прогнана) — возвращаем
+        // пустую статистику + флаг, чтобы UI показал «миграция не
+        // прогнана» вместо красного error-стейта.
+        const message = err instanceof Error ? err.message : String(err);
+        const tableMissing = /webhook_deliveries.*doesn'?t exist|Unknown table/i.test(
+          message,
+        );
+        if (tableMissing) {
+          return res.json({
+            stats: { pending: 0, delivered: 0, failed: 0, cancelled: 0 },
+            recentFailed: [],
+            migrationNeeded: true,
+          });
+        }
+        console.error("[webhook-queue-stats] failed", err);
+        res.status(500).json({ message: "Ошибка сервера" });
+      }
+    },
+  );
+
   return httpServer;
 }
