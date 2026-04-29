@@ -336,7 +336,19 @@ export default function CompanySettings() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+              {/* Скрыто из UI 2026-04-29 — основной flow идёт через
+                  WeSetup mini-app (race-claim + verifications), этот
+                  обратный канал в большинстве случаев не нужен и сбивает
+                  менеджеров. Значения wesetupBaseUrl + wesetupApiKey
+                  остаются в БД — server-side endpoints (journals-catalog,
+                  task-form, complete) продолжают работать с ранее
+                  сохранёнными credentials. Чтобы вернуть UI — убрать
+                  style display:none. */}
+              <div
+                style={{ display: "none" }}
+                aria-hidden="true"
+                className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold flex items-center gap-2">
