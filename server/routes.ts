@@ -9,6 +9,7 @@ import { storage, DatabaseStorage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
+import { isPublicHttpsUrl } from "./url-allowlist";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 import {
@@ -398,7 +399,17 @@ export async function registerRoutes(
           .trim()
           .optional()
           .nullable()
-          .transform((value) => (value ? value : null)),
+          .transform((value) => (value ? value : null))
+          .refine(
+            // Email: либо null/undefined, либо валидный формат.
+            // Раньше принимали любой мусор → ломались уведомления о
+            // выполненных задачах.
+            (value) =>
+              value === null ||
+              value === undefined ||
+              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+            "Введите корректный email"
+          ),
         wesetupBaseUrl: z
           .string()
           .trim()
@@ -408,11 +419,12 @@ export async function registerRoutes(
             value === undefined ? undefined : value ? value.replace(/\/+$/, "") : null
           )
           .refine(
+            // Защита от SSRF: только публичные http(s) URL'ы. Раньше
+            // /^https?:\/\// разрешал http://localhost:6379 и
+            // http://169.254.169.254 → SSRF-канал из админки.
             (value) =>
-              value === null ||
-              value === undefined ||
-              /^https?:\/\/[^/\s]+/i.test(value),
-            "Адрес WeSetup должен начинаться с http:// или https://"
+              value === null || value === undefined || isPublicHttpsUrl(value),
+            "URL WeSetup должен быть публичным http(s) — internal/localhost адреса запрещены"
           ),
         wesetupApiKey: z
           .string()
