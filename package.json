@@ -14,6 +14,7 @@
     "db:push": "echo 'BLOCKED: drizzle-kit push --force УДАЛЁН — он 28.04.2026 уничтожил всю prod БД из-за дрейфа схемы. Используйте отдельные create-*-table / add-*-col миграции из script/. Если очень нужен push — запустите вручную: npx drizzle-kit push (БЕЗ --force, и сначала mysqldump).' && exit 1",
     "db:indexes": "tsx script/add-indexes.ts",
     "create-admin": "tsx script/create-admin.ts",
+    "seed-admin": "tsx script/seed-admin.ts",
     "setup-db": "echo 'BLOCKED: script/create-tables.ts содержит DROP TABLE IF EXISTS users — он уничтожил prod БД 28.04.2026. Используйте create-*-table миграции вместо setup-db.' && exit 1",
     "update-tasks": "tsx script/update-tasks-table.ts",
     "reset-tasks": "tsx script/reset-recurring-tasks.ts",
