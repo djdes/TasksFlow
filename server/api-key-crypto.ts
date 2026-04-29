@@ -22,16 +22,33 @@ export function extractBearerKey(req: Request): string | null {
 /**
  * AES-256-GCM шифрование plaintext API-ключа для хранения в БД.
  * Формат: `iv(base64).tag(base64).ciphertext(base64)`. Ключ AES =
- * sha256(API_KEY_REVEAL_SECRET). Если env не задан — бросаем, чтобы
- * нельзя было случайно зашифровать с дефолтом и потом не расшифровать.
+ * sha256(secret). В качестве secret предпочитаем API_KEY_REVEAL_SECRET,
+ * а если его нет — берём SESSION_SECRET (он всегда задан в проде, иначе
+ * sessions ломаются). Это как fallback INTEGRATION_KEY_SECRET →
+ * NEXTAUTH_SECRET в WeSetup: «Показать ключ» работает out-of-the-box,
+ * без отдельной env-настройки. Минимум 16 символов — иначе шифрование
+ * выключено (вернётся к старому поведению «plaintext одноразово»).
  *
- * SECURITY: см. shared/schema.ts комментарий к keyEncrypted.
+ * SECURITY: см. shared/schema.ts комментарий к keyEncrypted. Если
+ * SESSION_SECRET ротируется, encrypted ключи становятся нечитаемы —
+ * используем «Перевыпустить» для миграции.
  */
+function resolveRevealSecret(): string | null {
+	const candidates = [
+		process.env.API_KEY_REVEAL_SECRET,
+		process.env.SESSION_SECRET,
+	];
+	for (const s of candidates) {
+		if (s && s.length >= 16) return s;
+	}
+	return null;
+}
+
 function getRevealKey(): Buffer {
-	const secret = process.env.API_KEY_REVEAL_SECRET;
-	if (!secret || secret.length < 16) {
+	const secret = resolveRevealSecret();
+	if (!secret) {
 		throw new Error(
-			"API_KEY_REVEAL_SECRET env var обязателен (минимум 16 символов) для шифрования API ключей",
+			"Ни API_KEY_REVEAL_SECRET, ни SESSION_SECRET (≥16 символов) не заданы — шифрование API ключей невозможно",
 		);
 	}
 	return crypto.createHash("sha256").update(secret).digest();
@@ -62,8 +79,7 @@ export function decryptApiKey(encrypted: string): string {
 	return plaintext.toString("utf8");
 }
 
-/** Доступно ли шифрование (env задан) — для UI feature-flag. */
+/** Доступно ли шифрование (есть подходящий secret) — для UI feature-flag. */
 export function isApiKeyRevealEnabled(): boolean {
-	const secret = process.env.API_KEY_REVEAL_SECRET;
-	return Boolean(secret && secret.length >= 16);
+	return resolveRevealSecret() !== null;
 }
