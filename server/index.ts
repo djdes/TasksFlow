@@ -49,10 +49,27 @@ app.use("/api", generalLimiter);
 // Применяем строгий лимит для авторизации
 app.use("/api/auth/login", authLimiter);
 
-// Настройка сессий
+// Настройка сессий.
+//
+// SESSION_SECRET ОБЯЗАТЕЛЕН в production. Раньше был fallback на
+// "your-secret-key-change-in-production" — если env не задан,
+// все session-cookie подписывались публично известным секретом,
+// и атакующий мог forge'ить сессии для любого юзера.
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET is required in production. Set it in env before starting the server."
+    );
+  }
+  // В dev допускаем default — но логируем чтобы было видно.
+  console.warn(
+    "[session] SESSION_SECRET не задан — using dev fallback. В prod это бы остановило старт."
+  );
+}
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    secret: sessionSecret || "dev-only-fallback-do-not-use-in-prod",
     resave: false,
     saveUninitialized: false,
     store: new MemoryStore({
