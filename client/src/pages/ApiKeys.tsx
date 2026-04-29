@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircle2, PlugZap } from "lucide-react";
+import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -28,8 +28,6 @@ type SecretReveal = {
 	secret: string;
 	source: "created" | "revealed" | "rotated";
 };
-
-const WESETUP_PENDING_KEY_STORAGE = "tasksflow:pending-wesetup-api-key";
 
 function formatTs(ts: number): string {
 	if (!ts) return "—";
@@ -145,16 +143,6 @@ export default function ApiKeysPage() {
 		} catch {
 			toast({ title: "Ошибка", description: "Не удалось скопировать", variant: "destructive" });
 		}
-	};
-
-	const handleUseForWesetup = (secret: string) => {
-		window.localStorage.setItem(WESETUP_PENDING_KEY_STORAGE, secret);
-		toast({
-			title: "Ключ подставим в настройках",
-			description: "Останется указать адрес WeSetup и сохранить.",
-		});
-		setShownSecret(null);
-		setLocation("/admin/settings");
 	};
 
 	if (authLoading) {
@@ -356,10 +344,6 @@ export default function ApiKeysPage() {
 							{shownSecret.secret}
 						</div>
 						<div className="flex flex-col gap-2 justify-end sm:flex-row">
-							<Button variant="outline" onClick={() => handleUseForWesetup(shownSecret.secret)}>
-								<PlugZap className="w-4 h-4 mr-2" />
-								Использовать для WeSetup
-							</Button>
 							<Button variant="outline" onClick={() => handleCopy(shownSecret.secret)}>
 								<Copy className="w-4 h-4 mr-2" />
 								Копировать
