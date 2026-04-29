@@ -36,8 +36,20 @@ jobs:
             cd "$DEPLOY_PATH"
             [ -f package.json ] || { echo "FATAL: package.json not found in $(pwd)"; exit 1; }
 
-            echo ">>> pulling latest main"
-            git pull --ff-only origin main
+            echo ">>> sync with origin/main (hard reset)"
+            # Прод — чистая deploy-копия, ручных правок тут быть не должно.
+            # Раньше использовали git pull --ff-only, но npm ci/install
+            # иногда трогает package-lock.json, и pull падает с
+            # «local changes would be overwritten». Теперь делаем
+            # fetch + reset --hard origin/main: гарантированно ровно
+            # то, что в репо. Если что-то отброшено — видно в логе.
+            git fetch origin main
+            DIRTY="$(git status --short)"
+            if [ -n "$DIRTY" ]; then
+              echo "WARNING: discarding local changes before reset:"
+              echo "$DIRTY"
+            fi
+            git reset --hard origin/main
             git log --oneline -1
 
             DEPS_STAMP=".deploy-deps.sha256"
