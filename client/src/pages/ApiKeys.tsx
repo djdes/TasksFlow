@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Key, Copy, Loader2, Plus, Trash2, CheckCircle2, PlugZap } from "lucide-react";
+import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircle2, PlugZap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -14,7 +14,20 @@ interface ApiKeyRow {
 	createdAt: number;
 	lastUsedAt: number;
 	revokedAt: number;
+	// true если plaintext был зашифрован при создании и сейчас доступен
+	// для расшифровки через `/api/api-keys/:id/reveal`. false для ключей,
+	// созданных до миграции add-api-key-encrypted — для них только rotate.
+	revealable: boolean;
 }
+
+// Источник появления plaintext в модалке. Влияет на текст: «создан»,
+// «открыт» или «перевыпущен» — пользователь должен понимать что
+// произошло.
+type SecretReveal = {
+	name: string;
+	secret: string;
+	source: "created" | "revealed" | "rotated";
+};
 
 const WESETUP_PENDING_KEY_STORAGE = "tasksflow:pending-wesetup-api-key";
 
@@ -30,7 +43,7 @@ export default function ApiKeysPage() {
 	const queryClient = useQueryClient();
 
 	const [newName, setNewName] = useState("");
-	const [justCreated, setJustCreated] = useState<{ name: string; secret: string } | null>(null);
+	const [shownSecret, setShownSecret] = useState<SecretReveal | null>(null);
 
 	const { data: keys = [], isLoading } = useQuery<ApiKeyRow[]>({
 		queryKey: ["api-keys"],
@@ -57,8 +70,49 @@ export default function ApiKeysPage() {
 			return r.json();
 		},
 		onSuccess: (data) => {
-			setJustCreated({ name: data.name, secret: data.secret });
+			setShownSecret({ name: data.name, secret: data.secret, source: "created" });
 			setNewName("");
+			queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+		},
+		onError: (e: any) => {
+			toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+		},
+	});
+
+	const revealMutation = useMutation({
+		mutationFn: async (id: number) => {
+			const r = await fetch(`/api/api-keys/${id}/reveal`, {
+				method: "POST",
+				credentials: "include",
+			});
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				throw new Error(data.message || "Не удалось показать ключ");
+			}
+			return data as { name: string; secret: string };
+		},
+		onSuccess: (data) => {
+			setShownSecret({ name: data.name, secret: data.secret, source: "revealed" });
+		},
+		onError: (e: any) => {
+			toast({ title: "Не получилось", description: e.message, variant: "destructive" });
+		},
+	});
+
+	const rotateMutation = useMutation({
+		mutationFn: async (id: number) => {
+			const r = await fetch(`/api/api-keys/${id}/rotate`, {
+				method: "POST",
+				credentials: "include",
+			});
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				throw new Error(data.message || "Не удалось перевыпустить");
+			}
+			return data as { name: string; secret: string };
+		},
+		onSuccess: (data) => {
+			setShownSecret({ name: data.name, secret: data.secret, source: "rotated" });
 			queryClient.invalidateQueries({ queryKey: ["api-keys"] });
 		},
 		onError: (e: any) => {
@@ -99,7 +153,7 @@ export default function ApiKeysPage() {
 			title: "Ключ подставим в настройках",
 			description: "Останется указать адрес WeSetup и сохранить.",
 		});
-		setJustCreated(null);
+		setShownSecret(null);
 		setLocation("/admin/settings");
 	};
 
@@ -208,20 +262,56 @@ export default function ApiKeysPage() {
 										</div>
 									</div>
 									{!k.revokedAt && (
-										<Button
-											variant="outline"
-											size="sm"
-											className="w-full sm:w-auto"
-											onClick={() => {
-												if (confirm(`Отозвать ключ «${k.name}»?\n\nВсе интеграции с ним сразу перестанут работать.`)) {
-													revokeMutation.mutate(k.id);
-												}
-											}}
-											disabled={revokeMutation.isPending}
-										>
-											<Trash2 className="w-4 h-4 mr-2" />
-											Отозвать
-										</Button>
+										<div className="flex flex-col gap-2 sm:flex-row">
+											{k.revealable && (
+												<Button
+													variant="outline"
+													size="sm"
+													className="w-full sm:w-auto"
+													onClick={() => revealMutation.mutate(k.id)}
+													disabled={revealMutation.isPending}
+													title="Расшифровать и показать plaintext"
+												>
+													<Eye className="w-4 h-4 mr-2" />
+													Показать
+												</Button>
+											)}
+											<Button
+												variant="outline"
+												size="sm"
+												className="w-full sm:w-auto"
+												onClick={() => {
+													if (
+														confirm(
+															`Перевыпустить ключ «${k.name}»?\n\n` +
+																`Старый ключ будет отозван прямо сейчас, ` +
+																`получите новый plaintext в окне после.`,
+														)
+													) {
+														rotateMutation.mutate(k.id);
+													}
+												}}
+												disabled={rotateMutation.isPending}
+												title="Отозвать и выдать новый plaintext"
+											>
+												<RefreshCw className="w-4 h-4 mr-2" />
+												Перевыпустить
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="w-full sm:w-auto"
+												onClick={() => {
+													if (confirm(`Отозвать ключ «${k.name}»?\n\nВсе интеграции с ним сразу перестанут работать.`)) {
+														revokeMutation.mutate(k.id);
+													}
+												}}
+												disabled={revokeMutation.isPending}
+											>
+												<Trash2 className="w-4 h-4 mr-2" />
+												Отозвать
+											</Button>
+										</div>
 									)}
 								</div>
 							))}
@@ -230,35 +320,51 @@ export default function ApiKeysPage() {
 				</div>
 			</div>
 
-			{justCreated && (
+			{shownSecret && (
 				<div
 					className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-					onClick={() => setJustCreated(null)}
+					onClick={() => setShownSecret(null)}
 				>
 					<div
 						className="content-panel max-w-lg w-full"
 						onClick={(e) => e.stopPropagation()}
 					>
 						<div className="flex items-center gap-2 mb-3">
-							<CheckCircle2 className="w-5 h-5 text-green-600" />
-							<h3 className="font-semibold text-lg">Ключ создан</h3>
+							{shownSecret.source === "revealed" ? (
+								<Eye className="w-5 h-5 text-primary" />
+							) : shownSecret.source === "rotated" ? (
+								<RefreshCw className="w-5 h-5 text-primary" />
+							) : (
+								<CheckCircle2 className="w-5 h-5 text-green-600" />
+							)}
+							<h3 className="font-semibold text-lg">
+								{shownSecret.source === "revealed"
+									? `Ключ «${shownSecret.name}»`
+									: shownSecret.source === "rotated"
+									? "Ключ перевыпущен"
+									: "Ключ создан"}
+							</h3>
 						</div>
 						<p className="text-sm text-muted-foreground mb-4">
-							Этот ключ показывается <strong>только один раз</strong>. Его можно указать в WeSetup и использовать в TasksFlow для доступа к журналам.
+							{shownSecret.source === "revealed"
+								? "Plaintext восстановлен из шифрованной копии в БД. Скопируйте и закройте окно — окно само не закроется."
+								: shownSecret.source === "rotated"
+								? "Старый ключ отозван — все интеграции на нём сразу перестанут работать. Скопируйте новый plaintext и пропишите его в интеграциях."
+								: "Сохраните ключ в надёжном месте. Через «Показать» можно будет открыть его повторно, пока не отозвали."}
 						</p>
 						<div className="bg-muted rounded p-3 font-mono text-sm break-all mb-4">
-							{justCreated.secret}
+							{shownSecret.secret}
 						</div>
 						<div className="flex flex-col gap-2 justify-end sm:flex-row">
-							<Button variant="outline" onClick={() => handleUseForWesetup(justCreated.secret)}>
+							<Button variant="outline" onClick={() => handleUseForWesetup(shownSecret.secret)}>
 								<PlugZap className="w-4 h-4 mr-2" />
 								Использовать для WeSetup
 							</Button>
-							<Button variant="outline" onClick={() => handleCopy(justCreated.secret)}>
+							<Button variant="outline" onClick={() => handleCopy(shownSecret.secret)}>
 								<Copy className="w-4 h-4 mr-2" />
 								Копировать
 							</Button>
-							<Button onClick={() => setJustCreated(null)}>Готово</Button>
+							<Button onClick={() => setShownSecret(null)}>Готово</Button>
 						</div>
 					</div>
 				</div>

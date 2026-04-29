@@ -186,11 +186,25 @@ export type Task = Omit<typeof tasks.$inferSelect, 'weekDays' | 'photoUrls'> & {
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 // API Keys — для server-to-server интеграций (managermagday и других).
+//
+// keyEncrypted: AES-256-GCM шифрованный plaintext в формате
+// `iv(base64).tag(base64).ciphertext(base64)`. Ключ шифрования — ENV
+// `API_KEY_REVEAL_SECRET` (sha256 от него = 32-байт AES-ключ). Колонка
+// nullable для back-compat: ключи созданные до этой миграции остаются
+// «view-only по prefix», их можно только перевыпустить через rotate.
+//
+// SECURITY-TRADEOFF: hash-only был неуязвим к БД-leak (плейнтекст
+// никак не восстановить). С keyEncrypted при leak БД + env'а злоумышленник
+// получает все ключи. Это сознательная регрессия ради UX «забыл скопировать —
+// открой и посмотри». Рекомендуется хранить API_KEY_REVEAL_SECRET в
+// отдельном вольт'е (1Password / hashicorp vault), не в .env рядом с
+// БД-creds, чтобы leak'и были независимы.
 export const apiKeys = mysqlTable("api_keys", {
   id: int("id").primaryKey().autoincrement(),
   name: varchar("name", { length: 100 }).notNull(),
   keyHash: varchar("key_hash", { length: 64 }).notNull().unique(),
   keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  keyEncrypted: text("key_encrypted"),
   companyId: int("company_id").notNull(),
   createdByUserId: int("created_by_user_id").notNull(),
   createdAt: int("created_at").notNull().default(0),

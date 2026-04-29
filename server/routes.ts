@@ -12,6 +12,11 @@ import { sendTaskCompletedEmail } from "./mail";
 import { registerCompanySchema, loginSchema } from "@shared/schema";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 import {
+  encryptApiKey,
+  decryptApiKey,
+  isApiKeyRevealEnabled,
+} from "./api-key-crypto";
+import {
   getJournalLinkIntegrationId,
   parseJournalLink,
 } from "@shared/journal-link";
@@ -1527,6 +1532,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Company не определена" });
       }
       const rows = await storage.listApiKeysByCompany(companyId);
+      const revealEnabled = isApiKeyRevealEnabled();
       const sanitized = rows.map(r => ({
         id: r.id,
         name: r.name,
@@ -1534,6 +1540,11 @@ export async function registerRoutes(
         createdAt: r.createdAt,
         lastUsedAt: r.lastUsedAt ?? 0,
         revokedAt: r.revokedAt ?? 0,
+        // Можно ли «открыть и посмотреть» plaintext через reveal-endpoint.
+        // Старые ключи (созданные до миграции) keyEncrypted=NULL — для них
+        // только rotate. Новые ключи — true если env API_KEY_REVEAL_SECRET
+        // задан в момент создания.
+        revealable: revealEnabled && Boolean(r.keyEncrypted),
       }));
       res.json(sanitized);
     } catch (err) {
@@ -1560,10 +1571,24 @@ export async function registerRoutes(
       const plaintext = generateApiKey();
       const keyHash = hashApiKey(plaintext);
       const keyPrefix = plaintext.slice(0, 12);
+      // Если env API_KEY_REVEAL_SECRET задан — шифруем plaintext и
+      // сохраняем рядом с hash'ем, чтобы потом можно было «открыть и
+      // посмотреть» через /api/api-keys/:id/reveal. Без env — старое
+      // поведение (только hash, plaintext одноразовый).
+      let keyEncrypted: string | null = null;
+      if (isApiKeyRevealEnabled()) {
+        try {
+          keyEncrypted = encryptApiKey(plaintext);
+        } catch (encErr) {
+          console.error("[api-keys] encrypt failed", encErr);
+          // Не валим запрос — пусть ключ создастся как раньше, без reveal.
+        }
+      }
       const created = await storage.createApiKey({
         name: parsed.data.name,
         keyHash,
         keyPrefix,
+        keyEncrypted,
         companyId,
         createdByUserId: req.session.userId,
       });
@@ -1621,6 +1646,134 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (err) {
       console.error("[api-keys] revoke failed", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
+  /**
+   * POST /api/api-keys/:id/reveal — расшифровать и вернуть plaintext.
+   * Требует admin сессии. Доступно только если ключ был создан после
+   * миграции add-api-key-encrypted И env API_KEY_REVEAL_SECRET задан.
+   * Для старых ключей возвращаем 410 Gone с инструкцией про rotate.
+   */
+  app.post("/api/api-keys/:id/reveal", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return res.status(400).json({ message: "Неверный id" });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      const record = await storage.getApiKeyById(id);
+      if (!record || record.companyId !== companyId) {
+        return res.status(404).json({ message: "Ключ не найден" });
+      }
+      if (record.revokedAt && record.revokedAt > 0) {
+        return res
+          .status(410)
+          .json({ message: "Ключ отозван — посмотреть нельзя." });
+      }
+      if (!record.keyEncrypted) {
+        return res.status(410).json({
+          message:
+            "Этот ключ создан до включения функции «Показать». " +
+            "Нажмите «Перевыпустить» чтобы получить новый plaintext.",
+          rotateAvailable: true,
+        });
+      }
+      if (!isApiKeyRevealEnabled()) {
+        return res.status(503).json({
+          message:
+            "API_KEY_REVEAL_SECRET не задан в env. " +
+            "Без него расшифровать ключ невозможно.",
+        });
+      }
+      let plaintext: string;
+      try {
+        plaintext = decryptApiKey(record.keyEncrypted);
+      } catch (err) {
+        console.error("[api-keys] reveal decrypt failed", err);
+        return res.status(500).json({
+          message:
+            "Не удалось расшифровать ключ. Возможно, изменился " +
+            "API_KEY_REVEAL_SECRET — перевыпустите ключ.",
+        });
+      }
+      // Sanity-check: первые 12 символов plaintext должны совпасть с
+      // keyPrefix. Если нет — БД покрашена, не отдаём ничего.
+      if (plaintext.slice(0, 12) !== record.keyPrefix) {
+        console.error(
+          `[api-keys] reveal mismatch id=${id} prefix=${record.keyPrefix}`,
+        );
+        return res
+          .status(500)
+          .json({ message: "Целостность ключа нарушена. Перевыпустите." });
+      }
+      res.json({
+        id: record.id,
+        name: record.name,
+        keyPrefix: record.keyPrefix,
+        secret: plaintext,
+      });
+    } catch (err) {
+      console.error("[api-keys] reveal failed", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
+  /**
+   * POST /api/api-keys/:id/rotate — отозвать старый и создать новый
+   * с тем же name. Возвращает новый plaintext (и encrypted если
+   * reveal включён). Удобно для ключей, которые нельзя «посмотреть»
+   * (создавались до миграции), а также для штатной ротации.
+   */
+  app.post("/api/api-keys/:id/rotate", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return res.status(400).json({ message: "Неверный id" });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId || !req.session?.userId) {
+        return res.status(400).json({ message: "Company не определена" });
+      }
+      const old = await storage.getApiKeyById(id);
+      if (!old || old.companyId !== companyId) {
+        return res.status(404).json({ message: "Ключ не найден" });
+      }
+      // Revoke старый (если ещё активен), чтобы не было двух одинаковых
+      // имён в листинге.
+      if (!old.revokedAt || old.revokedAt === 0) {
+        await storage.revokeApiKey(id);
+      }
+      const plaintext = generateApiKey();
+      const keyHash = hashApiKey(plaintext);
+      const keyPrefix = plaintext.slice(0, 12);
+      let keyEncrypted: string | null = null;
+      if (isApiKeyRevealEnabled()) {
+        try {
+          keyEncrypted = encryptApiKey(plaintext);
+        } catch (encErr) {
+          console.error("[api-keys] encrypt during rotate failed", encErr);
+        }
+      }
+      const created = await storage.createApiKey({
+        name: old.name,
+        keyHash,
+        keyPrefix,
+        keyEncrypted,
+        companyId,
+        createdByUserId: req.session.userId,
+      });
+      res.json({
+        id: created.id,
+        name: created.name,
+        keyPrefix: created.keyPrefix,
+        createdAt: created.createdAt,
+        secret: plaintext,
+        rotatedFromId: old.id,
+      });
+    } catch (err) {
+      console.error("[api-keys] rotate failed", err);
       res.status(500).json({ message: "Ошибка сервера" });
     }
   });
