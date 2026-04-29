@@ -1593,27 +1593,14 @@ export async function registerRoutes(
         createdByUserId: req.session.userId,
       });
 
-      // Автоматическое обратное подключение TF → WeSetup. Когда админ
-      // создаёт первый TFK-ключ, прописываем его же как
-      // wesetupApiKey + дефолтный wesetupBaseUrl=https://wesetup.ru.
-      // Без этого юзер при попытке открыть task-form видит «WeSetup-
-      // интеграция не настроена для этой компании» и формы журналов
-      // не работают.
-      try {
-        const company = await storage.getCompanyById(companyId);
-        if (company && (!company.wesetupApiKey || !company.wesetupBaseUrl)) {
-          await storage.updateCompany(companyId, {
-            wesetupApiKey: company.wesetupApiKey ?? plaintext,
-            wesetupBaseUrl:
-              company.wesetupBaseUrl ?? "https://wesetup.ru",
-          });
-        }
-      } catch (bridgeErr) {
-        console.warn(
-          "[api-keys] wesetup bridge auto-setup failed (non-fatal)",
-          bridgeErr,
-        );
-      }
+      // Auto-bridge: пересчитываем company.wesetupApiKey на самый
+      // свежий активный encrypted ключ. Раньше заполнялось только
+      // первый раз — после ротации старый plaintext в company.
+      // wesetupApiKey протухал и интеграция тихо ломалась. Теперь
+      // single source of truth: api_keys (с encryption) → company.
+      await syncCompanyWesetupBridge(companyId).catch((err) => {
+        console.warn("[api-keys] bridge sync failed (non-fatal)", err);
+      });
 
       res.json({
         id: created.id,
@@ -1643,6 +1630,11 @@ export async function registerRoutes(
         return res.json({ ok: true, already: true });
       }
       await storage.revokeApiKey(id);
+      // После revoke может пропасть текущий bridge — пересчитываем,
+      // чтобы interactive integration не сломалась тихо.
+      if (companyId) {
+        await syncCompanyWesetupBridge(companyId).catch(() => null);
+      }
       res.json({ ok: true });
     } catch (err) {
       console.error("[api-keys] revoke failed", err);
@@ -1764,6 +1756,10 @@ export async function registerRoutes(
         companyId,
         createdByUserId: req.session.userId,
       });
+      // Если ротировали bridge-ключ, переключим company.wesetupApiKey
+      // на свежий plaintext автоматически. Иначе integration сломается
+      // в момент следующего proxy-вызова (старый ключ revoked).
+      await syncCompanyWesetupBridge(companyId).catch(() => null);
       res.json({
         id: created.id,
         name: created.name,
@@ -1777,6 +1773,49 @@ export async function registerRoutes(
       res.status(500).json({ message: "Ошибка сервера" });
     }
   });
+
+  /**
+   * Single source of truth: companies.wesetup_api_key/base_url
+   * пересчитываются после любого create/rotate/revoke. Берём самый
+   * свежий активный ключ с keyEncrypted (raw plaintext), расшифровываем
+   * и пишем в company. Старые ключи без keyEncrypted (до миграции
+   * add-api-key-encrypted) пропускаем — для них bridge нельзя
+   * восстановить, надо вручную rotate.
+   *
+   * Если ни одного encrypted ключа не осталось — НЕ затираем
+   * существующий company.wesetupApiKey. Это страховка для legacy
+   * случаев когда юзер вписал tfk_… вручную ещё до миграции.
+   */
+  async function syncCompanyWesetupBridge(companyId: number): Promise<void> {
+    const keys = await storage.listApiKeysByCompany(companyId);
+    const candidates = keys
+      .filter((k) => (!k.revokedAt || k.revokedAt === 0) && k.keyEncrypted)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const top = candidates[0];
+    if (!top || !top.keyEncrypted) {
+      return; // Нечего подставлять — оставляем как есть.
+    }
+    let plaintext: string;
+    try {
+      plaintext = decryptApiKey(top.keyEncrypted);
+    } catch (err) {
+      console.warn("[bridge-sync] decrypt failed for key id=%s", top.id, err);
+      return;
+    }
+    const company = await storage.getCompanyById(companyId);
+    if (!company) return;
+    if (
+      company.wesetupApiKey === plaintext &&
+      company.wesetupBaseUrl &&
+      company.wesetupBaseUrl.length > 0
+    ) {
+      return;
+    }
+    await storage.updateCompany(companyId, {
+      wesetupApiKey: plaintext,
+      wesetupBaseUrl: company.wesetupBaseUrl ?? "https://wesetup.ru",
+    });
+  }
 
   // ===================== WESETUP PROXY =====================
   // Тонкий прокси, чтобы создание задачи в «Журнальном» режиме не зависело

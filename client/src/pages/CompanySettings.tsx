@@ -336,24 +336,16 @@ export default function CompanySettings() {
                 </p>
               </div>
 
-              {/* Был скрыт 2026-04-29 ради «mini-app основной flow».
-                  Возвращён 2026-04-29 (по запросу владельца): «все
-                  фишечки должны работать в TasksFlow». Без явного UI
-                  невозможно сменить wesetupBaseUrl или ключ если
-                  компания переехала / ключ ротировали — приходилось
-                  лезть в SQL. Теперь снова видим, плюс есть
-                  /admin/integrations с триггерами sync.
-
-                  Авто-bridge (создание первого tfk_ → подставляется
-                  как wesetupApiKey) продолжает работать — здесь блок
-                  полезен только для override / debug. */}
-              <details
-                className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4"
-                open={!company?.wesetupApiKey}
-              >
-                <summary className="cursor-pointer text-sm font-medium">
-                  Доступ TasksFlow к журналам WeSetup (расширенные настройки)
-                </summary>
+              {/*
+                Раньше тут был блок «Доступ TasksFlow к журналам WeSetup»
+                с двумя инпутами (wesetupBaseUrl, wesetupApiKey) и кнопкой
+                «Проверить». Удалён 2026-04-29: бридж-ключ теперь —
+                автоматический derive от активного ключа в /admin/api-keys
+                (см. server/routes.ts syncCompanyWesetupBridge), URL
+                всегда https://wesetup.ru. Статус и «Проверить» доступны
+                на /admin/integrations.
+              */}
+              <div style={{ display: "none" }} aria-hidden="true">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -492,7 +484,7 @@ export default function CompanySettings() {
                     </div>
                   ) : null}
                 </div>
-              </details>
+              </div>
 
               <Button
                 onClick={handleSaveCompany}
