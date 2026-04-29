@@ -696,14 +696,24 @@ export async function registerRoutes(
     try {
       const input = api.tasks.update.input.parse(req.body);
 
+      // Multi-tenant scope-check: задача должна быть в той же компании.
+      // Делаем это ДО любой scope-проверки руководителя, чтобы не утекало
+      // существование задач чужих компаний через 403 vs 404.
+      const existing = await storage.getTask(Number(req.params.id));
+      if (!existing) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      if (callerCompanyId !== null && existing.companyId !== callerCompanyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
       // Scope-check для руководителя на edit:
       //   • Текущий workerId задачи должен быть в его scope
       //   • Если пытаются переназначить — новый workerId тоже в scope
       if (!req.apiKey && req.session?.userId) {
         const me = await storage.getUserById(req.session.userId);
         if (me && !me.isAdmin) {
-          const existing = await storage.getTask(Number(req.params.id));
-          if (!existing) return res.status(404).json({ message: "Задача не найдена" });
           if (
             !canAssignToWorker(me, existing.workerId ?? null) ||
             (input.workerId !== undefined &&
@@ -735,12 +745,20 @@ export async function registerRoutes(
 
   app.delete(api.tasks.delete.path, requireAdminOrManagerOrApiKey, async (req, res) => {
     try {
+      // Multi-tenant scope-check: задача должна быть в той же компании.
+      const existing = await storage.getTask(Number(req.params.id));
+      if (!existing) {
+        return res.status(204).send();
+      }
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      if (callerCompanyId !== null && existing.companyId !== callerCompanyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
       // Scope-check на delete — те же правила, что и на edit.
       if (!req.apiKey && req.session?.userId) {
         const me = await storage.getUserById(req.session.userId);
         if (me && !me.isAdmin) {
-          const existing = await storage.getTask(Number(req.params.id));
-          if (!existing) return res.status(404).json({ message: "Задача не найдена" });
           if (!canAssignToWorker(me, existing.workerId ?? null)) {
             return res.status(403).json({
               message: "Можно удалять только задачи своих подчинённых",
@@ -780,8 +798,14 @@ export async function registerRoutes(
           return res.status(404).json({ message: "Задача не найдена" });
         }
 
-        // Проверяем права: исполнитель или админ
+        // Multi-tenant scope-check: задача должна принадлежать компании
+        // текущего юзера (защита от cross-tenant photo upload).
         const currentUser = await storage.getUserById(req.session.userId!);
+        if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
+          return res.status(404).json({ message: "Задача не найдена" });
+        }
+
+        // Проверяем права: исполнитель или админ
         const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
         if (!isAllowed) {
           return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
@@ -833,6 +857,12 @@ export async function registerRoutes(
         const taskId = Number(req.params.id);
         const task = await storage.getTask(taskId);
         if (!task) {
+          return res.status(404).json({ message: "Задача не найдена" });
+        }
+
+        // Multi-tenant scope: админ другой компании не должен загружать.
+        const adminCompanyId = await getCompanyIdFromReq(req);
+        if (adminCompanyId !== null && task.companyId !== adminCompanyId) {
           return res.status(404).json({ message: "Задача не найдена" });
         }
 
@@ -1004,6 +1034,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
+      // Multi-tenant scope-check: задача должна принадлежать компании
+      // вызывающей стороны (API key чужой компании или session-юзер
+      // другой компании не должны завершать задачу).
+      const callerCompanyIdForComplete = await getCompanyIdFromReq(req);
+      if (callerCompanyIdForComplete !== null && task.companyId !== callerCompanyIdForComplete) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
       // Проверка прав: API key имеет админские права, иначе исполнитель или session-админ.
       let isAllowed = false;
       if (req.apiKey) {
@@ -1100,6 +1138,13 @@ export async function registerRoutes(
       const taskId = Number(req.params.id);
       const task = await storage.getTask(taskId);
       if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
+      // Multi-tenant scope: задача должна принадлежать компании
+      // вызывающей стороны.
+      const callerCompanyIdForUncomplete = await getCompanyIdFromReq(req);
+      if (callerCompanyIdForUncomplete !== null && task.companyId !== callerCompanyIdForUncomplete) {
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
