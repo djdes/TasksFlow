@@ -1247,6 +1247,18 @@ export async function registerRoutes(
       if (!Number.isFinite(userId) || userId <= 0) {
         return res.status(400).json({ message: "Bad userId" });
       }
+
+      // Multi-tenant scope: API key одной компании не должен изменять
+      // managed-workers юзера другой компании.
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      const targetUser = await storage.getUserById(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (callerCompanyId !== null && targetUser.companyId !== callerCompanyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
       const body = req.body as { workerIds?: unknown };
       const list = Array.isArray(body?.workerIds)
         ? body.workerIds.filter(
@@ -1256,6 +1268,23 @@ export async function registerRoutes(
       if (list === null) {
         return res.status(400).json({ message: "workerIds must be number[]" });
       }
+
+      // Также фильтруем workerIds — оставляем только тех, кто реально
+      // в той же компании. Иначе можно подсунуть worker'а другой
+      // компании в managed-список (он его всё равно не увидит, но
+      // лучше не хранить мусорные ссылки).
+      if (callerCompanyId !== null && list.length > 0) {
+        const allWorkers = await storage.getWorkers(callerCompanyId);
+        const allowedIds = new Set(allWorkers.map((w) => w.id));
+        const filtered = list.filter((id) => allowedIds.has(id));
+        if (filtered.length !== list.length) {
+          // Тихо отбрасываем чужих — UI пусть не падает, но и в БД
+          // не пишем мусор.
+          list.length = 0;
+          for (const id of filtered) list.push(id);
+        }
+      }
+
       const updated = await storage.setManagedWorkers(userId, list);
       if (!updated) return res.status(404).json({ message: "User not found" });
       res.json({ ok: true, count: list.length });
@@ -1533,6 +1562,12 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Пользователь не найден" });
       }
 
+      // Multi-tenant scope: админ может править только своих юзеров.
+      const currentUser = await storage.getUserById(req.session.userId!);
+      if (currentUser?.companyId != null && existingUser.companyId !== currentUser.companyId) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
       // Проверяем, не занят ли номер другим пользователем
       const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
       const userWithPhone = await storage.getUserByPhone(normalizedPhone);
@@ -1561,6 +1596,17 @@ export async function registerRoutes(
   app.post("/api/users/:id/reset-balance", requireAuth, requireAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);
+
+      // Multi-tenant scope: админ может ресетить только своих юзеров.
+      const targetUser = await storage.getUserById(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+      const currentUser = await storage.getUserById(req.session.userId!);
+      if (currentUser?.companyId != null && targetUser.companyId !== currentUser.companyId) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
       const user = await storage.resetUserBalance(userId);
       if (!user) {
         return res.status(404).json({ message: "Пользователь не найден" });
