@@ -24,7 +24,7 @@ async function run() {
     user,
     password,
     database,
-    port: 3306,
+    port: Number(process.env.MYSQL_PORT) || 3306,
   });
   try {
     const [rows] = await connection.execute(

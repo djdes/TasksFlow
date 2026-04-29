@@ -77,6 +77,7 @@ jobs:
             npm run add-claim-col || echo "claim col migration failed (non-fatal)"
             npm run add-managed-workers-col || echo "managed-workers col migration failed (non-fatal)"
             npm run add-position-col || echo "position col migration failed (non-fatal)"
+            npm run add-api-key-encrypted || echo "api-key-encrypted migration failed (non-fatal)"
 
             echo ">>> build"
             npm run build
