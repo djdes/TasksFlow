@@ -40,14 +40,31 @@ if (!existsSync(uploadsDir)) {
   mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Расширение берём от mime-type, не от user-supplied originalname.
+// Иначе можно загрузить evil.php с Content-Type: image/jpeg и
+// сохранить как task-X-Y.php. На текущем prod (Node без PHP)
+// не критично, но defense-in-depth.
+const EXT_BY_MIME: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/heic": ".heic",
+  "image/heif": ".heif",
+};
+
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const taskId = req.params.id || "unknown";
+    const rawTaskId = req.params.id || "unknown";
+    // Защита от инъекции в filename: только digits либо "unknown".
+    const safeTaskId = /^\d+$/.test(rawTaskId) ? rawTaskId : "unknown";
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `task-${taskId}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    const ext = EXT_BY_MIME[file.mimetype] ?? ".bin";
+    cb(null, `task-${safeTaskId}-${uniqueSuffix}${ext}`);
   },
 });
 
@@ -55,10 +72,13 @@ const upload = multer({
   storage: multerStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    // Разрешаем только конкретные image-mime'ы из allowlist'а EXT_BY_MIME.
+    // Раньше принимали любой image/*, что в теории включает application/svg+xml
+    // или image/svg (потенциал XSS через embedded script).
+    if (EXT_BY_MIME[file.mimetype]) {
       cb(null, true);
     } else {
-      cb(new Error("Только изображения разрешены"));
+      cb(new Error("Разрешены: JPG, PNG, WebP, GIF, HEIC"));
     }
   },
 });
