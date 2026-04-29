@@ -512,10 +512,14 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.workers.get.path, async (req, res) => {
+  app.get(api.workers.get.path, requireAuthOrApiKey, async (req, res) => {
     try {
       const worker = await storage.getWorker(Number(req.params.id));
       if (!worker) {
+        return res.status(404).json({ message: 'Сотрудник не найден' });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      if (companyId !== null && worker.companyId !== companyId) {
         return res.status(404).json({ message: 'Сотрудник не найден' });
       }
       res.json(worker);
@@ -547,9 +551,18 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.workers.update.path, async (req, res) => {
+  app.put(api.workers.update.path, requireAuth, requireAdmin, async (req, res) => {
     try {
       const input = api.workers.update.input.parse(req.body);
+      // Multi-tenant scope: только сотрудники своей компании.
+      const existing = await storage.getWorker(Number(req.params.id));
+      if (!existing) {
+        return res.status(404).json({ message: 'Сотрудник не найден' });
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      if (companyId !== null && existing.companyId !== companyId) {
+        return res.status(404).json({ message: 'Сотрудник не найден' });
+      }
       const worker = await storage.updateWorker(Number(req.params.id), input);
       if (!worker) {
         return res.status(404).json({ message: 'Сотрудник не найден' });
@@ -567,8 +580,17 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.workers.delete.path, async (req, res) => {
+  app.delete(api.workers.delete.path, requireAuth, requireAdmin, async (req, res) => {
     try {
+      // Multi-tenant scope: только сотрудники своей компании.
+      const existing = await storage.getWorker(Number(req.params.id));
+      if (!existing) {
+        return res.status(204).send();
+      }
+      const companyId = await getCompanyIdFromReq(req);
+      if (companyId !== null && existing.companyId !== companyId) {
+        return res.status(404).json({ message: 'Сотрудник не найден' });
+      }
       await storage.deleteWorker(Number(req.params.id));
       res.status(204).send();
     } catch (err: any) {
@@ -617,6 +639,11 @@ export async function registerRoutes(
     try {
       const task = await storage.getTask(Number(req.params.id));
       if (!task) {
+        return res.status(404).json({ message: 'Задача не найдена' });
+      }
+      // Multi-tenant scope: запрещаем cross-company чтение.
+      const companyId = await getCompanyIdFromReq(req);
+      if (companyId !== null && task.companyId !== companyId) {
         return res.status(404).json({ message: 'Задача не найдена' });
       }
       res.json(task);
@@ -834,17 +861,29 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
+      // Multi-tenant scope: админ другой компании не должен трогать.
+      const adminCompanyId = await getCompanyIdFromReq(req);
+      if (adminCompanyId !== null && task.companyId !== adminCompanyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
       if (!task.examplePhotoUrl) {
         return res.status(400).json({ message: "У задачи нет примера фото" });
       }
 
-      // Удаляем файл с диска
+      // Удаляем файл с диска. Защищаемся от path traversal: разрешаем
+      // только пути внутри uploads/ относительно cwd.
       const { unlink } = await import("fs/promises");
-      const photoPath = path.join(process.cwd(), task.examplePhotoUrl);
-      try {
-        await unlink(photoPath);
-      } catch (unlinkErr: any) {
-        console.error("Error deleting example photo file:", unlinkErr);
+      const photoPath = path.resolve(process.cwd(), task.examplePhotoUrl);
+      const uploadsRoot = path.resolve(process.cwd(), "uploads");
+      if (!photoPath.startsWith(uploadsRoot + path.sep)) {
+        console.warn("Refusing to delete file outside uploads/:", photoPath);
+      } else {
+        try {
+          await unlink(photoPath);
+        } catch (unlinkErr: any) {
+          console.error("Error deleting example photo file:", unlinkErr);
+        }
       }
 
       const updatedTask = await storage.updateTask(taskId, { examplePhotoUrl: null });
@@ -871,8 +910,13 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
-      // Проверяем права: исполнитель или админ
+      // Multi-tenant scope: задача должна принадлежать компании текущего юзера.
       const currentUser = await storage.getUserById(req.session.userId!);
+      if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
+      // Проверяем права: исполнитель или админ
       const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
       if (!isAllowed) {
         return res.status(403).json({ message: "Нет прав для удаления фото" });
@@ -880,20 +924,25 @@ export async function registerRoutes(
 
       const currentPhotos: string[] = (task as any).photoUrls || [];
 
+      // Helper: безопасное удаление файла только внутри uploads/.
+      const uploadsRoot = path.resolve(process.cwd(), "uploads");
+      const safeUnlink = async (relPath: string) => {
+        const abs = path.resolve(process.cwd(), relPath);
+        if (!abs.startsWith(uploadsRoot + path.sep)) {
+          console.warn("Refusing to delete outside uploads/:", abs);
+          return;
+        }
+        const { unlink } = await import("fs/promises");
+        try { await unlink(abs); } catch (e: any) { console.error("unlink:", e?.message); }
+      };
+
       // Если передан конкретный URL, удаляем только его
       if (photoUrlToDelete) {
         if (!currentPhotos.includes(photoUrlToDelete)) {
           return res.status(400).json({ message: "Фото не найдено" });
         }
 
-        // Удаляем файл с диска
-        const { unlink } = await import("fs/promises");
-        const photoPath = path.join(process.cwd(), photoUrlToDelete);
-        try {
-          await unlink(photoPath);
-        } catch (unlinkErr: any) {
-          console.error("Error deleting photo file:", unlinkErr);
-        }
+        await safeUnlink(photoUrlToDelete);
 
         // Обновляем массив фото
         const newPhotoUrls = currentPhotos.filter(url => url !== photoUrlToDelete);
@@ -920,24 +969,13 @@ export async function registerRoutes(
       }
 
       // Удаляем все файлы с диска
-      const { unlink } = await import("fs/promises");
       for (const photoUrl of currentPhotos) {
-        const photoPath = path.join(process.cwd(), photoUrl);
-        try {
-          await unlink(photoPath);
-        } catch (unlinkErr: any) {
-          console.error("Error deleting photo file:", unlinkErr);
-        }
+        await safeUnlink(photoUrl);
       }
 
       // Также удаляем старый photoUrl если он есть и не в массиве
       if (task.photoUrl && !currentPhotos.includes(task.photoUrl)) {
-        const photoPath = path.join(process.cwd(), task.photoUrl);
-        try {
-          await unlink(photoPath);
-        } catch (unlinkErr: any) {
-          console.error("Error deleting legacy photo file:", unlinkErr);
-        }
+        await safeUnlink(task.photoUrl);
       }
 
       // Обновляем задачу, убирая все фото
@@ -2335,7 +2373,8 @@ export async function registerRoutes(
       return res.status(400).json({ message: "taskId должен быть числом" });
     }
 
-    // Проверим, что сотрудник — исполнитель этой задачи (или админ).
+    // Проверим, что сотрудник — исполнитель этой задачи (или админ),
+    // и что задача принадлежит компании текущего юзера (multi-tenant).
     try {
       const task = await storage.getTask(taskId);
       if (!task) {
@@ -2344,6 +2383,9 @@ export async function registerRoutes(
       const user = req.session?.userId
         ? await storage.getUserById(req.session.userId)
         : null;
+      if (user?.companyId != null && task.companyId !== user.companyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
       const isAllowed =
         user?.isAdmin || (task.workerId && user?.id === task.workerId);
       if (!isAllowed) {
