@@ -2258,8 +2258,16 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Bad taskId" });
     }
     const task = await storage.getTask(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Задача не найдена" });
+    }
+    // Multi-tenant scope: задача должна принадлежать компании юзера.
+    const callerCompanyId = await getCompanyIdFromReq(req);
+    if (callerCompanyId !== null && task.companyId !== callerCompanyId) {
+      return res.status(404).json({ message: "Задача не найдена" });
+    }
     const journalLinkIntegrationId = getJournalLinkIntegrationId(
-      task?.journalLink
+      task.journalLink
     );
     try {
       const upstream = await fetch(
@@ -2411,8 +2419,16 @@ export async function registerRoutes(
     let task: Awaited<ReturnType<typeof storage.getTask>>;
     try {
       task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      // Multi-tenant scope: задача должна принадлежать компании юзера.
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      if (callerCompanyId !== null && task.companyId !== callerCompanyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
       const journalLinkIntegrationId = getJournalLinkIntegrationId(
-        task?.journalLink
+        task.journalLink
       );
       const upstreamUrl = new URL(
         `${baseUrl}/api/integrations/tasksflow/task-form`
