@@ -929,6 +929,80 @@
     font-weight: 400;
   }
 
+  /* Inline-блок «На проверке» сверху Dashboard'а у verifier'а. */
+  .verification-queue {
+    @apply rounded-2xl border border-amber-200 bg-amber-50/60 p-4 mb-4;
+  }
+
+  .verification-queue-header {
+    @apply flex items-center gap-2 text-amber-900;
+  }
+
+  .verification-queue-title {
+    @apply text-base font-semibold;
+  }
+
+  .verification-queue-count {
+    @apply ml-auto inline-flex items-center justify-center min-w-[1.5rem] h-6
+           rounded-full bg-amber-500 px-2 text-xs font-bold text-white;
+  }
+
+  .verification-queue-body {
+    @apply mt-3 space-y-2;
+  }
+
+  .verification-queue-item {
+    @apply flex items-center justify-between gap-3 rounded-xl border
+           border-amber-100 bg-white p-3 shadow-sm flex-wrap;
+  }
+
+  .verification-queue-item-info {
+    @apply flex-1 min-w-0;
+  }
+
+  .verification-queue-item-title {
+    @apply font-medium text-gray-900 truncate;
+  }
+
+  .verification-queue-item-meta {
+    @apply text-xs text-gray-500 mt-0.5;
+  }
+
+  .verification-queue-actions {
+    @apply flex items-center gap-2 shrink-0;
+  }
+
+  .verification-queue-reject {
+    @apply flex items-center gap-2 flex-wrap w-full mt-2;
+  }
+
+  .verification-queue-reject-input {
+    @apply flex-1 min-w-0 h-9 rounded-lg border border-gray-300 bg-white
+           px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400;
+  }
+
+  .verification-queue-btn {
+    @apply inline-flex items-center gap-1.5 h-9 rounded-lg px-3
+           text-sm font-medium transition-colors disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+
+  .verification-queue-btn--approve {
+    @apply bg-green-500 text-white hover:bg-green-600;
+  }
+
+  .verification-queue-btn--reject-open {
+    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
+  }
+
+  .verification-queue-btn--reject {
+    @apply bg-rose-500 text-white hover:bg-rose-600;
+  }
+
+  .verification-queue-btn--cancel {
+    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
+  }
+
   /* Task actions */
   .task-actions {
     @apply flex items-center gap-1;

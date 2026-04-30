@@ -9,6 +9,7 @@ import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
+import { VerificationQueue } from "@/components/VerificationQueue";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -751,7 +752,12 @@ export default function Dashboard() {
             )}
           </div>
         ) : (
-          <GroupedTaskList
+          <>
+            {/* Phase 4: верификер видит здесь все «submitted» задачи
+                от своих подчинённых с кнопками Принять/Отклонить.
+                Если задач нет — компонент рендерит null. */}
+            <VerificationQueue />
+            <GroupedTaskList
             activeTasks={filteredTasks.filter((t) => !t.isCompleted)}
             completedTasks={filteredTasks.filter(
               (t) =>
@@ -781,6 +787,7 @@ export default function Dashboard() {
               if (confirm("Удалить задачу?")) deleteTask.mutate(id);
             }}
           />
+          </>
         )}
       </main>
 
