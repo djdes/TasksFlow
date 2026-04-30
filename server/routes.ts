@@ -1877,9 +1877,20 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Нельзя удалить администратора" });
       }
 
-      // Проверяем что пользователь из той же компании
-      if (userToDelete.companyId !== currentUser?.companyId) {
-        return res.status(403).json({ message: "Нет прав для удаления этого пользователя" });
+      // Multi-tenant scope: company-уровневый админ удаляет только
+      // юзеров своей компании. Раньше check был
+      // `userToDelete.companyId !== currentUser?.companyId`, что в
+      // частном случае «оба null» давал permit и легаси юзер без
+      // companyId мог удалить такого же без companyId юзера в другой
+      // соседней инсталляции (если миграция оставила NULL companyId).
+      // Шаблон выровнен с /reset-balance — если у админа нет
+      // companyId, считаем его платформенным и разрешаем; иначе
+      // требуем match.
+      if (
+        currentUser?.companyId != null &&
+        userToDelete.companyId !== currentUser.companyId
+      ) {
+        return res.status(404).json({ message: "Пользователь не найден" });
       }
 
       await storage.deleteUser(userId);
