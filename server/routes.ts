@@ -2702,13 +2702,36 @@ export async function registerRoutes(
         cache: "no-store",
       });
       const text = await upstream.text();
+      // Local mirror logic. Атомарный переход + начисление баланса
+      // если task.price > 0. Раньше `storage.updateTask({isCompleted})`
+      // флипал статус БЕЗ начисления — журнальные bonus-задачи
+      // выполнялись через /complete-with-values без зарплаты.
+      // Кроме того без atomicity параллельные complete + complete-
+      // with-values могли двойно зачислить (race), здесь
+      // transitionTaskToCompleted закрывает обе дыры.
+      const finishLocally = async (): Promise<void> => {
+        const desired = Boolean(isCompleted ?? true);
+        if (!desired) {
+          // uncomplete-флоу: отдаём через /uncomplete handler-логику
+          // вручную чтобы balance вычесть. Ниже не критично — клиенты
+          // обычно не используют complete-with-values для отмены.
+          const fresh = await storage.getTask(taskId);
+          if (fresh?.isCompleted && fresh.price && fresh.price > 0 && fresh.workerId) {
+            await storage.updateUserBalance(fresh.workerId, -fresh.price);
+          }
+          await storage.updateTask(taskId, { isCompleted: false });
+          return;
+        }
+        const transitioned = await storage.transitionTaskToCompleted(taskId);
+        if (!transitioned) return; // уже выполнена — никакого double-pay
+        const fresh = await storage.getTask(taskId);
+        if (fresh?.price && fresh.price > 0 && fresh.workerId) {
+          await storage.updateUserBalance(fresh.workerId, fresh.price);
+        }
+      };
       if (upstream.ok) {
-        // Also mark the local TF task as completed so dashboard's 1/4
-        // counter updates without waiting for the pull sync.
         try {
-          await storage.updateTask(taskId, {
-            isCompleted: Boolean(isCompleted ?? true),
-          });
+          await finishLocally();
         } catch (err) {
           console.error("[wesetup-proxy] local complete mirror failed", err);
         }
@@ -2719,9 +2742,7 @@ export async function registerRoutes(
         // обновился сразу — иначе сотрудник видит «не сохранено» и
         // тапает повторно, плодя дубли.
         try {
-          await storage.updateTask(taskId, {
-            isCompleted: Boolean(isCompleted ?? true),
-          });
+          await finishLocally();
         } catch {
           /* non-fatal */
         }
@@ -2750,9 +2771,17 @@ export async function registerRoutes(
       // юзеру 202 Accepted с пояснением.
       console.error("[wesetup-proxy] complete failed", err);
       try {
-        await storage.updateTask(taskId, {
-          isCompleted: Boolean(isCompleted ?? true),
-        });
+        // Тот же atomic+balance путь что в success/5xx ветках выше.
+        const desired = Boolean(isCompleted ?? true);
+        if (desired) {
+          const transitioned = await storage.transitionTaskToCompleted(taskId);
+          if (transitioned) {
+            const fresh = await storage.getTask(taskId);
+            if (fresh?.price && fresh.price > 0 && fresh.workerId) {
+              await storage.updateUserBalance(fresh.workerId, fresh.price);
+            }
+          }
+        }
       } catch {
         /* non-fatal */
       }
