@@ -1606,7 +1606,13 @@ export async function registerRoutes(
           .json({ message: "Для отказа укажите причину (reason)" });
       }
       const decision = decisionRaw as "approve" | "reject";
-      const reason = decision === "reject" ? String(reasonRaw).trim() : null;
+      // Cap длины такой же как в /mark-returned: причина рендерится в
+      // карточке задачи + push-нотификации, 1000 символов щедро для
+      // управляющего и блокирует payload-flood.
+      const reason =
+        decision === "reject"
+          ? String(reasonRaw).trim().slice(0, 1000)
+          : null;
 
       const task = await storage.getTask(taskId);
       if (!task) {
