@@ -937,6 +937,29 @@ export async function registerRoutes(
       }
 
       await storage.deleteTask(Number(req.params.id));
+
+      // Удаляем все привязанные к задаче файлы с диска. Раньше:
+      // удалённая задача оставляла photoUrls + examplePhotoUrl как
+      // orphan-файлы в /uploads/, ничем не убираемые — disk usage
+      // рос неконтролируемо. Best-effort, не валим ответ при ошибке.
+      try {
+        const uploadsRoot = path.resolve(process.cwd(), "uploads");
+        const { unlink } = await import("fs/promises");
+        const candidates: string[] = [];
+        const photos = (existing as { photoUrls?: string[] }).photoUrls;
+        if (Array.isArray(photos)) candidates.push(...photos);
+        if (existing.photoUrl) candidates.push(existing.photoUrl);
+        if (existing.examplePhotoUrl) candidates.push(existing.examplePhotoUrl);
+        for (const rel of candidates) {
+          if (typeof rel !== "string" || !rel) continue;
+          const abs = path.resolve(process.cwd(), rel);
+          if (!abs.startsWith(uploadsRoot + path.sep)) continue;
+          await unlink(abs).catch(() => null);
+        }
+      } catch (cleanupErr) {
+        console.warn("[task-delete] orphan files cleanup failed", cleanupErr);
+      }
+
       res.status(204).send();
     } catch (err: any) {
       console.error('Error deleting task:', err);
@@ -1035,11 +1058,33 @@ export async function registerRoutes(
           return res.status(404).json({ message: "Задача не найдена" });
         }
 
+        // Если у задачи уже был example-photo — удаляем старый файл с
+        // диска, чтобы не плодить orphan-файлы. Раньше: каждая
+        // переустановка example-photo оставляла старый файл навсегда,
+        // /uploads/ распухал на десятки тысяч orphan-ов и в конце
+        // концов забивал diskspace.
+        const previousExampleUrl = task.examplePhotoUrl;
+
         const examplePhotoUrl = `/uploads/${req.file.filename}`;
         const updatedTask = await storage.updateTask(taskId, { examplePhotoUrl });
 
         if (!updatedTask) {
           return res.status(500).json({ message: "Ошибка обновления задачи" });
+        }
+
+        // Best-effort cleanup только после успешного UPDATE — иначе
+        // получим status update fail + потерянный example.
+        if (previousExampleUrl && previousExampleUrl !== examplePhotoUrl) {
+          try {
+            const uploadsRoot = path.resolve(process.cwd(), "uploads");
+            const abs = path.resolve(process.cwd(), previousExampleUrl);
+            if (abs.startsWith(uploadsRoot + path.sep)) {
+              const { unlink } = await import("fs/promises");
+              await unlink(abs).catch(() => null);
+            }
+          } catch (cleanupErr) {
+            console.warn("[example-photo] orphan cleanup failed", cleanupErr);
+          }
         }
 
         return res.json({ examplePhotoUrl: updatedTask.examplePhotoUrl });
