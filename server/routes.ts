@@ -512,16 +512,31 @@ export async function registerRoutes(
 
   app.put("/api/auth/me", requireAuth, async (req, res) => {
     try {
-      const { name } = req.body;
+      const { name } = req.body ?? {};
       const user = await storage.getUserById(req.session.userId!);
 
       if (!user) {
         return res.status(404).json({ message: 'Пользователь не найден' });
       }
 
+      // Раньше: name?.trim() крашил с TypeError если name был числом
+      // или объектом — попадало в catch как непонятный 500.
+      // Также длина не лимитировалась — кто-то мог пихнуть мегабайт.
+      let normalizedName: string | null = null;
+      if (typeof name === "string") {
+        const trimmed = name.trim();
+        if (trimmed) {
+          normalizedName = trimmed.slice(0, 200);
+        }
+      } else if (name === null) {
+        normalizedName = null;
+      } else if (name !== undefined) {
+        return res.status(400).json({ message: "Имя должно быть строкой" });
+      }
+
       const updated = await storage.updateUser(user.id, {
         phone: user.phone,
-        name: name?.trim() || null,
+        name: normalizedName,
       });
 
       res.json(updated);
