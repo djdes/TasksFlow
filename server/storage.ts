@@ -301,9 +301,38 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  /** Сброс баланса пользователя до 0 (вызывается админом после выплаты) */
+  /**
+   * Сброс баланса до 0 — вызывается админом после ручной выплаты.
+   *
+   * Race-safe вариант: вместо `SET balance = 0` (overwrite) делаем
+   * `SET balance = balance - prevBalance`. Если concurrent /complete
+   * успел добавить N в balance между нашим SELECT и UPDATE, итоговый
+   * результат будет N, а не 0 — worker не теряет только что
+   * заработанные деньги.
+   *
+   * Раньше: read+overwrite. Сценарий потери:
+   *   1. balance=5000, admin видит «выплатить 5000».
+   *   2. Worker заканчивает task с price=1000 → atomic +1000 → 6000.
+   *   3. Admin жмёт «Сбросить» → balance=0.
+   *   4. Admin отдал 5000 наличкой, но 1000 за свежевыполненную task'у
+   *      пропали — приходится отдельно компенсировать.
+   *
+   * Теперь: прочитанный prevBalance вычитается атомарным SQL'ом.
+   * Concurrent +1000 не теряется (balance заканчивает = 1000 а не 0).
+   */
   async resetUserBalance(id: number): Promise<User | undefined> {
-    await db.update(users).set({ bonusBalance: 0 }).where(eq(users.id, id));
+    const [current] = await db
+      .select({ bonusBalance: users.bonusBalance })
+      .from(users)
+      .where(eq(users.id, id));
+    if (!current) return undefined;
+    const prevBalance = current.bonusBalance ?? 0;
+    await db
+      .update(users)
+      .set({
+        bonusBalance: sql`COALESCE(${users.bonusBalance}, 0) - ${prevBalance}`,
+      })
+      .where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
