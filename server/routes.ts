@@ -197,7 +197,25 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
+  // Rate-limit login и публичные регистрационные endpoint'ы. TasksFlow
+  // авторизуется только по телефону (без пароля!) — без лимитера
+  // атакующий мог переберать +7XXXXXXXXXX за секунду и получать
+  // session-cookie любого worker'а, чей телефон совпал.
+  // 20 attempts / минуту с одного IP — достаточно для legit-юзера
+  // (двойной тап / опечатка), но 28800/день делает перебор Russian
+  // phone space (~10⁹) непрактичным.
+  const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Слишком много попыток входа. Подождите минуту." },
+  });
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/companies/register", authLimiter);
+  app.use("/api/users/register", authLimiter);
+
   // Auth
   app.post(api.auth.login.path, async (req, res) => {
     try {
