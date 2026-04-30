@@ -2829,17 +2829,46 @@ export async function registerRoutes(
     "/api/admin/webhook-queue/stats",
     requireAuth,
     requireAdmin,
-    async (_req, res) => {
+    async (req, res) => {
       try {
+        // Multi-tenant scope: webhookDeliveries не имеет companyId,
+        // только taskId. Раньше: возвращали ВСЕ deliveries из ВСЕХ
+        // компаний — admin компании A видел ошибки доставок компании B
+        // (включая targetUrl и apiKey-prefix в lastError). Теперь
+        // сначала собираем taskIds компании, потом фильтруем deliveries.
+        const adminCompanyId = await getCompanyIdFromReq(req);
+        if (adminCompanyId === null) {
+          return res.json({
+            stats: { pending: 0, delivered: 0, failed: 0, cancelled: 0 },
+            recentFailed: [],
+          });
+        }
+
         const { db } = await import("./db");
-        const { webhookDeliveries } = await import("@shared/schema");
-        const { sql } = await import("drizzle-orm");
+        const { webhookDeliveries, tasks: tasksTable } = await import("@shared/schema");
+        const { sql, eq, and, inArray, desc } = await import("drizzle-orm");
+
+        // Список taskIds компании (limit для perf — обычно их немного,
+        // но огромная org может иметь 10к+).
+        const myTasks = await db
+          .select({ id: tasksTable.id })
+          .from(tasksTable)
+          .where(eq(tasksTable.companyId, adminCompanyId));
+        const myTaskIds = myTasks.map((t) => t.id);
+        if (myTaskIds.length === 0) {
+          return res.json({
+            stats: { pending: 0, delivered: 0, failed: 0, cancelled: 0 },
+            recentFailed: [],
+          });
+        }
+
         const rows = await db
           .select({
             status: webhookDeliveries.status,
             count: sql<number>`count(*)`,
           })
           .from(webhookDeliveries)
+          .where(inArray(webhookDeliveries.taskId, myTaskIds))
           .groupBy(webhookDeliveries.status);
         const stats = { pending: 0, delivered: 0, failed: 0, cancelled: 0 };
         for (const r of rows) {
@@ -2848,12 +2877,17 @@ export async function registerRoutes(
           else if (r.status === 2) stats.failed = Number(r.count);
           else if (r.status === 3) stats.cancelled = Number(r.count);
         }
-        // Top-N последних failed — чтобы админ видел что именно не уехало.
+        // Top-N последних failed — только для своей компании.
         const recentFailed = await db
           .select()
           .from(webhookDeliveries)
-          .where(sql`${webhookDeliveries.status} = 2`)
-          .orderBy(sql`${webhookDeliveries.updatedAt} desc`)
+          .where(
+            and(
+              eq(webhookDeliveries.status, 2),
+              inArray(webhookDeliveries.taskId, myTaskIds)
+            )
+          )
+          .orderBy(desc(webhookDeliveries.updatedAt))
           .limit(20);
         res.json({
           stats,
