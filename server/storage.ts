@@ -434,6 +434,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
       claimedByWorkerId: tasks.claimedByWorkerId,
+      verificationStatus: tasks.verificationStatus,
+      verifierWorkerId: tasks.verifierWorkerId,
+      verifiedByUserId: tasks.verifiedByUserId,
+      verifiedAt: tasks.verifiedAt,
+      rejectReason: tasks.rejectReason,
     }).from(tasks);
 
     const result = companyId
@@ -469,6 +474,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
       claimedByWorkerId: tasks.claimedByWorkerId,
+      verificationStatus: tasks.verificationStatus,
+      verifierWorkerId: tasks.verifierWorkerId,
+      verifiedByUserId: tasks.verifiedByUserId,
+      verifiedAt: tasks.verifiedAt,
+      rejectReason: tasks.rejectReason,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
@@ -484,7 +494,12 @@ export class DatabaseStorage implements IStorage {
    * @returns Созданная задача с id
    * @note weekDays и photoUrls автоматически сериализуются в JSON для хранения
    */
-  async createTask(insertTask: InsertTask & { companyId?: number }): Promise<Task> {
+  async createTask(
+    insertTask: InsertTask & {
+      companyId?: number;
+      verifierWorkerId?: number | null;
+    },
+  ): Promise<Task> {
     // Сериализуем weekDays и photoUrls в JSON строку для хранения в БД
     const taskData = {
       ...insertTask,
@@ -498,6 +513,11 @@ export class DatabaseStorage implements IStorage {
       examplePhotoUrl: insertTask.examplePhotoUrl ?? null,
       companyId: insertTask.companyId ?? null,
       journalLink: insertTask.journalLink ?? null,
+      // Phase 1 двухстадийной верификации: opt verifierWorkerId.
+      // Если задан — последующий /complete сотрудника не закрывает
+      // задачу, а переводит её в 'submitted' (см. submitForVerification).
+      verifierWorkerId: insertTask.verifierWorkerId ?? null,
+      verificationStatus: insertTask.verifierWorkerId ? "pending" : null,
       createdAt: Math.floor(Date.now() / 1000),
       completedAt: null,
     };
@@ -523,6 +543,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
       claimedByWorkerId: tasks.claimedByWorkerId,
+      verificationStatus: tasks.verificationStatus,
+      verifierWorkerId: tasks.verifierWorkerId,
+      verifiedByUserId: tasks.verifiedByUserId,
+      verifiedAt: tasks.verifiedAt,
+      rejectReason: tasks.rejectReason,
     }).from(tasks).where(eq(tasks.id, insertId));
     return {
       ...task,
@@ -589,6 +614,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: tasks.createdAt,
       completedAt: tasks.completedAt,
       claimedByWorkerId: tasks.claimedByWorkerId,
+      verificationStatus: tasks.verificationStatus,
+      verifierWorkerId: tasks.verifierWorkerId,
+      verifiedByUserId: tasks.verifiedByUserId,
+      verifiedAt: tasks.verifiedAt,
+      rejectReason: tasks.rejectReason,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {

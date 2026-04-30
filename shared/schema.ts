@@ -166,6 +166,10 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   // Опциональная привязка к строке журнала во внешней системе (WeSetup).
   // Хранится как stringified JSON; шейп описан в shared/journal-link.ts.
   journalLink: z.string().nullable().optional(),
+  // Phase 1 двухстадийной верификации. Когда задана — задача после
+  // /complete от сотрудника НЕ переходит в done, а ждёт approve от
+  // verifier'а через POST /api/tasks/:id/verify.
+  verifierWorkerId: z.number().int().positive().nullable().optional(),
 });
 
 // Схема валидации для регистрации компании
