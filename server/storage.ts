@@ -634,15 +634,33 @@ export class DatabaseStorage implements IStorage {
       ) {
         continue;
       }
-      await db
+      // Conditional update: между read'ом кандидатов и здесь
+      // sibling-task мог завершить её собственный воркер
+      // (с начислением баланса в /complete handler-е). Без
+      // WHERE-условия мы бы перезаписали честный completed-стейт
+      // как «claimed-by-us» — false attribution в дашборде. С
+      // условием affectedRows=0 для уже завершённых и счётчик
+      // claimed остаётся точным.
+      const result = await db
         .update(tasks)
         .set({
           isCompleted: true,
           completedAt: args.completedAt,
           claimedByWorkerId: args.claimedByWorkerId,
         })
-        .where(eq(tasks.id, candidate.id));
-      claimed += 1;
+        .where(
+          and(
+            eq(tasks.id, candidate.id),
+            eq(tasks.isCompleted, false),
+            isNull(tasks.claimedByWorkerId),
+          ),
+        );
+      const header = Array.isArray(result) ? result[0] : result;
+      const affected =
+        header && typeof header === "object" && "affectedRows" in header
+          ? (header as { affectedRows: number }).affectedRows
+          : 0;
+      if (affected > 0) claimed += 1;
     }
     return claimed;
   }
