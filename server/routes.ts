@@ -918,14 +918,25 @@ export async function registerRoutes(
       // «phantom»-зарплатой, без следа в task-журнале. Раньше: admin
       // удалял старую completed задачу для очистки списка → у worker'а
       // остался остаток оплаты без подтверждения; невозможно сверить.
+      //
+      // Race-fix: используем атомарный transitionTaskToUncompleted.
+      // Без него два concurrent DELETE могли оба прочитать
+      // isCompleted=true, оба вычесть price (двойной дебет) и потом
+      // оба удалить таск (одно affectedRows=0, но без error). Теперь
+      // только один из них переведёт isCompleted в false и сделает
+      // дебет; остальные получат transitioned=false и пропустят.
       if (
-        existing.isCompleted &&
         existing.price &&
         existing.price > 0 &&
         existing.workerId
       ) {
         try {
-          await storage.updateUserBalance(existing.workerId, -existing.price);
+          const reversed = await storage.transitionTaskToUncompleted(
+            Number(req.params.id),
+          );
+          if (reversed) {
+            await storage.updateUserBalance(existing.workerId, -existing.price);
+          }
         } catch (balanceErr) {
           console.error(
             "[task-delete] balance reversal failed",
