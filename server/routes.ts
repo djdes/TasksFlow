@@ -783,6 +783,45 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
+      // FINANCIAL SAFETY: PUT не должен менять состояния которые
+      // влияют на баланс (isCompleted, price на completed task,
+      // переназначение workerId на completed task) — иначе баланс
+      // теряет связь с реально выполненной работой. Раньше:
+      //   - PUT { isCompleted: true } флипал статус БЕЗ начисления
+      //     баланса (admin'ы сделали так чтобы скрыть задачу,
+      //     сотрудник терял зарплату).
+      //   - PUT { price: 5000 } на уже completed задаче не вызывал
+      //     correction баланса — старая цена в balance, новая в task.
+      //   - PUT { workerId: B } на completed задаче перевешивал task
+      //     на B, но balance оставался у A.
+      // Правильный flow: завершение через POST /complete + uncomplete.
+      // Цена и worker — менять можно ТОЛЬКО на не-completed task.
+      if (input.isCompleted !== undefined) {
+        return res.status(400).json({
+          message: "isCompleted нельзя менять через PUT — используйте /complete или /uncomplete",
+        });
+      }
+      if (existing.isCompleted) {
+        if (
+          input.price !== undefined &&
+          input.price !== (existing.price ?? 0)
+        ) {
+          return res.status(400).json({
+            message:
+              "Цена выполненной задачи фиксируется. Сначала отмените выполнение, затем измените цену.",
+          });
+        }
+        if (
+          input.workerId !== undefined &&
+          input.workerId !== existing.workerId
+        ) {
+          return res.status(400).json({
+            message:
+              "Исполнителя выполненной задачи нельзя менять — баланс уже начислен. Сначала отмените выполнение.",
+          });
+        }
+      }
+
       // Multi-tenant scope: если переназначаем workerId — новый
       // worker должен быть в той же компании. Иначе можно «отправить»
       // задачу чужому юзеру.
@@ -852,6 +891,30 @@ export async function registerRoutes(
               message: "Можно удалять только задачи своих подчинённых",
             });
           }
+        }
+      }
+
+      // FINANCIAL SAFETY: при удалении completed task с positive price
+      // вычитаем из баланса исполнителя — иначе balance остаётся с
+      // «phantom»-зарплатой, без следа в task-журнале. Раньше: admin
+      // удалял старую completed задачу для очистки списка → у worker'а
+      // остался остаток оплаты без подтверждения; невозможно сверить.
+      if (
+        existing.isCompleted &&
+        existing.price &&
+        existing.price > 0 &&
+        existing.workerId
+      ) {
+        try {
+          await storage.updateUserBalance(existing.workerId, -existing.price);
+        } catch (balanceErr) {
+          console.error(
+            "[task-delete] balance reversal failed",
+            balanceErr,
+          );
+          return res.status(500).json({
+            message: "Не удалось обновить баланс при удалении задачи",
+          });
         }
       }
 
