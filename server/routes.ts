@@ -242,7 +242,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error logging in:', err);
-      res.status(500).json({ message: 'Ошибка авторизации', error: err.message });
+      res.status(500).json({ message: 'Ошибка авторизации' });
     }
   });
 
@@ -256,14 +256,14 @@ export async function registerRoutes(
       res.json(user || null);
     } catch (err: any) {
       console.error('Error fetching user:', err);
-      res.status(500).json({ message: 'Ошибка', error: err.message });
+      res.status(500).json({ message: 'Ошибка' });
     }
   });
 
   app.post(api.auth.logout.path, async (req, res) => {
     req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false });
       }
       res.json({ success: true });
     });
@@ -312,7 +312,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error registering company:', err);
-      res.status(500).json({ message: 'Ошибка регистрации', error: err.message });
+      res.status(500).json({ message: 'Ошибка регистрации' });
     }
   });
 
@@ -383,7 +383,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error registering user:', err);
-      res.status(500).json({ message: 'Ошибка регистрации', error: err.message });
+      res.status(500).json({ message: 'Ошибка регистрации' });
     }
   });
 
@@ -398,7 +398,7 @@ export async function registerRoutes(
       res.json(company || null);
     } catch (err: any) {
       console.error('Error fetching company:', err);
-      res.status(500).json({ message: 'Ошибка', error: err.message });
+      res.status(500).json({ message: 'Ошибка' });
     }
   });
 
@@ -481,7 +481,7 @@ export async function registerRoutes(
       res.json(company);
     } catch (err: any) {
       console.error('Error updating company:', err);
-      res.status(500).json({ message: 'Ошибка обновления компании', error: err.message });
+      res.status(500).json({ message: 'Ошибка обновления компании' });
     }
   });
 
@@ -560,7 +560,7 @@ export async function registerRoutes(
       res.json(updated);
     } catch (err: any) {
       console.error('Error updating user:', err);
-      res.status(500).json({ message: 'Ошибка обновления', error: err.message });
+      res.status(500).json({ message: 'Ошибка обновления' });
     }
   });
 
@@ -580,7 +580,7 @@ export async function registerRoutes(
       res.json(workers);
     } catch (err: any) {
       console.error('Error fetching workers:', err);
-      res.status(500).json({ message: 'Ошибка загрузки сотрудников', error: err.message });
+      res.status(500).json({ message: 'Ошибка загрузки сотрудников' });
     }
   });
 
@@ -597,7 +597,7 @@ export async function registerRoutes(
       res.json(worker);
     } catch (err: any) {
       console.error('Error fetching worker:', err);
-      res.status(500).json({ message: 'Ошибка', error: err.message });
+      res.status(500).json({ message: 'Ошибка' });
     }
   });
 
@@ -619,7 +619,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error creating worker:', err);
-      res.status(500).json({ message: 'Ошибка создания сотрудника', error: err.message });
+      res.status(500).json({ message: 'Ошибка создания сотрудника' });
     }
   });
 
@@ -648,7 +648,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error updating worker:', err);
-      res.status(500).json({ message: 'Ошибка обновления', error: err.message });
+      res.status(500).json({ message: 'Ошибка обновления' });
     }
   });
 
@@ -667,7 +667,7 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (err: any) {
       console.error('Error deleting worker:', err);
-      res.status(500).json({ message: 'Ошибка удаления', error: err.message });
+      res.status(500).json({ message: 'Ошибка удаления' });
     }
   });
 
@@ -710,7 +710,7 @@ export async function registerRoutes(
       res.json(tasks.filter((t) => t.workerId !== null && allowed.has(t.workerId)));
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
-      res.status(500).json({ message: 'Ошибка загрузки задач', error: err.message });
+      res.status(500).json({ message: 'Ошибка загрузки задач' });
     }
   });
 
@@ -728,7 +728,7 @@ export async function registerRoutes(
       res.json(task);
     } catch (err: any) {
       console.error('Error fetching task:', err);
-      res.status(500).json({ message: 'Ошибка', error: err.message });
+      res.status(500).json({ message: 'Ошибка' });
     }
   });
 
@@ -781,7 +781,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error creating task:', err);
-      res.status(500).json({ message: 'Ошибка создания задачи', error: err.message });
+      res.status(500).json({ message: 'Ошибка создания задачи' });
     }
   });
 
@@ -884,7 +884,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error updating task:', err);
-      res.status(500).json({ message: 'Ошибка обновления', error: err.message });
+      res.status(500).json({ message: 'Ошибка обновления' });
     }
   });
 
@@ -963,7 +963,7 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (err: any) {
       console.error('Error deleting task:', err);
-      res.status(500).json({ message: 'Ошибка удаления', error: err.message });
+      res.status(500).json({ message: 'Ошибка удаления' });
     }
   });
 
@@ -1138,7 +1138,7 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err: any) {
       console.error("Error deleting example photo:", err);
-      res.status(500).json({ message: "Ошибка удаления примера фото", error: err.message });
+      res.status(500).json({ message: "Ошибка удаления примера фото" });
     }
   });
 
@@ -1234,7 +1234,7 @@ export async function registerRoutes(
       res.json({ success: true, photoUrls: [] });
     } catch (err: any) {
       console.error("Error deleting photo:", err);
-      res.status(500).json({ message: "Ошибка удаления фото", error: err.message });
+      res.status(500).json({ message: "Ошибка удаления фото" });
     }
   });
 
@@ -1360,7 +1360,7 @@ export async function registerRoutes(
       res.json(updatedTask);
     } catch (err: any) {
       console.error("Error completing task:", err);
-      res.status(500).json({ message: "Ошибка завершения задачи", error: err.message });
+      res.status(500).json({ message: "Ошибка завершения задачи" });
     }
   });
 
@@ -1423,7 +1423,7 @@ export async function registerRoutes(
       res.json(updatedTask);
     } catch (err: any) {
       console.error("Error uncompleting task:", err);
-      res.status(500).json({ message: "Ошибка отмены завершения задачи", error: err.message });
+      res.status(500).json({ message: "Ошибка отмены завершения задачи" });
     }
   });
 
@@ -1459,7 +1459,7 @@ export async function registerRoutes(
       res.json(users.filter((u) => allowed.has(u.id)));
     } catch (err: any) {
       console.error('Error fetching users:', err);
-      res.status(500).json({ message: 'Ошибка загрузки пользователей', error: err.message });
+      res.status(500).json({ message: 'Ошибка загрузки пользователей' });
     }
   });
 
@@ -1527,7 +1527,7 @@ export async function registerRoutes(
       res.json({ ok: true, count: list.length });
     } catch (err: any) {
       console.error('[managed-workers] failed', err);
-      res.status(500).json({ message: 'Ошибка сохранения иерархии', error: err.message });
+      res.status(500).json({ message: 'Ошибка сохранения иерархии' });
     }
   });
 
@@ -1585,7 +1585,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error creating user:', err);
-      res.status(500).json({ message: 'Ошибка создания пользователя', error: err.message });
+      res.status(500).json({ message: 'Ошибка создания пользователя' });
     }
   });
 
@@ -1640,7 +1640,7 @@ export async function registerRoutes(
         });
       }
       console.error("Error creating invitation:", err);
-      res.status(500).json({ message: "Ошибка создания приглашения", error: err.message });
+      res.status(500).json({ message: "Ошибка создания приглашения" });
     }
   });
 
@@ -1653,7 +1653,7 @@ export async function registerRoutes(
       res.json(list);
     } catch (err: any) {
       console.error("Error listing invitations:", err);
-      res.status(500).json({ message: "Ошибка загрузки приглашений", error: err.message });
+      res.status(500).json({ message: "Ошибка загрузки приглашений" });
     }
   });
 
@@ -1676,7 +1676,7 @@ export async function registerRoutes(
       res.json(updated);
     } catch (err: any) {
       console.error("Error revoking invitation:", err);
-      res.status(500).json({ message: "Ошибка отзыва приглашения", error: err.message });
+      res.status(500).json({ message: "Ошибка отзыва приглашения" });
     }
   });
 
@@ -1784,7 +1784,7 @@ export async function registerRoutes(
         });
       }
       console.error("Error accepting invitation:", err);
-      res.status(500).json({ message: "Ошибка регистрации", error: err.message });
+      res.status(500).json({ message: "Ошибка регистрации" });
     }
   });
 
@@ -1825,7 +1825,7 @@ export async function registerRoutes(
         });
       }
       console.error('Error updating user:', err);
-      res.status(500).json({ message: 'Ошибка обновления пользователя', error: err.message });
+      res.status(500).json({ message: 'Ошибка обновления пользователя' });
     }
   });
 
@@ -1851,7 +1851,7 @@ export async function registerRoutes(
       res.json(user);
     } catch (err: any) {
       console.error("Error resetting user balance:", err);
-      res.status(500).json({ message: "Ошибка сброса баланса", error: err.message });
+      res.status(500).json({ message: "Ошибка сброса баланса" });
     }
   });
 
@@ -1885,7 +1885,7 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err: any) {
       console.error("Error deleting user:", err);
-      res.status(500).json({ message: "Ошибка удаления пользователя", error: err.message });
+      res.status(500).json({ message: "Ошибка удаления пользователя" });
     }
   });
 
