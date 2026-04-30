@@ -83,6 +83,28 @@ export const tasks = mysqlTable("tasks", {
   // Карточки с claimedByWorkerId уезжают в раздел «Сделано другими».
   // NULL = выполнено самостоятельно (или не выполнено).
   claimedByWorkerId: int("claimed_by_worker_id"),
+  // Phase 1 двухстадийной верификации (employee → verifier → done).
+  // Полная семантика — в script/_add-verification-cols.ts.
+  //
+  // verificationStatus:
+  //   NULL        = задача без проверки, /complete сразу done (legacy).
+  //   'pending'   = ждёт выполнения сотрудником.
+  //   'submitted' = сотрудник нажал «Готово», ждёт verifier'а.
+  //                 isCompleted=false, balance НЕ начислен.
+  //   'approved'  = verifier одобрил. isCompleted=true, balance
+  //                 начислен, WeSetup-mirror отправлен.
+  //   'rejected'  = verifier отклонил, задача снова активна у
+  //                 сотрудника с пометкой rejectReason.
+  verificationStatus: varchar("verification_status", { length: 20 }),
+  // Кто должен проверить. Заполняется при bulk-assign-today из
+  // journal-responsibles. NULL = задача без проверки.
+  verifierWorkerId: int("verifier_worker_id"),
+  // Кто реально одобрил/отклонил (может быть admin, не verifier).
+  verifiedByUserId: int("verified_by_user_id"),
+  // Unix sec одобрения/отклонения.
+  verifiedAt: int("verified_at"),
+  // Текст причины при rejected — показывается сотруднику в карточке.
+  rejectReason: text("reject_reason"),
 });
 
 export const insertUserSchema = z.object({

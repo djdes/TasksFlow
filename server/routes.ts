@@ -1290,12 +1290,51 @@ export async function registerRoutes(
       if (task.isCompleted) {
         return res.json(task);
       }
+      // Phase 1 двухстадийной верификации: если задача уже в
+      // «submitted» — повторный /complete от того же воркера не
+      // должен ничего делать (она уже ждёт verifier'а). API key
+      // (machine integrations) обходит, чтобы старая интеграция не
+      // ломалась.
+      if (
+        !req.apiKey &&
+        task.verificationStatus === "submitted"
+      ) {
+        return res.json(task);
+      }
 
       // Если требуется фото, проверяем что оно загружено
       const taskPhotoUrls = (task as any).photoUrls || [];
       const hasPhotos = taskPhotoUrls.length > 0 || task.photoUrl;
       if (task.requiresPhoto && !hasPhotos) {
         return res.status(400).json({ message: "Необходимо загрузить фото перед завершением" });
+      }
+
+      // Phase 1 двухстадийной верификации:
+      //   • Если у задачи есть verifier_worker_id и текущий вызов —
+      //     не от API-key (machine integrations apruvят сами) и не от
+      //     самого verifier'а (он своё approve делает через /verify),
+      //     то задача переходит в submitted. Balance НЕ начисляется
+      //     до approve. WeSetup-mirror тоже не отправляется (его
+      //     уйдёт после approve).
+      //   • Если verifier == текущий юзер — он завершает задачу как
+      //     обычно (исполнитель и проверяющий совпадают для shared-
+      //     задач, где руководитель сам в смене).
+      //   • Если verifier_worker_id == NULL — старое поведение
+      //     (legacy задачи без проверки).
+      const requiresVerification =
+        !req.apiKey &&
+        task.verifierWorkerId !== null &&
+        task.verifierWorkerId !== req.session?.userId;
+      if (requiresVerification) {
+        const submitted = await storage.submitForVerification(taskId);
+        if (!submitted) {
+          // Concurrent submit или статус не позволяет (approved/already
+          // submitted). Отдаём текущий стейт.
+          const fresh = await storage.getTask(taskId);
+          return res.json(fresh ?? task);
+        }
+        const updatedTask = await storage.getTask(taskId);
+        return res.json(updatedTask ?? task);
       }
 
       // Race-safe атомарный переход isCompleted=false → true. Если
@@ -1447,6 +1486,218 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("Error uncompleting task:", err);
       res.status(500).json({ message: "Ошибка отмены завершения задачи" });
+    }
+  });
+
+  /**
+   * Phase 2 двухстадийной верификации: одобрить/отклонить задачу.
+   *
+   *   POST /api/tasks/:id/verify
+   *   Body:
+   *     { decision: "approve" }
+   *     { decision: "reject", reason: "<текст>" }
+   *
+   * Кто может:
+   *   • API key (machine integrations) — для server-to-server подтверждений.
+   *   • session-юзер == task.verifierWorkerId — назначенный проверяющий.
+   *   • session-юзер == admin компании — overrides verifier'а
+   *     (admin всегда может закрыть задачу, чтобы pipeline не вис при
+   *     отпуске verifier'а).
+   *
+   * approve: 'submitted' → 'approved'. Запускает все side-effects, как
+   * обычный /complete: balance, sibling-claim, email. WeSetup-mirror
+   * (если task.journalLink) тоже отправится — т.е. журнал считается
+   * заполненным только сейчас.
+   *
+   * reject: 'submitted' → 'rejected'. Никаких credit'ов; задача
+   * вернулась в active у сотрудника с пометкой rejectReason.
+   */
+  app.post("/api/tasks/:id/verify", requireAuthOrApiKey, async (req, res) => {
+    try {
+      const taskId = Number(req.params.id);
+      if (!Number.isFinite(taskId)) {
+        return res.status(400).json({ message: "Bad task id" });
+      }
+
+      const decisionRaw = (req.body || {}).decision;
+      const reasonRaw = (req.body || {}).reason;
+      if (decisionRaw !== "approve" && decisionRaw !== "reject") {
+        return res
+          .status(400)
+          .json({ message: "decision должен быть 'approve' или 'reject'" });
+      }
+      if (
+        decisionRaw === "reject" &&
+        (typeof reasonRaw !== "string" || !reasonRaw.trim())
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Для отказа укажите причину (reason)" });
+      }
+      const decision = decisionRaw as "approve" | "reject";
+      const reason = decision === "reject" ? String(reasonRaw).trim() : null;
+
+      const task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
+      // Multi-tenant scope.
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      if (
+        callerCompanyId !== null &&
+        task.companyId !== callerCompanyId
+      ) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+
+      // Pre-condition: задача должна быть «submitted».
+      if (task.verificationStatus !== "submitted") {
+        return res.status(409).json({
+          message:
+            "Задача не находится на проверке (текущий статус: " +
+            (task.verificationStatus ?? "—") +
+            ")",
+        });
+      }
+
+      // Доступ: API key, verifier_worker_id, или admin.
+      let verifierUserId: number | null = null;
+      if (req.apiKey) {
+        // Machine: используем верификатора как id (если задан) или 0
+        // как «system». В updates ставим verified_by_user_id из task.
+        verifierUserId = task.verifierWorkerId ?? 0;
+      } else if (req.session?.userId) {
+        const me = await storage.getUserById(req.session.userId);
+        if (
+          me &&
+          (me.isAdmin || me.id === task.verifierWorkerId)
+        ) {
+          verifierUserId = me.id;
+        }
+      }
+      if (verifierUserId === null) {
+        return res.status(403).json({
+          message:
+            "Только назначенный проверяющий или администратор может одобрять/отклонять задачи",
+        });
+      }
+
+      if (decision === "approve") {
+        const ok = await storage.approveVerification(taskId, verifierUserId);
+        if (!ok) {
+          const fresh = await storage.getTask(taskId);
+          return res.json(fresh ?? task);
+        }
+        // Side-effects (balance, sibling-claim, WeSetup-mirror) —
+        // те же что в /complete, но запускаем сейчас, при approve.
+        if (task.price && task.price > 0 && task.workerId) {
+          await storage.updateUserBalance(task.workerId, task.price);
+        }
+        const journalLink = parseJournalLink(task.journalLink);
+        const hasBonus =
+          (task.price ?? 0) > 0 ||
+          (journalLink?.bonusAmountKopecks ?? 0) > 0;
+        if (
+          journalLink &&
+          hasBonus &&
+          task.workerId &&
+          !journalLink.isFreeText
+        ) {
+          try {
+            const claimed = await storage.claimSiblingTasks({
+              sourceTaskId: task.id,
+              documentId: journalLink.documentId,
+              journalKind: journalLink.kind,
+              claimedByWorkerId: task.workerId,
+              companyId: task.companyId ?? null,
+              completedAt: Math.floor(Date.now() / 1000),
+            });
+            if (claimed > 0) {
+              console.log(
+                `[verify-approve] task ${task.id} claimed ${claimed} siblings`,
+              );
+            }
+          } catch (claimErr) {
+            console.error("[verify-approve] sibling claim failed", claimErr);
+          }
+        }
+        // WeSetup-mirror через webhook-queue (тот же путь что обычный
+        // /complete на journal-bound задаче). Если упстрим лежит —
+        // worker ретраит.
+        if (task.journalLink) {
+          try {
+            const target = await resolveWesetupTarget(req);
+            if (!("error" in target)) {
+              const { attemptOrEnqueue } = await import("./webhook-queue");
+              await attemptOrEnqueue({
+                taskId,
+                eventType: "complete",
+                targetUrl: `${target.baseUrl}/api/integrations/tasksflow/complete`,
+                apiKey: target.key,
+                payload: { taskId, isCompleted: true, values: {} },
+              });
+            }
+          } catch (err) {
+            console.warn(
+              "[verify-approve] WeSetup mirror enqueue failed (non-fatal)",
+              err instanceof Error ? err.message : err,
+            );
+          }
+        }
+        const fresh = await storage.getTask(taskId);
+        return res.json(fresh ?? task);
+      }
+
+      // decision === "reject"
+      const ok = await storage.rejectVerification(
+        taskId,
+        verifierUserId,
+        reason!,
+      );
+      if (!ok) {
+        const fresh = await storage.getTask(taskId);
+        return res.json(fresh ?? task);
+      }
+      const fresh = await storage.getTask(taskId);
+      return res.json(fresh ?? task);
+    } catch (err: any) {
+      console.error("Error verifying task:", err);
+      res.status(500).json({ message: "Ошибка проверки задачи" });
+    }
+  });
+
+  /**
+   * Список задач, ждущих проверки от текущего пользователя.
+   * Используется UI-табом «На проверке» в Dashboard'е verifier'а.
+   *
+   *   GET /api/tasks/awaiting-verification
+   *   200 → Task[]
+   *   401 → не авторизован
+   *
+   * Возвращает все задачи с verification_status='submitted' и
+   * verifier_worker_id == session.userId, в скоупе компании.
+   * Admin'у — всё submitted в его компании.
+   */
+  app.get("/api/tasks/awaiting-verification", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Не авторизован" });
+      const me = await storage.getUserById(userId);
+      if (!me) return res.status(401).json({ message: "Не авторизован" });
+      const companyId = me.companyId ?? null;
+      if (companyId === null) return res.json([]);
+
+      const allTasks = await storage.getTasks(companyId);
+      const filtered = allTasks.filter((t) => {
+        if (t.verificationStatus !== "submitted") return false;
+        if (me.isAdmin) return true;
+        return t.verifierWorkerId === userId;
+      });
+      res.json(filtered);
+    } catch (err: any) {
+      console.error("Error listing awaiting-verification tasks:", err);
+      res.status(500).json({ message: "Ошибка загрузки" });
     }
   });
 

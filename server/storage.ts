@@ -31,7 +31,7 @@ import {
   type Invitation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, lte, asc, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, lte, asc, isNull, or, sql } from "drizzle-orm";
 import { normalizePhone } from "./phone-normalize";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
@@ -89,6 +89,29 @@ export interface IStorage {
    */
   transitionTaskToCompleted(id: number): Promise<boolean>;
   transitionTaskToUncompleted(id: number): Promise<boolean>;
+
+  // Phase 1 двухстадийной верификации.
+  //
+  // submitForVerification: атомарный переход
+  //   verification_status NULL/'pending' → 'submitted'
+  // (вызывается когда сотрудник нажал «Готово» на задаче с
+  // verifier_worker_id != NULL). Race-safe — повторные клики дают
+  // affectedRows=0, balance НЕ изменяется.
+  submitForVerification(id: number): Promise<boolean>;
+  // approveVerification: 'submitted' → 'approved' + isCompleted=true.
+  // Здесь же ставим completedAt, потому что задача реально done только
+  // после проверки. Возврат: row для дальнейшего credit'а balance'а.
+  approveVerification(
+    id: number,
+    verifierUserId: number
+  ): Promise<boolean>;
+  // rejectVerification: 'submitted' → 'rejected' + isCompleted=false +
+  // reject_reason. Сотрудник снова видит задачу в активных.
+  rejectVerification(
+    id: number,
+    verifierUserId: number,
+    reason: string
+  ): Promise<boolean>;
 
   // API Keys
   createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
@@ -701,6 +724,101 @@ export class DatabaseStorage implements IStorage {
       .update(tasks)
       .set({ isCompleted: false, completedAt: null })
       .where(and(eq(tasks.id, id), eq(tasks.isCompleted, true)));
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
+  }
+
+  // ===================== TWO-STAGE VERIFICATION =====================
+
+  async submitForVerification(id: number): Promise<boolean> {
+    // Условный переход: только если verifier_worker_id задан и
+    // status в одном из «можно отправлять» состояний (NULL для
+    // legacy задач которые получили verifier'а на лету, 'pending'
+    // для свежих, 'rejected' — re-submit после исправления).
+    // Запрещаем повторное submitted/approved.
+    const result = await db
+      .update(tasks)
+      .set({
+        verificationStatus: "submitted",
+        // isCompleted=false до approval. Гарантируем явно — мог быть
+        // выставлен в true старым /complete и потом заведён verifier.
+        isCompleted: false,
+        completedAt: null,
+        rejectReason: null,
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          sql`${tasks.verifierWorkerId} IS NOT NULL`,
+          or(
+            isNull(tasks.verificationStatus),
+            eq(tasks.verificationStatus, "pending"),
+            eq(tasks.verificationStatus, "rejected"),
+          ),
+        ),
+      );
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
+  }
+
+  async approveVerification(
+    id: number,
+    verifierUserId: number,
+  ): Promise<boolean> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await db
+      .update(tasks)
+      .set({
+        verificationStatus: "approved",
+        isCompleted: true,
+        completedAt: now,
+        verifiedByUserId: verifierUserId,
+        verifiedAt: now,
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          eq(tasks.verificationStatus, "submitted"),
+        ),
+      );
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
+  }
+
+  async rejectVerification(
+    id: number,
+    verifierUserId: number,
+    reason: string,
+  ): Promise<boolean> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await db
+      .update(tasks)
+      .set({
+        verificationStatus: "rejected",
+        isCompleted: false,
+        completedAt: null,
+        verifiedByUserId: verifierUserId,
+        verifiedAt: now,
+        rejectReason: reason,
+      })
+      .where(
+        and(
+          eq(tasks.id, id),
+          eq(tasks.verificationStatus, "submitted"),
+        ),
+      );
     const header = Array.isArray(result) ? result[0] : result;
     const affected =
       header && typeof header === "object" && "affectedRows" in header

@@ -25,7 +25,8 @@
     "add-claim-col": "tsx script/_add-claim-col.ts",
     "add-managed-workers-col": "tsx script/_add-managed-workers-col.ts",
     "add-position-col": "tsx script/_add-position-col.ts",
-    "add-api-key-encrypted": "tsx script/add-api-key-encrypted.ts"
+    "add-api-key-encrypted": "tsx script/add-api-key-encrypted.ts",
+    "add-verification-cols": "tsx script/_add-verification-cols.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
