@@ -929,6 +929,22 @@
     font-weight: 400;
   }
 
+  /* Phase F: «уже закрыто» — мини-блок снизу task-card, показывает
+     соседей по журналу что закрыли свои задачи (опционально, по
+     per-org siblingVisibility флагу). */
+  .task-siblings {
+    @apply mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50/60
+           px-2 py-1 text-[12px] text-emerald-700;
+  }
+
+  .task-siblings-label {
+    @apply font-medium;
+  }
+
+  .task-siblings-list {
+    @apply truncate text-emerald-600;
+  }
+
   /* Inline-блок «На проверке» сверху Dashboard'а у verifier'а. */
   .verification-queue {
     @apply rounded-2xl border border-amber-200 bg-amber-50/60 p-4 mb-4;

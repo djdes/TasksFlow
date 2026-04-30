@@ -23,6 +23,7 @@ import {
   type YearGroup,
 } from "@/lib/group-tasks";
 import { getJournalBonus } from "@/lib/journal-bonus";
+import { parseJournalLink } from "@/lib/journal-link-parse";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -133,6 +134,33 @@ export function GroupedTaskList(props: Props) {
     () => groupTasksByDate(completedTasks, "completedAt"),
     [completedTasks]
   );
+  // Phase F: для каждого documentId считаем сколько siblings уже
+  // выполнено. Показываем рядом с активной задачей если у неё в
+  // journalLink стоит siblingVisibility=true (per-org per-journal
+  // флаг от WeSetup).
+  const siblingsByDoc = useMemo(() => {
+    const map = new Map<
+      string,
+      Array<{ rowKey: string; label: string; doneByName: string | null }>
+    >();
+    for (const task of completedTasks) {
+      const link = parseJournalLink(
+        (task as { journalLink?: string | null }).journalLink ?? null,
+      );
+      if (!link?.siblingVisibility) continue;
+      const arr = map.get(link.documentId) ?? [];
+      arr.push({
+        rowKey: link.rowKey,
+        label: link.label ?? task.title,
+        doneByName:
+          (task as { workerId?: number | null }).workerId != null
+            ? getUserName((task as { workerId: number }).workerId)
+            : null,
+      });
+      map.set(link.documentId, arr);
+    }
+    return map;
+  }, [completedTasks, getUserName]);
   const claimedGroups = useMemo(
     () => groupTasksByDate(claimedByOthersTasks, "completedAt"),
     [claimedByOthersTasks]
@@ -170,6 +198,17 @@ export function GroupedTaskList(props: Props) {
       (task as { journalLink?: string | null }).journalLink ||
         (categoryValue ?? "").startsWith("WeSetup · ")
     );
+    // Phase F: «соседи закрыли». Берём журнальные siblings (не свою
+    // задачу) и фильтруем по siblingVisibility=true в JournalLink.
+    const taskLink = parseJournalLink(
+      (task as { journalLink?: string | null }).journalLink ?? null,
+    );
+    const visibleSiblings =
+      taskLink && taskLink.siblingVisibility && !isCompleted
+        ? (siblingsByDoc.get(taskLink.documentId) ?? []).filter(
+            (s) => s.rowKey !== taskLink.rowKey,
+          )
+        : [];
 
     return (
       <div
@@ -262,6 +301,26 @@ export function GroupedTaskList(props: Props) {
                 </div>
               )}
             </div>
+
+            {/* Phase F: подсветка «уже сделанных» соседей по журналу.
+                Видим только когда WeSetup пометил siblingVisibility=true
+                для этого журнала (per-org настройка). */}
+            {visibleSiblings.length > 0 && (
+              <div className="task-siblings">
+                <span className="task-siblings-label">Уже закрыто:</span>
+                <span className="task-siblings-list">
+                  {visibleSiblings
+                    .slice(0, 5)
+                    .map((s) =>
+                      s.doneByName ? `${s.label} · ${s.doneByName}` : s.label,
+                    )
+                    .join(" · ")}
+                  {visibleSiblings.length > 5
+                    ? ` и ещё ${visibleSiblings.length - 5}`
+                    : ""}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center">
