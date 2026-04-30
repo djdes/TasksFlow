@@ -1147,6 +1147,12 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Нет прав для изменения задачи" });
       }
 
+      // Идемпотентность: если задача уже выполнена — возвращаем 200 с
+      // текущим состоянием БЕЗ повторного начисления баланса.
+      if (task.isCompleted) {
+        return res.json(task);
+      }
+
       // Если требуется фото, проверяем что оно загружено
       const taskPhotoUrls = (task as any).photoUrls || [];
       const hasPhotos = taskPhotoUrls.length > 0 || task.photoUrl;
@@ -1154,7 +1160,19 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Необходимо загрузить фото перед завершением" });
       }
 
-      const updatedTask = await storage.updateTask(taskId, { isCompleted: true });
+      // Race-safe атомарный переход isCompleted=false → true. Если
+      // одновременные POST'ы — только один получит true и начислит
+      // баланс. Остальные получат transitioned=false и пропустят
+      // updateUserBalance. Раньше storage.updateTask без conditional
+      // WHERE → два concurrent POST'а оба видели isCompleted=false,
+      // оба добавляли task.price → двойная оплата.
+      const transitioned = await storage.transitionTaskToCompleted(taskId);
+      if (!transitioned) {
+        // Кто-то параллельно уже завершил — отдаём текущий стейт.
+        const fresh = await storage.getTask(taskId);
+        return res.json(fresh ?? task);
+      }
+      const updatedTask = await storage.getTask(taskId);
       if (!updatedTask) {
         return res.status(500).json({ message: "Ошибка обновления задачи" });
       }

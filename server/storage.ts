@@ -80,6 +80,13 @@ export interface IStorage {
     companyId: number | null;
     completedAt: number;
   }): Promise<number>;
+  /**
+   * Атомарный переход isCompleted=false → true. Возвращает true если
+   * row реально перешёл (применять баланс), false если уже completed
+   * (или не существует). Race-safe: при двух параллельных вызовах
+   * только один вернёт true.
+   */
+  transitionTaskToCompleted(id: number): Promise<boolean>;
 
   // API Keys
   createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
@@ -607,6 +614,29 @@ export class DatabaseStorage implements IStorage {
       claimed += 1;
     }
     return claimed;
+  }
+
+  /**
+   * Атомарный переход isCompleted=false → true. Если 0 rows
+   * (задача не существует или уже completed) — возвращаем false.
+   * Используется в /complete handler чтобы не начислять баланс
+   * дважды при параллельных или повторных POST'ах.
+   */
+  async transitionTaskToCompleted(id: number): Promise<boolean> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await db
+      .update(tasks)
+      .set({ isCompleted: true, completedAt: now })
+      .where(and(eq(tasks.id, id), eq(tasks.isCompleted, false)));
+    // mysql2 возвращает [ResultSetHeader, FieldPacket[]]. У ResultSetHeader
+    // есть affectedRows (= rows которые matched WHERE и были обновлены).
+    // Drizzle's типы могут варьироваться — приводим осторожно.
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
   }
 
   // ===================== API KEYS =====================
