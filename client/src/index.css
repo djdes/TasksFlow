@@ -924,6 +924,11 @@
     max-width: 100%;
   }
 
+  .worker-info-position {
+    @apply text-gray-400;
+    font-weight: 400;
+  }
+
   /* Task actions */
   .task-actions {
     @apply flex items-center gap-1;

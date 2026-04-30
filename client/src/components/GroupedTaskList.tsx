@@ -194,13 +194,21 @@ export function GroupedTaskList(props: Props) {
                   <div className="worker-avatar">
                     {getUserInitials(task.workerId)}
                   </div>
-                  {/* Полное ФИО для admin/manager: «Иванов Сергей»
-                      вместо просто «Иванов». Раньше показывали
-                      только фамилию (shortName), но руководителю
-                      удобнее видеть кому именно выдана задача
-                      целиком — особенно когда у сотрудников
-                      одинаковые фамилии. */}
-                  <span>{getUserName(task.workerId)}</span>
+                  {/* Полное ФИО + должность для admin/manager:
+                      «Иванов Сергей · Повар». Без должности руководителю
+                      сложно сходу понять, кому в ряду из 30 сотрудников
+                      что выдано — задача «Бракераж» у Иванова означает
+                      одно если он шеф-повар и совсем другое если он
+                      посудомойщик. */}
+                  <span>
+                    {getUserName(task.workerId)}
+                    {getUserPosition?.(task.workerId) ? (
+                      <span className="worker-info-position">
+                        {" · "}
+                        {getUserPosition(task.workerId)}
+                      </span>
+                    ) : null}
+                  </span>
                 </div>
               )}
               {isJournal && !isCompleted && (
