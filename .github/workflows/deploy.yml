@@ -7,8 +7,19 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # Serialize, но БЕЗ отмены текущего. Раньше cancel-in-progress: true
+  # убивал run при следующем push'е, и если series быстрых пушей шли в
+  # пределах 1–3 минут (npm ci ещё не завершился), каждый кроме последнего
+  # отменялся до pm2 reload — фиксы оставались в репо, на прод не
+  # докатывались.
+  #
+  # С false: GH Actions держит одну активную и одну pending. Третий push
+  # вытесняет pending (его коммит уже есть в коде четвёртого, ничего не
+  # теряем), но активная всегда докатывается до pm2 reload. Минус —
+  # потратим больше CI-минут при пиковой активности; плюс — гарантия,
+  # что прод догоняет master.
   group: production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
