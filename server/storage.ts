@@ -88,6 +88,7 @@ export interface IStorage {
    * только один вернёт true.
    */
   transitionTaskToCompleted(id: number): Promise<boolean>;
+  transitionTaskToUncompleted(id: number): Promise<boolean>;
 
   // API Keys
   createApiKey(data: Omit<InsertApiKey, 'id' | 'createdAt'>): Promise<ApiKey>;
@@ -661,6 +662,27 @@ export class DatabaseStorage implements IStorage {
     // mysql2 возвращает [ResultSetHeader, FieldPacket[]]. У ResultSetHeader
     // есть affectedRows (= rows которые matched WHERE и были обновлены).
     // Drizzle's типы могут варьироваться — приводим осторожно.
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
+  }
+
+  /**
+   * Атомарный обратный переход isCompleted=true → false. Двойник
+   * `transitionTaskToCompleted`. Без него concurrent /uncomplete мог
+   * дважды вычитать price из баланса воркера: оба читали
+   * isCompleted=true, оба делали updateUserBalance(-price), баланс
+   * уходил в минус. Теперь только один вызов получает affected>0
+   * и вычитает.
+   */
+  async transitionTaskToUncompleted(id: number): Promise<boolean> {
+    const result = await db
+      .update(tasks)
+      .set({ isCompleted: false, completedAt: null })
+      .where(and(eq(tasks.id, id), eq(tasks.isCompleted, true)));
     const header = Array.isArray(result) ? result[0] : result;
     const affected =
       header && typeof header === "object" && "affectedRows" in header

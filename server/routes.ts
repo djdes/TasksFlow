@@ -1381,12 +1381,23 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
-      // Если задача была выполнена и имела стоимость, вычитаем из баланса
-      if (task.isCompleted && task.price && task.price > 0 && task.workerId) {
+      // Atomic isCompleted=true → false. Раньше: read+if+write
+      // pattern → два concurrent /uncomplete оба видели true и оба
+      // вычитали price из баланса. Теперь только один из них пройдёт
+      // условный UPDATE (affectedRows>0) и сделает дебет.
+      const wasTransitioned = task.isCompleted
+        ? await storage.transitionTaskToUncompleted(taskId)
+        : false;
+      if (
+        wasTransitioned &&
+        task.price &&
+        task.price > 0 &&
+        task.workerId
+      ) {
         await storage.updateUserBalance(task.workerId, -task.price);
       }
 
-      const updatedTask = await storage.updateTask(taskId, { isCompleted: false });
+      const updatedTask = await storage.getTask(taskId);
       if (!updatedTask) {
         return res.status(500).json({ message: "Ошибка обновления задачи" });
       }
@@ -2787,14 +2798,16 @@ export async function registerRoutes(
       const finishLocally = async (): Promise<void> => {
         const desired = Boolean(isCompleted ?? true);
         if (!desired) {
-          // uncomplete-флоу: отдаём через /uncomplete handler-логику
-          // вручную чтобы balance вычесть. Ниже не критично — клиенты
-          // обычно не используют complete-with-values для отмены.
+          // uncomplete-флоу: симметричный к complete атомарный
+          // переход. Без него concurrent /uncomplete + /complete-
+          // with-values{isCompleted:false} могли двойно дебетовать
+          // воркера (оба видят isCompleted=true, оба вычитают).
+          const transitioned = await storage.transitionTaskToUncompleted(taskId);
+          if (!transitioned) return; // уже не completed — никакого debit'а
           const fresh = await storage.getTask(taskId);
-          if (fresh?.isCompleted && fresh.price && fresh.price > 0 && fresh.workerId) {
+          if (fresh?.price && fresh.price > 0 && fresh.workerId) {
             await storage.updateUserBalance(fresh.workerId, -fresh.price);
           }
-          await storage.updateTask(taskId, { isCompleted: false });
           return;
         }
         const transitioned = await storage.transitionTaskToCompleted(taskId);
