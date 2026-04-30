@@ -11,6 +11,7 @@ import { createServer } from "http";
 import { logger, httpLogger } from "./logger";
 import { db } from "./db";
 import { processPendingDeliveries } from "./webhook-queue";
+import { runSchemaSelfCheck } from "./schema-self-check";
 
 const app = express();
 const httpServer = createServer(app);
@@ -227,6 +228,20 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 (async () => {
+  // Startup self-check: убеждаемся что verification-колонки добавлены.
+  // Если миграция _add-verification-cols.ts не применилась через
+  // deploy.yml (упала или skipped), здесь догоняем — иначе createTask
+  // и submitForVerification будут валиться с Unknown column. Не блокирует
+  // старт сервера если check failed — feature просто disabled.
+  try {
+    await runSchemaSelfCheck();
+  } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[schema-self-check] uncaught — continuing without verification",
+    );
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

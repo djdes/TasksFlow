@@ -500,8 +500,13 @@ export class DatabaseStorage implements IStorage {
       verifierWorkerId?: number | null;
     },
   ): Promise<Task> {
+    // Lazy import — schema-self-check.ts импортирует logger который
+    // тянет всю инфру; чтобы не зацикливаться при тестах, читаем флаг
+    // в runtime.
+    const { isVerificationSchemaReady } = await import("./schema-self-check");
+    const verificationReady = isVerificationSchemaReady();
     // Сериализуем weekDays и photoUrls в JSON строку для хранения в БД
-    const taskData = {
+    const taskData: Record<string, unknown> = {
       ...insertTask,
       weekDays: insertTask.weekDays ? JSON.stringify(insertTask.weekDays) : null,
       photoUrls: insertTask.photoUrls ? JSON.stringify(insertTask.photoUrls) : null,
@@ -513,14 +518,27 @@ export class DatabaseStorage implements IStorage {
       examplePhotoUrl: insertTask.examplePhotoUrl ?? null,
       companyId: insertTask.companyId ?? null,
       journalLink: insertTask.journalLink ?? null,
-      // Phase 1 двухстадийной верификации: opt verifierWorkerId.
-      // Если задан — последующий /complete сотрудника не закрывает
-      // задачу, а переводит её в 'submitted' (см. submitForVerification).
-      verifierWorkerId: insertTask.verifierWorkerId ?? null,
-      verificationStatus: insertTask.verifierWorkerId ? "pending" : null,
       createdAt: Math.floor(Date.now() / 1000),
       completedAt: null,
     };
+    // Phase 1 двухстадийной верификации: записываем verifier-поля
+    // ТОЛЬКО если миграция точно прошла (schema-self-check OK). На
+    // legacy-БД без новых колонок это упадёт с Unknown column — мы
+    // корректно делаем fallback на legacy-вставку без verification.
+    if (verificationReady) {
+      taskData.verifierWorkerId = insertTask.verifierWorkerId ?? null;
+      taskData.verificationStatus = insertTask.verifierWorkerId
+        ? "pending"
+        : null;
+    } else if (insertTask.verifierWorkerId) {
+      // Если задача требует verifier'а, но schema не готова — log и
+      // продолжаем без verification. Балансы и mirror работают как
+      // раньше; UX «На проверке» не активируется до миграции.
+      console.warn(
+        "[createTask] verification schema not ready — ignoring verifierWorkerId",
+        insertTask.verifierWorkerId,
+      );
+    }
     const [result] = await db.insert(tasks).values(taskData as any);
     const insertId = (result as any).insertId;
     const [task] = await db.select({

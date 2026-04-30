@@ -1319,11 +1319,13 @@ export async function registerRoutes(
       //   • Если verifier == текущий юзер — он завершает задачу как
       //     обычно (исполнитель и проверяющий совпадают для shared-
       //     задач, где руководитель сам в смене).
-      //   • Если verifier_worker_id == NULL — старое поведение
-      //     (legacy задачи без проверки).
+      //   • Если verifier_worker_id == NULL/undefined — старое
+      //     поведение (legacy задачи без проверки). undefined может
+      //     прилетать на legacy-БД где schema-self-check ещё не
+      //     добавил колонки.
       const requiresVerification =
         !req.apiKey &&
-        task.verifierWorkerId !== null &&
+        typeof task.verifierWorkerId === "number" &&
         task.verifierWorkerId !== req.session?.userId;
       if (requiresVerification) {
         const submitted = await storage.submitForVerification(taskId);
