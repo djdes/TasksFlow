@@ -1442,7 +1442,11 @@ export async function registerRoutes(
   app.post("/api/tasks/:id/mark-returned", requireAuthOrApiKey, async (req, res) => {
     try {
       const taskId = Number(req.params.id);
-      const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+      const reasonRaw = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+      // Cap длины: причина показывается в карточке задачи и в push-нотификации;
+      // 1000 символов — щедро для управляющего и одновременно блокирует
+      // payload-flood попытки.
+      const reason = reasonRaw.slice(0, 1000);
       if (!Number.isFinite(taskId) || !reason) {
         return res.status(400).json({ message: "Bad task id or reason" });
       }
