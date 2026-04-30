@@ -1336,6 +1336,11 @@ export async function registerRoutes(
           return res.json(fresh ?? task);
         }
         const updatedTask = await storage.getTask(taskId);
+        // КРИТИЧНО: тут возвращаемся БЕЗ запуска WeSetup-mirror и БЕЗ
+        // credit'а balance. Mirror отправится только когда verifier
+        // нажмёт «Принять» в WeSetup (см. POST /verifier endpoint там),
+        // — до approve журнальный entry в WeSetup НЕ помечается
+        // выполненным.
         return res.json(updatedTask ?? task);
       }
 
@@ -1418,6 +1423,66 @@ export async function registerRoutes(
   });
 
   // Отменить завершение задачи (любой авторизованный пользователь)
+  /**
+   * WeSetup → TF mirror: отметить задачу как «возвращена на доработку
+   * verifier'ом». Вызывается из POST /api/journal-documents/<id>/verifier
+   * на стороне WeSetup при reject-cells / reject-document.
+   *
+   * POST /api/tasks/:id/mark-returned
+   * Headers: Authorization: Bearer tfk_…
+   * Body: { reason: string }
+   *
+   * Сохраняет rejectReason + verification_status="rejected" + isCompleted
+   * в false (если был true), чтобы worker увидел задачу снова в активных
+   * с красной плашкой «Возвращено». Балансы не трогаем — это решение
+   * verifier'а, не worker'а.
+   *
+   * Auth: только API-key (machine-to-machine от WeSetup) или admin.
+   */
+  app.post("/api/tasks/:id/mark-returned", requireAuthOrApiKey, async (req, res) => {
+    try {
+      const taskId = Number(req.params.id);
+      const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+      if (!Number.isFinite(taskId) || !reason) {
+        return res.status(400).json({ message: "Bad task id or reason" });
+      }
+      const task = await storage.getTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      const callerCompanyId = await getCompanyIdFromReq(req);
+      if (callerCompanyId !== null && task.companyId !== callerCompanyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      // Авторизация: API-key или admin'у можно. Простой воркер не
+      // должен отмечать чужие задачи как «возвращённые».
+      let allowed = false;
+      if (req.apiKey) {
+        allowed = true;
+      } else if (req.session?.userId) {
+        const me = await storage.getUserById(req.session.userId);
+        if (me?.isAdmin) allowed = true;
+      }
+      if (!allowed) {
+        return res.status(403).json({ message: "Нет прав" });
+      }
+      await storage.updateTask(taskId, {
+        // updateTask примет verification поля если они в schema —
+        // см. shared/schema.ts. Если завершена — переоткрываем
+        // (worker должен исправить).
+        ...(task.isCompleted ? { isCompleted: false } : {}),
+        verificationStatus: "rejected",
+        rejectReason: reason,
+        verifiedAt: Math.floor(Date.now() / 1000),
+      } as never);
+      const fresh = await storage.getTask(taskId);
+      return res.json(fresh ?? task);
+    } catch (err: any) {
+      console.error("[mark-returned] failed", err);
+      return res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
   app.post("/api/tasks/:id/uncomplete", requireAuthOrApiKey, async (req, res) => {
     try {
       const taskId = Number(req.params.id);

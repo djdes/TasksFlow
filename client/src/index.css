@@ -929,6 +929,27 @@
     font-weight: 400;
   }
 
+  /* Phase E.UI: «возвращено на доработку» — красная плашка сверху
+     карточки, чтобы сотрудник сразу видел что verifier отклонил его
+     запись с причиной. */
+  .task-card--returned {
+    @apply ring-2 ring-rose-300 ring-offset-1;
+  }
+
+  .task-returned-banner {
+    @apply -mx-3 -mt-2 mb-3 flex flex-wrap items-baseline gap-2
+           rounded-t-2xl bg-rose-50 px-3 py-2 text-[12px] text-rose-700
+           border-b border-rose-200;
+  }
+
+  .task-returned-label {
+    @apply font-semibold uppercase tracking-wide;
+  }
+
+  .task-returned-reason {
+    @apply flex-1 text-rose-600;
+  }
+
   /* Phase F: «уже закрыто» — мини-блок снизу task-card, показывает
      соседей по журналу что закрыли свои задачи (опционально, по
      per-org siblingVisibility флагу). */

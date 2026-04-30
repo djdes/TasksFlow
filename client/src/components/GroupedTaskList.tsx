@@ -180,6 +180,18 @@ export function GroupedTaskList(props: Props) {
     const requiresPhoto = task.requiresPhoto && !task.photoUrl;
     const weekDays = (task as unknown as { weekDays?: number[] | null })
       .weekDays;
+    // Phase E.UI: если задача была отклонена verifier'ом —
+    // показываем баннер с причиной над содержимым карточки.
+    // Поля приходят из shared/schema.ts (verification_status,
+    // reject_reason). На legacy-задачах (verification_status=null)
+    // ничего не показываем.
+    const verificationStatus = (
+      task as unknown as { verificationStatus?: string | null }
+    ).verificationStatus;
+    const rejectReason = (
+      task as unknown as { rejectReason?: string | null }
+    ).rejectReason;
+    const isReturned = verificationStatus === "rejected" && !!rejectReason;
     const monthDay = (task as unknown as { monthDay?: number | null })
       .monthDay;
     // Для журнальных «единичных» задач (single-fillMode) — отдельный
@@ -213,9 +225,15 @@ export function GroupedTaskList(props: Props) {
     return (
       <div
         key={task.id}
-        className={`task-card ${isCompleted ? "completed" : ""}`}
+        className={`task-card ${isCompleted ? "completed" : ""} ${isReturned ? "task-card--returned" : ""}`}
         onClick={() => onTaskClick(task)}
       >
+        {isReturned && (
+          <div className="task-returned-banner">
+            <span className="task-returned-label">↩ Возвращено</span>
+            <span className="task-returned-reason">{rejectReason}</span>
+          </div>
+        )}
         <div className="flex items-start gap-3">
           <button
             onClick={(e) => onToggleComplete(task.id, e)}
