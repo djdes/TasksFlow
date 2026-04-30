@@ -1286,9 +1286,14 @@ export async function registerRoutes(
   // Users
   app.get(api.users.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании (session или API key)
+      // Фильтруем по компании. Раньше: companyId ?? undefined тянул
+      // ВСЕХ юзеров из ВСЕХ компаний при null (deleted-user-with-
+      // valid-session edge case).
       const companyId = await getCompanyIdFromReq(req);
-      const users = await storage.getAllUsers(companyId ?? undefined);
+      if (companyId === null) {
+        return res.json([]);
+      }
+      const users = await storage.getAllUsers(companyId);
 
       // Manager-scope: при создании задачи руководитель видит в
       // worker-dropdown только своих подчинённых. Админу — всё, как
