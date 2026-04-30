@@ -549,9 +549,16 @@ export async function registerRoutes(
   // Workers
   app.get(api.workers.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании (session-user или api key)
+      // Фильтруем по компании. Раньше: companyId ?? undefined →
+      // storage.getWorkers(undefined) возвращал ВСЕХ воркеров из
+      // ВСЕХ компаний. Edge case: юзер залогинен, потом удалён
+      // админом — session ещё валидна, но getCompanyIdFromReq
+      // возвращает null → leak всей БД воркеров.
       const companyId = await getCompanyIdFromReq(req);
-      const workers = await storage.getWorkers(companyId ?? undefined);
+      if (companyId === null) {
+        return res.json([]);
+      }
+      const workers = await storage.getWorkers(companyId);
       res.json(workers);
     } catch (err: any) {
       console.error('Error fetching workers:', err);
@@ -649,9 +656,16 @@ export async function registerRoutes(
   // Tasks
   app.get(api.tasks.list.path, requireAuthOrApiKey, async (req, res) => {
     try {
-      // Фильтруем по компании (session-user или api key)
+      // Фильтруем по компании. Если companyId не разрезолвился
+      // (юзер удалён / no company) — возвращаем пустой список.
+      // Раньше: storage.getTasks(undefined) тащил ВСЕ задачи из БД,
+      // потом filter по managed-workers их выкидывал, но запрос всё
+      // равно бил по всей таблице.
       const companyId = await getCompanyIdFromReq(req);
-      const tasks = await storage.getTasks(companyId ?? undefined);
+      if (companyId === null) {
+        return res.json([]);
+      }
+      const tasks = await storage.getTasks(companyId);
 
       // Manager-scope фильтр (Phase 2 hierarchy):
       //   • Админ или API key → видит всё (return as is)
