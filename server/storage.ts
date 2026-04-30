@@ -32,6 +32,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, lte, asc, isNull, sql } from "drizzle-orm";
+import { normalizePhone } from "./phone-normalize";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
@@ -163,7 +164,7 @@ export class DatabaseStorage implements IStorage {
    * @returns Пользователь или undefined если не найден
    */
   async getUserByPhone(phone: string): Promise<User | undefined> {
-    const normalizedPhone = phone.replace(/\s+/g, "").replace(/-/g, "");
+    const normalizedPhone = normalizePhone(phone);
     const [user] = await db.select().from(users).where(eq(users.phone, normalizedPhone));
     return user || undefined;
   }
@@ -175,7 +176,7 @@ export class DatabaseStorage implements IStorage {
    */
   async createUser(insertUser: InsertUser & { companyId?: number }): Promise<User> {
     // Нормализуем номер телефона
-    const normalizedPhone = insertUser.phone.replace(/\s+/g, "").replace(/-/g, "");
+    const normalizedPhone = normalizePhone(insertUser.phone);
     const [result] = await db.insert(users).values({
       ...insertUser,
       phone: normalizedPhone,
@@ -201,7 +202,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, updateUser: UpdateUser): Promise<User | undefined> {
-    const normalizedPhone = updateUser.phone.replace(/\s+/g, "").replace(/-/g, "");
+    const normalizedPhone = normalizePhone(updateUser.phone);
     const patch: Record<string, unknown> = {
       phone: normalizedPhone,
       name: updateUser.name ?? null,

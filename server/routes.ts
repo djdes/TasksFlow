@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import rateLimit from "express-rate-limit";
 import { existsSync, mkdirSync } from "fs";
 import { storage, DatabaseStorage } from "./storage";
+import { normalizePhone } from "./phone-normalize";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
@@ -222,7 +223,7 @@ export async function registerRoutes(
       const input = api.auth.login.input.parse(req.body);
       
       // Нормализуем номер телефона
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
       
       const user = await storage.getUserByPhone(normalizedPhone);
       if (!user) {
@@ -275,7 +276,7 @@ export async function registerRoutes(
       const input = registerCompanySchema.parse(req.body);
 
       // Нормализуем номер телефона
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
 
       // Проверяем, существует ли пользователь с таким телефоном
       const existingUser = await storage.getUserByPhone(normalizedPhone);
@@ -328,8 +329,8 @@ export async function registerRoutes(
       const input = registerUserSchema.parse(req.body);
 
       // Нормализуем номера телефонов
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
-      const normalizedAdminPhone = input.adminPhone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
+      const normalizedAdminPhone = normalizePhone(input.adminPhone);
 
       // Проверяем, существует ли пользователь с таким телефоном
       const existingUser = await storage.getUserByPhone(normalizedPhone);
@@ -1540,7 +1541,7 @@ export async function registerRoutes(
         input.role === "manager";
 
       // Проверяем, существует ли пользователь
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
       const companyId = await getCompanyIdFromReq(req);
       if (!companyId) {
         return res.status(400).json({ message: "Company не определена" });
@@ -1733,7 +1734,7 @@ export async function registerRoutes(
         return res.status(400).json({ reason: "used", message: "Приглашение уже использовано" });
       }
 
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
       const existing = await storage.getUserByPhone(normalizedPhone);
       if (existing) {
         // НЕ помечаем приглашение как used — пусть человек попробует
@@ -1806,7 +1807,7 @@ export async function registerRoutes(
       }
 
       // Проверяем, не занят ли номер другим пользователем
-      const normalizedPhone = input.phone.replace(/\s+/g, "").replace(/-/g, "");
+      const normalizedPhone = normalizePhone(input.phone);
       const userWithPhone = await storage.getUserByPhone(normalizedPhone);
       if (userWithPhone && userWithPhone.id !== userId) {
         return res.status(400).json({
