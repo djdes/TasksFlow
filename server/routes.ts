@@ -1889,6 +1889,11 @@ export async function registerRoutes(
         input.isAdmin === true ||
         input.role === "admin" ||
         input.role === "manager";
+      // Explicit demote-сигнал: WeSetup передаёт isAdmin:false когда хочет
+      // снять admin-флаг с уже-существующего юзера (раньше это не работало
+      // — endpoint просто возвращал 400 «уже существует»). Различаем
+      // undefined (skip) vs false (demote).
+      const explicitDemote = input.isAdmin === false;
 
       // Проверяем, существует ли пользователь
       const normalizedPhone = normalizePhone(input.phone);
@@ -1908,6 +1913,18 @@ export async function registerRoutes(
           (input.position ?? null) !== (existingUser.position ?? null)
         ) {
           await storage.setUserPosition(existingUser.id, input.position ?? null);
+        }
+        // Demote: если WeSetup явно прислал isAdmin:false и юзер сейчас
+        // admin — снимаем флаг. Это позволяет WeSetup-task-visibility
+        // корректно убрать admin-роль с заведующей/менеджеров когда
+        // менеджер откатил настройку.
+        if (
+          existingUser.companyId === companyId &&
+          explicitDemote &&
+          existingUser.isAdmin
+        ) {
+          const demoted = await storage.setUserAdmin(existingUser.id, false);
+          return res.json(demoted || existingUser);
         }
         if (existingUser.companyId === companyId && requestedAdmin && !existingUser.isAdmin) {
           const promoted = await storage.setUserAdmin(existingUser.id, true);
