@@ -1337,6 +1337,34 @@
     @apply text-amber-400;
   }
 
+  /* Tip-of-day — карточка совета. Цветной градиент по тону совета,
+     иконка слева, текст по центру, крестик закрытия справа. Не
+     перекрывает функционал, но добавляет «жизни» в интерфейс. */
+  .tip-of-day {
+    @apply rounded-2xl border p-3 mb-4 flex items-start gap-3;
+    backdrop-filter: blur(6px);
+  }
+  .tip-of-day-icon {
+    @apply w-9 h-9 rounded-xl flex items-center justify-center shrink-0;
+    background: rgba(255, 255, 255, 0.45);
+  }
+  .dark .tip-of-day-icon {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .tip-of-day-text {
+    @apply flex-1 min-w-0;
+  }
+  .tip-of-day-label {
+    @apply text-xs uppercase tracking-wider opacity-70 mb-0.5 font-semibold;
+  }
+  .tip-of-day-message {
+    @apply text-sm leading-relaxed;
+  }
+  .tip-of-day-close {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+           hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100;
+  }
+
   /* App footer — тонкая полоса в самом низу страницы. Визуально
      «закрывает» приложение, плюс даёт быстрые ссылки и понимание
      версии. Не липкий — снизу естественного потока. */

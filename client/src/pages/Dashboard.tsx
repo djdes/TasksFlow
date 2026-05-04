@@ -12,6 +12,7 @@ import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationQueue } from "@/components/VerificationQueue";
 import { GreetingBanner } from "@/components/GreetingBanner";
+import { TipOfTheDay } from "@/components/TipOfTheDay";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -648,6 +649,11 @@ export default function Dashboard() {
         {!canManageTasks && user ? (
           <GreetingBanner name={user.name ?? null} />
         ) : null}
+
+        {/* Совет дня — одна короткая фраза для воркера. Не баннер,
+            не реклама — мягкий приём «общаемся, а не работаем».
+            Можно закрыть крестиком, тогда не покажем до завтра. */}
+        {!canManageTasks ? <TipOfTheDay /> : null}
 
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
