@@ -13,6 +13,7 @@ import Register from "@/pages/Register";
 import RegisterCompany from "@/pages/RegisterCompany";
 import RegisterUser from "@/pages/RegisterUser";
 import Instructions from "@/pages/Instructions";
+import Help from "@/pages/Help";
 import CreateTask from "@/pages/CreateTask";
 import EditTask from "@/pages/EditTask";
 import CreateWorker from "@/pages/CreateWorker";
@@ -63,6 +64,7 @@ function Router() {
           <Route path="/register/company" component={RegisterCompany} />
           <Route path="/register/user" component={RegisterUser} />
           <Route path="/instructions" component={Instructions} />
+          <Route path="/help" component={Help} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/admin/users" component={AdminUsers} />
           <Route path="/admin/settings" component={CompanySettings} />

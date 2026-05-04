@@ -27,6 +27,7 @@ import {
   Coins,
   Tag,
   Home,
+  HelpCircle,
   Settings,
   LogOut,
   ChevronRight,
@@ -555,6 +556,19 @@ export default function Dashboard() {
                 </button>
               </>
             )}
+            {/* Помощь — доступна ВСЕМ. Особенно нужна сотрудникам в
+                возрасте: понятные пошаговые инструкции и FAQ. */}
+            <button
+              type="button"
+              className="dropdown-item w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setLocation("/help");
+              }}
+            >
+              <HelpCircle className="w-5 h-5 text-primary" />
+              <span className="font-medium">Помощь</span>
+            </button>
             <div className="dropdown-divider" />
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой
@@ -641,6 +655,31 @@ export default function Dashboard() {
             onBonusClick={() => setIsBonusInfoOpen(true)}
           />
         )}
+
+        {/* «Молодец!» баннер — когда у воркера активных задач не осталось.
+            Цель: видимая позитивная отметка вместо пустого конца списка.
+            Не админу (admin видит все задачи всех — там «всё закрыто»
+            редко и неинтересно как акцент). */}
+        {!canManageTasks &&
+          totalCount > 0 &&
+          completedCount === totalCount && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+              className="all-done-banner"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="all-done-emoji">🎉</div>
+              <div className="all-done-text">
+                <div className="all-done-title">Молодец!</div>
+                <div className="all-done-subtitle">
+                  Все задачи на сегодня закрыты. Отдыхай или подскажи коллеге.
+                </div>
+              </div>
+            </motion.div>
+          )}
 
         {/* Scope tabs — show only when there are shared tasks (event-log
             journals like acceptance, complaints). Personal-only orgs
@@ -730,24 +769,35 @@ export default function Dashboard() {
         {/* Task List */}
         {filteredTasks.length === 0 ? (
           <div className="empty-state">
+            <div className="empty-state-emoji" aria-hidden="true">
+              {canManageTasks ? "📋" : "☕"}
+            </div>
             <div className="empty-state-icon">
               <Inbox className="w-12 h-12 text-muted-foreground dark:text-[#c4b5fd]" />
             </div>
             <h3 className="empty-state-title">
-              {canManageTasks ? "Нет задач" : "Задач на сегодня нет"}
+              {canManageTasks ? "Нет задач" : "Сегодня задач нет"}
             </h3>
             <p className="empty-state-text">
               {canManageTasks
                 ? "Создайте первую задачу для начала работы"
-                : "Отдохните или проверьте расписание позже"}
+                : "Отдохни или загляни позже — задачи появляются по расписанию."}
             </p>
-            {canManageTasks && (
+            {canManageTasks ? (
               <button
                 onClick={() => setLocation("/tasks/new")}
                 className="empty-state-button"
               >
                 <Plus className="w-5 h-5" />
                 Создать задачу
+              </button>
+            ) : (
+              <button
+                onClick={() => setLocation("/help")}
+                className="empty-state-button-secondary"
+              >
+                <HelpCircle className="w-5 h-5" />
+                Как пользоваться
               </button>
             )}
           </div>
@@ -789,7 +839,63 @@ export default function Dashboard() {
           />
           </>
         )}
+
+        {/* Footer — простой и информативный, чтобы у пользователя было
+            понимание «программа живая, есть куда обратиться». */}
+        <footer className="app-footer">
+          <div className="app-footer-links">
+            <a
+              href="/help"
+              className="app-footer-link"
+              onClick={(e) => {
+                e.preventDefault();
+                setLocation("/help");
+              }}
+            >
+              Помощь
+            </a>
+            <span className="app-footer-dot" aria-hidden="true" />
+            <a
+              href="/instructions"
+              className="app-footer-link"
+              onClick={(e) => {
+                e.preventDefault();
+                setLocation("/instructions");
+              }}
+            >
+              Инструкция
+            </a>
+            <span className="app-footer-dot" aria-hidden="true" />
+            <span>TasksFlow · 2026</span>
+          </div>
+        </footer>
       </main>
+
+      {/* Help-FAB для воркеров — мини-кнопка «?» в правом нижнем
+          углу. Бабушки часто теряются в незнакомом интерфейсе и
+          ищут где спросить — здесь явный ярлык, ведёт на /help.
+          Для админа/руководителя — не показываем, чтобы не путать
+          с FAB «создать задачу». */}
+      {!canManageTasks && (
+        <motion.button
+          onClick={() => setLocation("/help")}
+          className="help-fab"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: "spring",
+            stiffness: 320,
+            damping: 22,
+            delay: 0.45,
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.93 }}
+          aria-label="Помощь"
+          title="Помощь — как пользоваться"
+        >
+          <HelpCircle className="w-6 h-6" />
+        </motion.button>
+      )}
 
       {/* FAB для admin/manager — spring entrance, pulse-glow,
           tap-springback. Один CTA-якорь для создания задачи.

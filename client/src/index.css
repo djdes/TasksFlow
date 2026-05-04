@@ -1280,6 +1280,43 @@
     }
   }
 
+  /* Help-FAB — для воркеров. Меньше основного FAB, чтобы не
+     перетягивать внимание у задач, но всегда виден в правом нижнем
+     углу. Цвет белый с цветной иконкой — нейтрально, не выглядит
+     «срочным» как красные/оранжевые кнопки. */
+  .help-fab {
+    @apply fixed bottom-4 right-4 w-12 h-12 rounded-full bg-white text-primary
+           shadow-lg flex items-center justify-center
+           border border-primary/20 hover:border-primary/40 hover:shadow-xl
+           active:scale-95 transition-all duration-200 z-40;
+  }
+  .dark .help-fab {
+    background: #1e293b;
+    color: #a8b3ff;
+    border-color: rgba(168, 179, 255, 0.3);
+  }
+  @media (min-width: 1024px) {
+    .help-fab {
+      @apply bottom-8 right-8 w-14 h-14;
+    }
+  }
+
+  /* App footer — тонкая полоса в самом низу страницы. Визуально
+     «закрывает» приложение, плюс даёт быстрые ссылки и понимание
+     версии. Не липкий — снизу естественного потока. */
+  .app-footer {
+    @apply mt-12 pt-6 pb-8 border-t border-border/40 text-center text-xs text-muted-foreground;
+  }
+  .app-footer-links {
+    @apply inline-flex flex-wrap items-center gap-x-3 gap-y-1 justify-center;
+  }
+  .app-footer-link {
+    @apply text-muted-foreground hover:text-primary transition-colors underline-offset-2 hover:underline;
+  }
+  .app-footer-dot {
+    @apply w-1 h-1 rounded-full bg-muted-foreground/40;
+  }
+
   /* ===== EMPTY STATE ===== */
   .empty-state {
     @apply flex flex-col items-center justify-center py-16 px-6 text-center;
@@ -1343,6 +1380,78 @@
   .empty-state-button {
     @apply h-12 px-6 rounded-xl font-semibold bg-primary text-white
            hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-2;
+  }
+
+  /* Вторичная кнопка для empty-state не-админа: «Как пользоваться»
+     помогает бабушкам не теряться, когда смена пустая и непонятно
+     что делать. Не яркий primary, мягкий outline. */
+  .empty-state-button-secondary {
+    @apply h-12 px-6 rounded-xl font-semibold border-2 border-primary/30
+           bg-white/60 text-primary hover:bg-primary/10 hover:border-primary/50
+           active:scale-95 transition-all flex items-center gap-2;
+  }
+
+  /* Большое emoji над иконкой — крупный визуальный якорь для тех,
+     кто плохо читает мелкий текст. Кофейный значок «отдыхай» или
+     планшет «нужно создать» — состояние понятно без слов. */
+  .empty-state-emoji {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+    animation: empty-emoji-bob 3.2s ease-in-out infinite;
+  }
+  @keyframes empty-emoji-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* «Молодец!» баннер — когда воркер всё закрыл. Зелёный градиент
+     с эмодзи 🎉, эффект мягкого свечения. Цель — психологический «win
+     moment», особенно для тех кто работает 6 дней в неделю и редко
+     слышит что-то приятное. */
+  .all-done-banner {
+    @apply rounded-3xl p-5 flex items-start gap-4 mb-4;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.12));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 10px 30px -12px rgba(16, 185, 129, 0.4);
+    position: relative;
+    overflow: hidden;
+  }
+  .all-done-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.4), transparent 60%);
+    pointer-events: none;
+  }
+  .all-done-emoji {
+    font-size: 44px;
+    line-height: 1;
+    flex-shrink: 0;
+    animation: all-done-bounce 1.6s ease-in-out infinite;
+  }
+  @keyframes all-done-bounce {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    25% { transform: translateY(-4px) rotate(-6deg); }
+    75% { transform: translateY(-4px) rotate(6deg); }
+  }
+  .all-done-text {
+    @apply flex-1 min-w-0 relative;
+  }
+  .all-done-title {
+    @apply text-lg font-bold mb-1;
+    color: #047857;
+  }
+  .all-done-subtitle {
+    @apply text-sm leading-relaxed;
+    color: #065f46;
+  }
+  .dark .all-done-title {
+    color: #6ee7b7;
+  }
+  .dark .all-done-subtitle {
+    color: #a7f3d0;
   }
 
   /* ===== DROPDOWN MENU ===== */
