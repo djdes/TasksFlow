@@ -62,9 +62,16 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
+      // refetchOnWindowFocus: воркер открывает приложение из таски на
+      // компьютере / переключает с другой вкладки — список тут же
+      // обновляется без явного «Обновить». Раньше staleTime:Infinity
+      // оставлял данные часами устаревшими.
+      refetchOnWindowFocus: true,
+      // staleTime: 30s — между фокусом и фокусом данные считаются
+      // свежими, query не дёргается; после 30s следующий обращение
+      // refetch'ится. Гораздо адекватнее чем Infinity.
+      staleTime: 30_000,
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
       retry: false,
     },
     mutations: {

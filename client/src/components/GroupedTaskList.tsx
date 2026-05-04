@@ -24,6 +24,7 @@ import {
 } from "@/lib/group-tasks";
 import { getJournalBonus } from "@/lib/journal-bonus";
 import { parseJournalLink } from "@/lib/journal-link-parse";
+import { HighlightedText } from "@/components/HighlightedText";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -96,6 +97,9 @@ type Props = {
   onEdit: (taskId: number) => void;
   onDuplicate: (task: Task) => void;
   onDelete: (taskId: number) => void;
+  /** Поисковый запрос для подсветки совпадений в task.title.
+   *  Пустой/undefined — без подсветки. */
+  searchQuery?: string;
 };
 
 /**
@@ -123,6 +127,7 @@ export function GroupedTaskList(props: Props) {
     onEdit,
     onDuplicate,
     onDelete,
+    searchQuery,
   } = props;
   const shortName = getUserShortName ?? getUserName;
 
@@ -243,7 +248,9 @@ export function GroupedTaskList(props: Props) {
           </button>
 
           <div className="task-content">
-            <h3 className="task-title">{task.title}</h3>
+            <h3 className="task-title">
+              <HighlightedText text={task.title} query={searchQuery} />
+            </h3>
 
             <div className="task-meta">
               {isAdmin && task.workerId && (
@@ -406,7 +413,9 @@ export function GroupedTaskList(props: Props) {
             <Lock className="w-4 h-4" />
           </div>
           <div className="task-content">
-            <h3 className="task-title">{task.title}</h3>
+            <h3 className="task-title">
+              <HighlightedText text={task.title} query={searchQuery} />
+            </h3>
             <div className="task-meta">
               <div className="task-badge claimed">
                 <Sparkles className="w-3.5 h-3.5" />

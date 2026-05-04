@@ -5,6 +5,11 @@ import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useStreak } from "@/hooks/use-streak";
+import {
+  feedbackTaskComplete,
+  isFeedbackEnabled,
+  setFeedbackEnabled,
+} from "@/lib/feedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
@@ -103,6 +108,13 @@ export default function Dashboard() {
   // включён, чтобы сразу видно было «у Иванова 3 невыполненных,
   // у Петрова 5».
   const [groupByWorker, setGroupByWorker] = useState(true);
+  // Toggle для звука/вибрации — состояние отражает localStorage. Меняется
+  // через переключатель в меню. Ре-синхронизируется при открытии меню
+  // на случай если пользователь поменял настройку на другом устройстве.
+  const [feedbackOn, setFeedbackOn] = useState(true);
+  useEffect(() => {
+    if (isMenuOpen) setFeedbackOn(isFeedbackEnabled());
+  }, [isMenuOpen]);
 
   // Tier-3 модель прав:
   //   • admin (isAdmin=true) — полный доступ, видит всё
@@ -397,6 +409,11 @@ export default function Dashboard() {
     }
 
     completeTask.mutate({ id: taskId, comment });
+    // Тактильный + аудио feedback для воркера — физическое
+    // подтверждение «отметка прошла». Срабатывает только если
+    // включено в меню (по умолчанию да). Опт-ин чтобы не раздражать
+    // на ночной смене / open-space.
+    feedbackTaskComplete();
   };
 
   const handleTaskComplete = (comment?: string) => {
@@ -585,6 +602,35 @@ export default function Dashboard() {
               <span className="font-medium">Помощь</span>
             </button>
             <div className="dropdown-divider" />
+            {/* Звук+вибро при «Готово». Дефолт — вкл, чтобы воркер
+                сразу получил physical-confirmation. Можно выключить
+                на ночной смене / open-space если раздражает. */}
+            <button
+              type="button"
+              className="dropdown-item w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                const next = !feedbackOn;
+                setFeedbackEnabled(next);
+                setFeedbackOn(next);
+              }}
+            >
+              <span className="w-5 h-5 text-primary">
+                {feedbackOn ? "🔔" : "🔕"}
+              </span>
+              <span className="font-medium flex-1 text-left">
+                Звук + вибро
+              </span>
+              <span
+                className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                  feedbackOn
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-gray-200 text-gray-500"
+                }`}
+              >
+                {feedbackOn ? "вкл" : "выкл"}
+              </span>
+            </button>
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой
                 воркер мог переключить под себя. */}
@@ -699,6 +745,18 @@ export default function Dashboard() {
               role="status"
               aria-live="polite"
             >
+              {/* Confetti — 8 эмодзи поднимаются один раз при показе
+                  баннера. CSS-only, без зависимостей. */}
+              <div className="all-done-confetti" aria-hidden="true">
+                <span>🎉</span>
+                <span>✨</span>
+                <span>⭐</span>
+                <span>🎊</span>
+                <span>💫</span>
+                <span>🎈</span>
+                <span>🌟</span>
+                <span>🥳</span>
+              </div>
               <div className="all-done-emoji">🎉</div>
               <div className="all-done-text">
                 <div className="all-done-title">Молодец!</div>
@@ -864,6 +922,7 @@ export default function Dashboard() {
             onDelete={(id) => {
               if (confirm("Удалить задачу?")) deleteTask.mutate(id);
             }}
+            searchQuery={searchQuery}
           />
           </>
         )}
