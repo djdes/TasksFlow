@@ -1,0 +1,99 @@
+import { useEffect, useState } from "react";
+
+/**
+ * Локальный «стрик» — сколько дней подряд воркер закрыл хотя бы одну
+ * задачу. Хранится в localStorage per-user, не дёргает API. Цель —
+ * мягкая мотивация: цифра «5 дней подряд» — психологически приятный
+ * ярлык, особенно для пожилых сотрудников, которым видимая отметка
+ * добавляет ощущение «меня заметили».
+ *
+ * Правила:
+ *   • Если сегодня уже закрыто что-то и stored.lastDate === today —
+ *     не меняем (повторный рендер не +1).
+ *   • Если stored.lastDate === вчера — +1.
+ *   • Иначе — сброс на 1 (пропустил день → стрик начинается заново).
+ *   • Если ещё ничего не закрыто (didCompleteSomething=false) —
+ *     просто отображаем сохранённое значение.
+ *
+ * Не обнуляем когда day всё ещё длится: сотрудник может закрыть
+ * задачу позже — даём шанс. Обнуление произойдёт через сутки если
+ * lastDate отстал >= 2 дня.
+ *
+ * Storage: `tf_streak_${userId}` = `{days:number, lastDate:"YYYY-MM-DD"}`.
+ * При смене userId (другой логин) ключ другой — стрики не путаются.
+ */
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+type Stored = { days: number; lastDate: string };
+
+export function useStreak(
+  userId: number | null | undefined,
+  didCompleteSomethingToday: boolean,
+): number {
+  const [streak, setStreak] = useState<number>(0);
+
+  useEffect(() => {
+    if (!userId) {
+      setStreak(0);
+      return;
+    }
+    const key = `tf_streak_${userId}`;
+    let stored: Stored | null = null;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Stored>;
+        if (
+          typeof parsed.days === "number" &&
+          typeof parsed.lastDate === "string"
+        ) {
+          stored = { days: parsed.days, lastDate: parsed.lastDate };
+        }
+      }
+    } catch {
+      /* corrupted — treat as fresh */
+    }
+
+    if (!didCompleteSomethingToday) {
+      // Только показываем то что было — без обновления.
+      setStreak(stored?.days ?? 0);
+      return;
+    }
+
+    const today = todayKey();
+    const yesterday = yesterdayKey();
+
+    let nextDays: number;
+    if (!stored) {
+      nextDays = 1;
+    } else if (stored.lastDate === today) {
+      nextDays = stored.days;
+    } else if (stored.lastDate === yesterday) {
+      nextDays = stored.days + 1;
+    } else {
+      nextDays = 1;
+    }
+
+    try {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ days: nextDays, lastDate: today } satisfies Stored),
+      );
+    } catch {
+      /* storage full / privacy mode — graceful degrade */
+    }
+    setStreak(nextDays);
+  }, [userId, didCompleteSomethingToday]);
+
+  return streak;
+}

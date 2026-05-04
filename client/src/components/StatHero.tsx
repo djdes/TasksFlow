@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import {
+  Award,
   Coins,
   Flame,
   Target,
@@ -182,6 +183,12 @@ type Props = {
   completedCount: number;
   claimedCount: number;
   bonusBalance: number;
+  /**
+   * Дней подряд с закрытой хотя бы одной задачей. Считается локально
+   * через `useStreak` (см. client/src/hooks/use-streak.ts). Только
+   * для воркеров — админу неинтересно.
+   */
+  streakDays?: number;
   onBonusClick?: () => void;
 };
 
@@ -191,6 +198,7 @@ export function StatHero({
   completedCount,
   claimedCount,
   bonusBalance,
+  streakDays,
   onBonusClick,
 }: Props) {
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
@@ -233,6 +241,26 @@ export function StatHero({
           value={claimedCount}
           hint={isAdmin ? "race-for-bonus" : "коллеги быстрее"}
           tone="slate"
+        />
+      ) : null}
+      {/* Streak плитка — только воркеру и только когда уже хотя бы день
+          в зачёте. Не нагнетаем «0 дней» — это демотивирует. С 1 дня
+          и выше показываем как мягкую плашку «5 дней подряд». */}
+      {!isAdmin && typeof streakDays === "number" && streakDays >= 1 ? (
+        <StatTile
+          icon={Award}
+          label="Стрик"
+          value={streakDays}
+          hint={
+            streakDays === 1
+              ? "первый день"
+              : streakDays < 5
+              ? "так держать"
+              : streakDays < 14
+              ? "крутая серия!"
+              : "ты мотор смены"
+          }
+          tone="primary"
         />
       ) : null}
       {!isAdmin ? (

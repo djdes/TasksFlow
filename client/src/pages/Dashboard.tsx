@@ -4,12 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
+import { useStreak } from "@/hooks/use-streak";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationQueue } from "@/components/VerificationQueue";
+import { GreetingBanner } from "@/components/GreetingBanner";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -282,6 +284,18 @@ export default function Dashboard() {
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
+
+  // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
+  // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
+  const ownCompletedToday =
+    !canManageTasks &&
+    tasks.some(
+      (t) =>
+        t.isCompleted &&
+        ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) === null &&
+        (!user?.id || t.workerId === user.id),
+    );
+  const streakDays = useStreak(user?.id, ownCompletedToday);
 
   /**
    * Открыть журнальную форму на стороне WeSetup (или fallback inline).
@@ -628,6 +642,13 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="app-content">
+        {/* Приветствие — «Доброе утро, Иван» + день недели. Помогает
+            воркеру сразу понять «программа меня узнала», плюс легче
+            ориентироваться какой сегодня день. Не админу. */}
+        {!canManageTasks && user ? (
+          <GreetingBanner name={user.name ?? null} />
+        ) : null}
+
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
             и баланс премии. Заменяет минималистичный progress-card. */}
@@ -652,6 +673,7 @@ export default function Dashboard() {
               ).length
             }
             bonusBalance={(user as { bonusBalance?: number }).bonusBalance ?? 0}
+            streakDays={streakDays}
             onBonusClick={() => setIsBonusInfoOpen(true)}
           />
         )}

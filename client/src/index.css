@@ -1301,6 +1301,42 @@
     }
   }
 
+  /* Greeting banner — приветствие воркеру с временем суток и датой.
+     Виден всегда (даже когда задач нет), мягкий градиент по времени
+     дня — утро/день/вечер/ночь. Не перетягивает внимание у задач,
+     но даёт ощущение «программа меня знает». */
+  .greeting-banner {
+    @apply rounded-3xl p-4 mb-4 flex items-center gap-4 border;
+    border-color: rgba(85, 102, 246, 0.15);
+    backdrop-filter: blur(8px);
+  }
+  .greeting-icon {
+    @apply w-14 h-14 rounded-2xl flex items-center justify-center shrink-0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+    color: #b45309;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+  .dark .greeting-icon {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    color: #fde68a;
+  }
+  .greeting-text {
+    @apply flex-1 min-w-0;
+  }
+  .greeting-title {
+    @apply text-lg font-semibold text-foreground truncate;
+    line-height: 1.2;
+  }
+  .greeting-date {
+    @apply text-xs text-muted-foreground mt-1 capitalize flex items-center;
+  }
+  .greeting-coffee {
+    @apply text-amber-600;
+  }
+  .dark .greeting-coffee {
+    @apply text-amber-400;
+  }
+
   /* App footer — тонкая полоса в самом низу страницы. Визуально
      «закрывает» приложение, плюс даёт быстрые ссылки и понимание
      версии. Не липкий — снизу естественного потока. */
