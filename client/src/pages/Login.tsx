@@ -201,6 +201,14 @@ export default function Login() {
               {isLoading ? "Вход..." : "Войти"}
             </button>
 
+            {/* Подсказка для тех, кто впервые. Бабушки часто пугаются
+                «надо ли регистрироваться?» — здесь явно сказано: если
+                руководитель уже добавил, просто введи телефон. */}
+            <p className="text-sm text-center text-muted-foreground leading-relaxed pt-3 max-w-sm mx-auto">
+              Если руководитель уже добавил вас — введите телефон и нажмите «Войти».
+              Если впервые — кнопка «Зарегистрироваться» внизу.
+            </p>
+
             {/* Кнопки регистрации и инструкции */}
             <div className="text-center pt-4 flex flex-col gap-3">
               <button
