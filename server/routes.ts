@@ -368,25 +368,17 @@ export async function registerRoutes(
         });
       }
 
-      // Ищем администратора по телефону
+      // Ищем администратора по телефону. Anti-enumeration: три разных
+      // ветки (не найден / не админ / без компании) объединяем в одно
+      // generic-сообщение, иначе атакующий через rate-лимитированный
+      // бот может построить реестр админов компаний — узнать «номер X
+      // = админ компании Y». Юзеру для UX достаточно знать «телефон
+      // админа неверный, спроси у него».
       const admin = await storage.getUserByPhone(normalizedAdminPhone);
-      if (!admin) {
+      if (!admin || !admin.isAdmin || !admin.companyId) {
         return res.status(400).json({
-          message: "Администратор с таким номером не найден",
-          field: "adminPhone",
-        });
-      }
-
-      if (!admin.isAdmin) {
-        return res.status(400).json({
-          message: "Указанный пользователь не является администратором",
-          field: "adminPhone",
-        });
-      }
-
-      if (!admin.companyId) {
-        return res.status(400).json({
-          message: "У администратора не привязана компания",
+          message:
+            "Не получилось привязаться к компании. Уточните у админа правильный номер.",
           field: "adminPhone",
         });
       }
