@@ -336,6 +336,7 @@ export default function EditTask() {
                   <FormControl>
                     <Input
                       className="things-input"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>

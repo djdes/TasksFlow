@@ -78,10 +78,11 @@ export default function CreateWorker() {
                 <FormItem>
                   <FormLabel>Имя</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Введите имя сотрудника" 
+                    <Input
+                      placeholder="Введите имя сотрудника"
                       className="things-input"
-                      {...field} 
+                      maxLength={255}
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

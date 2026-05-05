@@ -88,10 +88,11 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                 <FormItem>
                   <FormLabel>Название</FormLabel>
                   <FormControl>
-                    <Input 
-                      className="things-input" 
+                    <Input
+                      className="things-input"
                       data-testid="input-edit-task-title"
-                      {...field} 
+                      maxLength={255}
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

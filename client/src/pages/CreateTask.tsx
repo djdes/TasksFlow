@@ -761,6 +761,7 @@ export default function CreateTask() {
                     <Input
                       placeholder="Что нужно сделать?"
                       className="things-input"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>

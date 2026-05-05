@@ -119,9 +119,10 @@ export default function EditWorker() {
                 <FormItem>
                   <FormLabel>Имя</FormLabel>
                   <FormControl>
-                    <Input 
-                      className="things-input" 
-                      {...field} 
+                    <Input
+                      className="things-input"
+                      maxLength={255}
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
