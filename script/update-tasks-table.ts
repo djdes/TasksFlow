@@ -85,10 +85,11 @@ async function updateTasksTable() {
     console.log("Таблицы tasks и users обновлены");
   } catch (error) {
     console.error("Ошибка:", error);
-    process.exit(1);
+    // process.exitCode = 1 + connection.end в finally без exit(0)
+    // — иначе finally переопределяло exit на 0 при ошибке миграции.
+    process.exitCode = 1;
   } finally {
     await connection.end();
-    process.exit(0);
   }
 }
 
