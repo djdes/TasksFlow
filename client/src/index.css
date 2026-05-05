@@ -514,10 +514,10 @@
      2 колонки, на планшете+ — 4 колонки. Каждая плитка — небольшая
      glass-карточка с цветовым акцентом и анимированным числом. */
   /* По запросу владельца (2026-05-05): плитки всегда в ОДНУ строку
-     и на мобиле, и на десктопе. Раньше mobile=2 колонки, desktop=4 —
-     ощущалось «нагромождённо». Теперь flex с auto-fit и шириной
-     0 чтобы плитки одинаково сжимались под количество. На mobile
-     hint и часть padding'а уходят в compact-режим. */
+     и на мобиле, и на десктопе. Иконка вынесена в фон-водяной знак
+     в правом верхнем углу — текст и число занимают всю ширину
+     плитки и не обрезаются. Раньше иконка-чип сжимала label до
+     «СЕГОДН», «СТРИК», «ПРЕМ». */
   .stat-hero {
     display: flex;
     gap: 8px;
@@ -539,7 +539,7 @@
   .stat-tile {
     border-radius: 16px;
     border-width: 1px;
-    padding: 10px 10px 9px;
+    padding: 12px 12px 10px;
     backdrop-filter: blur(8px);
     box-shadow:
       0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
@@ -550,53 +550,54 @@
     position: relative;
     overflow: hidden;
   }
-  /* Compact mode на mobile: вертикальная раскладка [икона / число /
-     подпись] чтобы при 4-5 плитках в одну строку label не обрезался
-     до первой буквы. `display: contents` на .stat-tile-row делает
-     иконку и label прямыми flex-детьми .stat-tile — раскладку
-     контролируем через order, без перестройки JSX. Hint скрыт. */
-  @media (max-width: 719px) {
-    .stat-tile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 4px;
-      padding: 10px 6px 9px;
-    }
-    .stat-tile-row {
-      display: contents;
-    }
-    .stat-tile-icon {
-      order: 1;
-      width: 30px;
-      height: 30px;
-      border-radius: 10px;
-    }
-    .stat-tile-icon svg { width: 15px; height: 15px; }
-    .stat-tile-value {
-      order: 2;
-      font-size: 22px;
-      line-height: 1;
-    }
-    .stat-tile-label {
-      order: 3;
-      font-size: 11px;
-      letter-spacing: 0;
-      text-transform: none;
-      color: #475569;
-      white-space: normal;
-      overflow: visible;
-      text-overflow: clip;
-      line-height: 1.15;
-    }
-    .stat-tile-hint { display: none; }
-  }
   @media (min-width: 720px) {
     .stat-tile {
       border-radius: 20px;
       padding: 14px 14px 12px;
     }
+  }
+
+  /* Иконка-фон: position:absolute в правом верхнем углу плитки,
+     полупрозрачная (opacity 0.18). Освобождает строку с label'ом —
+     теперь label занимает всю ширину плитки и читается полностью. */
+  .stat-tile-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .stat-tile-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+  @media (min-width: 720px) {
+    .stat-tile-icon {
+      top: 10px;
+      right: 10px;
+      width: 72px;
+      height: 72px;
+    }
+    .stat-tile-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  /* Row теперь содержит только label (иконка absolute и в потоке не
+     участвует). Label получает всю ширину — никаких truncate. */
+  .stat-tile-row {
+    display: block;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 6px;
   }
 
   .stat-tile-button {
@@ -612,24 +613,10 @@
     border-radius: 22px;
   }
 
-  .stat-tile-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .stat-tile-icon {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    border-radius: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
+  /* Pulse и keyframes (для бонус-плитки с pulse=true): currentColor
+     наследуется от .stat-tile-icon (теперь absolute и полупрозрачной).
+     Чтобы pulse не портил эффект-фон, оставляем inset: -4px и тот же
+     цвет — pulse выглядит как мягкое сияние водяного знака. */
   .stat-tile-pulse {
     position: absolute;
     inset: -4px;
@@ -651,24 +638,31 @@
   }
 
   .stat-tile-label {
-    /* clamp на 320px → 10px, на 720+ → 11px. Не сжимаем сильнее, иначе
-       uppercase 0.06em label станет нечитаемым. */
-    font-size: clamp(10px, 0.9vw + 7px, 11px);
+    /* На всю ширину плитки — иконка водяной знак уже не отнимает
+       место в строке. Можем позволить полное «СЕГОДНЯ», «СДЕЛАНО»,
+       «СТРИК», «ПРЕМИЯ» без ellipsis. Padding-right оставляет
+     запас под иконку справа чтобы текст не наезжал. */
+    display: block;
+    padding-right: 50px;
+    font-size: clamp(11px, 0.9vw + 7.5px, 12px);
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #64748b;
-    /* Ellipsize длинные подписи вместо переноса — для «Сегодня»/«Сделано»
-       это не нужно, но «Опередили коллеги» в slate-tone могло переноситься
-       и ломать высоту тайла. */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+  @media (min-width: 720px) {
+    .stat-tile-label {
+      padding-right: 70px;
+      font-size: 12px;
+    }
   }
 
   .stat-tile-value {
-    /* На 320px фикс 28px не помещался в ~140px тайл — числа от 100+
-       обрезались. clamp 22px → 28px смягчает. */
+    position: relative;
+    z-index: 1;
     font-size: clamp(22px, 4.5vw + 8px, 28px);
     font-weight: 700;
     line-height: 1;
