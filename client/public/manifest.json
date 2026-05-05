@@ -1,7 +1,7 @@
 {
-  "name": "Task Delegate",
-  "short_name": "Tasks",
-  "description": "Система управления ежедневными задачами",
+  "name": "TasksFlow",
+  "short_name": "TasksFlow",
+  "description": "Контроль производственных процессов",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -12,7 +12,7 @@
       "src": "/favicon.png",
       "sizes": "any",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["productivity", "utilities"],
