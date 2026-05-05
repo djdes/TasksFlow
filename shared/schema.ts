@@ -192,14 +192,34 @@ const phoneValidation = z.string().min(1, "Номер телефона обяз�
 
 export const registerCompanySchema = z.object({
   phone: phoneValidation,
-  companyName: z.string().min(1, "Название компании обязательно"),
-  email: z.string().email("Неверный формат email"),
-  adminName: z.string().optional(),
+  // Все .max(255): MySQL columns companies.name, companies.email, users.name —
+  // VARCHAR(255). Без cap'а в Zod длинная строка проходила валидацию,
+  // MySQL тихо обрезал — пользователь регистрировал компанию с обрезанным
+  // названием, не зная об этом.
+  companyName: z
+    .string()
+    .min(1, "Название компании обязательно")
+    .max(255, "Название не должно превышать 255 символов"),
+  email: z
+    .string()
+    .email("Неверный формат email")
+    .max(255, "Email не должен превышать 255 символов"),
+  adminName: z
+    .string()
+    .max(255, "Имя не должно превышать 255 символов")
+    .optional(),
 });
 
 export const insertCompanySchema = z.object({
-  name: z.string().min(1, "Название компании обязательно"),
-  email: z.string().email("Неверный формат email").optional(),
+  name: z
+    .string()
+    .min(1, "Название компании обязательно")
+    .max(255, "Название не должно превышать 255 символов"),
+  email: z
+    .string()
+    .email("Неверный формат email")
+    .max(255, "Email не должен превышать 255 символов")
+    .optional(),
 });
 
 // Types
