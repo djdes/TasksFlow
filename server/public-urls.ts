@@ -48,28 +48,34 @@ export function getPublicTasksflowBaseUrl(req: Request): string {
   ]);
   if (fromEnv) return trimTrailingSlashes(fromEnv.toString());
 
-  const origin = parseHttpUrl(firstHeaderValue(req.headers.origin));
-  if (origin && (!isProduction() || !isLocalUrl(origin))) {
-    return trimTrailingSlashes(origin.toString());
-  }
-
-  const forwardedHost = firstHeaderValue(req.headers["x-forwarded-host"]);
-  const host = forwardedHost || req.headers.host;
-  if (host) {
-    const forwardedProto =
-      firstHeaderValue(req.headers["x-forwarded-proto"]) ||
-      (isProduction() ? "https" : req.protocol || "http");
-    const parsed = parseHttpUrl(`${forwardedProto}://${host}`);
-    if (parsed && (!isProduction() || !isLocalUrl(parsed))) {
-      return trimTrailingSlashes(parsed.toString());
+  // В production НЕ доверяем Host / Origin / X-Forwarded-Host: их шлёт
+  // клиент, и атакующий может подменить через `Host: evil.com`. Этот
+  // URL уходит в WeSetup как ?return=…, и после submit'а юзера
+  // редиректит туда — поэтому host-header injection превращается в
+  // open redirect. В проде используем только env (fromEnv выше) или
+  // hardcoded https://tasksflow.ru. В dev оставляем гибкость для
+  // localhost / разных dev-портов.
+  if (!isProduction()) {
+    const origin = parseHttpUrl(firstHeaderValue(req.headers.origin));
+    if (origin) {
+      return trimTrailingSlashes(origin.toString());
     }
+    const forwardedHost = firstHeaderValue(req.headers["x-forwarded-host"]);
+    const host = forwardedHost || req.headers.host;
+    if (host) {
+      const forwardedProto =
+        firstHeaderValue(req.headers["x-forwarded-proto"]) ||
+        req.protocol ||
+        "http";
+      const parsed = parseHttpUrl(`${forwardedProto}://${host}`);
+      if (parsed) {
+        return trimTrailingSlashes(parsed.toString());
+      }
+    }
+    return `http://localhost:${process.env.PORT || 5001}`;
   }
 
-  if (isProduction()) {
-    return "https://tasksflow.ru";
-  }
-
-  return `http://localhost:${process.env.PORT || 5001}`;
+  return "https://tasksflow.ru";
 }
 
 export function getPublicWesetupBaseUrl(internalBaseUrl: string): string {
