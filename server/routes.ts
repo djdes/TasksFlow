@@ -718,6 +718,46 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * Список задач, ждущих проверки от текущего пользователя.
+   * Используется UI-табом «На проверке» в Dashboard'е verifier'а.
+   *
+   *   GET /api/tasks/awaiting-verification
+   *   200 → Task[]
+   *   401 → не авторизован
+   *
+   * Возвращает все задачи с verification_status='submitted' и
+   * verifier_worker_id == session.userId, в скоупе компании.
+   * Admin'у — всё submitted в его компании.
+   *
+   * ВАЖНО: ДОЛЖЕН быть зарегистрирован ВЫШЕ /api/tasks/:id, иначе
+   * Express трактует "awaiting-verification" как :id и возвращает
+   * 404. Раньше endpoint был ниже /api/tasks/:id и фактически
+   * никогда не работал — VerificationBanner и /admin/verification
+   * page были пустыми.
+   */
+  app.get("/api/tasks/awaiting-verification", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Не авторизован" });
+      const me = await storage.getUserById(userId);
+      if (!me) return res.status(401).json({ message: "Не авторизован" });
+      const companyId = me.companyId ?? null;
+      if (companyId === null) return res.json([]);
+
+      const allTasks = await storage.getTasks(companyId);
+      const filtered = allTasks.filter((t) => {
+        if (t.verificationStatus !== "submitted") return false;
+        if (me.isAdmin) return true;
+        return t.verifierWorkerId === userId;
+      });
+      res.json(filtered);
+    } catch (err: any) {
+      console.error("Error listing awaiting-verification tasks:", err);
+      res.status(500).json({ message: "Ошибка загрузки" });
+    }
+  });
+
   app.get(api.tasks.get.path, requireAuthOrApiKey, async (req, res) => {
     try {
       const task = await storage.getTask(Number(req.params.id));
@@ -1808,39 +1848,12 @@ export async function registerRoutes(
     }
   });
 
-  /**
-   * Список задач, ждущих проверки от текущего пользователя.
-   * Используется UI-табом «На проверке» в Dashboard'е verifier'а.
-   *
-   *   GET /api/tasks/awaiting-verification
-   *   200 → Task[]
-   *   401 → не авторизован
-   *
-   * Возвращает все задачи с verification_status='submitted' и
-   * verifier_worker_id == session.userId, в скоупе компании.
-   * Admin'у — всё submitted в его компании.
-   */
-  app.get("/api/tasks/awaiting-verification", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) return res.status(401).json({ message: "Не авторизован" });
-      const me = await storage.getUserById(userId);
-      if (!me) return res.status(401).json({ message: "Не авторизован" });
-      const companyId = me.companyId ?? null;
-      if (companyId === null) return res.json([]);
-
-      const allTasks = await storage.getTasks(companyId);
-      const filtered = allTasks.filter((t) => {
-        if (t.verificationStatus !== "submitted") return false;
-        if (me.isAdmin) return true;
-        return t.verifierWorkerId === userId;
-      });
-      res.json(filtered);
-    } catch (err: any) {
-      console.error("Error listing awaiting-verification tasks:", err);
-      res.status(500).json({ message: "Ошибка загрузки" });
-    }
-  });
+  // /api/tasks/awaiting-verification теперь регистрируется ВЫШЕ
+  // /api/tasks/:id (см. блок ~720). Express матчит routes по
+  // порядку, и static "awaiting-verification" должен быть до
+  // dynamic ":id", иначе :id="awaiting-verification" → NaN → 404
+  // и endpoint никогда не работал. Тесты в tests/awaiting-verification
+  // ловят регрессию через 12 кейсов.
 
   // Users
   app.get(api.users.list.path, requireAuthOrApiKey, async (req, res) => {
