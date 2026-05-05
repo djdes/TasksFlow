@@ -100,7 +100,10 @@ describe("PUT /api/companies/me", () => {
 
     expect(response.status).toBe(400);
     expect(response.type).toContain("json");
-    expect(response.body.message).toContain("http://");
+    // Текущее сообщение в Zod refine: "...должен быть публичным
+    // http(s) — internal/localhost адреса запрещены". Раньше тест
+    // ожидал точно "http://" — устарел после изменения формулировки.
+    expect(response.body.message).toMatch(/http/i);
     expect(storage.updateCompany).not.toHaveBeenCalled();
   });
 });
