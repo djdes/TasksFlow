@@ -3,7 +3,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { loginSchema, insertUserSchema, insertTaskSchema } from "@shared/schema";
+import {
+  loginSchema,
+  insertUserSchema,
+  updateUserSchema,
+  insertTaskSchema,
+  insertCompanySchema,
+  registerCompanySchema,
+} from "@shared/schema";
 
 describe("loginSchema", () => {
   it("должна принимать валидный российский номер +7XXXXXXXXXX", () => {
@@ -140,5 +147,120 @@ describe("insertTaskSchema", () => {
       expect(result.data.isRecurring).toBe(true);
       expect(result.data.price).toBe(0);
     }
+  });
+});
+
+// ===================== CAPS — silent-truncation protection =====================
+//
+// Регрессия для тиков 32-35: MySQL VARCHAR cap'ает значения тихо без
+// strict mode, потеря данных без видимой ошибки. Все user-input поля
+// должны иметь .max(N), совпадающий с DB column. Если эти тесты падают
+// после изменения schema — посмотри shared/schema.ts varchar(N) для
+// колонки и добавь обратно .max().
+
+describe("silent-truncation caps", () => {
+  describe("insertUserSchema.name", () => {
+    it("принимает имя 255 символов", () => {
+      const r = insertUserSchema.safeParse({
+        phone: "+79991234567",
+        name: "и".repeat(255),
+      });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет имя 256 символов", () => {
+      const r = insertUserSchema.safeParse({
+        phone: "+79991234567",
+        name: "и".repeat(256),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("updateUserSchema.name", () => {
+    it("принимает имя 255 символов", () => {
+      const r = updateUserSchema.safeParse({
+        phone: "+79991234567",
+        name: "и".repeat(255),
+      });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет имя 256 символов", () => {
+      const r = updateUserSchema.safeParse({
+        phone: "+79991234567",
+        name: "и".repeat(256),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("insertUserSchema.position", () => {
+    it("принимает должность 120 символов", () => {
+      const r = insertUserSchema.safeParse({
+        phone: "+79991234567",
+        position: "д".repeat(120),
+      });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет должность 121 символ", () => {
+      const r = insertUserSchema.safeParse({
+        phone: "+79991234567",
+        position: "д".repeat(121),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("insertTaskSchema.category", () => {
+    it("принимает категорию 100 символов", () => {
+      const r = insertTaskSchema.safeParse({
+        title: "Задача",
+        category: "к".repeat(100),
+      });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет категорию 101 символ", () => {
+      const r = insertTaskSchema.safeParse({
+        title: "Задача",
+        category: "к".repeat(101),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("registerCompanySchema", () => {
+    it("отклоняет companyName > 255", () => {
+      const r = registerCompanySchema.safeParse({
+        phone: "+79991234567",
+        companyName: "к".repeat(256),
+        email: "a@b.c",
+      });
+      expect(r.success).toBe(false);
+    });
+    it("отклоняет email > 255", () => {
+      const r = registerCompanySchema.safeParse({
+        phone: "+79991234567",
+        companyName: "ИП",
+        email: "a".repeat(250) + "@b.c", // длиннее 255
+      });
+      expect(r.success).toBe(false);
+    });
+    it("отклоняет adminName > 255", () => {
+      const r = registerCompanySchema.safeParse({
+        phone: "+79991234567",
+        companyName: "ИП",
+        email: "a@b.c",
+        adminName: "и".repeat(256),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("insertCompanySchema", () => {
+    it("отклоняет name > 255", () => {
+      const r = insertCompanySchema.safeParse({
+        name: "к".repeat(256),
+      });
+      expect(r.success).toBe(false);
+    });
   });
 });
