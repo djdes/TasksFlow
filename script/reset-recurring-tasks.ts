@@ -3,6 +3,25 @@ import mysql from "mysql2/promise";
 import { unlink } from "fs/promises";
 import path from "path";
 
+// Path-traversal защита: photoUrls в БД пишутся через сервер с safe
+// filename'ами, но defense-in-depth — на случай если когда-нибудь
+// WeSetup integration или другой sync-канал пропишет «../../etc/passwd»
+// в БД. Daily-cron этого скрипта может работать под повышенными
+// правами, тут же `unlink` без allowlist'а ушёл бы за пределы uploads/.
+const UPLOADS_ROOT = path.resolve(process.cwd(), "uploads");
+function resolveSafeUploadPath(photoUrl: string): string | null {
+  // Только basename — отрезаем любые ../, абсолютные пути, slash-injection.
+  // photoUrl формат: "/uploads/task-1-xxx.jpg" или "uploads/...".
+  const basename = path.basename(photoUrl);
+  if (!basename || basename === "." || basename === "..") return null;
+  const resolved = path.resolve(UPLOADS_ROOT, basename);
+  // Ещё одна проверка: resolved обязан начинаться с UPLOADS_ROOT/.
+  if (!resolved.startsWith(UPLOADS_ROOT + path.sep) && resolved !== UPLOADS_ROOT) {
+    return null;
+  }
+  return resolved;
+}
+
 /**
  * Скрипт для сброса повторяющихся задач.
  * Запускать ежедневно через cron/планировщик задач в начале дня (например, в 00:00 или 06:00).
@@ -47,7 +66,11 @@ async function resetRecurringTasks() {
         try {
           const photoUrls: string[] = JSON.parse(task.photo_urls);
           for (const photoUrl of photoUrls) {
-            const photoPath = path.join(process.cwd(), photoUrl);
+            const photoPath = resolveSafeUploadPath(photoUrl);
+            if (!photoPath) {
+              console.warn(`Пропуск unsafe photoUrl для задачи ${task.id}:`, photoUrl);
+              continue;
+            }
             try {
               await unlink(photoPath);
               console.log(`Удален файл: ${photoPath}`);
@@ -64,13 +87,17 @@ async function resetRecurringTasks() {
 
       // Удаляем старое фото photo_url (для обратной совместимости)
       if (task.photo_url) {
-        const photoPath = path.join(process.cwd(), task.photo_url);
-        try {
-          await unlink(photoPath);
-          console.log(`Удален файл (legacy): ${photoPath}`);
-        } catch (err: any) {
-          if (err.code !== 'ENOENT') {
-            console.error(`Ошибка удаления файла ${photoPath}:`, err.message);
+        const photoPath = resolveSafeUploadPath(task.photo_url);
+        if (!photoPath) {
+          console.warn(`Пропуск unsafe legacy photo_url для задачи ${task.id}:`, task.photo_url);
+        } else {
+          try {
+            await unlink(photoPath);
+            console.log(`Удален файл (legacy): ${photoPath}`);
+          } catch (err: any) {
+            if (err.code !== 'ENOENT') {
+              console.error(`Ошибка удаления файла ${photoPath}:`, err.message);
+            }
           }
         }
       }
@@ -89,10 +116,16 @@ async function resetRecurringTasks() {
 
   } catch (error) {
     console.error("Ошибка:", error);
-    process.exit(1);
+    // Exit code устанавливаем, но НЕ зовём process.exit здесь —
+    // finally сначала закрывает connection. process.exit в finally
+    // переопределял exit code на 0 даже при ошибке → cron не видел
+    // failure и продолжал падать тихо изо дня в день.
+    process.exitCode = 1;
   } finally {
     await connection.end();
-    process.exit(0);
+    // Только если exitCode не выставлен явно через catch.
+    // process.exit(0) в этой ветке избыточен — Node сам выходит с
+    // process.exitCode когда event loop пуст.
   }
 }
 
