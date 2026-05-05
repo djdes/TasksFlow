@@ -8,6 +8,7 @@ import {
   isTaskFormSchema,
   journalKindToTemplateCode,
   normalizeTaskFormPayload,
+  normalizeTaskFormSchema,
   resolveActiveJournal,
   resolveJournalUi,
 } from "@shared/wesetup-journal-mode";
@@ -379,6 +380,120 @@ describe("journalKindToTemplateCode", () => {
 
   it("только префикс → пустая строка (edge)", () => {
     expect(journalKindToTemplateCode("wesetup-")).toBe("");
+  });
+});
+
+describe("normalizeTaskFormSchema", () => {
+  it("принимает legacy-shape с items вместо fields", () => {
+    const schema = normalizeTaskFormSchema({
+      items: [{ key: "f1", label: "Field" }],
+    });
+    expect(schema?.fields).toHaveLength(1);
+    expect(schema?.fields[0].key).toBe("f1");
+  });
+
+  it("отклоняет всю схему если хоть одно поле без key", () => {
+    // strict-policy: «частично валидная» схема = false-positive риск,
+    // юзер не получит часть данных, лучше null и forced-fix WeSetup.
+    const schema = normalizeTaskFormSchema({
+      fields: [
+        { key: "f1", label: "OK" },
+        { label: "BAD-no-key" },
+      ],
+    });
+    expect(schema).toBeNull();
+  });
+
+  it("intro подтягивается из description/hint fallback", () => {
+    expect(
+      normalizeTaskFormSchema({
+        description: "from-desc",
+        fields: [{ key: "f" }],
+      })?.intro,
+    ).toBe("from-desc");
+    expect(
+      normalizeTaskFormSchema({
+        hint: "from-hint",
+        fields: [{ key: "f" }],
+      })?.intro,
+    ).toBe("from-hint");
+    // Приоритет: intro > description > hint
+    expect(
+      normalizeTaskFormSchema({
+        intro: "WIN",
+        description: "loose",
+        fields: [{ key: "f" }],
+      })?.intro,
+    ).toBe("WIN");
+  });
+
+  it("submitLabel из snake_case submit_label", () => {
+    expect(
+      normalizeTaskFormSchema({
+        submit_label: "Сохранить",
+        fields: [{ key: "f" }],
+      })?.submitLabel,
+    ).toBe("Сохранить");
+  });
+
+  it("пустые fields → null", () => {
+    expect(normalizeTaskFormSchema({ fields: [] })).toBeNull();
+    expect(normalizeTaskFormSchema({})).toBeNull();
+  });
+
+  it("field type по умолчанию = text", () => {
+    const schema = normalizeTaskFormSchema({
+      fields: [{ key: "f1" }],
+    });
+    expect(schema?.fields[0].type).toBe("text");
+  });
+
+  it("field с options без type → автоматически select", () => {
+    const schema = normalizeTaskFormSchema({
+      fields: [
+        { key: "f1", options: ["A", "B"] },
+      ],
+    });
+    expect(schema?.fields[0].type).toBe("select");
+  });
+
+  it("field type=string нормализуется в text", () => {
+    const schema = normalizeTaskFormSchema({
+      fields: [{ key: "f1", type: "string" }],
+    });
+    expect(schema?.fields[0].type).toBe("text");
+  });
+
+  it("field type=yes-no без options → boolean, с options → checkbox-group", () => {
+    const bare = normalizeTaskFormSchema({
+      fields: [{ key: "f1", type: "yes-no" }],
+    });
+    expect(bare?.fields[0].type).toBe("boolean");
+
+    const withOptions = normalizeTaskFormSchema({
+      fields: [{ key: "f1", type: "yes-no", options: ["Да", "Нет"] }],
+    });
+    expect(withOptions?.fields[0].type).toBe("checkbox-group");
+  });
+
+  it("label fallback: title > caption > name > key", () => {
+    expect(
+      normalizeTaskFormSchema({
+        fields: [{ key: "f1" }],
+      })?.fields[0].label,
+    ).toBe("f1");
+    expect(
+      normalizeTaskFormSchema({
+        fields: [{ key: "f1", title: "T" }],
+      })?.fields[0].label,
+    ).toBe("T");
+  });
+
+  it("numberValue парсит строку как число (maxLength=«100»)", () => {
+    const schema = normalizeTaskFormSchema({
+      fields: [{ key: "f1", maxLength: "100" }],
+    });
+    expect(schema?.fields[0].maxLength).toBe(100);
   });
 });
 
