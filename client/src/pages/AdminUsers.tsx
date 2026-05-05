@@ -37,7 +37,7 @@ export default function AdminUsers() {
 
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ["users"],
+    queryKey: [api.users.list.path],
     queryFn: async () => {
       const response = await fetch(api.users.list.path, {
         credentials: "include",
@@ -66,7 +66,7 @@ export default function AdminUsers() {
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       form.reset({ phone: "+7", name: "" });
       toast({ title: "Пользователь создан" });
     },
@@ -91,7 +91,7 @@ export default function AdminUsers() {
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       setEditingUserId(null);
       toast({ title: "Пользователь обновлён" });
     },
@@ -114,7 +114,7 @@ export default function AdminUsers() {
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       toast({ title: "Баланс сброшен" });
     },
     onError: (error: Error) => {
@@ -136,7 +136,7 @@ export default function AdminUsers() {
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       toast({ title: "Пользователь удалён" });
     },
     onError: (error: Error) => {

@@ -116,7 +116,6 @@ export function TaskViewDialog({
           onTaskUpdate(updatedTask);
         }
       }
-      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       toast({
         title: "Успешно",
@@ -179,7 +178,6 @@ export function TaskViewDialog({
           onTaskUpdate(updatedTask);
         }
       }
-      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       toast({
         title: "Успешно",

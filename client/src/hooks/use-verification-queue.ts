@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@shared/schema";
+import { api } from "@shared/routes";
 
 const QUERY_KEY = ["awaiting-verification"] as const;
 
@@ -52,11 +53,18 @@ export function useVerifyTask() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       // Инвалидируем оба query — задача переходит из «На проверке»
       // в «Активные» (reject) или в «Выполненные» (approve).
+      // Раньше инвалидировали ["tasks"], но реальный queryKey всех
+      // task-хуков — [api.tasks.list.path] = ["/api/tasks"]. Они не
+      // совпадали, dashboard висел со старым state до 30s polling
+      // tick'а.
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+      queryClient.invalidateQueries({
+        queryKey: [api.tasks.get.path, vars.taskId],
+      });
     },
   });
 }
