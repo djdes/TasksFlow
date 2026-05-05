@@ -308,9 +308,15 @@ export function TaskViewDialog({
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {photoUrls.map((url, index) => (
                     <div key={url} className="relative aspect-square group">
+                      {/* loading="lazy": при 10 фото в 3-col grid нижние ~4
+                          вне viewport до scroll — не тащим по сети сразу.
+                          Помогает на 3G/4G, особенно когда задач много.
+                          decoding="async": не блокирует main thread. */}
                       <img
                         src={url}
                         alt={`Фото ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover rounded-xl border-2 border-emerald-400 cursor-pointer hover:opacity-95 transition-all shadow-sm"
                         onClick={() => {
                           setFullscreenPhotoIndex(index);
