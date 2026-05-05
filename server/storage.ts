@@ -932,6 +932,7 @@ export class DatabaseStorage implements IStorage {
     apiKey: string;
     payload: string;
     nextRetryAt: number;
+    attempts?: number;
   }): Promise<WebhookDelivery> {
     const now = Math.floor(Date.now() / 1000);
     const insert: InsertWebhookDelivery = {
@@ -940,7 +941,7 @@ export class DatabaseStorage implements IStorage {
       targetUrl: input.targetUrl,
       apiKey: input.apiKey,
       payload: input.payload,
-      attempts: 0,
+      attempts: input.attempts ?? 0,
       status: 0,
       nextRetryAt: input.nextRetryAt,
       createdAt: now,

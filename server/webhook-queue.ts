@@ -98,6 +98,11 @@ export async function attemptOrEnqueue(input: {
       targetUrl: input.targetUrl,
       apiKey: input.apiKey,
       payload: body,
+      // 1 синхронная попытка уже была — учитываем её, иначе worker
+      // в первый ретрай поставит attempts=1 и nextRetryAt=5min ОПЯТЬ
+      // (computeNextRetryAt(1)), и реальная лестница будет
+      // 5/5/15/60/360/1440 вместо задуманной 5/15/60/360/1440.
+      attempts: 1,
       nextRetryAt: computeNextRetryAt(1),
     });
     logger.info(
@@ -117,6 +122,7 @@ export async function attemptOrEnqueue(input: {
       targetUrl: input.targetUrl,
       apiKey: input.apiKey,
       payload: body,
+      attempts: 1,
       nextRetryAt: computeNextRetryAt(1),
     });
     logger.warn(
