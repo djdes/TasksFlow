@@ -218,6 +218,12 @@ export async function registerRoutes(
   });
   app.use("/api/auth/login", authLimiter);
   app.use("/api/companies/register", authLimiter);
+  // /api/users/register — открытый endpoint регистрации воркера к
+  // существующей компании. Без strict-лимита бот мог через
+  // generalLimiter (1000/15min) зарегистрировать сотни фейковых
+  // аккаунтов в чужой компании (если узнает adminPhone) и спамить
+  // её админу уведомлениями. Симметрия с companies/register.
+  app.use("/api/users/register", authLimiter);
 
   // Photo upload limiter — heavy endpoint (multer + diskStorage). Без
   // отдельного лимита злоумышленник с одной сессии может через
