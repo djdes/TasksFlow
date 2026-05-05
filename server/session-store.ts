@@ -17,13 +17,43 @@
  *   touch(sid, sess, cb) — продлить expires (для rolling sessions)
  */
 import { Store, type SessionData } from "express-session";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import { sessions } from "@shared/schema";
 import { logger } from "./logger";
 
 type Callback = (err?: unknown) => void;
 type GetCallback = (err: unknown, session?: SessionData | null) => void;
+
+/**
+ * Авто-создание таблицы при старте сервера. Идемпотентно — IF NOT
+ * EXISTS никогда ничего не сломает. Без этого после деплоя кода
+ * (без отдельного `tsx script/add-sessions-table.ts`) каждый запрос
+ * валился с «Table 'tasksflow.sessions' doesn't exist».
+ *
+ * Безопасно даже если у пользователя БД нет CREATE прав: ошибка
+ * логируется, но сервер продолжает старт (без сессий впрочем —
+ * юзер увидит честную error toast'у вместо «doesn't exist»).
+ */
+export async function ensureSessionsTable(): Promise<void> {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`sessions\` (
+        \`sid\` VARCHAR(128) NOT NULL,
+        \`expires\` INT NOT NULL,
+        \`data\` MEDIUMTEXT NOT NULL,
+        PRIMARY KEY (\`sid\`),
+        KEY \`expires_idx\` (\`expires\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    logger.info("[session-store] sessions table ensured");
+  } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[session-store] не удалось создать таблицу sessions — сессии будут падать. Дайте БД-юзеру право CREATE TABLE или прогоните миграцию вручную: tsx script/add-sessions-table.ts",
+    );
+  }
+}
 
 function expiresFromSession(session: SessionData): number {
   // express-session кладёт абсолютную дату в session.cookie.expires

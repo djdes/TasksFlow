@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { MySqlSessionStore } from "./session-store";
+import { MySqlSessionStore, ensureSessionsTable } from "./session-store";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
@@ -243,6 +243,42 @@ process.on("unhandledRejection", (reason, promise) => {
     logger.error(
       { err: err instanceof Error ? err.message : String(err) },
       "[schema-self-check] uncaught — continuing without verification",
+    );
+  }
+
+  // Auto-migration таблицы sessions. Раньше деплоился новый код, и
+  // первый же запрос валился с «Table 'tasksflow.sessions' doesn't
+  // exist» — нужно было руками гонять `tsx script/add-sessions-table.ts`.
+  // Теперь делаем CREATE TABLE IF NOT EXISTS на старте — идемпотентно
+  // и безопасно. Аналогично для webhook_deliveries — она уже лежит
+  // на проде, но если кто-то поднимет fresh-инстанс, таблица создастся
+  // автоматически.
+  await ensureSessionsTable();
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`webhook_deliveries\` (
+        \`id\` int NOT NULL AUTO_INCREMENT,
+        \`task_id\` int NOT NULL,
+        \`event_type\` varchar(20) NOT NULL,
+        \`target_url\` varchar(500) NOT NULL,
+        \`api_key\` varchar(255) NOT NULL,
+        \`payload\` text NOT NULL,
+        \`attempts\` int NOT NULL DEFAULT 0,
+        \`status\` int NOT NULL DEFAULT 0,
+        \`next_retry_at\` int NOT NULL,
+        \`last_error\` text,
+        \`created_at\` int NOT NULL DEFAULT 0,
+        \`updated_at\` int NOT NULL DEFAULT 0,
+        PRIMARY KEY (\`id\`),
+        KEY \`status_next_retry_idx\` (\`status\`, \`next_retry_at\`),
+        KEY \`task_id_idx\` (\`task_id\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[webhook-deliveries] auto-create failed — миграция не прошла, retry-queue не работает",
     );
   }
 
