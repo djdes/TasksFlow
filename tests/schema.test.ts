@@ -210,6 +210,37 @@ describe("silent-truncation caps", () => {
     });
   });
 
+  describe("insertTaskSchema.title (drizzle-zod auto-cap check)", () => {
+    it("принимает 255 символов", () => {
+      const r = insertTaskSchema.safeParse({ title: "т".repeat(255) });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет 256 символов (если drizzle-zod auto-cap'ит varchar(255))", () => {
+      const r = insertTaskSchema.safeParse({ title: "т".repeat(256) });
+      // Это документирует ожидаемое поведение createInsertSchema:
+      // varchar(255) → автоматически .max(255). Если упадёт — нужно
+      // ручной .max() добавлять как для других полей.
+      expect(r.success).toBe(false);
+    });
+  });
+
+  describe("insertTaskSchema.description (тик 87 фикс)", () => {
+    it("принимает 5000 символов", () => {
+      const r = insertTaskSchema.safeParse({
+        title: "Test",
+        description: "д".repeat(5000),
+      });
+      expect(r.success).toBe(true);
+    });
+    it("отклоняет 5001 символ", () => {
+      const r = insertTaskSchema.safeParse({
+        title: "Test",
+        description: "д".repeat(5001),
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
   describe("insertTaskSchema.category", () => {
     it("принимает категорию 100 символов", () => {
       const r = insertTaskSchema.safeParse({
