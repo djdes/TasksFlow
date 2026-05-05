@@ -382,6 +382,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                     <Input
                       placeholder="Например: Уборка, Готовка..."
                       className="things-input"
+                      maxLength={100}
                       {...field}
                     />
                   </FormControl>

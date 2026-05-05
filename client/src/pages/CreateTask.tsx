@@ -884,6 +884,7 @@ export default function CreateTask() {
                     <Input
                       placeholder="Например: Уборка, Готовка, Покупки..."
                       className="things-input"
+                      maxLength={100}
                       {...field}
                     />
                   </FormControl>
