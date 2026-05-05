@@ -67,7 +67,14 @@ const multerStorage = multer.diskStorage({
     const rawTaskId = req.params.id || "unknown";
     // Защита от инъекции в filename: только digits либо "unknown".
     const safeTaskId = /^\d+$/.test(rawTaskId) ? rawTaskId : "unknown";
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    // Math.random() не криптографически случаен — атакующий с access
+    // к /uploads/ static directory мог теоретически brute-force'ить
+    // 10^9 значений random suffix чтобы скачать чужое фото. С
+    // crypto.randomBytes(8) — 16 hex символов (64 бита), практически
+    // unguessable. Date.now() оставлен как удобный sort-by-time префикс
+    // для админа; criticality смещена с timestamp на random.
+    const randomSuffix = crypto.randomBytes(8).toString("hex");
+    const uniqueSuffix = Date.now() + "-" + randomSuffix;
     const ext = EXT_BY_MIME[file.mimetype] ?? ".bin";
     cb(null, `task-${safeTaskId}-${uniqueSuffix}${ext}`);
   },
