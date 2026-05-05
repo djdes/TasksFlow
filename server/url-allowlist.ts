@@ -14,6 +14,38 @@
  * В dev можно отключить через LOCAL_INTEGRATIONS_ALLOWED=1.
  */
 
+/**
+ * Конвертирует IPv4-mapped IPv6 в dotted IPv4. WHATWG URL parser
+ * нормализует "::ffff:127.0.0.1" в "::ffff:7f00:1" (hex), что ломало
+ * простую startsWith+regex проверку. Покрываем оба формата.
+ *
+ *   "::ffff:127.0.0.1" → "127.0.0.1"
+ *   "::ffff:7f00:1"    → "127.0.0.1"
+ *   "::ffff:0a00:1"    → "10.0.0.1"
+ *   "2001:db8::1"      → null (не IPv4-mapped)
+ */
+function ipv4MappedToDotted(hostname: string): string | null {
+  if (!hostname.startsWith("::ffff:")) return null;
+  const rest = hostname.slice(7);
+  // Уже dotted-форма (на старых Node / при некоторых нормализациях).
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(rest)) return rest;
+  // Hex-форма "AAAA:BBBB" → A.A.B.B (each AAAA = два байта).
+  const parts = rest.split(":");
+  if (parts.length !== 2) return null;
+  const high = parseInt(parts[0], 16);
+  const low = parseInt(parts[1], 16);
+  if (
+    !Number.isFinite(high) || !Number.isFinite(low) ||
+    high < 0 || high > 0xffff || low < 0 || low > 0xffff
+  ) return null;
+  return [
+    (high >> 8) & 0xff,
+    high & 0xff,
+    (low >> 8) & 0xff,
+    low & 0xff,
+  ].join(".");
+}
+
 function isPrivateHostname(rawHostname: string): boolean {
   // По WHATWG URL spec, IPv6 hostname возвращается со square brackets:
   //   new URL("http://[::1]/").hostname === "[::1]"
@@ -38,16 +70,19 @@ function isPrivateHostname(rawHostname: string): boolean {
   if (/^f[cd][0-9a-f]{2}:/.test(hostname)) return true;
   // IPv6 link-local (fe80::/10) — fe80..febf
   if (/^fe[89ab][0-9a-f]:/.test(hostname)) return true;
-  // IPv4-mapped IPv6: ::ffff:127.0.0.1 — формальная защита от обхода
-  // через альтернативную форму записи loopback'а.
-  if (hostname.startsWith("::ffff:")) {
-    const v4 = hostname.slice(7);
+  // IPv4-mapped IPv6: ::ffff:127.0.0.1 → защита от обхода loopback'а
+  // через IPv6-форму. WHATWG URL parser нормализует dotted-форму в
+  // hex (::ffff:127.0.0.1 → ::ffff:7f00:1), поэтому raw startsWith
+  // проверка не достаточна — конвертируем hex обратно в dotted и
+  // прогоняем те же IPv4 regex'ы.
+  const mappedV4 = ipv4MappedToDotted(hostname);
+  if (mappedV4) {
     if (
-      v4 === "127.0.0.1" || v4 === "0.0.0.0" ||
-      /^127\./.test(v4) || /^10\./.test(v4) ||
-      /^192\.168\./.test(v4) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(v4) ||
-      /^169\.254\./.test(v4)
+      mappedV4 === "127.0.0.1" || mappedV4 === "0.0.0.0" ||
+      /^127\./.test(mappedV4) || /^10\./.test(mappedV4) ||
+      /^192\.168\./.test(mappedV4) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(mappedV4) ||
+      /^169\.254\./.test(mappedV4)
     ) return true;
   }
   // Single-label hostname без точки — кроме localhost (уже выше). Это
