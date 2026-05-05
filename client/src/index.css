@@ -550,15 +550,46 @@
     position: relative;
     overflow: hidden;
   }
-  /* Compact mode на mobile: hint строка скрыта, label мельче,
-     иконка меньше — иначе 4-5 плиток в строке не помещаются на
-     iPhone SE (375px). Desktop разворачивается в полный размер. */
+  /* Compact mode на mobile: вертикальная раскладка [икона / число /
+     подпись] чтобы при 4-5 плитках в одну строку label не обрезался
+     до первой буквы. `display: contents` на .stat-tile-row делает
+     иконку и label прямыми flex-детьми .stat-tile — раскладку
+     контролируем через order, без перестройки JSX. Hint скрыт. */
   @media (max-width: 719px) {
-    .stat-tile-row { gap: 6px; margin-bottom: 4px; }
-    .stat-tile-icon { width: 28px; height: 28px; border-radius: 10px; }
-    .stat-tile-icon svg { width: 14px; height: 14px; }
-    .stat-tile-label { font-size: 10px; letter-spacing: 0.04em; }
-    .stat-tile-value { font-size: 18px; }
+    .stat-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+      padding: 10px 6px 9px;
+    }
+    .stat-tile-row {
+      display: contents;
+    }
+    .stat-tile-icon {
+      order: 1;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+    }
+    .stat-tile-icon svg { width: 15px; height: 15px; }
+    .stat-tile-value {
+      order: 2;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .stat-tile-label {
+      order: 3;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #475569;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.15;
+    }
     .stat-tile-hint { display: none; }
   }
   @media (min-width: 720px) {
