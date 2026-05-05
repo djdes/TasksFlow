@@ -45,6 +45,12 @@ async function main() {
   // mysqldump | gzip > file
   // Используем pipe вместо --result-file чтобы не держать большой
   // временный файл несжатым.
+  //
+  // Password передаётся через env MYSQL_PWD, а не -p${password} в
+  // argv. Раньше пароль был виден в ps aux / /proc/<pid>/cmdline,
+  // на shared host это утечка credential'а в логи мониторинга
+  // (top, atop, audit-логи). MYSQL_PWD читается mysqldump'ом
+  // автоматически и не попадает в argv.
   await new Promise<void>((resolve, reject) => {
     const dump = spawn(
       "mysqldump",
@@ -53,7 +59,6 @@ async function main() {
         host,
         "-u",
         user,
-        `-p${password}`,
         "--single-transaction",
         "--quick",
         "--lock-tables=false",
@@ -62,7 +67,10 @@ async function main() {
         "--events",
         database,
       ],
-      { stdio: ["ignore", "pipe", "inherit"] }
+      {
+        stdio: ["ignore", "pipe", "inherit"],
+        env: { ...process.env, MYSQL_PWD: password },
+      }
     );
     const gz = spawn("gzip", ["-c"], {
       stdio: [dump.stdout!, "pipe", "inherit"],
