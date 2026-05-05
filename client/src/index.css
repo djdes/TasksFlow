@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Onest:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -513,11 +513,19 @@
      Заменяет тонкий progress-card богатой сеткой плиток. На мобильном
      2 колонки, на планшете+ — 4 колонки. Каждая плитка — небольшая
      glass-карточка с цветовым акцентом и анимированным числом. */
-  /* По запросу владельца (2026-05-05): плитки всегда в ОДНУ строку
-     и на мобиле, и на десктопе. Иконка вынесена в фон-водяной знак
-     в правом верхнем углу — текст и число занимают всю ширину
-     плитки и не обрезаются. Раньше иконка-чип сжимала label до
-     «СЕГОДН», «СТРИК», «ПРЕМ». */
+  /* StatHero (2026-05-05 третий заход): «number-first» editorial
+     раскладка вместо watermark или icon+label-row.
+       icon-chip 26-32px сверху-слева ─┐
+                                       ▼
+       ┌──────────────────┐
+       │ ▢                │  ← цветной чип, маркер типа
+       │                  │
+       │ 23   ←──────── Onest 28-32px bold tabular-nums
+       │ Сегодня ←──── обычный регистр, не CAPS
+       │ из 24    ←─── faint hint, desktop only
+       └──────────────────┘
+     Каждый элемент — своя строка, ничего не конкурирует за
+     горизонталь. Подпись больше не truncate'ится до «СЕГОДН». */
   .stat-hero {
     display: flex;
     gap: 8px;
@@ -528,76 +536,71 @@
     flex: 1 1 0;
     min-width: 0;
   }
-
   @media (min-width: 720px) {
-    .stat-hero {
-      gap: 14px;
-      margin-bottom: 18px;
-    }
+    .stat-hero { gap: 12px; margin-bottom: 18px; }
   }
 
   .stat-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 11px 11px 10px;
     border-radius: 16px;
     border-width: 1px;
-    padding: 12px 12px 10px;
-    backdrop-filter: blur(8px);
+    overflow: hidden;
+    transition:
+      transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow:
       0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
-      0 8px 24px -16px rgba(15, 23, 42, 0.18);
-    transition:
-      box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
-      transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
-    position: relative;
-    overflow: hidden;
+      0 4px 14px -10px rgba(15, 23, 42, 0.14);
   }
   @media (min-width: 720px) {
     .stat-tile {
-      border-radius: 20px;
       padding: 14px 14px 12px;
+      border-radius: 20px;
+      gap: 5px;
+    }
+  }
+  /* Hover lift только на устройствах с курсором — на мобиле touch
+     уже даёт активную state через :active без перемещения карточки. */
+  @media (hover: hover) {
+    .stat-tile:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+        0 10px 22px -12px rgba(15, 23, 42, 0.2);
     }
   }
 
-  /* Иконка-фон: position:absolute в правом верхнем углу плитки,
-     полупрозрачная (opacity 0.18). Освобождает строку с label'ом —
-     теперь label занимает всю ширину плитки и читается полностью. */
+  /* Icon-чип сверху-слева. Не водяной знак, не «гигант-фон» —
+     компактный 26px бейджик который мгновенно сообщает «это
+     счётчик про сегодня / про сделанное / про премию». */
   .stat-tile-icon {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.18;
-    pointer-events: none;
-    z-index: 0;
+    flex-shrink: 0;
   }
-  .stat-tile-icon svg {
-    width: 32px;
-    height: 32px;
+  .stat-tile-icon-glyph {
+    width: 14px;
+    height: 14px;
   }
   @media (min-width: 720px) {
     .stat-tile-icon {
-      top: 10px;
-      right: 10px;
-      width: 72px;
-      height: 72px;
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
     }
-    .stat-tile-icon svg {
-      width: 40px;
-      height: 40px;
+    .stat-tile-icon-glyph {
+      width: 16px;
+      height: 16px;
     }
-  }
-
-  /* Row теперь содержит только label (иконка absolute и в потоке не
-     участвует). Label получает всю ширину — никаких truncate. */
-  .stat-tile-row {
-    display: block;
-    position: relative;
-    z-index: 1;
-    margin-bottom: 6px;
   }
 
   .stat-tile-button {
@@ -613,76 +616,93 @@
     border-radius: 22px;
   }
 
-  /* Pulse и keyframes (для бонус-плитки с pulse=true): currentColor
-     наследуется от .stat-tile-icon (теперь absolute и полупрозрачной).
-     Чтобы pulse не портил эффект-фон, оставляем inset: -4px и тот же
-     цвет — pulse выглядит как мягкое сияние водяного знака. */
+  /* Pulse — мягкое сияние вокруг icon-чипа на бонус-плитке
+     с pulse=true. Сидит за иконкой, currentColor наследуется. */
   .stat-tile-pulse {
     position: absolute;
-    inset: -4px;
-    border-radius: 18px;
+    inset: -3px;
+    border-radius: 11px;
     box-shadow: 0 0 0 0 currentColor;
     animation: stat-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    pointer-events: none;
   }
 
   @keyframes stat-pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45);
-    }
-    70% {
-      box-shadow: 0 0 0 12px rgba(251, 191, 36, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45); }
+    70% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  }
+
+  /* Number — главный герой плитки. Onest — characterful display
+     шрифт от Greg Gazdowicz, отлично читается, tabular-цифры,
+     уважительная кириллица. font-variant-numeric: tabular-nums
+     фиксирует ширину каждой цифры — счётчик не «прыгает» при
+     анимированном переходе 99→100. */
+  .stat-tile-value {
+    font-family: 'Onest', 'Inter', system-ui, sans-serif;
+    font-size: clamp(26px, 5.5vw, 30px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+    color: #0b1024;
+    line-height: 0.95;
+    margin-top: 2px;
+    /* tight числовая baseline — чтобы цифра «приклеилась» к подписи
+       снизу как в editorial-вёрстке. */
+  }
+  @media (min-width: 720px) {
+    .stat-tile-value {
+      font-size: clamp(30px, 1.5vw + 22px, 36px);
+      letter-spacing: -0.03em;
     }
   }
 
-  .stat-tile-label {
-    /* На всю ширину плитки — иконка водяной знак уже не отнимает
-       место в строке. Можем позволить полное «СЕГОДНЯ», «СДЕЛАНО»,
-       «СТРИК», «ПРЕМИЯ» без ellipsis. Padding-right оставляет
-     запас под иконку справа чтобы текст не наезжал. */
-    display: block;
-    padding-right: 50px;
-    font-size: clamp(11px, 0.9vw + 7.5px, 12px);
+  /* Suffix («₽» у премии) — приглушённый, чтобы не конкурировал с
+     числом. 0.55em от размера number, mid-grey. */
+  .stat-tile-suffix {
+    font-family: 'Onest', 'Inter', system-ui, sans-serif;
+    font-size: 0.55em;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
     color: #64748b;
+    margin-left: 2px;
+    letter-spacing: 0;
+  }
+
+  /* Label — обычный регистр, не CAPS. Бабушки лучше читают
+     «Сегодня» чем «СЕГОДНЯ» (uppercase letterspacing замедляет
+     распознавание). Цвет средне-серый — подпись, не заголовок. */
+  .stat-tile-label {
+    font-size: clamp(11.5px, 1vw + 8.5px, 13px);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #475569;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   @media (min-width: 720px) {
-    .stat-tile-label {
-      padding-right: 70px;
-      font-size: 12px;
-    }
+    .stat-tile-label { font-size: 13px; }
   }
 
-  .stat-tile-value {
-    position: relative;
-    z-index: 1;
-    font-size: clamp(22px, 4.5vw + 8px, 28px);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: #0b1024;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .stat-tile-suffix {
-    font-size: clamp(13px, 1.5vw + 7px, 16px);
-    font-weight: 600;
-    color: #64748b;
-    margin-left: 2px;
-  }
-
+  /* Hint скрыт на мобиле (нет места). На desktop — мелкий faint
+     текст под подписью: «из 24», «копится», «коллеги быстрее». */
   .stat-tile-hint {
-    font-size: clamp(11px, 0.6vw + 9px, 12px);
-    color: #6b7280;
-    margin-top: 4px;
-    font-weight: 500;
+    display: none;
+  }
+  @media (min-width: 720px) {
+    .stat-tile-hint {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 400;
+      color: #94a3b8;
+      line-height: 1.2;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   /* ===== PROGRESS BAR (legacy — оставлен для совместимости с

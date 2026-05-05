@@ -122,56 +122,59 @@ function StatTile({
   return (
     <motion.div
       variants={tileVariants}
-      whileHover={{ y: -3 }}
+      whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 400, damping: 26 }}
       className={`stat-tile bg-gradient-to-br ${t.bg}`}
     >
-      <div className="stat-tile-row">
-        <div className={`stat-tile-icon ${t.iconBg} ${t.iconColor}`}>
-          {progress !== undefined ? (
-            <svg
-              viewBox="0 0 36 36"
-              className="absolute inset-0 -rotate-90"
-              aria-hidden="true"
-            >
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                strokeWidth="2.5"
-                stroke="currentColor"
-                strokeOpacity="0.18"
-              />
-              <motion.circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                strokeWidth="2.5"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 15}
-                initial={{ strokeDashoffset: 2 * Math.PI * 15 }}
-                animate={{
-                  strokeDashoffset:
-                    2 * Math.PI * 15 * (1 - Math.max(0, Math.min(1, progress))),
-                }}
-                transition={{ duration: 1.05, ease: EASE_OUT_QUINT, delay: 0.15 }}
-              />
-            </svg>
-          ) : null}
-          <Icon className="w-5 h-5 relative" strokeWidth={2.2} />
-          {pulse ? <span className={`stat-tile-pulse ${t.ring}`} /> : null}
-        </div>
-        <span className="stat-tile-label">{label}</span>
+      {/* Number-first раскладка: маленький цветной icon-чип сверху,
+          крупное число (Onest, tabular), затем подпись и hint. Раньше
+          icon+label были в одной строке flex — на 80px ширине метка
+          обрезалась до «СЕГОДН». Теперь каждый элемент — своя строка
+          без конкуренции за горизонталь. */}
+      <div className={`stat-tile-icon ${t.iconBg} ${t.iconColor}`}>
+        {progress !== undefined ? (
+          <svg
+            viewBox="0 0 36 36"
+            className="absolute inset-0 -rotate-90"
+            aria-hidden="true"
+          >
+            <circle
+              cx="18"
+              cy="18"
+              r="15"
+              fill="none"
+              strokeWidth="2.5"
+              stroke="currentColor"
+              strokeOpacity="0.18"
+            />
+            <motion.circle
+              cx="18"
+              cy="18"
+              r="15"
+              fill="none"
+              strokeWidth="2.5"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 15}
+              initial={{ strokeDashoffset: 2 * Math.PI * 15 }}
+              animate={{
+                strokeDashoffset:
+                  2 * Math.PI * 15 * (1 - Math.max(0, Math.min(1, progress))),
+              }}
+              transition={{ duration: 1.05, ease: EASE_OUT_QUINT, delay: 0.15 }}
+            />
+          </svg>
+        ) : null}
+        <Icon className="stat-tile-icon-glyph relative" strokeWidth={2.2} />
+        {pulse ? <span className={`stat-tile-pulse ${t.ring}`} /> : null}
       </div>
       <div className="stat-tile-value">
         <AnimatedNumber value={value} />
         {suffix ? (
-          <span className="stat-tile-suffix"> {suffix}</span>
+          <span className="stat-tile-suffix">{suffix}</span>
         ) : null}
       </div>
+      <div className="stat-tile-label">{label}</div>
       {hint ? <div className="stat-tile-hint">{hint}</div> : null}
     </motion.div>
   );
