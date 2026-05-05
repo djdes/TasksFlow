@@ -47,6 +47,33 @@ app.use("/api", generalLimiter);
 // Применяем строгий лимит для авторизации
 app.use("/api/auth/login", authLimiter);
 
+// Security headers — без helmet (extra dep) делаем минимальный набор
+// руками. Опускаем CSP: anti-flash inline-script в client/index.html
+// требует точной настройки с nonce/hash, оставлено на будущее.
+//
+//   X-Content-Type-Options: nosniff  — браузер не «угадывает» MIME,
+//     html-payload загруженный как .png не выполнится
+//   X-Frame-Options: DENY            — anti-clickjacking; TasksFlow
+//     не embeds в iframe ни одной интеграции, безопасно жёстко
+//   Strict-Transport-Security        — после первого HTTPS-визита
+//     запрещает HTTP-fallback; защита от downgrade-атак (только
+//     production — на dev http://localhost ломалось бы)
+//   Referrer-Policy: same-origin    — Referer на внешние URL не
+//     утекает, чтобы task-title и /admin/users-id не попадали в
+//     логи третьих сторон
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "same-origin");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader(
+      "Strict-Transport-Security",
+      "max-age=15552000; includeSubDomains",
+    );
+  }
+  next();
+});
+
 // Настройка сессий.
 //
 // SESSION_SECRET ОБЯЗАТЕЛЕН в production. Раньше был fallback на
