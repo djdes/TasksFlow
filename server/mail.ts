@@ -94,14 +94,15 @@ export async function sendTaskCompletedEmail(
     }
 
     await transporter.sendMail(mailOptions);
+    // Operational visibility без PII: email адресата и имя сотрудника
+    // в production-логах = privacy-leak (Sentry/CloudWatch собирают
+    // их в централизованное хранилище). Достаточно photoCount + flag
+    // hasComment; для расследования инцидента есть task-id / worker-id
+    // в полнотекстовых логах /complete-route.
     const photoCount = mailOptions.attachments?.length || 0;
-    const hasComment = comment && comment.trim();
+    const hasComment = Boolean(comment && comment.trim());
     console.log(
-      `Email sent to ${toEmail}: ${taskTitle} - ${workerName}` +
-        (photoCount > 0
-          ? ` (with ${photoCount} photo${photoCount > 1 ? "s" : ""})`
-          : "") +
-        (hasComment ? " (with comment)" : "")
+      `[mail] sent (photos=${photoCount}, comment=${hasComment ? "yes" : "no"})`,
     );
   } catch (error) {
     console.error("Error sending email:", error);
