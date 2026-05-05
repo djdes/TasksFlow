@@ -455,8 +455,10 @@ export function TaskViewDialog({
           onClick={() => setIsPhotoFullscreen(false)}
         >
           <button
+            type="button"
             className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
             onClick={() => setIsPhotoFullscreen(false)}
+            aria-label="Закрыть"
           >
             <X className="w-6 h-6 text-white" />
           </button>
@@ -465,24 +467,28 @@ export function TaskViewDialog({
           {photoUrls.length > 1 && (
             <>
               <button
+                type="button"
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setFullscreenPhotoIndex(prev => prev > 0 ? prev - 1 : photoUrls.length - 1);
                 }}
+                aria-label="Предыдущее фото"
               >
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <button
+                type="button"
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setFullscreenPhotoIndex(prev => prev < photoUrls.length - 1 ? prev + 1 : 0);
                 }}
+                aria-label="Следующее фото"
               >
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -512,8 +518,10 @@ export function TaskViewDialog({
           onClick={() => setIsExamplePhotoFullscreen(false)}
         >
           <button
+            type="button"
             className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
             onClick={() => setIsExamplePhotoFullscreen(false)}
+            aria-label="Закрыть"
           >
             <X className="w-6 h-6 text-white" />
           </button>
