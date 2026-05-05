@@ -1957,7 +1957,17 @@ export async function registerRoutes(
       // снять admin-флаг с уже-существующего юзера (раньше это не работало
       // — endpoint просто возвращал 400 «уже существует»). Различаем
       // undefined (skip) vs false (demote).
-      const explicitDemote = input.isAdmin === false;
+      //
+      // ВАЖНО: insertUserSchema.isAdmin имеет .default(false) в Zod, поэтому
+      // input.isAdmin === false срабатывает и для отсутствующего поля
+      // (idempotent re-create) — это **демотило бы любого admin'а**, кого
+      // WeSetup случайно ре-провизионировал. Используем raw req.body для
+      // различения «явно false» vs «не передано». См. tests/api-user-provision
+      // → "does NOT demote when isAdmin is undefined".
+      const explicitDemote =
+        typeof req.body === "object" &&
+        req.body !== null &&
+        (req.body as { isAdmin?: unknown }).isAdmin === false;
 
       // Проверяем, существует ли пользователь
       const normalizedPhone = normalizePhone(input.phone);

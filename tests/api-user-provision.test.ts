@@ -210,4 +210,100 @@ describe("POST /api/users with API key", () => {
       companyId: 42,
     });
   });
+
+  // Regression для commit c4a3c41 (feat(users): demote-path в POST /api/users):
+  // explicit isAdmin:false на existing admin'е → setUserAdmin(false).
+  // Раньше POST /api/users просто возвращал 400 «уже существует» — WeSetup
+  // не мог снять admin-флаг с заведующей через тот же endpoint.
+  it("demotes existing admin when integration sends explicit isAdmin: false", async () => {
+    const apiKey = "tfk_test_demote_key";
+    const { app } = await buildApp();
+    const existingAdmin = {
+      id: 80,
+      phone: "+79990001125",
+      name: "Бывший управляющий",
+      isAdmin: true,
+      createdAt: 1,
+      bonusBalance: 0,
+      companyId: 42,
+    } satisfies User;
+
+    storage.getApiKeyByHash.mockResolvedValue({
+      id: 8,
+      name: "WeSetup",
+      keyHash: hashApiKey(apiKey),
+      keyPrefix: apiKey.slice(0, 12),
+      companyId: 42,
+      createdByUserId: 1,
+      createdAt: 1,
+      lastUsedAt: 0,
+      revokedAt: 0,
+    } satisfies ApiKey);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+    storage.getUserByPhone.mockResolvedValue(existingAdmin);
+    storage.setUserAdmin.mockResolvedValue({
+      ...existingAdmin,
+      isAdmin: false,
+    } satisfies User);
+
+    const response = await request(app)
+      .post("/api/users")
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({
+        phone: "+79990001125",
+        name: "Бывший управляющий",
+        isAdmin: false,
+      });
+
+    expect(response.status).toBe(200);
+    expect(storage.setUserAdmin).toHaveBeenCalledWith(80, false);
+    expect(response.body).toMatchObject({
+      id: 80,
+      isAdmin: false,
+    });
+  });
+
+  it("does NOT demote when isAdmin is undefined (skip-сигнал, не explicit false)", async () => {
+    // Различение undefined vs false — критично. WeSetup может прислать
+    // payload без isAdmin поля при обычном position-update, и это НЕ
+    // должно снимать admin-флаг.
+    const apiKey = "tfk_test_no_demote_key";
+    const { app } = await buildApp();
+    const existingAdmin = {
+      id: 81,
+      phone: "+79990001126",
+      name: "Управляющий",
+      isAdmin: true,
+      createdAt: 1,
+      bonusBalance: 0,
+      companyId: 42,
+    } satisfies User;
+
+    storage.getApiKeyByHash.mockResolvedValue({
+      id: 9,
+      name: "WeSetup",
+      keyHash: hashApiKey(apiKey),
+      keyPrefix: apiKey.slice(0, 12),
+      companyId: 42,
+      createdByUserId: 1,
+      createdAt: 1,
+      lastUsedAt: 0,
+      revokedAt: 0,
+    } satisfies ApiKey);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+    storage.getUserByPhone.mockResolvedValue(existingAdmin);
+
+    const response = await request(app)
+      .post("/api/users")
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({
+        phone: "+79990001126",
+        name: "Управляющий",
+        // НЕТ isAdmin поля — просто idempotent re-create
+      });
+
+    // Без isAdmin — обычный «уже существует» path, без demote.
+    expect(storage.setUserAdmin).not.toHaveBeenCalled();
+    expect(response.status).toBe(400);
+  });
 });
