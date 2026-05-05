@@ -21,6 +21,16 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       <Input
         ref={ref}
         type="tel"
+        // type="tel" уже даёт numeric keyboard на iOS/Android, но
+        // inputMode дублирует на случай если браузер игнорирует type
+        // (некоторые Android-WebView). autoComplete=«tel» включает
+        // autofill из системных контактов — воркер с сохранённым в
+        // Google Account телефоном получит быстрый tap-to-fill вместо
+        // 11 нажатий каждый раз. enterKeyHint меняет лейбл клавиши
+        // Enter на «Go», подталкивая к отправке формы.
+        inputMode="tel"
+        autoComplete="tel"
+        enterKeyHint="go"
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={
