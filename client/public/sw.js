@@ -3,7 +3,11 @@
  * Обеспечивает оффлайн работу и кеширование
  */
 
-const CACHE_NAME = "tasksflow-v2";
+// v3: не кэшируем /api/* в CacheStorage — раньше каждый успешный ответ
+// складывался в кэш с session cookie. После logout и login другого юзера
+// на том же устройстве offline-fallback показывал данные предыдущего
+// юзера. Multi-tenant + общее устройство (планшет в магазине) = утечка.
+const CACHE_NAME = "tasksflow-v3";
 // Не кешируем "/" и "/dashboard" — это HTML-страницы, ссылающиеся на хешированные
 // /assets/index-*.js. Если закэшировать старый index.html, после нового деплоя
 // старый bundle уже не существует на сервере и nginx-fallback отдаёт HTML с
@@ -67,18 +71,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // /api/* — только сеть, без CacheStorage. Если offline — пусть TanStack
+  // Query сам обработает retry/error UX. Раньше делали Network First с
+  // cache.put в fallback, но это утечка приватных данных между юзерами
+  // одного устройства (см. комментарий к CACHE_NAME).
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
     return;
   }
 
