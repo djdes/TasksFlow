@@ -532,16 +532,25 @@
      горизонталь. Подпись больше не truncate'ится до «СЕГОДН». */
   .stat-hero {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 14px;
     align-items: stretch;
   }
+  /* flex-basis 92px: 4-5 плиток на iPhone SE (375px, .app-content
+     px-4 → 343px usable) перестают помещаться в один ряд и сами
+     обернутся в 2 ряда. До этого .stat-tile имел overflow:hidden
+     и тихо клипал «5000₽», «100+ дней стрика», «100+ задач» —
+     номера обрезались на правом крае без видимой ошибки.
+     На широких viewport'ах (≥720px ниже) flex-basis сбрасываем,
+     чтобы плитки опять делили ширину поровну. */
   .stat-hero > * {
-    flex: 1 1 0;
+    flex: 1 1 92px;
     min-width: 0;
   }
   @media (min-width: 720px) {
-    .stat-hero { gap: 12px; margin-bottom: 18px; }
+    .stat-hero { gap: 12px; margin-bottom: 18px; flex-wrap: nowrap; }
+    .stat-hero > * { flex: 1 1 0; }
   }
 
   .stat-tile {
