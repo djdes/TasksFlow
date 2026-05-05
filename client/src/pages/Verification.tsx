@@ -202,6 +202,11 @@ export default function VerificationPage() {
                           onChange={(e) => setRejectReason(e.target.value)}
                           placeholder="Причина отказа (увидит сотрудник)"
                           className="verify-row-reject-input"
+                          // Сервер всё равно cap'ает до 1000 (см. routes.ts
+                          // /verify endpoint), но без maxLength юзер может
+                          // ввести 5000 символов и сервер тихо обрежет —
+                          // часть его текста просто пропадёт.
+                          maxLength={1000}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleConfirmReject(task);
                             if (e.key === "Escape") {
