@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { MySqlSessionStore } from "./session-store";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
@@ -15,9 +15,6 @@ import { runSchemaSelfCheck } from "./schema-self-check";
 
 const app = express();
 const httpServer = createServer(app);
-
-// Настройка хранилища сессий
-const MemoryStore = createMemoryStore(session);
 
 // Trust proxy for rate limiting behind nginx/apache
 app.set("trust proxy", 1);
@@ -73,9 +70,16 @@ app.use(
     secret: sessionSecret || "dev-only-fallback-do-not-use-in-prod",
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000, // Очистка просроченных сессий каждые 24 часа
-    }),
+    // MySQL store (table `sessions`) — переживает рестарты сервера.
+    // Раньше был MemoryStore, и каждый деплой = всех вышибало.
+    // См. server/session-store.ts комментарий.
+    store: new MySqlSessionStore(),
+    // rolling: true — каждый запрос продлевает cookie expires.
+    // Активный юзер не вылетит через 30 дней с момента ПЕРВОГО входа,
+    // он вылетит только если 30 дней ничего не делал. Раньше без
+    // rolling cookie экспайрилась ровно через 30 дней даже при
+    // ежедневном использовании.
+    rolling: true,
     cookie: {
       secure: process.env.NODE_ENV === "production", // HTTPS в production
       httpOnly: true,

@@ -241,6 +241,25 @@ export const apiKeys = mysqlTable("api_keys", {
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
 
+// Сессии — раньше жили в MemoryStore (in-process), и при каждом
+// рестарте сервера (deploy / crash / scaling) все логины теряются.
+// Жалоба владельца 2026-05-05 «постоянно вылетает с акка».
+//
+// Колонки:
+//   sid     — express-session id (≤128 символов, обычно 32-байтный b64)
+//   expires — unix-секунды истечения. Cron подчищает row'ы где
+//             expires < NOW() (см. session-store.ts)
+//   data    — JSON-сериализованная session.cookie + req.session
+//             поля (userId и т.п.). MEDIUMTEXT хватает на 16MB.
+export const sessions = mysqlTable("sessions", {
+  sid: varchar("sid", { length: 128 }).primaryKey(),
+  expires: int("expires").notNull(),
+  data: text("data").notNull(),
+});
+
+export type SessionRow = typeof sessions.$inferSelect;
+export type InsertSessionRow = typeof sessions.$inferInsert;
+
 // Очередь повторных доставок webhook'ов в WeSetup. Когда таск
 // закрывается / открывается обратно, TasksFlow отправляет POST
 // /api/integrations/tasksflow/complete на WeSetup. Если WeSetup
