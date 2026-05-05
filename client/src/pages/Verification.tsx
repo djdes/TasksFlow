@@ -17,6 +17,7 @@ import {
 } from "@/hooks/use-verification-queue";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import type { Task } from "@shared/schema";
 
 /**
@@ -42,6 +43,7 @@ export default function VerificationPage() {
   const { data: tasks = [], isLoading } = useAwaitingVerification();
   const { data: users = [] } = useUsers();
   const verifyMut = useVerifyTask();
+  const { toast } = useToast();
   const [rejectingTaskId, setRejectingTaskId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -73,16 +75,21 @@ export default function VerificationPage() {
     try {
       await verifyMut.mutateAsync({ taskId: task.id, decision: "approve" });
     } catch (err) {
-      alert(
-        "Не удалось принять: " +
-          (err instanceof Error ? err.message : "ошибка"),
-      );
+      toast({
+        title: "Не удалось принять",
+        description: err instanceof Error ? err.message : "Ошибка",
+        variant: "destructive",
+      });
     }
   }
 
   async function handleConfirmReject(task: Task) {
     if (!rejectReason.trim()) {
-      alert("Укажите причину");
+      toast({
+        title: "Укажите причину",
+        description: "Сотрудник увидит её и поймёт что исправить",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -94,10 +101,11 @@ export default function VerificationPage() {
       setRejectingTaskId(null);
       setRejectReason("");
     } catch (err) {
-      alert(
-        "Не удалось отклонить: " +
-          (err instanceof Error ? err.message : "ошибка"),
-      );
+      toast({
+        title: "Не удалось отклонить",
+        description: err instanceof Error ? err.message : "Ошибка",
+        variant: "destructive",
+      });
     }
   }
 
