@@ -35,8 +35,9 @@ export const logger = pino({
   }),
 });
 
-// Создаем дочерние логгеры для разных модулей
+// Дочерний logger с module-меткой — для HTTP request log'ов в
+// server/index.ts. Раньше были также dbLogger/authLogger/taskLogger,
+// но они никогда не использовались (ts-prune подтвердил dead). Если
+// понадобится в будущем — добавить child заново. Лучше явно создать
+// при первом use, чем держать dead exports.
 export const httpLogger = logger.child({ module: "http" });
-export const dbLogger = logger.child({ module: "db" });
-export const authLogger = logger.child({ module: "auth" });
-export const taskLogger = logger.child({ module: "task" });
