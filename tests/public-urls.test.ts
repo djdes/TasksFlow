@@ -49,6 +49,63 @@ describe("public URL helpers", () => {
     ).toBe("https://tasksflow.ru");
   });
 
+  // ===== Host-header injection regression (тик 16) =====
+  // Раньше getPublicTasksflowBaseUrl без env var доверял Origin /
+  // X-Forwarded-Host / Host headers — все контролируемы клиентом.
+  // Атакующий слал `Host: evil.com` и WeSetup отдавал fill-link с
+  // ?return=https://evil.com/dashboard → open redirect через WeSetup.
+
+  it("(тик 16) ignores attacker's X-Forwarded-Host in production", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.TASKSFLOW_PUBLIC_URL;
+
+    // attacker шлёт `X-Forwarded-Host: evil.com` в production
+    expect(
+      getPublicTasksflowBaseUrl(
+        req({
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "evil.com",
+        })
+      )
+    ).toBe("https://tasksflow.ru"); // hardcoded fallback, НЕ evil.com
+  });
+
+  it("(тик 16) ignores attacker's Host header in production", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.TASKSFLOW_PUBLIC_URL;
+
+    expect(
+      getPublicTasksflowBaseUrl(req({ host: "evil.com" }))
+    ).toBe("https://tasksflow.ru");
+  });
+
+  it("(тик 16) ignores attacker's Origin header in production", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.TASKSFLOW_PUBLIC_URL;
+
+    expect(
+      getPublicTasksflowBaseUrl(req({ origin: "https://evil.com" }))
+    ).toBe("https://tasksflow.ru");
+  });
+
+  it("(тик 16) env var overrides everything in production", () => {
+    process.env.NODE_ENV = "production";
+    process.env.TASKSFLOW_PUBLIC_URL = "https://staging.tasksflow.ru";
+
+    expect(
+      getPublicTasksflowBaseUrl(req({ host: "evil.com" }))
+    ).toBe("https://staging.tasksflow.ru");
+  });
+
+  it("(тик 16) in dev, headers ARE used (для localhost flexibility)", () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.TASKSFLOW_PUBLIC_URL;
+
+    expect(
+      getPublicTasksflowBaseUrl(req({ host: "localhost:5001" }))
+    ).toBe("http://localhost:5001");
+  });
+
   it("rewrites localhost WeSetup fill URLs to the public domain in production", () => {
     process.env.NODE_ENV = "production";
     delete process.env.WESETUP_PUBLIC_URL;
