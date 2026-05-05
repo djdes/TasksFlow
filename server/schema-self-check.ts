@@ -46,6 +46,15 @@ const VERIFICATION_COLUMNS: ColumnSpec[] = [
     name: "reject_reason",
     ddl: "ALTER TABLE tasks ADD COLUMN reject_reason TEXT NULL",
   },
+  {
+    // Сохранённый JSON-payload от /api/wesetup/complete-with-values
+    // когда у задачи есть verifier_worker_id — звонок в WeSetup
+    // откладывается до approve, чтобы заведующая могла отклонить
+    // ДО фактической записи в журнал WeSetup. См. routes.ts
+    // proxy /api/wesetup/complete-with-values + verify-handler.
+    name: "submitted_values",
+    ddl: "ALTER TABLE tasks ADD COLUMN submitted_values TEXT NULL",
+  },
 ];
 
 const VERIFICATION_INDEXES: ColumnSpec[] = [

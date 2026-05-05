@@ -11,7 +11,9 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
 import { isPublicHttpsUrl } from "./url-allowlist";
-import { registerCompanySchema, loginSchema } from "@shared/schema";
+import { registerCompanySchema, loginSchema, tasks } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 import {
   encryptApiKey,
@@ -1702,7 +1704,23 @@ export async function registerRoutes(
         // WeSetup-mirror через webhook-queue (тот же путь что обычный
         // /complete на journal-bound задаче). Если упстрим лежит —
         // worker ретраит.
+        //
+        // Если у задачи есть submittedValues (продавец заполнил форму
+        // через /api/wesetup/complete-with-values, payload отложен до
+        // approve), отправляем те значения в WeSetup. Иначе — пустой
+        // values как для обычной /complete-задачи.
         if (task.journalLink) {
+          let savedValues: Record<string, unknown> = {};
+          if (task.submittedValues) {
+            try {
+              const parsed = JSON.parse(task.submittedValues);
+              if (parsed && typeof parsed === "object") {
+                savedValues = parsed as Record<string, unknown>;
+              }
+            } catch {
+              /* corrupted JSON — отправим пустой values, лучше чем 500 */
+            }
+          }
           try {
             const target = await resolveWesetupTarget(req);
             if (!("error" in target)) {
@@ -1712,7 +1730,7 @@ export async function registerRoutes(
                 eventType: "complete",
                 targetUrl: `${target.baseUrl}/api/integrations/tasksflow/complete`,
                 apiKey: target.key,
-                payload: { taskId, isCompleted: true, values: {} },
+                payload: { taskId, isCompleted: true, values: savedValues },
               });
             }
           } catch (err) {
@@ -1720,6 +1738,14 @@ export async function registerRoutes(
               "[verify-approve] WeSetup mirror enqueue failed (non-fatal)",
               err instanceof Error ? err.message : err,
             );
+          }
+          // Очищаем submittedValues — они уже в WeSetup-журнале.
+          if (task.submittedValues) {
+            await db
+              .update(tasks)
+              .set({ submittedValues: null })
+              .where(eq(tasks.id, taskId))
+              .catch(() => null);
           }
         }
         const fresh = await storage.getTask(taskId);
@@ -1735,6 +1761,16 @@ export async function registerRoutes(
       if (!ok) {
         const fresh = await storage.getTask(taskId);
         return res.json(fresh ?? task);
+      }
+      // Чистим submittedValues — задача отклонена, продавец будет
+      // заполнять форму заново. Без этого при повторном /complete-with-
+      // values старые значения «застряли» бы в submitted_values.
+      if (task.submittedValues) {
+        await db
+          .update(tasks)
+          .set({ submittedValues: null })
+          .where(eq(tasks.id, taskId))
+          .catch(() => null);
       }
       const fresh = await storage.getTask(taskId);
       return res.json(fresh ?? task);
@@ -3121,12 +3157,67 @@ export async function registerRoutes(
       return res.status(500).json({ message: "Ошибка проверки прав" });
     }
 
+    // Двухстадийная верификация для journal-задач.
+    // Раньше /complete-with-values сразу:
+    //   1) звонил WeSetup → applyRemoteCompletion записал в журнал
+    //   2) transitionTaskToCompleted локально → isCompleted=true
+    // — обходил submitForVerification, заведующая не видела задачу.
+    //
+    // Теперь если task.verifierWorkerId set + не self + isCompleted=true:
+    // сохраняем JSON-payload в submitted_values, делаем submitForVerification,
+    // НЕ ЗВОНИМ в WeSetup. Approve-handler позже сам отправит данные
+    // в журнал. Это позволяет заведующей отклонить запись ДО того
+    // как она попадёт в журнал WeSetup.
+    const taskBeforeAny = await storage.getTask(taskId);
+    const desired = Boolean(isCompleted ?? true);
+    const meId = req.session?.userId;
+    const requiresVerification =
+      desired &&
+      taskBeforeAny &&
+      typeof taskBeforeAny.verifierWorkerId === "number" &&
+      taskBeforeAny.verifierWorkerId !== meId;
+
+    if (requiresVerification) {
+      try {
+        // Сохраняем payload для будущего approve. Локально transition
+        // в submitted (verification_status) — задача появится в очереди
+        // у заведующей.
+        await db
+          .update(tasks)
+          .set({ submittedValues: JSON.stringify(values ?? {}) })
+          .where(eq(tasks.id, taskId));
+        const submitted = await storage.submitForVerification(taskId);
+        if (!submitted) {
+          // Concurrent submit или статус не позволяет (approved/already
+          // submitted). Возвращаем текущий стейт — клиент рефрешит UI.
+          const fresh = await storage.getTask(taskId);
+          return res.status(200).json({
+            message: "Задача уже в очереди на проверку",
+            task: fresh,
+            verificationPending: true,
+          });
+        }
+        return res.status(200).json({
+          message: "Отправлено на проверку заведующей",
+          verificationPending: true,
+        });
+      } catch (err) {
+        console.error(
+          "[wesetup-proxy] submit-for-verification failed",
+          err,
+        );
+        return res.status(500).json({
+          message: "Не удалось отправить на проверку",
+        });
+      }
+    }
+
     const completeJournalLinkIntegrationId = getJournalLinkIntegrationId(
-      (await storage.getTask(taskId))?.journalLink
+      taskBeforeAny?.journalLink
     );
     const completePayload = {
       taskId,
-      isCompleted: Boolean(isCompleted ?? true),
+      isCompleted: desired,
       values: values ?? {},
       ...(completeJournalLinkIntegrationId
         ? { integrationId: completeJournalLinkIntegrationId }

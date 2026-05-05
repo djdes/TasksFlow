@@ -105,6 +105,12 @@ export const tasks = mysqlTable("tasks", {
   verifiedAt: int("verified_at"),
   // Текст причины при rejected — показывается сотруднику в карточке.
   rejectReason: text("reject_reason"),
+  // JSON-сохранённый payload form values от продавца, ожидающий
+  // одобрения заведующей. Звонок в WeSetup `/complete` откладывается
+  // до approve — заведующая может отклонить ДО фактической записи в
+  // журнал WeSetup. NULL = legacy-задача или verification не нужен.
+  // См. routes.ts /api/wesetup/complete-with-values + verify-handler.
+  submittedValues: text("submitted_values"),
 });
 
 export const insertUserSchema = z.object({
