@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useStreak } from "@/hooks/use-streak";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -18,6 +19,8 @@ import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationQueue } from "@/components/VerificationQueue";
 import { GreetingBanner } from "@/components/GreetingBanner";
 import { TipOfTheDay } from "@/components/TipOfTheDay";
+import { StreakAchievement } from "@/components/StreakAchievement";
+import { OnboardingTour } from "@/components/OnboardingTour";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -89,6 +92,12 @@ export default function Dashboard() {
   const [journalTaskId, setJournalTaskId] = useState<number | null>(null);
   const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
+  // Quick-chip фильтры: каждый — boolean toggle. Несколько можно
+  // включить одновременно (логика AND). Хранить нечего — стейт
+  // живёт пока открыт dashboard.
+  const [chipPhoto, setChipPhoto] = useState(false);
+  const [chipBonus, setChipBonus] = useState(false);
+  const [chipJournal, setChipJournal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   // Таб «Мои задачи» / «Общие задачи смены» / «Все».
   // - personal: задачи лично сотруднику (закрепленные за ним)
@@ -108,6 +117,9 @@ export default function Dashboard() {
   // включён, чтобы сразу видно было «у Иванова 3 невыполненных,
   // у Петрова 5».
   const [groupByWorker, setGroupByWorker] = useState(true);
+  // Ref на search input для keyboard shortcut «/». Передаётся через
+  // ref-callback в Input.
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   // Toggle для звука/вибрации — состояние отражает localStorage. Меняется
   // через переключатель в меню. Ре-синхронизируется при открытии меню
   // на случай если пользователь поменял настройку на другом устройстве.
@@ -237,25 +249,37 @@ export default function Dashboard() {
     return true;
   };
 
-  const baseFilteredTasks = user?.isAdmin
-    ? tasks
-        .filter(task => {
-          if (filterByUserId === "all") return true;
-          if (filterByUserId === "unassigned") return !task.workerId;
-          return task.workerId === parseInt(filterByUserId);
-        })
-        .filter(task => {
-          if (filterByCategory === "all") return true;
-          if (filterByCategory === "uncategorized") return !(task as any).category;
-          return (task as any).category === filterByCategory;
-        })
-    : tasks
-        .filter(task => task.workerId === user?.id && isTaskVisibleToday(task))
-        .filter(task => {
-          if (filterByCategory === "all") return true;
-          if (filterByCategory === "uncategorized") return !(task as any).category;
-          return (task as any).category === filterByCategory;
-        });
+  // Quick-chip filter — применяется поверх категории/исполнителя.
+  // AND-семантика: «С премией» + «Журнальные» = только journal-задачи
+  // с price > 0.
+  const passesChips = (task: typeof tasks[0]): boolean => {
+    if (chipPhoto && !task.requiresPhoto) return false;
+    if (chipBonus && (!task.price || task.price <= 0)) return false;
+    if (chipJournal && !((task as { journalLink?: string | null }).journalLink)) return false;
+    return true;
+  };
+
+  const baseFilteredTasks = (
+    user?.isAdmin
+      ? tasks
+          .filter(task => {
+            if (filterByUserId === "all") return true;
+            if (filterByUserId === "unassigned") return !task.workerId;
+            return task.workerId === parseInt(filterByUserId);
+          })
+          .filter(task => {
+            if (filterByCategory === "all") return true;
+            if (filterByCategory === "uncategorized") return !(task as any).category;
+            return (task as any).category === filterByCategory;
+          })
+      : tasks
+          .filter(task => task.workerId === user?.id && isTaskVisibleToday(task))
+          .filter(task => {
+            if (filterByCategory === "all") return true;
+            if (filterByCategory === "uncategorized") return !(task as any).category;
+            return (task as any).category === filterByCategory;
+          })
+  ).filter(passesChips);
 
   // Подсчёт задач по scope ДО применения фильтра — чтобы табы
   // показывали реальное число (а не отфильтрованное по выбранному
@@ -300,6 +324,25 @@ export default function Dashboard() {
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
+  // Keyboard shortcuts: /, n, ?, g h. Дёшево — глобальный listener.
+  useKeyboardShortcuts({
+    onFocusSearch: () => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    },
+    onNewTask: () => {
+      // Кнопка «новая задача» доступна только админу/руководителю,
+      // воркеру эту команду игнорируем (canManageTasks ниже считается
+      // от user'а — но переменная в этом scope ещё не объявлена,
+      // делаем прямую проверку через user).
+      if (user?.isAdmin) {
+        setLocation("/tasks/new");
+      }
+    },
+    onHelp: () => setLocation("/help"),
+    onDashboard: () => setLocation("/dashboard"),
+  });
+
   const ownCompletedToday =
     !canManageTasks &&
     tasks.some(
@@ -807,9 +850,10 @@ export default function Dashboard() {
             <div className="relative w-full flex-1 sm:min-w-[220px] sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск задач"
+                placeholder="Поиск задач (нажми / для фокуса)"
                 className="h-10 w-full rounded-xl border-input bg-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
               />
             </div>
@@ -851,6 +895,52 @@ export default function Dashboard() {
             )}
           </div>
         )}
+
+        {/* Quick filter chips — быстрые тумблеры поверх стандартных
+            фильтров. Скрываем когда задач слишком мало (меньше 4)
+            чтобы не плодить кнопки на пустом списке. */}
+        {tasks.length >= 4 ? (
+          <div className="quick-chips">
+            <button
+              type="button"
+              className={`quick-chip ${chipPhoto ? "quick-chip-active" : ""}`}
+              onClick={() => setChipPhoto((v) => !v)}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>С фото</span>
+            </button>
+            <button
+              type="button"
+              className={`quick-chip ${chipBonus ? "quick-chip-active" : ""}`}
+              onClick={() => setChipBonus((v) => !v)}
+            >
+              <Coins className="w-3.5 h-3.5" />
+              <span>С премией</span>
+            </button>
+            <button
+              type="button"
+              className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
+              onClick={() => setChipJournal((v) => !v)}
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>Журнальные</span>
+            </button>
+            {chipPhoto || chipBonus || chipJournal ? (
+              <button
+                type="button"
+                className="quick-chip quick-chip-reset"
+                onClick={() => {
+                  setChipPhoto(false);
+                  setChipBonus(false);
+                  setChipJournal(false);
+                }}
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Сбросить</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Task List */}
         {filteredTasks.length === 0 ? (
@@ -1041,6 +1131,19 @@ export default function Dashboard() {
           onOpenChange={setIsDuplicateDialogOpen}
         />
       )}
+
+      {/* Streak achievement modal — открывается один раз при достижении
+          milestone (7/14/30/60/100/200 дней). Показ воркеру независимо
+          от наличия задач сегодня. */}
+      {!canManageTasks ? (
+        <StreakAchievement userId={user?.id ?? null} streakDays={streakDays} />
+      ) : null}
+
+      {/* Onboarding tour — 4 шага для впервые-залогиненного воркера.
+          После dismiss флаг tf_onboarded_v1=true в localStorage,
+          повторно не показывается. Можно вернуть через /help (там
+          вся та же информация). */}
+      {!canManageTasks ? <OnboardingTour /> : null}
 
       {/* Bonus Info Dialog */}
       <Dialog open={isBonusInfoOpen} onOpenChange={setIsBonusInfoOpen}>

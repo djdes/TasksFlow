@@ -1371,6 +1371,31 @@
            hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100;
   }
 
+  /* Quick filter chips — быстрые тумблеры под filters-bar:
+     С фото / С премией / Журнальные / Сбросить. AND-семантика
+     с обычными фильтрами. */
+  .quick-chips {
+    @apply flex flex-wrap items-center gap-2 mb-3 mt-1;
+  }
+  .quick-chip {
+    @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-full
+           text-xs font-medium border border-border bg-background
+           text-muted-foreground hover:text-foreground hover:border-foreground/40
+           transition-all active:scale-95;
+  }
+  .quick-chip-active {
+    @apply bg-primary/10 text-primary border-primary/40 hover:text-primary
+           hover:border-primary/60;
+  }
+  .quick-chip-reset {
+    @apply text-rose-600 hover:text-rose-700 border-rose-200 hover:border-rose-300;
+  }
+  .dark .quick-chip-active {
+    background-color: rgba(168, 179, 255, 0.15);
+    color: #a8b3ff;
+    border-color: rgba(168, 179, 255, 0.4);
+  }
+
   /* Search highlight — подсветка совпадений в task.title когда юзер
      вводит запрос в фильтр. Жёлтый фон с мягкой round'кой, не выглядит
      как старые-школьные `<mark>`. */
