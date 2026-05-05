@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Award, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Portal } from "@/components/Portal";
+import { plural } from "@/lib/i18n";
 
 /**
  * Модал «Поздравляем!» при достижении milestone-стрика. Срабатывает
@@ -171,7 +172,7 @@ export function StreakAchievement({ userId, streakDays }: Props) {
                     Стрик
                   </div>
                   <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {streakDays} {streakDays === 1 ? "день" : streakDays < 5 ? "дня" : "дней"}
+                    {streakDays} {plural(streakDays, "день", "дня", "дней")}
                   </div>
                 </div>
               </div>
