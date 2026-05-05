@@ -5,6 +5,7 @@ import {
   useVerifyTask,
 } from "@/hooks/use-verification-queue";
 import { useUsers } from "@/hooks/use-users";
+import { useToast } from "@/hooks/use-toast";
 import type { Task } from "@shared/schema";
 
 /**
@@ -21,6 +22,7 @@ export function VerificationQueue() {
   const { data: tasks = [], isLoading } = useAwaitingVerification();
   const { data: users = [] } = useUsers();
   const verifyMut = useVerifyTask();
+  const { toast } = useToast();
   const [rejectingTaskId, setRejectingTaskId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -37,16 +39,21 @@ export function VerificationQueue() {
     try {
       await verifyMut.mutateAsync({ taskId: task.id, decision: "approve" });
     } catch (err) {
-      alert(
-        "Не удалось принять: " +
-          (err instanceof Error ? err.message : "ошибка"),
-      );
+      toast({
+        title: "Не удалось принять",
+        description: err instanceof Error ? err.message : "Ошибка",
+        variant: "destructive",
+      });
     }
   }
 
   async function handleConfirmReject(task: Task) {
     if (!rejectReason.trim()) {
-      alert("Укажите причину");
+      toast({
+        title: "Укажите причину",
+        description: "Сотрудник увидит её и поймёт что исправить",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -58,10 +65,11 @@ export function VerificationQueue() {
       setRejectingTaskId(null);
       setRejectReason("");
     } catch (err) {
-      alert(
-        "Не удалось отклонить: " +
-          (err instanceof Error ? err.message : "ошибка"),
-      );
+      toast({
+        title: "Не удалось отклонить",
+        description: err instanceof Error ? err.message : "Ошибка",
+        variant: "destructive",
+      });
     }
   }
 
@@ -99,6 +107,15 @@ export function VerificationQueue() {
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="Причина отказа"
                     className="verification-queue-reject-input"
+                    // Cap до 1000 — server cap для reason в /verify endpoint.
+                    maxLength={1000}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleConfirmReject(task);
+                      if (e.key === "Escape") {
+                        setRejectingTaskId(null);
+                        setRejectReason("");
+                      }
+                    }}
                   />
                   <button
                     type="button"
