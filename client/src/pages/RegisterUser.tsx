@@ -193,6 +193,8 @@ export default function RegisterUser() {
                       placeholder="Иван Иванов"
                       className="h-14 text-lg border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
                       maxLength={255}
+                      autoComplete="name"
+                      autoCapitalize="words"
                       {...field}
                     />
                   </FormControl>

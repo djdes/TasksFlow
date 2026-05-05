@@ -335,6 +335,8 @@ export default function CompanySettings() {
                   placeholder="admin@company.ru"
                   className="h-12"
                   maxLength={255}
+                  autoComplete="email"
+                  inputMode="email"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   На этот адрес будут приходить уведомления о выполненных задачах с фото
