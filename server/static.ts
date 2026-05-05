@@ -10,13 +10,21 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Статические файлы с хешами (js, css) - кэшируем на год
-  // Файлы без хеша - не кэшируем
+  // Статические файлы с хешами Vite (assets/*) — кэшируем на год immutable.
+  // HTML — не кэшируем (новый bundle ссылается на новые хеши, старый html
+  // надо обновлять). Иначе — стандартный 1y без immutable.
   app.use(express.static(distPath, {
     maxAge: '1y',
     setHeaders: (res, filePath) => {
-      // Файлы с хешами в имени (index-ABC123.js) - кэш на год
-      if (/\.[0-9a-f]{8,}\.(js|css)$/i.test(filePath)) {
+      // Vite пишет хеши в base64url-варианте: index-Bh37p_Mr.js,
+      // CompanySettings-QVmoLW9d.js, B_Y-k1I5.js. Старая регулярка
+      // `\.[0-9a-f]{8,}\.(js|css)$` матчила только hex и пропускала
+      // все реальные хеши Vite — assets отдавались без `immutable`,
+      // браузер ревалидировал при каждом перезагрузе. Фикс: путь
+      // внутри /assets/ ⇒ immutable (Vite туда складывает только
+      // хешированные файлы).
+      const normalized = filePath.replace(/\\/g, '/');
+      if (normalized.includes('/assets/')) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       } else if (filePath.endsWith('.html')) {
         // HTML файлы - не кэшировать
