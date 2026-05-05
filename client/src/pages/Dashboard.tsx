@@ -94,12 +94,16 @@ export default function Dashboard() {
   // Separate dialog for journal-bound tasks — employee sees the
   // WeSetup-defined form instead of the plain «Выполнено» button.
   const [journalTaskId, setJournalTaskId] = useState<number | null>(null);
-  // Default: «только мои» для админа/руководителя. Раньше «all» —
-   // заведующая открывала dashboard и видела свалку из задач всех
-   // сотрудников включая чужие completed/submitted. Теперь стартуем
-   // с filter на свои задачи; «Все сотрудники» доступно через
-   // dropdown селектор.
-  const [filterByUserId, setFilterByUserId] = useState<string>("__self__");
+  // Default: «все сотрудники» — admin видит ВСЕ задачи орги. На
+  // отдельных секциях ниже («Мои задачи» / «Задачи сотрудников»)
+  // визуально разделено: что нужно сделать самой и что мониторишь
+  // у подчинённых. Submitted-задачи продолжают жить отдельно на
+  // /admin/verification, доступ через VerificationBanner.
+  // Раньше дефолтом было "__self__" — admin видел ТОЛЬКО свои, и
+  // приходилось кликать в dropdown чтобы посмотреть Иванова. Это
+  // оказалось неудобно: admin теряет контроль смены. Возвращаем "all"
+  // + добавляем визуальный split вместо плоского списка.
+  const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
   // Quick-chip фильтры: каждый — boolean toggle. Несколько можно
   // включить одновременно (логика AND). Хранить нечего — стейт
@@ -363,6 +367,25 @@ export default function Dashboard() {
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
+
+  // Visual split для admin: разделяем filteredTasks на «мои» (где
+  // admin сам — worker) и «чужие» (задачи подчинённых). Активно
+  // только когда выбран фильтр «Все сотрудники» — иначе пользователь
+  // явно сузил выборку и split не нужен. Voркер этого не видит —
+  // у него своя задачка одна на дашборде.
+  //
+  // Это решает «свалку» которую жаловалась заведующая (всё в одном
+  // длинном списке), но НЕ скрывает чужие задачи (оставляем admin
+  // полный контроль смены). Submitted-задачи всё равно живут
+  // отдельно на /admin/verification — баннер сверху.
+  const splitMineVsOthers =
+    canManageTasks && filterByUserId === "all" && Boolean(user?.id);
+  const tasksMine = splitMineVsOthers
+    ? filteredTasks.filter((t) => t.workerId === user!.id)
+    : filteredTasks;
+  const tasksOthers = splitMineVsOthers
+    ? filteredTasks.filter((t) => t.workerId !== user!.id)
+    : [];
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
@@ -1069,6 +1092,118 @@ export default function Dashboard() {
                 Как пользоваться
               </button>
             )}
+          </div>
+        ) : splitMineVsOthers ? (
+          // Admin + filter=all: рендерим ДВЕ секции с заголовками.
+          // Мои сверху (что заведующей нужно сделать самой), чужие
+          // снизу (надзор за подчинёнными). Каждая GroupedTaskList
+          // живёт сама по себе — может отдельно сворачиваться по
+          // worker'у, у каждой свой заголовок.
+          <div className="space-y-6">
+            <section className="space-y-2">
+              <div className="flex items-center justify-between gap-3 px-1">
+                <h2 className="text-[15px] font-semibold text-foreground">
+                  Мои задачи
+                  <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    {tasksMine.length}
+                  </span>
+                </h2>
+                <span className="text-[12px] text-muted-foreground">
+                  {tasksMine.length === 0
+                    ? "сегодня лично на тебе ничего"
+                    : "что нужно сделать самой"}
+                </span>
+              </div>
+              {tasksMine.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-[13px] text-muted-foreground">
+                  Лично на тебе сегодня задач нет — занимайся надзором ↓
+                </div>
+              ) : (
+                <GroupedTaskList
+                  activeTasks={tasksMine.filter((t) => !t.isCompleted)}
+                  completedTasks={tasksMine.filter(
+                    (t) =>
+                      Boolean(t.isCompleted) &&
+                      ((t as { claimedByWorkerId?: number | null })
+                        .claimedByWorkerId ?? null) === null
+                  )}
+                  claimedByOthersTasks={tasksMine.filter(
+                    (t) =>
+                      Boolean(t.isCompleted) &&
+                      ((t as { claimedByWorkerId?: number | null })
+                        .claimedByWorkerId ?? null) !== null
+                  )}
+                  isAdmin={canManageTasks}
+                  // Группировка по сотруднику в секции «мои» теряет смысл —
+                  // тут все задачи одного человека (текущего пользователя).
+                  groupByWorker={false}
+                  getUserInitials={getUserInitials}
+                  getUserName={getUserName}
+                  getUserShortName={getUserShortName}
+                  getUserPosition={getUserPosition}
+                  onTaskClick={handleTaskClick}
+                  onToggleComplete={toggleTaskComplete}
+                  onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
+                  onDuplicate={(task) => {
+                    setDuplicateTask(task);
+                    setIsDuplicateDialogOpen(true);
+                  }}
+                  onDelete={(id) => {
+                    if (confirm("Удалить задачу?")) deleteTask.mutate(id);
+                  }}
+                  searchQuery={searchQuery}
+                />
+              )}
+            </section>
+
+            {tasksOthers.length > 0 ? (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <h2 className="text-[15px] font-semibold text-foreground">
+                    Задачи сотрудников
+                    <span className="ml-2 inline-flex items-center rounded-full bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                      {tasksOthers.length}
+                    </span>
+                  </h2>
+                  <span className="text-[12px] text-muted-foreground">
+                    надзор за сменой
+                  </span>
+                </div>
+                <GroupedTaskList
+                  activeTasks={tasksOthers.filter((t) => !t.isCompleted)}
+                  completedTasks={tasksOthers.filter(
+                    (t) =>
+                      Boolean(t.isCompleted) &&
+                      ((t as { claimedByWorkerId?: number | null })
+                        .claimedByWorkerId ?? null) === null
+                  )}
+                  claimedByOthersTasks={tasksOthers.filter(
+                    (t) =>
+                      Boolean(t.isCompleted) &&
+                      ((t as { claimedByWorkerId?: number | null })
+                        .claimedByWorkerId ?? null) !== null
+                  )}
+                  isAdmin={canManageTasks}
+                  groupByWorker={groupByWorker}
+                  onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
+                  getUserInitials={getUserInitials}
+                  getUserName={getUserName}
+                  getUserShortName={getUserShortName}
+                  getUserPosition={getUserPosition}
+                  onTaskClick={handleTaskClick}
+                  onToggleComplete={toggleTaskComplete}
+                  onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
+                  onDuplicate={(task) => {
+                    setDuplicateTask(task);
+                    setIsDuplicateDialogOpen(true);
+                  }}
+                  onDelete={(id) => {
+                    if (confirm("Удалить задачу?")) deleteTask.mutate(id);
+                  }}
+                  searchQuery={searchQuery}
+                />
+              </section>
+            ) : null}
           </div>
         ) : (
           <>
