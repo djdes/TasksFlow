@@ -57,6 +57,27 @@ async function buildAll() {
     },
     minify: true,
     external: externals,
+    // server/vite.ts динамически импортируется только в dev
+    // (см. server/index.ts: `if (NODE_ENV === 'development') await
+    // import("./vite")`). esbuild всё равно затягивал его в bundle и
+    // вместе с ним — vite.config.ts с import.meta.dirname (что в CJS
+    // = empty, отсюда 5 warnings) и весь vite-плагин-стек. Маркируем
+    // server/vite.ts как external, чтобы он не попал в production
+    // bundle. В production файла нет, но dynamic import под флагом
+    // dev никогда не выполняется — безопасно.
+    plugins: [
+      {
+        name: "exclude-vite-bridge",
+        setup(b) {
+          b.onResolve({ filter: /^\.\/vite$/ }, (args) => {
+            if (args.importer.endsWith("server/index.ts") || args.importer.endsWith("server\\index.ts")) {
+              return { path: args.path, external: true };
+            }
+            return null;
+          });
+        },
+      },
+    ],
     logLevel: "info",
   });
 }
