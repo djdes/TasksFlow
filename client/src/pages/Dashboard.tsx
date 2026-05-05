@@ -625,15 +625,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Bonus balance for workers */}
+          {/* Bonus balance for workers — была <div onClick>, что
+              недоступно с клавиатуры и не объявляется screen-reader'ом
+              как нажимаемое. Меняем на <button>, чтобы VoiceOver/TalkBack
+              корректно произносили «кнопка, подробнее о премии», а
+              Tab/Enter работали для пользователей без мыши. */}
           {!user.isAdmin && (user as any).bonusBalance > 0 && (
-            <div
-              className="bonus-badge cursor-pointer"
+            <button
+              type="button"
+              className="bonus-badge"
               onClick={() => setIsBonusInfoOpen(true)}
+              aria-label="Подробнее о премии"
             >
               <Coins className="w-5 h-5 text-yellow-300" />
               <span className="bonus-badge-text">{(user as any).bonusBalance} ₽</span>
-            </div>
+            </button>
           )}
         </div>
 
