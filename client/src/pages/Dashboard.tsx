@@ -379,38 +379,82 @@ export default function Dashboard() {
   //    от worker'а — он терял из виду свои отправленные. Теперь
   //    остаются в отдельной секции, чтобы worker видел «вот эти
   //    задачи я уже сделал, ждут проверки».
-  const isSubmitted = (t: typeof tasks[0]) =>
+  // Дискриминатор «эта задача — на проверку у меня».
+  //
+  // В TasksFlow есть ДВА типа задач которые попадают в очередь
+  // верификации:
+  //
+  //   1. Verifier-summary task — отдельная задача, созданная WeSetup'ом
+  //      специально для verifier'а. journalLink.taskScope === "verifier"
+  //      или journalLink.kind начинается с "wesetup-verifier" (в зависимости
+  //      от версии). Title обычно «Проверить ...» или «Проверка · ...».
+  //      У неё workerId = ID заведующей (она исполнитель этой verifier-задачи).
+  //
+  //   2. Filler-task в submitted state — обычная задача сотрудника,
+  //      которую он нажал «готово», но ждёт apprоval. workerId = filler.
+  //      verificationStatus === "submitted".
+  //
+  // Раньше split смотрел ТОЛЬКО на verificationStatus. Verifier-summary
+  // задачи имеют verificationStatus=NULL и попадали в «Мои задачи» admin'а
+  // вперемешку с filler'ами — пользователь жаловался «всё вперемешку».
+  // Сейчас оба типа правильно ловятся.
+  function parseJournalLink(t: typeof tasks[0]): Record<string, unknown> | null {
+    const raw = (t as { journalLink?: string | null }).journalLink;
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  const isVerifierTask = (t: typeof tasks[0]): boolean => {
+    const link = parseJournalLink(t);
+    if (!link) return false;
+    if (link.taskScope === "verifier") return true;
+    const kind = typeof link.kind === "string" ? link.kind : "";
+    return kind.startsWith("wesetup-verifier");
+  };
+  const isSubmittedFiller = (t: typeof tasks[0]) =>
     (t as { verificationStatus?: string | null }).verificationStatus ===
     "submitted";
+  // «На проверке» — verifier-задача ИЛИ filler в submitted-статусе.
+  const isToVerify = (t: typeof tasks[0]) =>
+    isVerifierTask(t) || isSubmittedFiller(t);
 
-  // Split применяется ВСЕГДА для admin/manager и worker'а — две
-  // секции «Мои задачи» / «На проверке» всегда раздельно. Раньше
-  // ставили условие `filterByUserId === "all"`, и при смене фильтра
-  // split сворачивался обратно в плоский список — пользователь
-  // жаловался: «всё вперемешку, не понятно сколько мне делать».
-  // Теперь split включён всегда; если admin сузил filter (выбрал
-  // Иванов в dropdown) — обе секции отфильтруются по нему, в «Мои»
-  // ничего не попадёт (admin != Иванов), а в «На проверке» — только
-  // submitted Иванова. Это и есть желаемое поведение.
-  const splitForAdmin = canManageTasks && Boolean(user?.id);
-  const splitForWorker = !canManageTasks && Boolean(user?.id);
-  const splitActive = splitForAdmin || splitForWorker;
+  // Split применяется ВСЕГДА — два подпункта в «Сегодня»: «Мои задачи»
+  // (что лично делать) и «На проверке» (что верифицировать). Раньше
+  // условие на filter=all сворачивало split обратно в плоский список,
+  // а ещё раньше дискриминатор был неправильный — пользователь видел
+  // verifier-задачи вперемешку со своими собственными.
+  const splitActive = Boolean(user?.id);
 
-  // tasksMine: что лично пользователю сделать (НЕ submitted).
-  //   • admin: его worker-задачи (как воркер своей смены)
-  //   • worker: его задачи (default-фильтр уже их выбрал)
+  // tasksMine: что лично пользователю СДЕЛАТЬ (не на проверке).
+  //   • admin/manager: filler-задачи где workerId=я (она тоже worker
+  //     для каких-то задач смены).
+  //   • worker: его собственные задачи (filter уже сузил по workerId).
   const tasksMine = splitActive
     ? filteredTasks.filter(
-        (t) => t.workerId === user!.id && !isSubmitted(t)
+        (t) => t.workerId === user!.id && !isToVerify(t)
       )
     : filteredTasks;
-  // tasksToVerify: то что в очереди на проверку.
-  //   • admin: ЛЮБЫЕ submitted (он верификатор всей смены)
-  //   • worker: только СВОИ submitted (он их отправил)
+  // tasksToVerify: что в очереди на проверку.
+  //   • admin/manager: ВСЕ verifier-задачи (где admin worker) +
+  //     ЛЮБЫЕ submitted-filler от подчинённых.
+  //   • worker: только свои submitted-filler (отправил, ждёт вердикта).
+  //     Verifier-задач у обычного worker'а быть не должно (они только
+  //     у management), но для безопасности фильтруем по workerId.
   const tasksToVerify = splitActive
     ? filteredTasks.filter((t) => {
-        if (!isSubmitted(t)) return false;
-        return canManageTasks ? true : t.workerId === user!.id;
+        if (!isToVerify(t)) return false;
+        if (canManageTasks) {
+          // admin видит и свои verifier И чужие submitted
+          return isVerifierTask(t)
+            ? t.workerId === user!.id
+            : true;
+        }
+        // worker — только своё
+        return t.workerId === user!.id;
       })
     : [];
 
