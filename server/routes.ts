@@ -218,6 +218,24 @@ export async function registerRoutes(
   });
   app.use("/api/auth/login", authLimiter);
   app.use("/api/companies/register", authLimiter);
+
+  // Photo upload limiter — heavy endpoint (multer + diskStorage). Без
+  // отдельного лимита злоумышленник с одной сессии может через
+  // generalLimiter (1000/15min в server/index.ts) залить 1000×10MB =
+  // 10GB на диск и положить сервер.
+  // 60 загрузок за 15 минут на IP: воркер делает 5-15 фото в день,
+  // админ массово ставит example-photo на ~50 задач — оба укладываются.
+  const photoUploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      message: "Слишком много загрузок фото. Подождите 15 минут.",
+    },
+  });
+  app.use("/api/tasks/:id/photo", photoUploadLimiter);
+  app.use("/api/tasks/:id/example-photo", photoUploadLimiter);
   app.use("/api/users/register", authLimiter);
 
   // Auth
