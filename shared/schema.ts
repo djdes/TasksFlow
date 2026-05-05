@@ -171,7 +171,11 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   isRecurring: z.boolean().optional().default(true), // повторяющаяся задача
   price: z.number().min(0).optional().default(0), // стоимость выполнения в рублях
   category: z.string().max(100).nullable().optional(), // категория задачи
-  description: z.string().nullable().optional(), // описание задачи
+  // Описание — DB column TEXT (64KB max). Без zod cap юзер мог
+  // отправить 50KB описание; multi-tenant SaaS потенциально
+  // эксплойтнуть. 5000 символов — щедро для UX (~1 страница A4),
+  // одновременно блокирует abusive payloads.
+  description: z.string().max(5000, "Описание не должно превышать 5000 символов").nullable().optional(),
   // Опциональная привязка к строке журнала во внешней системе (WeSetup).
   // Хранится как stringified JSON; шейп описан в shared/journal-link.ts.
   journalLink: z.string().nullable().optional(),

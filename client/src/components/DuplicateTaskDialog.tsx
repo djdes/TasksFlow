@@ -299,6 +299,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                       placeholder="Подробное описание задачи..."
                       className="things-input min-h-[80px] resize-none"
                       rows={3}
+                      maxLength={5000}
                       {...field}
                     />
                   </FormControl>

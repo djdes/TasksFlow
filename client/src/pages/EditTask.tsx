@@ -359,6 +359,7 @@ export default function EditTask() {
                       placeholder="Подробное описание задачи..."
                       className="things-input min-h-[80px] resize-none"
                       rows={3}
+                      maxLength={5000}
                       {...field}
                     />
                   </FormControl>
