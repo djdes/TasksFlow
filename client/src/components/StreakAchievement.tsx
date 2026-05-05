@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Award, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Portal } from "@/components/Portal";
 
 /**
  * Модал «Поздравляем!» при достижении milestone-стрика. Срабатывает
@@ -104,6 +105,7 @@ export function StreakAchievement({ userId, streakDays }: Props) {
   }
 
   return (
+    <Portal>
     <AnimatePresence>
       {activeMilestone ? (
         <motion.div
@@ -187,5 +189,6 @@ export function StreakAchievement({ userId, streakDays }: Props) {
         </motion.div>
       ) : null}
     </AnimatePresence>
+    </Portal>
   );
 }

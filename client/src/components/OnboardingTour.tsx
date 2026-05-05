@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, X, ListChecks, Coins, HelpCircle, Sparkles } from "lucide-react";
+import { Portal } from "@/components/Portal";
 
 /**
  * Простой 4-шаговый onboarding для нового воркера. Не лезет в DOM
@@ -90,10 +91,11 @@ export function OnboardingTour() {
   const progress = ((step + 1) / STEPS.length) * 100;
 
   return (
+    <Portal>
     <AnimatePresence mode="wait">
       <motion.div
         key="onboarding"
-        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -183,5 +185,6 @@ export function OnboardingTour() {
         </motion.div>
       </motion.div>
     </AnimatePresence>
+    </Portal>
   );
 }

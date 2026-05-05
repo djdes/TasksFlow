@@ -6,6 +6,7 @@ import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useToast } from "@/hooks/use-toast";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -21,6 +22,7 @@ import { GreetingBanner } from "@/components/GreetingBanner";
 import { TipOfTheDay } from "@/components/TipOfTheDay";
 import { StreakAchievement } from "@/components/StreakAchievement";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import { Portal } from "@/components/Portal";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -172,11 +174,29 @@ export default function Dashboard() {
     }
   }, [user, authLoading, setLocation]);
 
+  const { toast } = useToast();
   const handleRefresh = async () => {
+    if (isRefreshing) return;
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
-    await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
-    setTimeout(() => setIsRefreshing(false), 600);
+    try {
+      // refetchQueries — синхронно ждём свежие данные. Раньше был
+      // invalidateQueries без await на refetch — спиннер крутился, но
+      // юзер не знал, реально обновилось или нет, особенно если
+      // сервер вернул тот же массив.
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: [api.tasks.list.path] }),
+        queryClient.refetchQueries({ queryKey: [api.users.list.path] }),
+      ]);
+      toast({ title: "Обновлено", description: "Список свежий" });
+    } catch (err) {
+      toast({
+        title: "Не удалось обновить",
+        description: err instanceof Error ? err.message : "Попробуйте позже",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const categories = Array.from(new Set(
@@ -732,6 +752,32 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="app-content">
+        {/* Поиск задач — поднят на самый верх (по запросу владельца
+            2026-05-05). Раньше прятался ниже фильтров — приходилось
+            скроллить чтобы найти. Теперь сразу под header'ом. */}
+        {tasks.length >= 1 ? (
+          <div className="search-top">
+            <Search className="search-top-icon" />
+            <Input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск задач (нажми / для фокуса)"
+              className="search-top-input"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="search-top-clear"
+                aria-label="Очистить поиск"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Приветствие — «Доброе утро, Иван» + день недели. Помогает
             воркеру сразу понять «программа меня узнала», плюс легче
             ориентироваться какой сегодня день. Не админу. */}
@@ -844,20 +890,10 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        {/* Filters */}
-        {(user?.isAdmin || categories.length > 0 || tasks.length > 6) && (
+        {/* Filters — без поиска (он наверху как отдельный sticky-блок).
+            Тут остаются «Категория» и «Исполнитель» — нечастые фильтры. */}
+        {(user?.isAdmin || categories.length > 0) && (
           <div className="filters-bar">
-            <div className="relative w-full flex-1 sm:min-w-[220px] sm:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск задач (нажми / для фокуса)"
-                className="h-10 w-full rounded-xl border-input bg-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-
             {categories.length > 0 && (
               <Select value={filterByCategory} onValueChange={setFilterByCategory}>
                 <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]">
@@ -1048,54 +1084,58 @@ export default function Dashboard() {
         </footer>
       </main>
 
-      {/* Help-FAB для воркеров — мини-кнопка «?» в правом нижнем
-          углу. Бабушки часто теряются в незнакомом интерфейсе и
-          ищут где спросить — здесь явный ярлык, ведёт на /help.
-          Для админа/руководителя — не показываем, чтобы не путать
-          с FAB «создать задачу». */}
-      {!canManageTasks && (
-        <motion.button
-          onClick={() => setLocation("/help")}
-          className="help-fab"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 320,
-            damping: 22,
-            delay: 0.45,
-          }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.93 }}
-          aria-label="Помощь"
-          title="Помощь — как пользоваться"
-        >
-          <HelpCircle className="w-6 h-6" />
-        </motion.button>
-      )}
+      {/* FAB-кнопки в Portal — иначе #root scroll-контейнер «прибивает»
+          fixed-элементы к концу контента. См. Portal.tsx комментарий. */}
+      <Portal>
+        {/* Help-FAB для воркеров — мини-кнопка «?» в правом нижнем
+            углу. Бабушки часто теряются в незнакомом интерфейсе и
+            ищут где спросить — здесь явный ярлык, ведёт на /help.
+            Для админа/руководителя — не показываем, чтобы не путать
+            с FAB «создать задачу». */}
+        {!canManageTasks && (
+          <motion.button
+            onClick={() => setLocation("/help")}
+            className="help-fab"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 320,
+              damping: 22,
+              delay: 0.45,
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.93 }}
+            aria-label="Помощь"
+            title="Помощь — как пользоваться"
+          >
+            <HelpCircle className="w-6 h-6" />
+          </motion.button>
+        )}
 
-      {/* FAB для admin/manager — spring entrance, pulse-glow,
-          tap-springback. Один CTA-якорь для создания задачи.
-          Руководитель сможет назначать только своим подчинённым
-          (server-side scope-check на POST /api/tasks). */}
-      {canManageTasks && filteredTasks.length > 0 && (
-        <motion.button
-          onClick={() => setLocation("/tasks/new")}
-          className="fab-button"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 320,
-            damping: 22,
-            delay: 0.35,
-          }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.93 }}
-        >
-          <Plus className="w-7 h-7" />
-        </motion.button>
-      )}
+        {/* FAB для admin/manager — spring entrance, pulse-glow,
+            tap-springback. Один CTA-якорь для создания задачи.
+            Руководитель сможет назначать только своим подчинённым
+            (server-side scope-check на POST /api/tasks). */}
+        {canManageTasks && filteredTasks.length > 0 && (
+          <motion.button
+            onClick={() => setLocation("/tasks/new")}
+            className="fab-button"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 320,
+              damping: 22,
+              delay: 0.35,
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.93 }}
+          >
+            <Plus className="w-7 h-7" />
+          </motion.button>
+        )}
+      </Portal>
 
       {/* Dialogs */}
       {user && (

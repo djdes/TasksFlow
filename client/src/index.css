@@ -513,38 +513,33 @@
      Заменяет тонкий progress-card богатой сеткой плиток. На мобильном
      2 колонки, на планшете+ — 4 колонки. Каждая плитка — небольшая
      glass-карточка с цветовым акцентом и анимированным числом. */
+  /* По запросу владельца (2026-05-05): плитки всегда в ОДНУ строку
+     и на мобиле, и на десктопе. Раньше mobile=2 колонки, desktop=4 —
+     ощущалось «нагромождённо». Теперь flex с auto-fit и шириной
+     0 чтобы плитки одинаково сжимались под количество. На mobile
+     hint и часть padding'а уходят в compact-режим. */
   .stat-hero {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    display: flex;
+    gap: 8px;
     margin-bottom: 14px;
+    align-items: stretch;
   }
-
-  /* Совсем узкие экраны (<360px — старый iPhone SE / Galaxy A02): две
-     плитки в ряд становятся ~140px каждая, числа схлопываются. На таких
-     телефонах одна колонка читается лучше, чем гордая «сетка». */
-  @media (max-width: 359px) {
-    .stat-hero {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-    .stat-tile {
-      padding: 12px 12px 10px;
-    }
+  .stat-hero > * {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   @media (min-width: 720px) {
     .stat-hero {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
       margin-bottom: 18px;
     }
   }
 
   .stat-tile {
-    border-radius: 20px;
+    border-radius: 16px;
     border-width: 1px;
-    padding: 14px 14px 12px;
+    padding: 10px 10px 9px;
     backdrop-filter: blur(8px);
     box-shadow:
       0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
@@ -554,6 +549,23 @@
       transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
     overflow: hidden;
+  }
+  /* Compact mode на mobile: hint строка скрыта, label мельче,
+     иконка меньше — иначе 4-5 плиток в строке не помещаются на
+     iPhone SE (375px). Desktop разворачивается в полный размер. */
+  @media (max-width: 719px) {
+    .stat-tile-row { gap: 6px; margin-bottom: 4px; }
+    .stat-tile-icon { width: 28px; height: 28px; border-radius: 10px; }
+    .stat-tile-icon svg { width: 14px; height: 14px; }
+    .stat-tile-label { font-size: 10px; letter-spacing: 0.04em; }
+    .stat-tile-value { font-size: 18px; }
+    .stat-tile-hint { display: none; }
+  }
+  @media (min-width: 720px) {
+    .stat-tile {
+      border-radius: 20px;
+      padding: 14px 14px 12px;
+    }
   }
 
   .stat-tile-button {
@@ -1369,6 +1381,43 @@
   .tip-of-day-close {
     @apply w-8 h-8 rounded-lg flex items-center justify-center shrink-0
            hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100;
+  }
+
+  /* Поиск наверху — отдельный блок сразу под header'ом. Sticky
+     чтобы при скролле длинного списка задач поиск всегда оставался
+     под рукой. На mobile это особенно важно — иначе листаешь до
+     середины списка и не помнишь, где спросить. */
+  .search-top {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: -16px -16px 12px;
+    padding: 12px 16px;
+    background: hsl(var(--background) / 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  @media (min-width: 1024px) {
+    .search-top {
+      margin: -24px -32px 16px;
+      padding: 14px 32px;
+    }
+  }
+  .search-top-icon {
+    @apply w-4 h-4 text-muted-foreground shrink-0;
+  }
+  .search-top-input {
+    @apply h-10 flex-1 rounded-xl border-input bg-background text-sm text-foreground placeholder:text-muted-foreground;
+    padding-left: 12px;
+  }
+  .search-top-clear {
+    @apply w-9 h-9 rounded-xl flex items-center justify-center
+           bg-muted/50 text-muted-foreground hover:text-foreground
+           hover:bg-muted active:scale-95 transition-all shrink-0;
   }
 
   /* Quick filter chips — быстрые тумблеры под filters-bar:
