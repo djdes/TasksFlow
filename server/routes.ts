@@ -544,11 +544,15 @@ export async function registerRoutes(
       // Раньше: name?.trim() крашил с TypeError если name был числом
       // или объектом — попадало в catch как непонятный 500.
       // Также длина не лимитировалась — кто-то мог пихнуть мегабайт.
+      //
+      // Cap=255 синхронно с MySQL VARCHAR(255) и updateUserSchema.name
+      // (см. shared/schema.ts → .max(255)). Раньше был slice(0, 200) —
+      // имена 201-255 проходили schema, но handler обрезал silently.
       let normalizedName: string | null = null;
       if (typeof name === "string") {
         const trimmed = name.trim();
         if (trimmed) {
-          normalizedName = trimmed.slice(0, 200);
+          normalizedName = trimmed.slice(0, 255);
         }
       } else if (name === null) {
         normalizedName = null;
