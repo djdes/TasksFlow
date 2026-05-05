@@ -439,6 +439,7 @@ export class DatabaseStorage implements IStorage {
       verifiedByUserId: tasks.verifiedByUserId,
       verifiedAt: tasks.verifiedAt,
       rejectReason: tasks.rejectReason,
+      submittedValues: tasks.submittedValues,
     }).from(tasks);
 
     const result = companyId
@@ -479,6 +480,7 @@ export class DatabaseStorage implements IStorage {
       verifiedByUserId: tasks.verifiedByUserId,
       verifiedAt: tasks.verifiedAt,
       rejectReason: tasks.rejectReason,
+      submittedValues: tasks.submittedValues,
     }).from(tasks).where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
