@@ -49,9 +49,9 @@ const DialogContent = React.forwardRef<
           шапки (Edit/Create/Duplicate). Раньше bg-white/20 на белом было
           почти прозрачным. Делаем полу-чёрный fallback + позволяем
           переопределить через data-attribute (см. dialog-close-on-color). */}
-      <DialogPrimitive.Close className="dialog-close-button absolute right-3 top-3 p-1.5 rounded-lg bg-black/10 text-foreground hover:bg-black/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 z-10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
+      <DialogPrimitive.Close className="dialog-close-button absolute right-3 top-3 p-1.5 rounded-lg bg-black/10 text-foreground hover:bg-black/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 z-10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20" aria-label="Закрыть">
+        <X className="h-4 w-4" aria-hidden="true" />
+        <span className="sr-only">Закрыть</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
