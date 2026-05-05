@@ -18,7 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   phone: loginSchema.shape.phone,
-  name: z.string().min(1, "Введите имя"),
+  // .max(255) симметрично с MySQL VARCHAR(255) для users.name —
+  // см. тики 32/33 для контекста silent-truncation.
+  name: z
+    .string()
+    .min(1, "Введите имя")
+    .max(255, "Имя не должно превышать 255 символов"),
   adminPhone: loginSchema.shape.phone,
 });
 
@@ -187,6 +192,7 @@ export default function RegisterUser() {
                       type="text"
                       placeholder="Иван Иванов"
                       className="h-14 text-lg border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>

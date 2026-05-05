@@ -181,6 +181,7 @@ export default function Register() {
                       type="text"
                       placeholder="ИП Иванов Иван"
                       className="h-14 text-lg border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>
@@ -202,6 +203,7 @@ export default function Register() {
                       type="email"
                       placeholder="admin@company.ru"
                       className="h-14 text-lg border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>
@@ -223,6 +225,7 @@ export default function Register() {
                       type="text"
                       placeholder="Иван Иванов"
                       className="h-14 text-lg border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>

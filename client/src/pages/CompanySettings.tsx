@@ -317,6 +317,7 @@ export default function CompanySettings() {
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="ИП Иванов Иван"
                   className="h-12"
+                  maxLength={255}
                 />
               </div>
 
@@ -333,6 +334,7 @@ export default function CompanySettings() {
                   onChange={(e) => setCompanyEmail(e.target.value)}
                   placeholder="admin@company.ru"
                   className="h-12"
+                  maxLength={255}
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   На этот адрес будут приходить уведомления о выполненных задачах с фото
