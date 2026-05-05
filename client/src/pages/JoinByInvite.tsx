@@ -112,6 +112,7 @@ export default function JoinByInvite() {
             onChange={(e) => setName(e.target.value)}
             required
             minLength={1}
+            maxLength={255}
           />
           {submitError?.field === "name" && (
             <p className="text-sm text-destructive">{submitError.message}</p>

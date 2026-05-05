@@ -122,7 +122,10 @@ export const insertUserSchema = z.object({
     },
     "Неверный формат номера телефона (формат: +7XXXXXXXXX или +7XXXXXXXXXX)"
   ),
-  name: z.string().optional(),
+  // .max(255): MySQL column users.name = VARCHAR(255). Без cap'а в Zod
+  // имя >255 символов проходило валидацию, но MySQL тихо обрезал — юзер
+  // регистрировался с неполным именем, не зная об этом.
+  name: z.string().max(255, "Имя не должно превышать 255 символов").optional(),
   isAdmin: z.boolean().optional().default(false),
   position: z.string().trim().max(120).optional().nullable(),
 });
@@ -135,7 +138,7 @@ export const updateUserSchema = z.object({
     },
     "Неверный формат номера телефона (формат: +7XXXXXXXXX или +7XXXXXXXXXX)"
   ),
-  name: z.string().nullable().optional(),
+  name: z.string().max(255, "Имя не должно превышать 255 символов").nullable().optional(),
   position: z.string().trim().max(120).nullable().optional(),
 });
 

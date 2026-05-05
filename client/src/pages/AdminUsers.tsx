@@ -373,6 +373,7 @@ export default function AdminUsers() {
                             onChange={(e) => setEditName(e.target.value)}
                             placeholder="Имя пользователя"
                             className="mt-1"
+                            maxLength={255}
                           />
                         </div>
                         <div className="flex gap-2 justify-end">
