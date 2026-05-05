@@ -293,19 +293,24 @@ export default function Dashboard() {
     return true;
   };
 
-  // Submitted-задачи полностью скрыты с dashboard'а — они живут на
-   // отдельном экране /admin/verification. Заведующая на dashboard
-   // видит ТОЛЬКО что нужно сделать самой; что нужно проверить —
-   // через VerificationBanner / меню. Это снимает «свалку» когда
-   // в одном списке смешивались свои задачи + чужие submitted.
-  const hideSubmitted = (task: typeof tasks[0]) =>
+  // Submitted-задачи теперь показываются на dashboard для admin'а —
+  // в отдельной секции «На проверке». Раньше скрывались полностью
+  // (см. hideSubmitted) и жили только на /admin/verification, но
+  // пользователь жаловался: «непонятно что у меня в очереди на
+  // проверку — приходится отдельно ходить». Теперь видны прямо на
+  // главном экране, отделены от «Моих задач».
+  //
+  // Worker по-прежнему submitted не видит — для него это уже не
+  // открытая задача (он её отправил, ждёт проверки).
+  const hideSubmittedForWorker = (task: typeof tasks[0]) =>
     (task as { verificationStatus?: string | null }).verificationStatus !==
     "submitted";
 
   const baseFilteredTasks = (
     user?.isAdmin
       ? tasks
-          .filter(hideSubmitted)
+          // Submitted ОСТАВЛЯЕМ — split по секциям ниже разделит на
+          // «мои на исполнение» и «на проверке».
           .filter(task => {
             if (filterByUserId === "all") return true;
             if (filterByUserId === "unassigned") return !task.workerId;
@@ -318,7 +323,7 @@ export default function Dashboard() {
             return (task as any).category === filterByCategory;
           })
       : tasks
-          .filter(hideSubmitted)
+          .filter(hideSubmittedForWorker)
           .filter(task => task.workerId === user?.id && isTaskVisibleToday(task))
           .filter(task => {
             if (filterByCategory === "all") return true;
@@ -368,23 +373,32 @@ export default function Dashboard() {
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
 
-  // Visual split для admin: разделяем filteredTasks на «мои» (где
-  // admin сам — worker) и «чужие» (задачи подчинённых). Активно
-  // только когда выбран фильтр «Все сотрудники» — иначе пользователь
-  // явно сузил выборку и split не нужен. Voркер этого не видит —
-  // у него своя задачка одна на дашборде.
+  // Visual split для admin: разделяем filteredTasks на «что мне
+  // сделать» и «что мне проверить». Активно только когда фильтр
+  // «Все сотрудники» — иначе admin явно сузил выборку (например,
+  // выбрал «Иванов» в dropdown'е) и split не нужен.
   //
-  // Это решает «свалку» которую жаловалась заведующая (всё в одном
-  // длинном списке), но НЕ скрывает чужие задачи (оставляем admin
-  // полный контроль смены). Submitted-задачи всё равно живут
-  // отдельно на /admin/verification — баннер сверху.
-  const splitMineVsOthers =
+  // tasksMine — задачи где admin сам worker И статус не submitted.
+  //   Submitted-свои попадают в /admin/verification под чужой supervisor,
+  //   на dashboard'е admin'а они уже отработаны (нет смысла их
+  //   показывать как «мне делать»).
+  // tasksToVerify — submitted задачи (любого worker'а). Это «на
+  //   проверке у меня» — те что подчинённые отправили на согласование.
+  // Задачи в работе у других сотрудников (НЕ submitted, НЕ свои)
+  //   на dashboard'е admin'а с фильтром «все» НЕ показываются —
+  //   admin переключает dropdown на конкретного человека для надзора.
+  const splitMineVsVerify =
     canManageTasks && filterByUserId === "all" && Boolean(user?.id);
-  const tasksMine = splitMineVsOthers
-    ? filteredTasks.filter((t) => t.workerId === user!.id)
+  const isSubmitted = (t: typeof tasks[0]) =>
+    (t as { verificationStatus?: string | null }).verificationStatus ===
+    "submitted";
+  const tasksMine = splitMineVsVerify
+    ? filteredTasks.filter(
+        (t) => t.workerId === user!.id && !isSubmitted(t)
+      )
     : filteredTasks;
-  const tasksOthers = splitMineVsOthers
-    ? filteredTasks.filter((t) => t.workerId !== user!.id)
+  const tasksToVerify = splitMineVsVerify
+    ? filteredTasks.filter((t) => isSubmitted(t))
     : [];
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
@@ -1093,12 +1107,11 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-        ) : splitMineVsOthers ? (
-          // Admin + filter=all: рендерим ДВЕ секции с заголовками.
-          // Мои сверху (что заведующей нужно сделать самой), чужие
-          // снизу (надзор за подчинёнными). Каждая GroupedTaskList
-          // живёт сама по себе — может отдельно сворачиваться по
-          // worker'у, у каждой свой заголовок.
+        ) : splitMineVsVerify ? (
+          // Admin + filter=all: ДВЕ секции — «Мои задачи» (что мне
+          // сделать самой) и «На проверке» (что мне согласовать).
+          // Чёткое отделение «исполнить» vs «верифицировать» —
+          // подчинённые не путаются в очереди заведующей.
           <div className="space-y-6">
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-3 px-1">
@@ -1116,7 +1129,7 @@ export default function Dashboard() {
               </div>
               {tasksMine.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-[13px] text-muted-foreground">
-                  Лично на тебе сегодня задач нет — занимайся надзором ↓
+                  Лично на тебе сегодня задач нет — переходи к проверке ↓
                 </div>
               ) : (
                 <GroupedTaskList
@@ -1156,34 +1169,40 @@ export default function Dashboard() {
               )}
             </section>
 
-            {tasksOthers.length > 0 ? (
+            {tasksToVerify.length > 0 ? (
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-3 px-1">
                   <h2 className="text-[15px] font-semibold text-foreground">
-                    Задачи сотрудников
-                    <span className="ml-2 inline-flex items-center rounded-full bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
-                      {tasksOthers.length}
+                    На проверке
+                    <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                      {tasksToVerify.length}
                     </span>
                   </h2>
-                  <span className="text-[12px] text-muted-foreground">
-                    надзор за сменой
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/admin/verification")}
+                    className="text-[12px] text-primary hover:underline"
+                  >
+                    открыть очередь →
+                  </button>
                 </div>
                 <GroupedTaskList
-                  activeTasks={tasksOthers.filter((t) => !t.isCompleted)}
-                  completedTasks={tasksOthers.filter(
+                  activeTasks={tasksToVerify.filter((t) => !t.isCompleted)}
+                  completedTasks={tasksToVerify.filter(
                     (t) =>
                       Boolean(t.isCompleted) &&
                       ((t as { claimedByWorkerId?: number | null })
                         .claimedByWorkerId ?? null) === null
                   )}
-                  claimedByOthersTasks={tasksOthers.filter(
+                  claimedByOthersTasks={tasksToVerify.filter(
                     (t) =>
                       Boolean(t.isCompleted) &&
                       ((t as { claimedByWorkerId?: number | null })
                         .claimedByWorkerId ?? null) !== null
                   )}
                   isAdmin={canManageTasks}
+                  // По worker'у группировать смысл есть — видно
+                  // «Иванов прислал 3, Петров 5».
                   groupByWorker={groupByWorker}
                   onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
                   getUserInitials={getUserInitials}
