@@ -179,7 +179,10 @@ export default function CompanySettings() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+      // queryKey должен совпадать с AuthContext (["auth", "me"]),
+      // иначе header'у с именем админа никто не скажет «обнови» —
+      // юзер увидит старое имя до F5.
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       toast({
         title: "Сохранено",
         description: "Ваше имя обновлено",
