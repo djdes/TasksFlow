@@ -19,6 +19,16 @@ const pool = mysql.createPool({
   port: 3306,
   waitForConnections: true,
   connectionLimit: 10,
+  // TCP keep-alive: за NAT / firewall idle connection часто рвётся
+  // через ~30s. Без этого следующий запрос на «протухшем» сокете
+  // валится с PROTOCOL_CONNECTION_LOST, и юзер видит 500 пока pool
+  // не вычистит мёртвые соединения.
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
+  // idleTimeout — закрываем connection если он не использовался >5 мин,
+  // чтобы pool не накапливал stale-сокеты. Новые запросы создадут
+  // свежее соединение.
+  idleTimeout: 5 * 60 * 1000,
 });
 
 export const db = drizzle(pool, { schema, mode: "default" });
