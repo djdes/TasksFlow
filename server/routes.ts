@@ -1572,6 +1572,27 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
+      // Авторизация: API-key (machine integration), исполнитель (свою
+      // задачу), или session-admin. Раньше проверки не было — любой
+      // авторизованный юзер из той же компании мог /uncomplete на
+      // чужую задачу, что вычитало деньги с чужого баланса. Это
+      // симметрично с /complete (см. line 1314-1317 ниже похожий
+      // блок). См. tests/uncomplete-endpoint → "посторонний воркер".
+      let isAllowed = false;
+      if (req.apiKey) {
+        isAllowed = true;
+      } else if (req.session?.userId === task.workerId) {
+        isAllowed = true;
+      } else if (req.session?.userId) {
+        const currentUser = await storage.getUserById(req.session.userId);
+        if (currentUser?.isAdmin) {
+          isAllowed = true;
+        }
+      }
+      if (!isAllowed) {
+        return res.status(403).json({ message: "Нет прав для изменения задачи" });
+      }
+
       // Atomic isCompleted=true → false. Раньше: read+if+write
       // pattern → два concurrent /uncomplete оба видели true и оба
       // вычитали price из баланса. Теперь только один из них пройдёт
