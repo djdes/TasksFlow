@@ -55,7 +55,10 @@ import {
   User,
   Search,
   Palette,
-  QrCode
+  QrCode,
+  Gift,
+  CalendarCheck,
+  MessageCircle,
 } from "lucide-react";
 import {
   Select,
@@ -70,7 +73,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Gift, CalendarCheck, MessageCircle } from "lucide-react";
 
 const WEEK_DAY_SHORT_NAMES: { [key: number]: string } = {
   0: "Вс",
