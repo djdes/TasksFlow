@@ -82,10 +82,15 @@ export function TaskViewDialog({
       formData.append("photo", file);
       formData.append("taskId", String(currentTask.id));
 
+      // 120s timeout: photo до 10MB, медленный 3G ≈ 100KB/s, реально
+      // 60-90s на upload. Без таймаута воркер с упавшим Wi-Fi'ем
+      // видит «крутится» бесконечно — лучше через 2 минуты дать
+      // explicit error toast и предложить попробовать ещё раз.
       const response = await fetch(`/api/tasks/${currentTask.id}/photo`, {
         method: "POST",
         credentials: "include",
         body: formData,
+        signal: AbortSignal.timeout(120_000),
       });
 
       if (!response.ok) {
@@ -140,8 +145,11 @@ export function TaskViewDialog({
     mutationFn: async (photoUrl: string) => {
       if (!currentTask) throw new Error("Задача не выбрана");
 
+      // 30s timeout: DELETE — лёгкая операция, server обычно отвечает <1s.
+      // С таймаутом ошибки сети становятся видимыми, без — вечно spinner.
       const response = await fetch(`/api/tasks/${currentTask.id}/photo?url=${encodeURIComponent(photoUrl)}`, {
         method: "DELETE",
+        signal: AbortSignal.timeout(30_000),
         credentials: "include",
         headers: {
           "Accept": "application/json",
