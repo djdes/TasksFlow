@@ -2759,6 +2759,10 @@ export async function registerRoutes(
       {
         headers: { Authorization: `Bearer ${target.key}` },
         cache: "no-store",
+        // 30s timeout: catalog fetch — admin UI view, не должна
+        // вешать handler если WeSetup тормозит. Без таймаута Express
+        // ждёт до browser ~5min.
+        signal: AbortSignal.timeout(30_000),
       }
     );
     return upstream;
@@ -3009,6 +3013,7 @@ export async function registerRoutes(
               : {}),
           }),
           cache: "no-store",
+          signal: AbortSignal.timeout(30_000),
         }
       );
       const text = await upstream.text();
@@ -3164,6 +3169,7 @@ export async function registerRoutes(
       const upstream = await fetch(upstreamUrl, {
         headers: { Authorization: `Bearer ${key}` },
         cache: "no-store",
+        signal: AbortSignal.timeout(30_000),
       });
       const text = await upstream.text();
       const parsed = parseJsonOrUndefined(text);
@@ -3476,6 +3482,7 @@ export async function registerRoutes(
           },
           body: JSON.stringify(req.body || {}),
           cache: "no-store",
+          signal: AbortSignal.timeout(30_000),
         }
       );
       const text = await upstream.text();
@@ -3520,6 +3527,10 @@ export async function registerRoutes(
     try {
       const upstream = await fetch(`${baseUrl}${path}`, {
         method,
+        // 60s — этот generic-proxy используется для sync-users и
+        // sync-tasks, массовых операций. 30s могло обрезать на
+        // больших компаниях.
+        signal: AbortSignal.timeout(60_000),
         headers: {
           Authorization: `Bearer ${key}`,
           ...(method === "POST"
