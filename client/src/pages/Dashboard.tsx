@@ -94,7 +94,12 @@ export default function Dashboard() {
   // Separate dialog for journal-bound tasks — employee sees the
   // WeSetup-defined form instead of the plain «Выполнено» button.
   const [journalTaskId, setJournalTaskId] = useState<number | null>(null);
-  const [filterByUserId, setFilterByUserId] = useState<string>("all");
+  // Default: «только мои» для админа/руководителя. Раньше «all» —
+   // заведующая открывала dashboard и видела свалку из задач всех
+   // сотрудников включая чужие completed/submitted. Теперь стартуем
+   // с filter на свои задачи; «Все сотрудники» доступно через
+   // dropdown селектор.
+  const [filterByUserId, setFilterByUserId] = useState<string>("__self__");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
   // Quick-chip фильтры: каждый — boolean toggle. Несколько можно
   // включить одновременно (логика AND). Хранить нечего — стейт
@@ -284,12 +289,23 @@ export default function Dashboard() {
     return true;
   };
 
+  // Submitted-задачи полностью скрыты с dashboard'а — они живут на
+   // отдельном экране /admin/verification. Заведующая на dashboard
+   // видит ТОЛЬКО что нужно сделать самой; что нужно проверить —
+   // через VerificationBanner / меню. Это снимает «свалку» когда
+   // в одном списке смешивались свои задачи + чужие submitted.
+  const hideSubmitted = (task: typeof tasks[0]) =>
+    (task as { verificationStatus?: string | null }).verificationStatus !==
+    "submitted";
+
   const baseFilteredTasks = (
     user?.isAdmin
       ? tasks
+          .filter(hideSubmitted)
           .filter(task => {
             if (filterByUserId === "all") return true;
             if (filterByUserId === "unassigned") return !task.workerId;
+            if (filterByUserId === "__self__") return task.workerId === user.id;
             return task.workerId === parseInt(filterByUserId);
           })
           .filter(task => {
@@ -298,6 +314,7 @@ export default function Dashboard() {
             return (task as any).category === filterByCategory;
           })
       : tasks
+          .filter(hideSubmitted)
           .filter(task => task.workerId === user?.id && isTaskVisibleToday(task))
           .filter(task => {
             if (filterByCategory === "all") return true;
@@ -955,6 +972,10 @@ export default function Dashboard() {
                   <SelectValue placeholder="Исполнитель" />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* «Только мои» — default для admin: видит свои задачи
+                      (как worker). Чтобы посмотреть что у других — переключает
+                      на «Все сотрудники» или конкретного человека. */}
+                  <SelectItem value="__self__">Только мои</SelectItem>
                   <SelectItem value="all">Все сотрудники</SelectItem>
                   <SelectItem value="unassigned">Не назначенные</SelectItem>
                   {users.map((u) => (
