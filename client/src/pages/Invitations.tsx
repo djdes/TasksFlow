@@ -242,6 +242,7 @@ export default function Invitations() {
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
                 placeholder="Например, Кассир"
+                maxLength={120}
               />
             </div>
             <div className="space-y-2">
