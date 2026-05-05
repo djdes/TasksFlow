@@ -1436,7 +1436,7 @@
   .verification-banner {
     @apply w-full flex items-center gap-4 mb-4 rounded-2xl
            border-2 border-primary/30 bg-gradient-to-r
-           from-primary/8 via-primary/4 to-transparent
+           from-primary/10 via-primary/5 to-transparent
            p-4 text-left transition-all
            hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10
            active:scale-[0.99];
