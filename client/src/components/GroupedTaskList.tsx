@@ -100,6 +100,16 @@ type Props = {
   /** Поисковый запрос для подсветки совпадений в task.title.
    *  Пустой/undefined — без подсветки. */
   searchQuery?: string;
+  /** Если передан — внутри активной секции рендерится два под-блока:
+   *  «Что сделать» (filler-задачи где isVerify(t) === false) и
+   *  «На проверке» (где isVerify(t) === true). Пустой sub-блок не
+   *  показывается. Удобно когда у пользователя смешаны personal-задачи
+   *  и verifier-summary задачи (как у заведующей с журналами WeSetup) —
+   *  без сплита всё в одной куче.
+   *
+   *  Работает в обоих режимах: по дате (groupByWorker=false) и
+   *  внутри каждой worker-секции (groupByWorker=true). */
+  isVerifyTask?: (task: Task) => boolean;
 };
 
 /**
@@ -128,6 +138,7 @@ export function GroupedTaskList(props: Props) {
     onDuplicate,
     onDelete,
     searchQuery,
+    isVerifyTask,
   } = props;
   const shortName = getUserShortName ?? getUserName;
 
@@ -577,6 +588,49 @@ export function GroupedTaskList(props: Props) {
     return sections;
   }, [activeTasks, groupByWorker, getUserName, getUserPosition]);
 
+  /**
+   * Рендерит набор активных задач с опциональным split на два sub-блока
+   * «Что сделать» / «На проверке». Если isVerifyTask не передан (или
+   * после применения сплита остался один тип) — рендерим обычный
+   * year-group accordion как раньше.
+   */
+  function renderActiveTasks(tasksSubset: Task[]) {
+    if (tasksSubset.length === 0) return null;
+    if (!isVerifyTask) {
+      const groups = groupTasksByDate(tasksSubset, "createdAt");
+      return <>{groups.map((g) => renderYearGroup(g))}</>;
+    }
+    const todoTasks = tasksSubset.filter((t) => !isVerifyTask(t));
+    const verifyTasks = tasksSubset.filter((t) => isVerifyTask(t));
+    // Если в подмножестве только один тип — split не нужен.
+    if (todoTasks.length === 0 || verifyTasks.length === 0) {
+      const groups = groupTasksByDate(tasksSubset, "createdAt");
+      return <>{groups.map((g) => renderYearGroup(g))}</>;
+    }
+    const todoGroups = groupTasksByDate(todoTasks, "createdAt");
+    const verifyGroups = groupTasksByDate(verifyTasks, "createdAt");
+    return (
+      <div className="space-y-4">
+        <div>
+          <div className="active-split-header">
+            <span className="active-split-label">Что сделать</span>
+            <span className="active-split-count">{todoTasks.length}</span>
+          </div>
+          {todoGroups.map((g) => renderYearGroup(g))}
+        </div>
+        <div>
+          <div className="active-split-header active-split-header--verify">
+            <span className="active-split-label">На проверке</span>
+            <span className="active-split-count active-split-count--verify">
+              {verifyTasks.length}
+            </span>
+          </div>
+          {verifyGroups.map((g) => renderYearGroup(g))}
+        </div>
+      </div>
+    );
+  }
+
   function renderActiveByWorker() {
     if (activeWorkerSections.length === 0) {
       return (
@@ -634,7 +688,10 @@ export function GroupedTaskList(props: Props) {
                 </span>
               </summary>
               <div className="worker-section-body">
-                {section.groups.map((g) => renderYearGroup(g))}
+                {/* Внутри worker-секции тоже применяем split «Что
+                    сделать / На проверке» — admin'у надо видеть кто
+                    что делает И кто что должен проверить. */}
+                {renderActiveTasks(section.tasks)}
               </div>
             </details>
           );
@@ -673,7 +730,7 @@ export function GroupedTaskList(props: Props) {
         ) : groupByWorker ? (
           renderActiveByWorker()
         ) : (
-          activeGroups.map((g) => renderYearGroup(g))
+          renderActiveTasks(activeTasks)
         )}
       </section>
 

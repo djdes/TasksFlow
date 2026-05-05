@@ -2617,6 +2617,60 @@
   color: #3848c7;
 }
 
+/* Split-заголовки внутри Active секции:
+   «Что сделать» / «На проверке». Маленькие подзаголовки, не такие
+   шумные как .grouped-section-title — разделяют ОДНУ группу активных
+   задач на два под-блока (filler vs verifier). См. GroupedTaskList
+   prop `isVerifyTask`. */
+.active-split-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 0 4px;
+}
+.active-split-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6f7282;
+}
+.active-split-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f0f2f7;
+  color: #6f7282;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.active-split-header--verify .active-split-label {
+  color: #b45309; /* amber-700 */
+}
+.active-split-count--verify {
+  background: rgba(245, 158, 11, 0.15); /* amber/15 */
+  color: #b45309;
+}
+.dark .active-split-label {
+  color: #9b9fb3;
+}
+.dark .active-split-count {
+  background: rgba(255, 255, 255, 0.06);
+  color: #c4b5fd;
+}
+.dark .active-split-header--verify .active-split-label {
+  color: #fbbf24; /* amber-400 */
+}
+.dark .active-split-count--verify {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
 /* Chevron rotation via open-state — <details> native */
 .group-chevron {
   color: #6f7282;

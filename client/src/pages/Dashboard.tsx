@@ -367,37 +367,19 @@ export default function Dashboard() {
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
 
-  // Visual split — двух типов:
+  // Discriminator «это задача на проверку» — для split'а внутри
+  // активной секции GroupedTaskList. См. prop `isVerifyTask` там.
   //
-  // 1. Admin (canManageTasks + filter=all): «Мои задачи» (что мне
-  //    сделать самой) vs «На проверке» (что мне согласовать).
-  //    Submitted задачи ЛЮБОГО worker'а попадают в «На проверке» —
-  //    заведующая видит очередь на верификацию прямо на дашборде.
+  // В TasksFlow к verification-очереди относятся:
+  //   1. Verifier-summary task — отдельная задача от WeSetup'а с
+  //      journalLink.taskScope === "verifier" (или kind начинается
+  //      с "wesetup-verifier"). title обычно «Проверить ...» / «Проверка · ...».
+  //   2. Filler-task в submitted state — обычная задача воркера,
+  //      нажал «готово», ждёт apprоval (verificationStatus === "submitted").
   //
-  // 2. Worker (НЕ admin): «Активные» (что делать) vs «На проверке»
-  //    (что я отправил, ждёт вердикта). Раньше submitted скрывались
-  //    от worker'а — он терял из виду свои отправленные. Теперь
-  //    остаются в отдельной секции, чтобы worker видел «вот эти
-  //    задачи я уже сделал, ждут проверки».
-  // Дискриминатор «эта задача — на проверку у меня».
-  //
-  // В TasksFlow есть ДВА типа задач которые попадают в очередь
-  // верификации:
-  //
-  //   1. Verifier-summary task — отдельная задача, созданная WeSetup'ом
-  //      специально для verifier'а. journalLink.taskScope === "verifier"
-  //      или journalLink.kind начинается с "wesetup-verifier" (в зависимости
-  //      от версии). Title обычно «Проверить ...» или «Проверка · ...».
-  //      У неё workerId = ID заведующей (она исполнитель этой verifier-задачи).
-  //
-  //   2. Filler-task в submitted state — обычная задача сотрудника,
-  //      которую он нажал «готово», но ждёт apprоval. workerId = filler.
-  //      verificationStatus === "submitted".
-  //
-  // Раньше split смотрел ТОЛЬКО на verificationStatus. Verifier-summary
-  // задачи имеют verificationStatus=NULL и попадали в «Мои задачи» admin'а
-  // вперемешку с filler'ами — пользователь жаловался «всё вперемешку».
-  // Сейчас оба типа правильно ловятся.
+  // Обе попадают в один visual-блок «На проверке» внутри Активных,
+  // отделённый от «Что сделать» (filler-задач которые ещё нужно
+  // выполнить).
   function parseJournalLink(t: typeof tasks[0]): Record<string, unknown> | null {
     const raw = (t as { journalLink?: string | null }).journalLink;
     if (!raw) return null;
@@ -418,45 +400,8 @@ export default function Dashboard() {
   const isSubmittedFiller = (t: typeof tasks[0]) =>
     (t as { verificationStatus?: string | null }).verificationStatus ===
     "submitted";
-  // «На проверке» — verifier-задача ИЛИ filler в submitted-статусе.
   const isToVerify = (t: typeof tasks[0]) =>
     isVerifierTask(t) || isSubmittedFiller(t);
-
-  // Split применяется ВСЕГДА — два подпункта в «Сегодня»: «Мои задачи»
-  // (что лично делать) и «На проверке» (что верифицировать). Раньше
-  // условие на filter=all сворачивало split обратно в плоский список,
-  // а ещё раньше дискриминатор был неправильный — пользователь видел
-  // verifier-задачи вперемешку со своими собственными.
-  const splitActive = Boolean(user?.id);
-
-  // tasksMine: что лично пользователю СДЕЛАТЬ (не на проверке).
-  //   • admin/manager: filler-задачи где workerId=я (она тоже worker
-  //     для каких-то задач смены).
-  //   • worker: его собственные задачи (filter уже сузил по workerId).
-  const tasksMine = splitActive
-    ? filteredTasks.filter(
-        (t) => t.workerId === user!.id && !isToVerify(t)
-      )
-    : filteredTasks;
-  // tasksToVerify: что в очереди на проверку.
-  //   • admin/manager: ВСЕ verifier-задачи (где admin worker) +
-  //     ЛЮБЫЕ submitted-filler от подчинённых.
-  //   • worker: только свои submitted-filler (отправил, ждёт вердикта).
-  //     Verifier-задач у обычного worker'а быть не должно (они только
-  //     у management), но для безопасности фильтруем по workerId.
-  const tasksToVerify = splitActive
-    ? filteredTasks.filter((t) => {
-        if (!isToVerify(t)) return false;
-        if (canManageTasks) {
-          // admin видит и свои verifier И чужие submitted
-          return isVerifierTask(t)
-            ? t.workerId === user!.id
-            : true;
-        }
-        // worker — только своё
-        return t.workerId === user!.id;
-      })
-    : [];
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
@@ -1164,142 +1109,13 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-        ) : splitActive ? (
-          // ДВЕ секции — «Мои задачи» (что мне сделать) и «На проверке»
-          // (для admin'а — что согласовать; для worker'а — что я
-          // отправил, ждёт вердикта).
-          <div className="space-y-6">
-            <section className="space-y-2">
-              <div className="flex items-center justify-between gap-3 px-1">
-                <h2 className="text-[15px] font-semibold text-foreground">
-                  Мои задачи
-                  <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                    {tasksMine.length}
-                  </span>
-                </h2>
-                <span className="text-[12px] text-muted-foreground">
-                  {tasksMine.length === 0
-                    ? canManageTasks
-                      ? "сегодня лично на тебе ничего"
-                      : "сегодня всё сделано"
-                    : canManageTasks
-                      ? "что нужно сделать самой"
-                      : "что нужно сделать"}
-                </span>
-              </div>
-              {tasksMine.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-[13px] text-muted-foreground">
-                  {canManageTasks
-                    ? "Лично на тебе сегодня задач нет — переходи к проверке ↓"
-                    : tasksToVerify.length > 0
-                      ? "Всё активное сделано — ждём вердикта заведующей ↓"
-                      : "Сегодня задач нет — отдохни."}
-                </div>
-              ) : (
-                <GroupedTaskList
-                  activeTasks={tasksMine.filter((t) => !t.isCompleted)}
-                  completedTasks={tasksMine.filter(
-                    (t) =>
-                      Boolean(t.isCompleted) &&
-                      ((t as { claimedByWorkerId?: number | null })
-                        .claimedByWorkerId ?? null) === null
-                  )}
-                  claimedByOthersTasks={tasksMine.filter(
-                    (t) =>
-                      Boolean(t.isCompleted) &&
-                      ((t as { claimedByWorkerId?: number | null })
-                        .claimedByWorkerId ?? null) !== null
-                  )}
-                  isAdmin={canManageTasks}
-                  // Группировка по сотруднику в секции «мои» теряет смысл —
-                  // тут все задачи одного человека (текущего пользователя).
-                  groupByWorker={false}
-                  getUserInitials={getUserInitials}
-                  getUserName={getUserName}
-                  getUserShortName={getUserShortName}
-                  getUserPosition={getUserPosition}
-                  onTaskClick={handleTaskClick}
-                  onToggleComplete={toggleTaskComplete}
-                  onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
-                  onDuplicate={(task) => {
-                    setDuplicateTask(task);
-                    setIsDuplicateDialogOpen(true);
-                  }}
-                  onDelete={(id) => {
-                    if (confirm("Удалить задачу?")) deleteTask.mutate(id);
-                  }}
-                  searchQuery={searchQuery}
-                />
-              )}
-            </section>
-
-            {tasksToVerify.length > 0 ? (
-              <section className="space-y-2">
-                <div className="flex items-center justify-between gap-3 px-1">
-                  <h2 className="text-[15px] font-semibold text-foreground">
-                    На проверке
-                    <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                      {tasksToVerify.length}
-                    </span>
-                  </h2>
-                  {canManageTasks ? (
-                    <button
-                      type="button"
-                      onClick={() => setLocation("/admin/verification")}
-                      className="text-[12px] text-primary hover:underline"
-                    >
-                      открыть очередь →
-                    </button>
-                  ) : (
-                    <span className="text-[12px] text-muted-foreground">
-                      ждём проверки заведующей
-                    </span>
-                  )}
-                </div>
-                <GroupedTaskList
-                  activeTasks={tasksToVerify.filter((t) => !t.isCompleted)}
-                  completedTasks={tasksToVerify.filter(
-                    (t) =>
-                      Boolean(t.isCompleted) &&
-                      ((t as { claimedByWorkerId?: number | null })
-                        .claimedByWorkerId ?? null) === null
-                  )}
-                  claimedByOthersTasks={tasksToVerify.filter(
-                    (t) =>
-                      Boolean(t.isCompleted) &&
-                      ((t as { claimedByWorkerId?: number | null })
-                        .claimedByWorkerId ?? null) !== null
-                  )}
-                  isAdmin={canManageTasks}
-                  // По worker'у группировать смысл есть только для admin —
-                  // видно «Иванов прислал 3, Петров 5». Для worker'а
-                  // тут все его собственные submitted — не нужна группировка.
-                  groupByWorker={canManageTasks && groupByWorker}
-                  onToggleGroupByWorker={
-                    canManageTasks ? () => setGroupByWorker((v) => !v) : undefined
-                  }
-                  getUserInitials={getUserInitials}
-                  getUserName={getUserName}
-                  getUserShortName={getUserShortName}
-                  getUserPosition={getUserPosition}
-                  onTaskClick={handleTaskClick}
-                  onToggleComplete={toggleTaskComplete}
-                  onEdit={(id) => setLocation(`/tasks/${id}/edit`)}
-                  onDuplicate={(task) => {
-                    setDuplicateTask(task);
-                    setIsDuplicateDialogOpen(true);
-                  }}
-                  onDelete={(id) => {
-                    if (confirm("Удалить задачу?")) deleteTask.mutate(id);
-                  }}
-                  searchQuery={searchQuery}
-                />
-              </section>
-            ) : null}
-          </div>
         ) : (
-          <>
-            <GroupedTaskList
+          // Один общий GroupedTaskList — внутри секции «Активные»
+          // он сам разделит на «Что сделать» и «На проверке»
+          // (через prop isVerifyTask). Большие отдельные секции
+          // были слишком перегружены — пользователь хотел просто
+          // два под-блока с подзаголовками внутри одного списка.
+          <GroupedTaskList
             activeTasks={filteredTasks.filter((t) => !t.isCompleted)}
             completedTasks={filteredTasks.filter(
               (t) =>
@@ -1329,8 +1145,12 @@ export default function Dashboard() {
               if (confirm("Удалить задачу?")) deleteTask.mutate(id);
             }}
             searchQuery={searchQuery}
+            // isToVerify = verifier-summary || submitted-filler.
+            // Active секция внутри GroupedTaskList разделит активные
+            // задачи на «Что сделать» (filler todo) и «На проверке»
+            // (verifier + submitted-filler) с маленькими подзаголовками.
+            isVerifyTask={isToVerify}
           />
-          </>
         )}
 
         {/* Footer — простой и информативный, чтобы у пользователя было
