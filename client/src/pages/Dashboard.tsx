@@ -17,7 +17,8 @@ import { TaskViewDialog } from "@/components/TaskViewDialog";
 import { TaskFormFiller } from "@/components/TaskFormFiller";
 import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
-import { VerificationQueue } from "@/components/VerificationQueue";
+import { VerificationBanner } from "@/components/VerificationBanner";
+import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { GreetingBanner } from "@/components/GreetingBanner";
 import { TipOfTheDay } from "@/components/TipOfTheDay";
 import { StreakAchievement } from "@/components/StreakAchievement";
@@ -33,6 +34,7 @@ import {
   Edit2,
   Trash2,
   Plus,
+  ShieldCheck,
   Inbox,
   Calendar,
   CalendarDays,
@@ -112,6 +114,9 @@ export default function Dashboard() {
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
+  // VerificationBanner — react-query кэш переиспользуется.
+  const { data: pendingVerifyTasks = [] } = useAwaitingVerification();
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
   // Режим группировки списка для админа/руководителя: по дате
   // (default — старое поведение) или по сотруднику. Воркер видит
@@ -610,6 +615,30 @@ export default function Dashboard() {
                 <span className="font-medium">Создать задачу</span>
               </button>
             )}
+            {/* «На проверке» — для всех управленцев (admin + manager).
+                Виден если есть pending verification > 0 либо если юзер
+                сам verifier (canManageTasks). Бэйдж справа с числом
+                для быстрого скана. */}
+            {canManageTasks && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setLocation("/admin/verification");
+                }}
+              >
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                <span className="font-medium flex-1 text-left">
+                  На проверке
+                </span>
+                {pendingVerifyTasks.length > 0 ? (
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-primary text-white font-bold">
+                    {pendingVerifyTasks.length}
+                  </span>
+                ) : null}
+              </button>
+            )}
             {/* «Сотрудники» и «Настройки компании» — только админ.
                 Руководителю эти страницы не нужны: списком своих
                 подчинённых он управляет на стороне WeSetup
@@ -789,6 +818,13 @@ export default function Dashboard() {
             не реклама — мягкий приём «общаемся, а не работаем».
             Можно закрыть крестиком, тогда не покажем до завтра. */}
         {!canManageTasks ? <TipOfTheDay /> : null}
+
+        {/* «На проверке» баннер — для админа/руководителя. Раньше
+            очередь была inline-блоком над списком задач, и заведующая
+            путалась «это мои задачи или те что я проверяю». Теперь
+            компактный prominent-баннер ведёт на отдельный экран
+            /admin/verification. */}
+        {canManageTasks ? <VerificationBanner /> : null}
 
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
@@ -1015,10 +1051,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* Phase 4: верификер видит здесь все «submitted» задачи
-                от своих подчинённых с кнопками Принять/Отклонить.
-                Если задач нет — компонент рендерит null. */}
-            <VerificationQueue />
             <GroupedTaskList
             activeTasks={filteredTasks.filter((t) => !t.isCompleted)}
             completedTasks={filteredTasks.filter(

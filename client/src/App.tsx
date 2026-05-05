@@ -22,6 +22,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import CompanySettings from "@/pages/CompanySettings";
 import ApiKeysPage from "@/pages/ApiKeys";
 import IntegrationsPage from "@/pages/Integrations";
+import VerificationPage from "@/pages/Verification";
 import Invitations from "@/pages/Invitations";
 import JoinByInvite from "@/pages/JoinByInvite";
 import NotFound from "@/pages/not-found";
@@ -70,6 +71,7 @@ function Router() {
           <Route path="/admin/settings" component={CompanySettings} />
           <Route path="/admin/api-keys" component={ApiKeysPage} />
           <Route path="/admin/integrations" component={IntegrationsPage} />
+          <Route path="/admin/verification" component={VerificationPage} />
           <Route path="/admin/invitations" component={Invitations} />
           <Route path="/join/:token" component={JoinByInvite} />
           <Route path="/tasks/new" component={CreateTask} />

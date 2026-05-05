@@ -1428,6 +1428,132 @@
            hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100;
   }
 
+  /* Verification banner на dashboard'е — для управленцев. Раньше
+     задачи на проверке висели inline'ом и путались с «моими» —
+     заведующая жаловалась «не понятно где что». Теперь вместо
+     inline-секции компактная prominent-плашка ведёт на отдельный
+     экран /admin/verification. */
+  .verification-banner {
+    @apply w-full flex items-center gap-4 mb-4 rounded-2xl
+           border-2 border-primary/30 bg-gradient-to-r
+           from-primary/8 via-primary/4 to-transparent
+           p-4 text-left transition-all
+           hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10
+           active:scale-[0.99];
+    cursor: pointer;
+  }
+  .dark .verification-banner {
+    background: linear-gradient(90deg, rgba(168, 179, 255, 0.12), rgba(168, 179, 255, 0.04), transparent);
+    border-color: rgba(168, 179, 255, 0.35);
+  }
+  .verification-banner-icon {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px -4px hsl(var(--primary) / 0.4);
+  }
+  .verification-banner-pulse {
+    position: absolute;
+    inset: -3px;
+    border-radius: 17px;
+    box-shadow: 0 0 0 0 hsl(var(--primary));
+    animation: verify-banner-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    pointer-events: none;
+  }
+  @keyframes verify-banner-pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5); }
+    70% { box-shadow: 0 0 0 12px hsl(var(--primary) / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  }
+  .verification-banner-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .verification-banner-title {
+    @apply text-base font-bold text-foreground;
+    line-height: 1.2;
+  }
+  .verification-banner-subtitle {
+    @apply text-xs text-muted-foreground mt-0.5;
+    line-height: 1.3;
+  }
+  .verification-banner-cta {
+    @apply flex items-center gap-1 text-xs font-semibold text-primary shrink-0;
+  }
+  @media (max-width: 480px) {
+    .verification-banner-cta span { display: none; }
+  }
+
+  /* /admin/verification page — полноэкранный list submitted задач */
+  .verify-page-counter {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+           bg-primary/10 text-primary text-sm font-bold;
+  }
+  .verify-row {
+    @apply flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4;
+    transition: background-color 160ms ease;
+  }
+  .verify-row:hover {
+    background-color: hsl(var(--muted) / 0.4);
+  }
+  .verify-row-info {
+    @apply flex-1 min-w-0;
+  }
+  .verify-row-title {
+    @apply text-base font-semibold text-foreground;
+    line-height: 1.3;
+  }
+  .verify-row-meta {
+    @apply text-sm text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap;
+  }
+  .verify-row-worker {
+    @apply font-medium text-foreground;
+  }
+  .verify-row-dot {
+    @apply text-muted-foreground/50;
+  }
+  .verify-row-bonus {
+    @apply text-amber-600 dark:text-amber-400 font-semibold;
+  }
+  .verify-row-actions {
+    @apply flex gap-2 shrink-0 sm:flex-row;
+  }
+  .verify-row-reject {
+    @apply flex flex-col sm:flex-row gap-2 shrink-0 sm:items-center w-full sm:w-auto;
+  }
+  .verify-row-reject-input {
+    @apply h-10 px-3 rounded-xl border border-border bg-background
+           text-sm w-full sm:min-w-[200px] focus:outline-none
+           focus:ring-2 focus:ring-primary/40 focus:border-primary;
+  }
+  .verify-btn {
+    @apply h-10 px-4 rounded-xl text-sm font-semibold inline-flex
+           items-center justify-center gap-1.5 transition-all
+           active:scale-95 disabled:opacity-50;
+    flex-shrink: 0;
+  }
+  .verify-btn--approve {
+    @apply bg-emerald-600 text-white hover:bg-emerald-700
+           shadow-md shadow-emerald-600/30;
+  }
+  .verify-btn--reject {
+    @apply border border-rose-300 text-rose-700 hover:bg-rose-50
+           dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30;
+  }
+  .verify-btn--reject-confirm {
+    @apply bg-rose-600 text-white hover:bg-rose-700;
+  }
+  .verify-btn--cancel {
+    @apply border border-border text-muted-foreground hover:bg-muted;
+  }
+
   /* Поиск наверху — отдельный блок сразу под header'ом. Sticky
      чтобы при скролле длинного списка задач поиск всегда оставался
      под рукой. На mobile это особенно важно — иначе листаешь до
