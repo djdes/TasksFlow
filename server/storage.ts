@@ -406,6 +406,41 @@ export class DatabaseStorage implements IStorage {
 
   // ===================== TASKS =====================
 
+  // Полный набор колонок tasks для SELECT. Использовать в getTask,
+  // getTasks, createTask, updateTask. Раньше каждый метод дублировал
+  // 25 строк, и при добавлении нового поля (например, submittedValues
+  // в commit 47cc605/тик 6) приходилось править все 4 — некоторые
+  // забывались (тик 13: createTask/updateTask пропускали submittedValues
+  // даже после фикса getTask/getTasks). Один источник правды → меньше
+  // silent-omission багов.
+  private static readonly TASK_SELECT = {
+    id: tasks.id,
+    title: tasks.title,
+    workerId: tasks.workerId,
+    requiresPhoto: tasks.requiresPhoto,
+    photoUrl: tasks.photoUrl,
+    photoUrls: tasks.photoUrls,
+    examplePhotoUrl: tasks.examplePhotoUrl,
+    isCompleted: tasks.isCompleted,
+    weekDays: tasks.weekDays,
+    monthDay: tasks.monthDay,
+    isRecurring: tasks.isRecurring,
+    price: tasks.price,
+    category: tasks.category,
+    description: tasks.description,
+    companyId: tasks.companyId,
+    journalLink: tasks.journalLink,
+    createdAt: tasks.createdAt,
+    completedAt: tasks.completedAt,
+    claimedByWorkerId: tasks.claimedByWorkerId,
+    verificationStatus: tasks.verificationStatus,
+    verifierWorkerId: tasks.verifierWorkerId,
+    verifiedByUserId: tasks.verifiedByUserId,
+    verifiedAt: tasks.verifiedAt,
+    rejectReason: tasks.rejectReason,
+    submittedValues: tasks.submittedValues,
+  } as const;
+
   /**
    * Получение всех задач
    * @param companyId - ID компании для фильтрации (опционально)
@@ -414,33 +449,7 @@ export class DatabaseStorage implements IStorage {
    * @note photoUrls возвращается как string[] (пустой массив если нет фото)
    */
   async getTasks(companyId?: number): Promise<Task[]> {
-    const query = db.select({
-      id: tasks.id,
-      title: tasks.title,
-      workerId: tasks.workerId,
-      requiresPhoto: tasks.requiresPhoto,
-      photoUrl: tasks.photoUrl,
-      photoUrls: tasks.photoUrls,
-      examplePhotoUrl: tasks.examplePhotoUrl,
-      isCompleted: tasks.isCompleted,
-      weekDays: tasks.weekDays,
-      monthDay: tasks.monthDay,
-      isRecurring: tasks.isRecurring,
-      price: tasks.price,
-      category: tasks.category,
-      description: tasks.description,
-      companyId: tasks.companyId,
-      journalLink: tasks.journalLink,
-      createdAt: tasks.createdAt,
-      completedAt: tasks.completedAt,
-      claimedByWorkerId: tasks.claimedByWorkerId,
-      verificationStatus: tasks.verificationStatus,
-      verifierWorkerId: tasks.verifierWorkerId,
-      verifiedByUserId: tasks.verifiedByUserId,
-      verifiedAt: tasks.verifiedAt,
-      rejectReason: tasks.rejectReason,
-      submittedValues: tasks.submittedValues,
-    }).from(tasks);
+    const query = db.select(DatabaseStorage.TASK_SELECT).from(tasks);
 
     const result = companyId
       ? await query.where(eq(tasks.companyId, companyId))
@@ -455,33 +464,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTask(id: number): Promise<Task | undefined> {
-    const [task] = await db.select({
-      id: tasks.id,
-      title: tasks.title,
-      workerId: tasks.workerId,
-      requiresPhoto: tasks.requiresPhoto,
-      photoUrl: tasks.photoUrl,
-      photoUrls: tasks.photoUrls,
-      examplePhotoUrl: tasks.examplePhotoUrl,
-      isCompleted: tasks.isCompleted,
-      weekDays: tasks.weekDays,
-      monthDay: tasks.monthDay,
-      isRecurring: tasks.isRecurring,
-      price: tasks.price,
-      category: tasks.category,
-      description: tasks.description,
-      companyId: tasks.companyId,
-      journalLink: tasks.journalLink,
-      createdAt: tasks.createdAt,
-      completedAt: tasks.completedAt,
-      claimedByWorkerId: tasks.claimedByWorkerId,
-      verificationStatus: tasks.verificationStatus,
-      verifierWorkerId: tasks.verifierWorkerId,
-      verifiedByUserId: tasks.verifiedByUserId,
-      verifiedAt: tasks.verifiedAt,
-      rejectReason: tasks.rejectReason,
-      submittedValues: tasks.submittedValues,
-    }).from(tasks).where(eq(tasks.id, id));
+    const [task] = await db
+      .select(DatabaseStorage.TASK_SELECT)
+      .from(tasks)
+      .where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
       ...task,
@@ -543,33 +529,10 @@ export class DatabaseStorage implements IStorage {
     }
     const [result] = await db.insert(tasks).values(taskData as any);
     const insertId = (result as any).insertId;
-    const [task] = await db.select({
-      id: tasks.id,
-      title: tasks.title,
-      workerId: tasks.workerId,
-      requiresPhoto: tasks.requiresPhoto,
-      photoUrl: tasks.photoUrl,
-      photoUrls: tasks.photoUrls,
-      examplePhotoUrl: tasks.examplePhotoUrl,
-      isCompleted: tasks.isCompleted,
-      weekDays: tasks.weekDays,
-      monthDay: tasks.monthDay,
-      isRecurring: tasks.isRecurring,
-      price: tasks.price,
-      category: tasks.category,
-      description: tasks.description,
-      companyId: tasks.companyId,
-      journalLink: tasks.journalLink,
-      createdAt: tasks.createdAt,
-      completedAt: tasks.completedAt,
-      claimedByWorkerId: tasks.claimedByWorkerId,
-      verificationStatus: tasks.verificationStatus,
-      verifierWorkerId: tasks.verifierWorkerId,
-      verifiedByUserId: tasks.verifiedByUserId,
-      verifiedAt: tasks.verifiedAt,
-      rejectReason: tasks.rejectReason,
-      submittedValues: tasks.submittedValues,
-    }).from(tasks).where(eq(tasks.id, insertId));
+    const [task] = await db
+      .select(DatabaseStorage.TASK_SELECT)
+      .from(tasks)
+      .where(eq(tasks.id, insertId));
     return {
       ...task,
       weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
@@ -615,33 +578,10 @@ export class DatabaseStorage implements IStorage {
       }
     });
     await db.update(tasks).set(updateData as any).where(eq(tasks.id, id));
-    const [task] = await db.select({
-      id: tasks.id,
-      title: tasks.title,
-      workerId: tasks.workerId,
-      requiresPhoto: tasks.requiresPhoto,
-      photoUrl: tasks.photoUrl,
-      photoUrls: tasks.photoUrls,
-      examplePhotoUrl: tasks.examplePhotoUrl,
-      isCompleted: tasks.isCompleted,
-      weekDays: tasks.weekDays,
-      monthDay: tasks.monthDay,
-      isRecurring: tasks.isRecurring,
-      price: tasks.price,
-      category: tasks.category,
-      description: tasks.description,
-      companyId: tasks.companyId,
-      journalLink: tasks.journalLink,
-      createdAt: tasks.createdAt,
-      completedAt: tasks.completedAt,
-      claimedByWorkerId: tasks.claimedByWorkerId,
-      verificationStatus: tasks.verificationStatus,
-      verifierWorkerId: tasks.verifierWorkerId,
-      verifiedByUserId: tasks.verifiedByUserId,
-      verifiedAt: tasks.verifiedAt,
-      rejectReason: tasks.rejectReason,
-      submittedValues: tasks.submittedValues,
-    }).from(tasks).where(eq(tasks.id, id));
+    const [task] = await db
+      .select(DatabaseStorage.TASK_SELECT)
+      .from(tasks)
+      .where(eq(tasks.id, id));
     if (!task) return undefined;
     return {
       ...task,
