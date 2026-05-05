@@ -3324,6 +3324,13 @@ export async function registerRoutes(
     };
     const completeUrl = `${baseUrl}/api/integrations/tasksflow/complete`;
     try {
+      // AbortSignal.timeout — Node 17.3+ built-in. Без таймаута:
+      // если WeSetup hang'нется, Express handler ждёт до browser
+      // timeout (~5min), все pool-connection'ы заняты — TasksFlow
+      // встаёт колом для всех воркеров. /complete-with-values
+      // вызывается КАЖДЫМ завершением journal-задачи, самый
+      // критичный по UX. 30s достаточно для медленного WeSetup, но
+      // не висит часами.
       const upstream = await fetch(completeUrl, {
         method: "POST",
         headers: {
@@ -3332,6 +3339,7 @@ export async function registerRoutes(
         },
         body: JSON.stringify(completePayload),
         cache: "no-store",
+        signal: AbortSignal.timeout(30_000),
       });
       const text = await upstream.text();
       // Local mirror logic. Атомарный переход + начисление баланса
