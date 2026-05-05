@@ -1,5 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useRef, lazy, Suspense } from "react";
+import { MotionConfig } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -108,17 +109,28 @@ function Router() {
 }
 
 function App() {
+  // reducedMotion="user" — Framer Motion уважает OS-настройку
+  // prefers-reduced-motion: reduce. CSS-fallback в index.css:2680
+  // покрывает CSS-анимации, но Framer (StatHero, StreakAchievement,
+  // OnboardingTour, Login auth-hero, GreetingBanner и др.) — это JS,
+  // CSS rule на animation-duration на него НЕ влияет. Без MotionConfig
+  // пользователи с вестибулярными нарушениями / мигренями получают
+  // полный спектр scale/translate-эффектов даже при включённом
+  // системном reduced-motion. С "user" — финальные значения сразу
+  // без анимации.
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <MotionConfig reducedMotion="user">
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>
   );
