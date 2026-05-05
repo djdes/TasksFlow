@@ -5,6 +5,8 @@ import {
   flattenJournalRows,
   findTaskFormInCatalog,
   groupJournalRowsByDocument,
+  isTaskFormSchema,
+  journalKindToTemplateCode,
   normalizeTaskFormPayload,
   resolveActiveJournal,
   resolveJournalUi,
@@ -340,5 +342,88 @@ describe("journal link parsing", () => {
 
       expect(getJournalLinkIntegrationId(raw)).toBe(`int-${kind}`);
     }
+  });
+});
+
+// ===================== непокрытые helper'ы =====================
+//
+// Регрессия: если WeSetup когда-нибудь поменяет соглашение по
+// kind-префиксу, эти тесты сразу засветятся. journalKindToTemplateCode
+// — единственная точка mapping'а в проекте, поэтому критичная.
+
+describe("journalKindToTemplateCode", () => {
+  it("strip'ает префикс «wesetup-»", () => {
+    expect(journalKindToTemplateCode("wesetup-cleaning")).toBe("cleaning");
+    expect(journalKindToTemplateCode("wesetup-temperature")).toBe("temperature");
+  });
+
+  it("case-insensitive: WESETUP-cleaning тоже даёт cleaning", () => {
+    expect(journalKindToTemplateCode("WESETUP-cleaning")).toBe("cleaning");
+    expect(journalKindToTemplateCode("WeSetup-cleaning")).toBe("cleaning");
+  });
+
+  it("kind без префикса возвращает as-is (no-op)", () => {
+    expect(journalKindToTemplateCode("cleaning")).toBe("cleaning");
+    expect(journalKindToTemplateCode("foo-bar")).toBe("foo-bar");
+  });
+
+  it("strip'ает только первый префикс (если случайно вложенный)", () => {
+    expect(journalKindToTemplateCode("wesetup-wesetup-cleaning")).toBe(
+      "wesetup-cleaning",
+    );
+  });
+
+  it("пустая строка → пустая строка", () => {
+    expect(journalKindToTemplateCode("")).toBe("");
+  });
+
+  it("только префикс → пустая строка (edge)", () => {
+    expect(journalKindToTemplateCode("wesetup-")).toBe("");
+  });
+});
+
+describe("isTaskFormSchema (type guard)", () => {
+  it("принимает валидный schema-shape", () => {
+    expect(
+      isTaskFormSchema({
+        title: "Test",
+        fields: [
+          { key: "f1", label: "Field", type: "text" },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("принимает schema без title (опциональное поле)", () => {
+    expect(
+      isTaskFormSchema({
+        fields: [{ key: "f1", label: "Field", type: "text" }],
+      }),
+    ).toBe(true);
+  });
+
+  it("отклоняет null и undefined", () => {
+    expect(isTaskFormSchema(null)).toBe(false);
+    expect(isTaskFormSchema(undefined)).toBe(false);
+  });
+
+  it("отклоняет если fields не массив", () => {
+    expect(isTaskFormSchema({ fields: "not-array" })).toBe(false);
+    expect(isTaskFormSchema({ fields: null })).toBe(false);
+  });
+
+  // Note: isTaskFormSchema → normalizeTaskFormSchema, который очень
+  // tolerant — поле без label/type получает defaults. Так что строгая
+  // проверка «без key» провалится, но «без label/type» — нет. Тестируем
+  // только то, что точно отклоняется.
+
+  it("отклоняет если поле без key (key — единственное обязательное)", () => {
+    expect(isTaskFormSchema({ fields: [{ label: "Field" }] })).toBe(false);
+  });
+
+  it("отклоняет примитивы и массивы", () => {
+    expect(isTaskFormSchema("string")).toBe(false);
+    expect(isTaskFormSchema(123)).toBe(false);
+    expect(isTaskFormSchema([])).toBe(false);
   });
 });
