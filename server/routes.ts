@@ -15,6 +15,7 @@ import { registerCompanySchema, loginSchema, tasks } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
+import { resolveUploadAbs } from "./uploads-paths";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -957,7 +958,6 @@ export async function registerRoutes(
       // orphan-файлы в /uploads/, ничем не убираемые — disk usage
       // рос неконтролируемо. Best-effort, не валим ответ при ошибке.
       try {
-        const uploadsRoot = path.resolve(process.cwd(), "uploads");
         const { unlink } = await import("fs/promises");
         const candidates: string[] = [];
         const photos = (existing as { photoUrls?: string[] }).photoUrls;
@@ -965,9 +965,8 @@ export async function registerRoutes(
         if (existing.photoUrl) candidates.push(existing.photoUrl);
         if (existing.examplePhotoUrl) candidates.push(existing.examplePhotoUrl);
         for (const rel of candidates) {
-          if (typeof rel !== "string" || !rel) continue;
-          const abs = path.resolve(process.cwd(), rel);
-          if (!abs.startsWith(uploadsRoot + path.sep)) continue;
+          const abs = resolveUploadAbs(rel);
+          if (!abs) continue;
           await unlink(abs).catch(() => null);
         }
       } catch (cleanupErr) {
@@ -1090,9 +1089,8 @@ export async function registerRoutes(
         // получим status update fail + потерянный example.
         if (previousExampleUrl && previousExampleUrl !== examplePhotoUrl) {
           try {
-            const uploadsRoot = path.resolve(process.cwd(), "uploads");
-            const abs = path.resolve(process.cwd(), previousExampleUrl);
-            if (abs.startsWith(uploadsRoot + path.sep)) {
+            const abs = resolveUploadAbs(previousExampleUrl);
+            if (abs) {
               const { unlink } = await import("fs/promises");
               await unlink(abs).catch(() => null);
             }
@@ -1129,13 +1127,12 @@ export async function registerRoutes(
         return res.status(400).json({ message: "У задачи нет примера фото" });
       }
 
-      // Удаляем файл с диска. Защищаемся от path traversal: разрешаем
-      // только пути внутри uploads/ относительно cwd.
+      // Удаляем файл с диска через resolveUploadAbs (защита от path traversal
+      // через basename + защита от абсолютного photoUrl, см. uploads-paths.ts).
       const { unlink } = await import("fs/promises");
-      const photoPath = path.resolve(process.cwd(), task.examplePhotoUrl);
-      const uploadsRoot = path.resolve(process.cwd(), "uploads");
-      if (!photoPath.startsWith(uploadsRoot + path.sep)) {
-        console.warn("Refusing to delete file outside uploads/:", photoPath);
+      const photoPath = resolveUploadAbs(task.examplePhotoUrl);
+      if (!photoPath) {
+        console.warn("Refusing to delete file outside uploads/:", task.examplePhotoUrl);
       } else {
         try {
           await unlink(photoPath);
@@ -1183,11 +1180,10 @@ export async function registerRoutes(
       const currentPhotos: string[] = (task as any).photoUrls || [];
 
       // Helper: безопасное удаление файла только внутри uploads/.
-      const uploadsRoot = path.resolve(process.cwd(), "uploads");
       const safeUnlink = async (relPath: string) => {
-        const abs = path.resolve(process.cwd(), relPath);
-        if (!abs.startsWith(uploadsRoot + path.sep)) {
-          console.warn("Refusing to delete outside uploads/:", abs);
+        const abs = resolveUploadAbs(relPath);
+        if (!abs) {
+          console.warn("Refusing to delete outside uploads/:", relPath);
           return;
         }
         const { unlink } = await import("fs/promises");

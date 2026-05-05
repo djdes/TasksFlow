@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import path from "path";
+import { resolveUploadAbs } from "./uploads-paths";
 
 // SMTP креды читаем из env. Раньше были hardcoded'ы прямо в коде:
 //   user: 'admin@yesbeat.ru', pass: 'vsyc csjb evlz tcrk' (Google App Password).
@@ -72,16 +73,14 @@ export async function sendTaskCompletedEmail(
     // путь '../../etc/passwd' в path.join даст путь в корень сервера.
     // Allowlist: только пути внутри uploads/.
     if (photoUrls && photoUrls.length > 0) {
-      const uploadsRoot = path.resolve(process.cwd(), "uploads");
       const safeAttachments: NonNullable<
         nodemailer.SendMailOptions["attachments"]
       > = [];
       for (let i = 0; i < photoUrls.length; i += 1) {
         const photoUrl = photoUrls[i];
-        if (typeof photoUrl !== "string" || !photoUrl) continue;
-        const abs = path.resolve(process.cwd(), photoUrl);
-        if (!abs.startsWith(uploadsRoot + path.sep)) {
-          console.warn("[mail] refusing attachment outside uploads/:", abs);
+        const abs = resolveUploadAbs(photoUrl);
+        if (!abs) {
+          console.warn("[mail] refusing attachment outside uploads/:", photoUrl);
           continue;
         }
         safeAttachments.push({
