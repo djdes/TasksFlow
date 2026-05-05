@@ -30,30 +30,19 @@
 
 import { storage } from "./storage";
 import { logger } from "./logger";
+import {
+  RETRY_LADDER_MIN,
+  MAX_ATTEMPTS,
+  computeNextRetryAt,
+  isRetriable,
+} from "./webhook-backoff";
 
-/**
- * Backoff-лестница в минутах. attempts=0 — это первая попытка
- * (мгновенная). attempts=1 — через 5 мин. И т.д.
- */
-const RETRY_LADDER_MIN = [0, 5, 15, 60, 6 * 60, 24 * 60] as const;
-const MAX_ATTEMPTS = RETRY_LADDER_MIN.length;
+// Re-export для callers которые могут от webhook-queue импортить.
+export { RETRY_LADDER_MIN, MAX_ATTEMPTS, computeNextRetryAt, isRetriable };
 
 const FETCH_TIMEOUT_MS = 10_000;
 
 export type WebhookEventType = "complete" | "uncomplete";
-
-function computeNextRetryAt(attempts: number): number {
-  const delayMin =
-    RETRY_LADDER_MIN[Math.min(attempts, RETRY_LADDER_MIN.length - 1)];
-  return Math.floor(Date.now() / 1000) + delayMin * 60;
-}
-
-/** Should this HTTP error trigger a retry? */
-function isRetriable(status: number): boolean {
-  if (status >= 500) return true;
-  if (status === 408 || status === 429) return true;
-  return false;
-}
 
 /**
  * Try delivering immediately. On success — return without enqueuing.
