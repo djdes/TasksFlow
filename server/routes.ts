@@ -986,9 +986,14 @@ export async function registerRoutes(
     res.setHeader('Content-Type', 'application/json');
 
     upload.single("photo")(req, res, async (err: any) => {
+      // needCleanup — флаг «файл успешно сохранён multer'ом, но мы НЕ
+      // дописали его в БД». finally-блок снесёт orphan. Сбрасываем в
+      // false только когда photoUrls записан в task.
+      let needCleanup = false;
       try {
         if (err) {
-          // Ошибки multer (например, неверный тип файла / размер)
+          // Ошибки multer (например, неверный тип файла / размер) —
+          // multer fileFilter rejects до сохранения, файла на диске нет.
           console.error("Multer upload error:", err);
           return res.status(400).json({ message: err.message || "Ошибка загрузки файла" });
         }
@@ -996,6 +1001,8 @@ export async function registerRoutes(
         if (!req.file) {
           return res.status(400).json({ message: "Файл не загружен" });
         }
+        // С этого момента файл лежит на диске — нужен cleanup при early-return.
+        needCleanup = true;
 
         const taskId = Number(req.params.id);
         const task = await storage.getTask(taskId);
@@ -1033,6 +1040,8 @@ export async function registerRoutes(
           return res.status(500).json({ message: "Ошибка обновления задачи" });
         }
 
+        // UPDATE успешен — файл теперь принадлежит БД, cleanup НЕ нужен.
+        needCleanup = false;
         return res.json({
           photoUrl: photoUrl,
           photoUrls: (updatedTask as any).photoUrls || []
@@ -1040,6 +1049,14 @@ export async function registerRoutes(
       } catch (uploadErr: any) {
         console.error("Error uploading photo:", uploadErr);
         return res.status(500).json({ message: "Ошибка загрузки фото", error: uploadErr.message });
+      } finally {
+        if (needCleanup && req.file) {
+          const abs = resolveUploadAbs(req.file.filename);
+          if (abs) {
+            const { unlink } = await import("fs/promises");
+            await unlink(abs).catch(() => null);
+          }
+        }
       }
     });
   });
@@ -1049,6 +1066,8 @@ export async function registerRoutes(
     res.setHeader('Content-Type', 'application/json');
 
     upload.single("photo")(req, res, async (err: any) => {
+      // см. комментарий к needCleanup в /api/tasks/:id/photo выше.
+      let needCleanup = false;
       try {
         if (err) {
           console.error("Multer upload error:", err);
@@ -1058,6 +1077,7 @@ export async function registerRoutes(
         if (!req.file) {
           return res.status(400).json({ message: "Файл не загружен" });
         }
+        needCleanup = true;
 
         const taskId = Number(req.params.id);
         const task = await storage.getTask(taskId);
@@ -1085,8 +1105,12 @@ export async function registerRoutes(
           return res.status(500).json({ message: "Ошибка обновления задачи" });
         }
 
-        // Best-effort cleanup только после успешного UPDATE — иначе
-        // получим status update fail + потерянный example.
+        // UPDATE успешен — новый файл принадлежит БД.
+        needCleanup = false;
+
+        // Best-effort cleanup ПРЕДЫДУЩЕГО example-photo только после
+        // успешного UPDATE — иначе получим status update fail +
+        // потерянный example.
         if (previousExampleUrl && previousExampleUrl !== examplePhotoUrl) {
           try {
             const abs = resolveUploadAbs(previousExampleUrl);
@@ -1103,6 +1127,14 @@ export async function registerRoutes(
       } catch (uploadErr: any) {
         console.error("Error uploading example photo:", uploadErr);
         return res.status(500).json({ message: "Ошибка загрузки фото", error: uploadErr.message });
+      } finally {
+        if (needCleanup && req.file) {
+          const abs = resolveUploadAbs(req.file.filename);
+          if (abs) {
+            const { unlink } = await import("fs/promises");
+            await unlink(abs).catch(() => null);
+          }
+        }
       }
     });
   });
