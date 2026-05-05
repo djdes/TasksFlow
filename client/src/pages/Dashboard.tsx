@@ -383,8 +383,16 @@ export default function Dashboard() {
     (t as { verificationStatus?: string | null }).verificationStatus ===
     "submitted";
 
-  const splitForAdmin =
-    canManageTasks && filterByUserId === "all" && Boolean(user?.id);
+  // Split применяется ВСЕГДА для admin/manager и worker'а — две
+  // секции «Мои задачи» / «На проверке» всегда раздельно. Раньше
+  // ставили условие `filterByUserId === "all"`, и при смене фильтра
+  // split сворачивался обратно в плоский список — пользователь
+  // жаловался: «всё вперемешку, не понятно сколько мне делать».
+  // Теперь split включён всегда; если admin сузил filter (выбрал
+  // Иванов в dropdown) — обе секции отфильтруются по нему, в «Мои»
+  // ничего не попадёт (admin != Иванов), а в «На проверке» — только
+  // submitted Иванова. Это и есть желаемое поведение.
+  const splitForAdmin = canManageTasks && Boolean(user?.id);
   const splitForWorker = !canManageTasks && Boolean(user?.id);
   const splitActive = splitForAdmin || splitForWorker;
 
