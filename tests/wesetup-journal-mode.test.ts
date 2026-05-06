@@ -278,6 +278,70 @@ describe("task form helpers", () => {
     });
   });
 
+  it("catalog=null → null (без crash)", () => {
+    expect(findTaskFormInCatalog(null, "wesetup-cleaning")).toBeNull();
+  });
+
+  it("catalog=undefined → null", () => {
+    expect(findTaskFormInCatalog(undefined, "wesetup-cleaning")).toBeNull();
+  });
+
+  it("journalKind=null → null", () => {
+    const catalog = {
+      journals: [
+        {
+          templateCode: "x",
+          label: "X",
+          description: null,
+          iconName: null,
+          taskForm: form,
+          documents: [],
+        },
+      ],
+    };
+    expect(findTaskFormInCatalog(catalog, null)).toBeNull();
+  });
+
+  it("journalKind='' (пустая) → null", () => {
+    const catalog = { journals: [] };
+    expect(findTaskFormInCatalog(catalog, "")).toBeNull();
+  });
+
+  it("journal не найден в catalog → null", () => {
+    // Edge case: kind который не соответствует ни одному templateCode.
+    const catalog = {
+      journals: [
+        {
+          templateCode: "cleaning",
+          label: "Уборка",
+          description: null,
+          iconName: null,
+          taskForm: form,
+          documents: [],
+        },
+      ],
+    };
+    expect(
+      findTaskFormInCatalog(catalog, "wesetup-nonexistent"),
+    ).toBeNull();
+  });
+
+  it("найден журнал, но taskForm=null → null (нет формы)", () => {
+    const catalog = {
+      journals: [
+        {
+          templateCode: "cleaning",
+          label: "Уборка",
+          description: null,
+          iconName: null,
+          taskForm: null,
+          documents: [],
+        },
+      ],
+    };
+    expect(findTaskFormInCatalog(catalog, "wesetup-cleaning")).toBeNull();
+  });
+
   it("keeps lookup stable for a 35 journal catalog", () => {
     const catalog = {
       journals: Array.from({ length: 35 }, (_, index) => ({
