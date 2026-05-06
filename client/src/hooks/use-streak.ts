@@ -37,6 +37,40 @@ function yesterdayKey(): string {
 export type StreakStored = { days: number; lastDate: string };
 
 /**
+ * Pure-функция парсинга localStorage-payload. Возвращает stored либо
+ * null если невалидно. Извлечено для прямого тестирования defensive-
+ * checks без mocking localStorage.
+ *
+ * Защищает от:
+ *   • corrupted JSON
+ *   • days не number / float / negative
+ *   • lastDate не string
+ *   • null root (JSON.parse('null'))
+ */
+export function parseStreakStored(raw: string | null | undefined): StreakStored | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<StreakStored> | null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    const days = (parsed as { days?: unknown }).days;
+    const lastDate = (parsed as { lastDate?: unknown }).lastDate;
+    if (
+      typeof days !== "number" ||
+      !Number.isInteger(days) ||
+      days < 0 ||
+      typeof lastDate !== "string"
+    ) {
+      return null;
+    }
+    return { days, lastDate };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Pure-функция расчёта следующего streak. Извлечена из useEffect для
  * прямого unit-тестирования без React. Изменения тут — изменения
  * UX-мотивации воркера, легко тихо сломать.
@@ -79,15 +113,7 @@ export function useStreak(
     let stored: Stored | null = null;
     try {
       const raw = window.localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Stored>;
-        if (
-          typeof parsed.days === "number" &&
-          typeof parsed.lastDate === "string"
-        ) {
-          stored = { days: parsed.days, lastDate: parsed.lastDate };
-        }
-      }
+      stored = parseStreakStored(raw);
     } catch {
       /* corrupted — treat as fresh */
     }

@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeNextStreak,
+  parseStreakStored,
   type StreakStored,
 } from "../client/src/hooks/use-streak";
 
@@ -81,5 +82,62 @@ describe("computeNextStreak — boundary semantics", () => {
     // Edge: stored есть но days=0 (legacy migration)
     const stored: StreakStored = { days: 0, lastDate: YESTERDAY };
     expect(computeNextStreak(stored, TODAY, YESTERDAY, true)).toBe(1);
+  });
+});
+
+describe("parseStreakStored — defensive corrupted-localStorage", () => {
+  it("null/undefined/'' → null", () => {
+    expect(parseStreakStored(null)).toBeNull();
+    expect(parseStreakStored(undefined)).toBeNull();
+    expect(parseStreakStored("")).toBeNull();
+  });
+
+  it("malformed JSON → null", () => {
+    expect(parseStreakStored("not json{{")).toBeNull();
+  });
+
+  it("JSON-null literal → null (без crash)", () => {
+    expect(parseStreakStored("null")).toBeNull();
+  });
+
+  it("array вместо object → null", () => {
+    expect(parseStreakStored("[1,2]")).toBeNull();
+  });
+
+  it("number вместо object → null", () => {
+    expect(parseStreakStored("42")).toBeNull();
+  });
+
+  it("days отсутствует → null", () => {
+    expect(parseStreakStored('{"lastDate":"2026-05-05"}')).toBeNull();
+  });
+
+  it("lastDate отсутствует → null", () => {
+    expect(parseStreakStored('{"days":5}')).toBeNull();
+  });
+
+  it("days=1.5 (float) → null (Number.isInteger guard)", () => {
+    // Регрессия: без isInteger guard'а UI показал бы «1.5 дней».
+    expect(
+      parseStreakStored('{"days":1.5,"lastDate":"2026-05-05"}'),
+    ).toBeNull();
+  });
+
+  it("days=-3 (negative) → null", () => {
+    expect(
+      parseStreakStored('{"days":-3,"lastDate":"2026-05-05"}'),
+    ).toBeNull();
+  });
+
+  it("happy path → объект", () => {
+    expect(
+      parseStreakStored('{"days":7,"lastDate":"2026-05-05"}'),
+    ).toEqual({ days: 7, lastDate: "2026-05-05" });
+  });
+
+  it("days=0 (legacy migration) → объект", () => {
+    expect(
+      parseStreakStored('{"days":0,"lastDate":"2026-05-05"}'),
+    ).toEqual({ days: 0, lastDate: "2026-05-05" });
   });
 });
