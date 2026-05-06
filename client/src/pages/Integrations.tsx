@@ -19,6 +19,20 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
+
+// Integrations admin queries: combine TanStack signal с timeout. Чтобы
+// не плодить boilerplate в каждом queryFn — небольшой helper.
+function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(ms);
+  if ("any" in AbortSignal && signal) {
+    return (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+      signal,
+      timeoutSignal,
+    ]);
+  }
+  return timeoutSignal;
+}
 
 /**
  * /admin/integrations — единый «Интеграционный центр» TasksFlow
@@ -106,8 +120,11 @@ export default function IntegrationsPage() {
 
   const healthQuery = useQuery<WesetupHealth>({
     queryKey: ["wesetup-health"],
-    queryFn: async () => {
-      const r = await fetch("/api/wesetup/health", { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const r = await fetchOrFriendlyError("/api/wesetup/health", {
+        credentials: "include",
+        signal: withTimeout(signal, 30_000),
+      });
       const data = await r.json().catch(() => ({ ok: false, message: "не JSON" }));
       if (!r.ok) {
         throw Object.assign(new Error(data?.message || "health failed"), { data });
@@ -120,8 +137,11 @@ export default function IntegrationsPage() {
 
   const linksQuery = useQuery<LinksResponse>({
     queryKey: ["wesetup-links"],
-    queryFn: async () => {
-      const r = await fetch("/api/wesetup/links", { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const r = await fetchOrFriendlyError("/api/wesetup/links", {
+        credentials: "include",
+        signal: withTimeout(signal, 30_000),
+      });
       if (!r.ok) {
         return {};
       }
@@ -132,9 +152,10 @@ export default function IntegrationsPage() {
 
   const queueQuery = useQuery<WebhookQueueStats>({
     queryKey: ["webhook-queue-stats"],
-    queryFn: async () => {
-      const r = await fetch("/api/admin/webhook-queue/stats", {
+    queryFn: async ({ signal }) => {
+      const r = await fetchOrFriendlyError("/api/admin/webhook-queue/stats", {
         credentials: "include",
+        signal: withTimeout(signal, 30_000),
       });
       if (!r.ok) throw new Error("queue stats failed");
       return (await r.json()) as WebhookQueueStats;
@@ -145,9 +166,11 @@ export default function IntegrationsPage() {
 
   const syncUsers = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/wesetup/sync-users", {
+      // 90s — bulk операция массовой sync, server timeout 60s + запас.
+      const r = await fetchOrFriendlyError("/api/wesetup/sync-users", {
         method: "POST",
         credentials: "include",
+        signal: AbortSignal.timeout(90_000),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.message || data.error || "Ошибка sync-users");
@@ -175,9 +198,10 @@ export default function IntegrationsPage() {
 
   const syncTasks = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/wesetup/sync-tasks", {
+      const r = await fetchOrFriendlyError("/api/wesetup/sync-tasks", {
         method: "POST",
         credentials: "include",
+        signal: AbortSignal.timeout(90_000),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.message || data.error || "Ошибка sync-tasks");
@@ -199,9 +223,10 @@ export default function IntegrationsPage() {
 
   const syncHierarchy = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/wesetup/sync-hierarchy", {
+      const r = await fetchOrFriendlyError("/api/wesetup/sync-hierarchy", {
         method: "POST",
         credentials: "include",
+        signal: AbortSignal.timeout(90_000),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok)
@@ -222,11 +247,12 @@ export default function IntegrationsPage() {
 
   const bulkAssign = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/wesetup/bulk-assign-today", {
+      const r = await fetchOrFriendlyError("/api/wesetup/bulk-assign-today", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
+        signal: AbortSignal.timeout(90_000),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.message || data.error || "Ошибка bulk-assign");

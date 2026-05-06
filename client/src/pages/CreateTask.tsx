@@ -128,8 +128,9 @@ export default function CreateTask() {
     setCatalogError(null);
 
     try {
-      const response = await fetch("/api/wesetup/journals-catalog", {
+      const response = await fetchOrFriendlyError("/api/wesetup/journals-catalog", {
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -471,11 +472,12 @@ export default function CreateTask() {
 
     setJournalSubmitting(true);
     try {
-      const response = await fetch("/api/wesetup/bind-row", {
+      const response = await fetchOrFriendlyError("/api/wesetup/bind-row", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
