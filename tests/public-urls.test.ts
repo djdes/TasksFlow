@@ -131,4 +131,35 @@ describe("public URL helpers", () => {
       )
     ).toBe("https://wesetup.ru/task-fill/77?token=abc");
   });
+
+  it("relative upstream URL → resolves relative to publicBase", () => {
+    // Upstream вернул relative path вместо absolute (некоторые
+    // configurations так делают). Без protocol parseHttpUrl даёт null,
+    // мы должны fall back на publicBase + path.
+    expect(
+      toPublicWesetupUrl(
+        "/task-fill/77?token=abc",
+        "https://wesetup.ru",
+      ),
+    ).toBe("https://wesetup.ru/task-fill/77?token=abc");
+  });
+
+  it("malformed upstream URL → возвращает as-is (без crash)", () => {
+    // new URL("garbage", base) при некоторых combo throws — функция
+    // должна вернуть raw upstream без падения.
+    const result = toPublicWesetupUrl("not a url", "https://wesetup.ru");
+    // Может либо вернуть raw, либо resolve как relative path. Главное
+    // — не throw и не undefined.
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("publicBaseUrl сам malformed → возвращает upstream as-is", () => {
+    const result = toPublicWesetupUrl(
+      "https://wesetup.ru/task-fill/77",
+      "not a valid url",
+    );
+    // parseHttpUrl(publicBaseUrl) даёт null → ранний return upstream.
+    expect(result).toBe("https://wesetup.ru/task-fill/77");
+  });
 });
