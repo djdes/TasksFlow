@@ -101,6 +101,19 @@ describe("formatPhoneInput — мусор и edge cases", () => {
   it("partial '+7 99' → '+799'", () => {
     expect(formatPhoneInput("+7 99")).toBe("+799");
   });
+
+  it("арабско-индийские цифры (٠١٢٣٤٥٦٧٨٩) → отбрасываются (regex \\D)", () => {
+    // Регрессия freeze: JS regex `\D` НЕ рассматривает арабско-индийские
+    // цифры U+0660..0669 как digits. В русском контексте это OK
+    // (никто не вводит арабские цифры в +7-номер), но если кто-то
+    // заменит на unicode-aware regex, тест засветится и потребует
+    // решения о валидной семантике.
+    expect(formatPhoneInput("+7٩٩٩١٢٣٤٥٦٧")).toBe("+7");
+  });
+
+  it("полноширинные цифины (０１２) → отбрасываются", () => {
+    expect(formatPhoneInput("+7９９９１２３")).toBe("+7");
+  });
 });
 
 describe("formatPhoneInput — output structure", () => {
