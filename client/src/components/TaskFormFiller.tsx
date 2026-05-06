@@ -203,7 +203,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     for (const field of schema.fields) {
       if (field.type === "hidden") continue;
       const v = values[field.key];
-      parts.push(`${field.label}: ${formatValue(field, v)}`);
+      parts.push(`${field.label}: ${formatTaskFormValue(field, v)}`);
     }
     return parts.join("\n");
   }, [schema, values]);
@@ -652,6 +652,3 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-
-// formatValue extracted to lib/task-form-format.ts as formatTaskFormValue.
-const formatValue = formatTaskFormValue;
