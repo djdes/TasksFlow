@@ -270,4 +270,60 @@ describe("POST /api/tasks/:id/example-photo — admin only", () => {
       });
     expect(r.status).toBe(403);
   });
+
+  it("admin happy path → 200, examplePhotoUrl", async () => {
+    // updateTask вызывается с {examplePhotoUrl: "/uploads/task-100-..."}
+    storage.updateTask.mockImplementation(async (id: number, patch: any) => {
+      if (patch.examplePhotoUrl) {
+        const filename = patch.examplePhotoUrl.replace(/^\/uploads\//, "");
+        uploadedFiles.push(filename);
+      }
+      return { ...TASK, id, ...patch };
+    });
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/100/example-photo`)
+      .attach("photo", MINIMAL_JPEG, {
+        filename: "x.jpg",
+        contentType: "image/jpeg",
+      });
+    expect(r.status).toBe(200);
+    expect(r.body.examplePhotoUrl).toMatch(/^\/uploads\/task-100-/);
+    expect(storage.updateTask).toHaveBeenCalledWith(
+      100,
+      expect.objectContaining({ examplePhotoUrl: expect.any(String) }),
+    );
+  });
+
+  it("admin + чужая компания → 404 (multi-tenant)", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(TASK_FOREIGN);
+
+    const r = await request(app)
+      .post(`/api/tasks/100/example-photo`)
+      .attach("photo", MINIMAL_JPEG, {
+        filename: "x.jpg",
+        contentType: "image/jpeg",
+      });
+    expect(r.status).toBe(404);
+    expect(storage.updateTask).not.toHaveBeenCalled();
+  });
+
+  it("несуществующий task → 404", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(undefined);
+
+    const r = await request(app)
+      .post(`/api/tasks/9999/example-photo`)
+      .attach("photo", MINIMAL_JPEG, {
+        filename: "x.jpg",
+        contentType: "image/jpeg",
+      });
+    expect(r.status).toBe(404);
+  });
 });
