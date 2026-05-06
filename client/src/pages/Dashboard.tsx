@@ -14,7 +14,7 @@ import {
   getUserInitials as getUserInitialsLib,
   getUserShortName as getUserShortNameLib,
 } from "@/lib/user-display";
-import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
+import { getTaskScope } from "@/lib/task-scope";
 import {
   isJournalTask,
   isSubmittedFiller,
@@ -436,16 +436,11 @@ export default function Dashboard() {
   };
 
 
-  // getTaskScope — обёртка над lib/task-scope.ts. Function declaration
-  // (не const arrow) важна потому что используется в `scopeCounts`
-  // reduce'е ВЫШЕ по файлу. const-arrow не hoisted, в TDZ давал
-  // «can't access lexical declaration … before initialization» при
-  // первом рендере (см. ErrorBoundary screenshot 2026-04-28).
-  function getTaskScope(task: typeof tasks[0]): "personal" | "shared" {
-    return getTaskScopeLib({
-      journalLink: (task as { journalLink?: string | null }).journalLink,
-    });
-  }
+  // getTaskScope импортирован напрямую из lib/task-scope.ts. Раньше
+  // здесь был local function-wrapper для type adaptation, но Task
+  // structurally compatible с lib's expected shape (journalLink
+  // optional). Imports hoisted, поэтому TDZ-risk на reduce'ах выше
+  // (scopeCounts) не возникает.
 
   /**
    * Клик по самой карточке. Раньше всегда открывал TaskViewDialog —
