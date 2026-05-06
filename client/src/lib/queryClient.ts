@@ -24,6 +24,16 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Default timeout для всех простых GET/POST. Совпадает с server-side
+// timeout'ом fetch к WeSetup (30s) — то есть если backend hung'нется,
+// клиент всё равно получит явный fail после 30 секунд через AbortError
+// → ApiError → toast «Не удалось». Без таймаута бабушка-воркер видит
+// бесконечный спиннер.
+//
+// Для file-upload путей (multer multipart) уровень выше использует
+// явный AbortSignal.timeout(120_000) — этот default им не подходит.
+const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -34,6 +44,7 @@ export async function apiRequest(
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
   });
 
   await throwIfResNotOk(res);
@@ -45,9 +56,21 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+  async ({ queryKey, signal }) => {
+    // signal приходит из TanStack Query — auto-abort при unmount/refetch
+    // компонента. Таймаут добавляем поверх через AbortSignal.any —
+    // первый из двух сигналов тригерит abort. (Node 20+, Chrome 118+.)
+    const timeoutSignal = AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS);
+    const combined =
+      "any" in AbortSignal && signal
+        ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+            signal,
+            timeoutSignal,
+          ])
+        : timeoutSignal;
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      signal: combined,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
