@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { matchTaskBySearch } from "@/lib/task-search";
 import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
+import { extractCategories } from "@/lib/extract-categories";
 import {
   getUserInitials as getUserInitialsLib,
   getUserShortName as getUserShortNameLib,
@@ -229,11 +230,7 @@ export default function Dashboard() {
     }
   };
 
-  const categories = Array.from(new Set(
-    tasks
-      .map(task => (task as any).category)
-      .filter((c): c is string => c !== null && c !== undefined && c.trim() !== "")
-  )).sort();
+  const categories = extractCategories(tasks as { category?: string | null }[]);
 
   const getUserName = (userId: number | null) => {
     if (!userId) return "Не назначен";
