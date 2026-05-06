@@ -2,12 +2,29 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertWorker } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
+
+// Helper: combine TanStack Query signal с timeout signal через AbortSignal.any.
+// (Node 20+, Chrome 118+; fallback на pure timeout если any недоступен.)
+function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(ms);
+  if ("any" in AbortSignal && signal) {
+    return (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+      signal,
+      timeoutSignal,
+    ]);
+  }
+  return timeoutSignal;
+}
 
 export function useWorkers() {
   return useQuery({
     queryKey: [api.workers.list.path],
-    queryFn: async () => {
-      const res = await fetch(api.workers.list.path, { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const res = await fetchOrFriendlyError(api.workers.list.path, {
+        credentials: "include",
+        signal: withTimeout(signal, 30_000),
+      });
       if (!res.ok) throw new Error("Failed to fetch workers");
       return api.workers.list.responses[200].parse(await res.json());
     },
@@ -18,9 +35,12 @@ export function useWorker(id: number) {
   return useQuery({
     queryKey: [api.workers.get.path, id],
     enabled: !!id,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const url = buildUrl(api.workers.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetchOrFriendlyError(url, {
+        credentials: "include",
+        signal: withTimeout(signal, 30_000),
+      });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch worker");
       return api.workers.get.responses[200].parse(await res.json());
@@ -35,13 +55,14 @@ export function useCreateWorker() {
   return useMutation({
     mutationFn: async (data: InsertWorker) => {
       const validated = api.workers.create.input.parse(data);
-      const res = await fetch(api.workers.create.path, {
+      const res = await fetchOrFriendlyError(api.workers.create.path, {
         method: api.workers.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
-      
+
       if (!res.ok) {
         if (res.status === 400) {
           const error = api.workers.create.responses[400].parse(await res.json());
@@ -69,11 +90,12 @@ export function useUpdateWorker() {
     mutationFn: async ({ id, ...updates }: { id: number } & InsertWorker) => {
       const validated = api.workers.update.input.parse(updates);
       const url = buildUrl(api.workers.update.path, { id });
-      const res = await fetch(url, {
+      const res = await fetchOrFriendlyError(url, {
         method: api.workers.update.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!res.ok) throw new Error("Failed to update worker");
@@ -96,9 +118,10 @@ export function useDeleteWorker() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.workers.delete.path, { id });
-      const res = await fetch(url, { 
-        method: api.workers.delete.method, 
-        credentials: "include" 
+      const res = await fetchOrFriendlyError(url, {
+        method: api.workers.delete.method,
+        credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       if (!res.ok) throw new Error("Failed to delete worker");
     },

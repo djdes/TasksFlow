@@ -16,9 +16,18 @@ const QUERY_KEY = ["awaiting-verification"] as const;
 export function useAwaitingVerification() {
   return useQuery<Task[]>({
     queryKey: QUERY_KEY,
-    queryFn: async () => {
-      const res = await fetch("/api/tasks/awaiting-verification", {
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const res = await fetchOrFriendlyError("/api/tasks/awaiting-verification", {
         credentials: "include",
+        signal: combined,
       });
       if (!res.ok) {
         if (res.status === 401) return [];

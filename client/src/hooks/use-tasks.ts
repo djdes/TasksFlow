@@ -6,8 +6,19 @@ import { fetchOrFriendlyError } from "@/lib/queryClient";
 export function useTasks() {
   return useQuery<Task[]>({
     queryKey: [api.tasks.list.path],
-    queryFn: async () => {
-      const res = await fetch(api.tasks.list.path, { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const res = await fetchOrFriendlyError(api.tasks.list.path, {
+        credentials: "include",
+        signal: combined,
+      });
       if (!res.ok) throw new Error("Failed to fetch tasks");
       // Не используем parse чтобы сохранить weekDays и photoUrls как массивы
       return await res.json();
@@ -19,9 +30,20 @@ export function useTask(id: number) {
   return useQuery({
     queryKey: [api.tasks.get.path, id],
     enabled: !!id,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const url = buildUrl(api.tasks.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const res = await fetchOrFriendlyError(url, {
+        credentials: "include",
+        signal: combined,
+      });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch task");
       // Не используем parse чтобы сохранить weekDays как массив
@@ -47,11 +69,12 @@ export function useCreateTask() {
 
       const validated = api.tasks.create.input.parse(payload);
       
-      const res = await fetch(api.tasks.create.path, {
+      const res = await fetchOrFriendlyError(api.tasks.create.path, {
         method: api.tasks.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!res.ok) {
@@ -86,11 +109,12 @@ export function useUpdateTask() {
       const validated = api.tasks.update.input.parse(payload);
       const url = buildUrl(api.tasks.update.path, { id });
       
-      const res = await fetch(url, {
+      const res = await fetchOrFriendlyError(url, {
         method: api.tasks.update.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!res.ok) throw new Error("Failed to update task");
@@ -108,9 +132,10 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.tasks.delete.path, { id });
-      const res = await fetch(url, { 
-        method: api.tasks.delete.method, 
-        credentials: "include" 
+      const res = await fetchOrFriendlyError(url, {
+        method: api.tasks.delete.method,
+        credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       if (!res.ok) throw new Error("Failed to delete task");
     },
@@ -125,11 +150,15 @@ export function useCompleteTask() {
 
   return useMutation({
     mutationFn: async ({ id, comment }: { id: number; comment?: string }) => {
-      const res = await fetch(buildUrl(api.tasks.complete.path, { id }), {
+      // useCompleteTask — самый горячий путь воркера: каждое нажатие
+      // «Готово». 35s — server timeout 30s + 5s round-trip (на journal-
+      // задачах internally делает upstream WeSetup).
+      const res = await fetchOrFriendlyError(buildUrl(api.tasks.complete.path, { id }), {
         method: api.tasks.complete.method,
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment }),
+        signal: AbortSignal.timeout(35_000),
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
