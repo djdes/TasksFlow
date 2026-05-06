@@ -11,6 +11,11 @@ import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { matchTaskBySearch } from "@/lib/task-search";
 import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
 import {
+  getUserInitials as getUserInitialsLib,
+  getUserShortName as getUserShortNameLib,
+} from "@/lib/user-display";
+import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
+import {
   feedbackTaskComplete,
   isFeedbackEnabled,
   setFeedbackEnabled,
@@ -239,31 +244,21 @@ export default function Dashboard() {
    */
   const getUserShortName = (userId: number | null) => {
     if (!userId) return "Не назначен";
-    const foundUser = users.find(u => u.id === userId);
+    const foundUser = users.find((u) => u.id === userId);
     if (!foundUser) return "Неизвестный";
-    const full = (foundUser.name || foundUser.phone).trim();
-    if (!full) return foundUser.phone;
-    const parts = full.split(/\s+/);
-    return parts.length >= 2 ? parts[parts.length - 1] : parts[0];
+    return getUserShortNameLib(foundUser);
   };
 
   const getUserPosition = (userId: number | null) => {
     if (!userId) return null;
-    const foundUser = users.find(u => u.id === userId);
+    const foundUser = users.find((u) => u.id === userId);
     return (foundUser as { position?: string | null } | undefined)?.position ?? null;
   };
 
   const getUserInitials = (userId: number | null) => {
     if (!userId) return "?";
-    const foundUser = users.find(u => u.id === userId);
-    if (!foundUser) return "?";
-    const name = (foundUser.name || foundUser.phone).trim();
-    const parts = name.split(/\s+/);
-    if (parts.length >= 2) {
-      // Иванов Сергей → ИС вместо ИВ. Корректнее для русских имён.
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    const foundUser = users.find((u) => u.id === userId);
+    return getUserInitialsLib(foundUser);
   };
 
   const currentDayOfWeek = new Date().getDay();
@@ -462,23 +457,15 @@ export default function Dashboard() {
     return hasJournalLink || category.startsWith("WeSetup · ");
   };
 
-  // getTaskScope — function declaration (а не const arrow), потому что
-  // используется в `scopeCounts` reduce'е выше по файлу. const-arrow
-  // не hoisted и в TDZ давал «can't access lexical declaration … before
-  // initialization» при первом рендере (см. ErrorBoundary screenshot
-  // 2026-04-28). Function declaration hoisted в начало enclosing scope —
-  // безопасно вызывать раньше визуального места объявления.
-  function getTaskScope(
-    task: typeof tasks[0]
-  ): "personal" | "shared" {
-    const raw = (task as { journalLink?: string | null }).journalLink;
-    if (!raw) return "personal";
-    try {
-      const parsed = JSON.parse(raw) as { taskScope?: string };
-      return parsed.taskScope === "shared" ? "shared" : "personal";
-    } catch {
-      return "personal";
-    }
+  // getTaskScope — обёртка над lib/task-scope.ts. Function declaration
+  // (не const arrow) важна потому что используется в `scopeCounts`
+  // reduce'е ВЫШЕ по файлу. const-arrow не hoisted, в TDZ давал
+  // «can't access lexical declaration … before initialization» при
+  // первом рендере (см. ErrorBoundary screenshot 2026-04-28).
+  function getTaskScope(task: typeof tasks[0]): "personal" | "shared" {
+    return getTaskScopeLib({
+      journalLink: (task as { journalLink?: string | null }).journalLink,
+    });
   }
 
   /**
