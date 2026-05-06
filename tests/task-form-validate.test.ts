@@ -99,6 +99,24 @@ describe("isFieldValueValid — number field", () => {
   it("max=100 + value=100.1 → false", () => {
     expect(isFieldValueValid({ ...numField, max: 100 }, 100.1)).toBe(false);
   });
+
+  it("string '36.6' для number field → true (typeof guard НЕ срабатывает)", () => {
+    // Документированное поведение: если value пришёл как string
+    // (например из <input type="number"> до coercion), проверка
+    // min/max пропускается потому что `typeof v === "number"` false.
+    // Это freeze: защита от вводящего в заблуждение «range check
+    // молча пропустил всё». Если кто-то добавит string→number
+    // coercion ВНУТРИ isFieldValueValid, тест упадёт и потребует
+    // решения о новой семантике.
+    expect(
+      isFieldValueValid({ ...numField, min: 35, max: 42 }, "36.6"),
+    ).toBe(true);
+  });
+
+  it("string '0' (для number field) → true (не '' guard)", () => {
+    // Pass через `v === ""` check (это не пустая строка).
+    expect(isFieldValueValid(numField, "0")).toBe(true);
+  });
 });
 
 describe("isFieldValueValid — array (multi-select)", () => {
