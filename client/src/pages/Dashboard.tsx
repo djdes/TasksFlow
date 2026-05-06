@@ -8,6 +8,7 @@ import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { matchTaskBySearch } from "@/lib/task-search";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -349,21 +350,17 @@ export default function Dashboard() {
       ? baseFilteredTasks.filter((task) => getTaskScope(task) === taskTab)
       : baseFilteredTasks;
 
-  const normalizedSearch = searchQuery.trim().toLowerCase();
-  const filteredTasks = normalizedSearch
-    ? scopeFilteredTasks.filter((task) => {
-        const haystack = [
-          task.title,
-          (task as any).description,
-          (task as any).category,
-          getUserName(task.workerId),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(normalizedSearch);
-      })
-    : scopeFilteredTasks;
+  const filteredTasks = scopeFilteredTasks.filter((task) =>
+    matchTaskBySearch(
+      {
+        title: task.title,
+        description: (task as { description?: string | null }).description,
+        category: (task as { category?: string | null }).category,
+      },
+      getUserName(task.workerId),
+      searchQuery,
+    ),
+  );
 
   const completedCount = filteredTasks.filter(t => t.isCompleted).length;
   const totalCount = filteredTasks.length;
