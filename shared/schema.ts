@@ -175,7 +175,11 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   // не будет показываться в свой день. Раньше Zod пропускал.
   monthDay: z.number().int().min(1).max(31).nullable().optional(),
   isRecurring: z.boolean().optional().default(true), // повторяющаяся задача
-  price: z.number().min(0).optional().default(0), // стоимость выполнения в рублях
+  // .int() обязателен: drizzle column int. Без guard'а float (например
+  // юзер ввёл «50.5») попадёт в БД через ZodError-bypass, MySQL cast'нет
+  // в 50 silently — расхождение между ZOD-form-input и БД value. Также
+  // .int() блокирует Infinity (Number.isInteger(Infinity)===false).
+  price: z.number().int().min(0).optional().default(0),
   category: z.string().max(100).nullable().optional(), // категория задачи
   // Описание — DB column TEXT (64KB max). Без zod cap юзер мог
   // отправить 50KB описание; multi-tenant SaaS потенциально

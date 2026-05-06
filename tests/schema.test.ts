@@ -129,6 +129,39 @@ describe("insertTaskSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("должна отклонять price с float (50.5)", () => {
+    // Регрессия: drizzle column int. Без .int() в Zod юзер мог
+    // отправить 50.5, MySQL cast'нул бы в 50 silently → расхождение.
+    const result = insertTaskSchema.safeParse({
+      title: "Задача",
+      price: 50.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("должна отклонять price с Infinity", () => {
+    // .int() автоматически блокирует Infinity (isInteger=false). Без
+    // этого guard'а balance update'ы могли бы стать Infinity → UI
+    // показал бы «∞ ₽» или NaN.
+    const result = insertTaskSchema.safeParse({
+      title: "Задача",
+      price: Infinity,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("должна принимать price=0 и положительные integers", () => {
+    expect(
+      insertTaskSchema.safeParse({ title: "Задача", price: 0 }).success,
+    ).toBe(true);
+    expect(
+      insertTaskSchema.safeParse({ title: "Задача", price: 100 }).success,
+    ).toBe(true);
+    expect(
+      insertTaskSchema.safeParse({ title: "Задача", price: 999999 }).success,
+    ).toBe(true);
+  });
+
   it("должна отклонять weekDays с float (1.5)", () => {
     // Регрессия: float проходил `.min(0).max(6)` без .int(), потом
     // в UI бейджах рендерился как «Пн, ,Ср» (WEEK_DAY_SHORT_NAMES[1.5]=
