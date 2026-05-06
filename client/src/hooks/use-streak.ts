@@ -34,7 +34,35 @@ function yesterdayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-type Stored = { days: number; lastDate: string };
+export type StreakStored = { days: number; lastDate: string };
+
+/**
+ * Pure-функция расчёта следующего streak. Извлечена из useEffect для
+ * прямого unit-тестирования без React. Изменения тут — изменения
+ * UX-мотивации воркера, легко тихо сломать.
+ *
+ *   • didCompleteSomethingToday=false → отображаем сохранённое (даже
+ *     если день начался — пока не сделал ничего, не +1).
+ *   • lastDate === today → idempotent, не +1 при повторном рендере.
+ *   • lastDate === yesterday → +1 (продолжение серии).
+ *   • Иначе (пропустил день, нет сохранённого) → 1 (новая серия).
+ */
+export function computeNextStreak(
+  stored: StreakStored | null,
+  today: string,
+  yesterday: string,
+  didCompleteSomethingToday: boolean,
+): number {
+  if (!didCompleteSomethingToday) {
+    return stored?.days ?? 0;
+  }
+  if (!stored) return 1;
+  if (stored.lastDate === today) return stored.days;
+  if (stored.lastDate === yesterday) return stored.days + 1;
+  return 1;
+}
+
+type Stored = StreakStored;
 
 export function useStreak(
   userId: number | null | undefined,
@@ -64,24 +92,19 @@ export function useStreak(
       /* corrupted — treat as fresh */
     }
 
-    if (!didCompleteSomethingToday) {
-      // Только показываем то что было — без обновления.
-      setStreak(stored?.days ?? 0);
-      return;
-    }
-
     const today = todayKey();
     const yesterday = yesterdayKey();
+    const nextDays = computeNextStreak(
+      stored,
+      today,
+      yesterday,
+      didCompleteSomethingToday,
+    );
 
-    let nextDays: number;
-    if (!stored) {
-      nextDays = 1;
-    } else if (stored.lastDate === today) {
-      nextDays = stored.days;
-    } else if (stored.lastDate === yesterday) {
-      nextDays = stored.days + 1;
-    } else {
-      nextDays = 1;
+    if (!didCompleteSomethingToday) {
+      // Только показываем то что было — без обновления storage.
+      setStreak(nextDays);
+      return;
     }
 
     try {
