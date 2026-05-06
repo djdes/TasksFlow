@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ApiError, apiRequest, withTimeout } from "../client/src/lib/queryClient";
+import { ApiError, apiRequest, getQueryFn, withTimeout } from "../client/src/lib/queryClient";
 
 const originalFetch = globalThis.fetch;
 
@@ -324,5 +324,98 @@ describe("withTimeout helper", () => {
     userController.abort(new Error("pre-aborted"));
     const result = withTimeout(userController.signal, 30_000);
     expect(result.aborted).toBe(true);
+  });
+});
+
+// ===================== getQueryFn — TanStack Query function =============
+//
+// Используется queryClient.defaultOptions.queries.queryFn для всех
+// useQuery в проекте. Поведение at 401 критично:
+//   • on401:"throw" → ApiError, useQuery попадает в onError → toast
+//   • on401:"returnNull" → null, useQuery treats as data → Login flow
+//
+// Регрессия = либо bombard'им юзеров «Не авторизован» toast'ами на
+// /me-запросе anonymous, либо silently глотаем real auth-errors.
+
+describe("getQueryFn — on401 поведение", () => {
+  it("on401='returnNull' + 401 → возвращает null (без throw)", async () => {
+    (globalThis.fetch as any).mockResolvedValue(
+      mockResponse({ ok: false, status: 401, body: '{"message":"Auth"}' }),
+    );
+    const fn = getQueryFn<unknown>({ on401: "returnNull" });
+    const result = await fn({
+      queryKey: ["/api/auth/me"],
+      signal: new AbortController().signal,
+      meta: undefined,
+      client: {} as any,
+    } as any);
+    expect(result).toBeNull();
+  });
+
+  it("on401='throw' + 401 → throws ApiError(401)", async () => {
+    (globalThis.fetch as any).mockResolvedValue(
+      mockResponse({ ok: false, status: 401, body: '{"message":"Auth"}' }),
+    );
+    const fn = getQueryFn<unknown>({ on401: "throw" });
+    await expect(
+      fn({
+        queryKey: ["/api/tasks"],
+        signal: new AbortController().signal,
+        meta: undefined,
+        client: {} as any,
+      } as any),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("happy path 200 → возвращает parsed JSON", async () => {
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "",
+      text: async () => '[{"id":1}]',
+      json: async () => [{ id: 1 }],
+    } as Response);
+    const fn = getQueryFn<{ id: number }[]>({ on401: "throw" });
+    const result = await fn({
+      queryKey: ["/api/tasks"],
+      signal: new AbortController().signal,
+      meta: undefined,
+      client: {} as any,
+    } as any);
+    expect(result).toEqual([{ id: 1 }]);
+  });
+
+  it("queryKey собирается через '/' join (массив частей → URL)", async () => {
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "",
+      text: async () => "{}",
+      json: async () => ({}),
+    } as Response);
+    const fn = getQueryFn<unknown>({ on401: "throw" });
+    await fn({
+      queryKey: ["/api/tasks", "100"],
+      signal: new AbortController().signal,
+      meta: undefined,
+      client: {} as any,
+    } as any);
+    const callUrl = (globalThis.fetch as any).mock.calls[0][0];
+    expect(callUrl).toBe("/api/tasks/100");
+  });
+
+  it("non-401 ошибка (500) → throws ApiError независимо от on401", async () => {
+    (globalThis.fetch as any).mockResolvedValue(
+      mockResponse({ ok: false, status: 500, body: '{"message":"Down"}' }),
+    );
+    const fn = getQueryFn<unknown>({ on401: "returnNull" });
+    await expect(
+      fn({
+        queryKey: ["/api/tasks"],
+        signal: new AbortController().signal,
+        meta: undefined,
+        client: {} as any,
+      } as any),
+    ).rejects.toBeInstanceOf(ApiError);
   });
 });
