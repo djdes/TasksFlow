@@ -194,3 +194,39 @@ describe("apiRequest — ошибки", () => {
     }
   });
 });
+
+// ===================== fetch-timeout regression =====================
+//
+// Тики 125-130: вся frontend-fetch инфраструктура получила timeouts.
+// apiRequest (этот файл) — defense-in-depth для всех мутаций. Без
+// этих тестов кто-то может случайно убрать `signal: AbortSignal.
+// timeout(...)` из queryClient.ts и infinite-spinner-баг вернётся,
+// никто не заметит до production-инцидента.
+
+describe("apiRequest — AbortSignal timeout (regression)", () => {
+  it("передаёт AbortSignal в init.signal", async () => {
+    const fetchMock = globalThis.fetch as any;
+    fetchMock.mockResolvedValue(
+      mockResponse({ ok: true, status: 200, body: "" }),
+    );
+
+    await apiRequest("GET", "/api/test");
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.signal).toBeDefined();
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("signal не уже aborted (timeout не сработал моментально)", async () => {
+    const fetchMock = globalThis.fetch as any;
+    fetchMock.mockResolvedValue(
+      mockResponse({ ok: true, status: 200, body: "" }),
+    );
+
+    await apiRequest("GET", "/api/test");
+    const signal = fetchMock.mock.calls[0][1].signal as AbortSignal;
+    // Default timeout = 30s; в момент вызова fetch signal должен
+    // быть «pending» (not aborted). Защита от случая когда default
+    // случайно поставлен в 0.
+    expect(signal.aborted).toBe(false);
+  });
+});
