@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { forwardRef } from "react";
+import { formatPhoneInput } from "@/lib/phone-input-format";
 
 interface PhoneInputProps {
   value: string;
@@ -38,16 +39,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           "h-16 text-2xl font-semibold tracking-wider border-2 border-border rounded-2xl px-6 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card shadow-sm"
         }
         value={value}
-        onChange={(e) => {
-          const v = e.target.value;
-          const cleaned = v.replace(/^\+?7?/, "");
-          let digits = cleaned.replace(/\D/g, "");
-          if (digits.startsWith("7") && digits.length > 1) {
-            digits = digits.slice(1);
-          }
-          const limited = digits.slice(0, 10);
-          onChange("+7" + limited);
-        }}
+        onChange={(e) => onChange(formatPhoneInput(e.target.value))}
         onKeyDown={(e) => {
           if (e.key === "Backspace") {
             const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
