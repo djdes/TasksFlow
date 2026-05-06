@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Edit, Calendar, RefreshCw, CalendarDays, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { coerceWeekDays } from "@/lib/coerce-week-days";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -92,19 +93,7 @@ export default function EditTask() {
   useEffect(() => {
     if (task) {
       // Получаем weekDays и преобразуем в массив если нужно
-      const taskWeekDays = (task as any).weekDays;
-      let weekDaysArray: number[] | null = null;
-      if (taskWeekDays) {
-        if (Array.isArray(taskWeekDays)) {
-          weekDaysArray = taskWeekDays;
-        } else if (typeof taskWeekDays === 'string') {
-          try {
-            weekDaysArray = JSON.parse(taskWeekDays);
-          } catch {
-            weekDaysArray = null;
-          }
-        }
-      }
+      const weekDaysArray = coerceWeekDays((task as any).weekDays);
 
       form.reset({
         title: task.title,

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { coerceWeekDays } from "@/lib/coerce-week-days";
 import { useUsers } from "@/hooks/use-users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,13 +112,9 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
   // Заполняем форму данными задачи при открытии
   useEffect(() => {
     if (task && open) {
-      // Получаем weekDays и преобразуем в массив если нужно
-      let weekDaysArray: number[] | null = null;
-      if (task.weekDays) {
-        if (Array.isArray(task.weekDays)) {
-          weekDaysArray = task.weekDays;
-        }
-      }
+      // weekDays coerce'ится через shared helper (защита от floats,
+      // string-form, out-of-range — все edge cases в одном месте).
+      const weekDaysArray = coerceWeekDays(task.weekDays);
 
       form.reset({
         title: task.title,
