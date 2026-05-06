@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { forwardRef } from "react";
-import { formatPhoneInput } from "@/lib/phone-input-format";
+import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
 
 interface PhoneInputProps {
   value: string;
@@ -41,13 +41,9 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         value={value}
         onChange={(e) => onChange(formatPhoneInput(e.target.value))}
         onKeyDown={(e) => {
-          if (e.key === "Backspace") {
-            const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-            if (cursor <= 2) e.preventDefault();
-          }
-          if (e.key === "Delete") {
-            const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-            if (cursor < 2) e.preventDefault();
+          const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
+          if (shouldBlockPhoneKey({ key: e.key, cursor })) {
+            e.preventDefault();
           }
         }}
         onFocus={(e) => {

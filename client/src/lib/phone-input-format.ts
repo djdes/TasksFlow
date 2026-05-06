@@ -29,3 +29,25 @@ export function formatPhoneInput(raw: string): string {
   const limited = digits.slice(0, 10);
   return "+7" + limited;
 }
+
+/**
+ * Должен ли keydown event быть отменён, чтобы не дать стереть
+ * фиксированный «+7» префикс. Возвращает true когда event нужно
+ * preventDefault.
+ *
+ *   shouldBlockPhoneKey({key:"Backspace", cursor:2})  → true
+ *   shouldBlockPhoneKey({key:"Backspace", cursor:3})  → false
+ *   shouldBlockPhoneKey({key:"Delete",    cursor:0})  → true
+ *   shouldBlockPhoneKey({key:"Delete",    cursor:2})  → false
+ *   shouldBlockPhoneKey({key:"a",         cursor:0})  → false (не наш ключ)
+ *
+ * Pure-функция для прямого тестирования без DOM events.
+ */
+export function shouldBlockPhoneKey(input: {
+  key: string;
+  cursor: number;
+}): boolean {
+  if (input.key === "Backspace") return input.cursor <= 2;
+  if (input.key === "Delete") return input.cursor < 2;
+  return false;
+}

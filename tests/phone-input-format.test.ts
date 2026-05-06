@@ -12,7 +12,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatPhoneInput } from "../client/src/lib/phone-input-format";
+import {
+  formatPhoneInput,
+  shouldBlockPhoneKey,
+} from "../client/src/lib/phone-input-format";
 
 describe("formatPhoneInput — happy paths", () => {
   it("пустая строка → '+7'", () => {
@@ -133,5 +136,45 @@ describe("formatPhoneInput — output structure", () => {
   it("максимум 12 символов '+7' + 10 цифр", () => {
     const result = formatPhoneInput("+7999123456789012345");
     expect(result.length).toBeLessThanOrEqual(12);
+  });
+});
+
+describe("shouldBlockPhoneKey — защита '+7' префикса", () => {
+  it("Backspace на cursor=2 (между + и первой цифрой) → block", () => {
+    expect(shouldBlockPhoneKey({ key: "Backspace", cursor: 2 })).toBe(true);
+  });
+
+  it("Backspace на cursor=1 → block", () => {
+    expect(shouldBlockPhoneKey({ key: "Backspace", cursor: 1 })).toBe(true);
+  });
+
+  it("Backspace на cursor=0 → block", () => {
+    expect(shouldBlockPhoneKey({ key: "Backspace", cursor: 0 })).toBe(true);
+  });
+
+  it("Backspace на cursor=3 → НЕ block (можно стирать цифры)", () => {
+    expect(shouldBlockPhoneKey({ key: "Backspace", cursor: 3 })).toBe(false);
+  });
+
+  it("Delete на cursor=0 → block (попытка съесть '+')", () => {
+    expect(shouldBlockPhoneKey({ key: "Delete", cursor: 0 })).toBe(true);
+  });
+
+  it("Delete на cursor=1 → block (попытка съесть '7')", () => {
+    expect(shouldBlockPhoneKey({ key: "Delete", cursor: 1 })).toBe(true);
+  });
+
+  it("Delete на cursor=2 → НЕ block (стираем цифру справа от +7)", () => {
+    expect(shouldBlockPhoneKey({ key: "Delete", cursor: 2 })).toBe(false);
+  });
+
+  it("обычный ключ ('a' / digit) → НЕ block", () => {
+    expect(shouldBlockPhoneKey({ key: "a", cursor: 0 })).toBe(false);
+    expect(shouldBlockPhoneKey({ key: "5", cursor: 2 })).toBe(false);
+  });
+
+  it("Enter / Tab → НЕ block", () => {
+    expect(shouldBlockPhoneKey({ key: "Enter", cursor: 0 })).toBe(false);
+    expect(shouldBlockPhoneKey({ key: "Tab", cursor: 0 })).toBe(false);
   });
 });
