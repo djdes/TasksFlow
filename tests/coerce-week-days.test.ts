@@ -53,6 +53,12 @@ describe("coerceWeekDays — array input", () => {
     expect(coerceWeekDays([NaN, 1])).toEqual([1]);
   });
 
+  it("[Infinity, 1, -Infinity] → [1] (Number.isInteger guard)", () => {
+    // Freeze: Number.isInteger(Infinity) === false, filter отбрасывает
+    // даже без явного Number.isFinite. Защита автоматическая.
+    expect(coerceWeekDays([Infinity, 1, -Infinity])).toEqual([1]);
+  });
+
   it("['1', 3] (string-element) → [3] (typeof number guard)", () => {
     expect(coerceWeekDays(["1", 3])).toEqual([3]);
   });
