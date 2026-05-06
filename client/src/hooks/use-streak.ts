@@ -23,15 +23,29 @@ import { useEffect, useState } from "react";
  * При смене userId (другой логин) ключ другой — стрики не путаются.
  */
 
-function todayKey(): string {
-  const d = new Date();
+/**
+ * Pure-функция: «YYYY-MM-DD» из локальной Date. Извлечено для
+ * unit-тестирования (используется как ключ сохранения / сравнения
+ * lastDate в streak storage).
+ */
+export function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function yesterdayKey(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** YYYY-MM-DD сегодняшнего дня. */
+export function todayKey(now: Date = new Date()): string {
+  return dateKey(now);
+}
+
+/**
+ * YYYY-MM-DD вчерашнего дня. Использует Date.setDate(-1), который
+ * корректно перешагивает границы месяца/года (1 марта → 28/29 февраля,
+ * 1 января → 31 декабря предыдущего).
+ */
+export function yesterdayKey(now: Date = new Date()): string {
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  return dateKey(y);
 }
 
 export type StreakStored = { days: number; lastDate: string };
