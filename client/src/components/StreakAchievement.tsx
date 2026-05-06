@@ -3,6 +3,11 @@ import { Award, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Portal } from "@/components/Portal";
 import { plural } from "@/lib/i18n";
+import {
+  MILESTONES,
+  type Milestone,
+  pickHighestUnseenMilestone,
+} from "@/lib/streak-milestones";
 
 /**
  * Модал «Поздравляем!» при достижении milestone-стрика. Срабатывает
@@ -14,9 +19,6 @@ import { plural } from "@/lib/i18n";
  * на крестик или на backdrop.
  */
 
-const MILESTONES = [7, 14, 30, 60, 100, 200] as const;
-
-type Milestone = (typeof MILESTONES)[number];
 
 const MILESTONE_DESCRIPTIONS: Record<
   Milestone,
@@ -73,25 +75,21 @@ export function StreakAchievement({ userId, streakDays }: Props) {
   const [activeMilestone, setActiveMilestone] = useState<Milestone | null>(null);
 
   useEffect(() => {
-    if (!userId || streakDays < 1) return;
-    // Идём от высокого к низкому — если достиг 30 и ещё не показывали,
-    // показываем 30 (а не 7), чтобы не спамить старыми milestones.
-    for (let i = MILESTONES.length - 1; i >= 0; i -= 1) {
-      const m = MILESTONES[i];
-      if (streakDays >= m) {
-        const seen = (() => {
-          try {
-            return window.localStorage.getItem(storageKey(userId, m)) === "true";
-          } catch {
-            return false;
-          }
-        })();
-        if (!seen) {
-          setActiveMilestone(m);
-          return;
+    if (!userId) return;
+    // Собираем set уже-показанных milestones и просим pure-функцию
+    // выбрать что показать.
+    const seen = new Set<number>();
+    for (const m of MILESTONES) {
+      try {
+        if (window.localStorage.getItem(storageKey(userId, m)) === "true") {
+          seen.add(m);
         }
+      } catch {
+        /* private mode — без storage всё считается «не seen» */
       }
     }
+    const milestone = pickHighestUnseenMilestone(streakDays, seen);
+    if (milestone) setActiveMilestone(milestone);
   }, [userId, streakDays]);
 
   function dismiss() {
