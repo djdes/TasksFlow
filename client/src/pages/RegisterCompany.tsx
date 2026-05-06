@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import { registerCompanySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 const formSchema = registerCompanySchema;
 
@@ -49,11 +50,12 @@ export default function Register() {
         document.activeElement.blur();
       }
 
-      const response = await fetch("/api/companies/register", {
+      const response = await fetchOrFriendlyError("/api/companies/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(values),
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!response.ok) {

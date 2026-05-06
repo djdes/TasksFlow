@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/PhoneInput";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 type Preview =
   | { valid: true; companyName: string; position: string | null }
@@ -34,7 +35,9 @@ export default function JoinByInvite() {
   } | null>(null);
 
   useEffect(() => {
-    fetch(`/api/invitations/by-token/${encodeURIComponent(token)}`)
+    fetch(`/api/invitations/by-token/${encodeURIComponent(token)}`, {
+      signal: AbortSignal.timeout(30_000),
+    })
       .then((r) => r.json())
       .then(setPreview)
       .catch(() => setPreview({ valid: false, reason: "not_found" }));
@@ -64,13 +67,14 @@ export default function JoinByInvite() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const r = await fetch(
+      const r = await fetchOrFriendlyError(
         `/api/invitations/by-token/${encodeURIComponent(token)}/accept`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ phone, name }),
+          signal: AbortSignal.timeout(30_000),
         },
       );
       const body = await r.json();

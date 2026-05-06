@@ -15,6 +15,7 @@ import {
 import { z } from "zod";
 import { loginSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 const formSchema = z.object({
   phone: loginSchema.shape.phone,
@@ -55,11 +56,12 @@ export default function RegisterUser() {
         document.activeElement.blur();
       }
 
-      const response = await fetch("/api/users/register", {
+      const response = await fetchOrFriendlyError("/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(values),
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!response.ok) {
