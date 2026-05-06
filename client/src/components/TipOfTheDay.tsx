@@ -12,6 +12,7 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import { pickByDayOfYear } from "@/lib/day-of-year";
 
 /**
  * «Совет дня» — одна короткая фраза в день. Не реклама, не уведомление —
@@ -102,14 +103,7 @@ function dayOfYearKey(): string {
 }
 
 export function TipOfTheDay() {
-  const tip = useMemo(() => {
-    const start = new Date(new Date().getFullYear(), 0, 0);
-    const diff =
-      (Date.now() - start.getTime()) +
-      (start.getTimezoneOffset() - new Date().getTimezoneOffset()) * 60_000;
-    const dayOfYear = Math.floor(diff / 86_400_000);
-    return TIPS[dayOfYear % TIPS.length];
-  }, []);
+  const tip = useMemo(() => pickByDayOfYear(new Date(), TIPS), []);
 
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
