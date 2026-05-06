@@ -227,6 +227,62 @@ describe("POST /api/tasks/:id/mark-returned — input validation", () => {
     expect(response.status).toBe(400);
   });
 
+  it("reason типа array → 400 (typeof guard)", async () => {
+    // typeof [] === "object", но Array.isArray проверка должна отбить.
+    // Регрессия: если бы typeof reasonRaw !== 'string' || !reasonRaw.trim()
+    // упростили до !reasonRaw.trim() — массив пройдёт через trim() с
+    // TypeError 500 вместо чистого 400.
+    const { app } = await buildApp();
+    storage.getApiKeyByHash.mockResolvedValue(VALID_API_KEY);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .post(`/api/tasks/${TASK.id}/mark-returned`)
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ reason: ["переделать"] });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("reason типа object → 400 (typeof guard)", async () => {
+    const { app } = await buildApp();
+    storage.getApiKeyByHash.mockResolvedValue(VALID_API_KEY);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .post(`/api/tasks/${TASK.id}/mark-returned`)
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ reason: { text: "переделать" } });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("reason типа boolean → 400", async () => {
+    const { app } = await buildApp();
+    storage.getApiKeyByHash.mockResolvedValue(VALID_API_KEY);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .post(`/api/tasks/${TASK.id}/mark-returned`)
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ reason: true });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("reason из одних пробелов '   ' → 400 (после trim пустой)", async () => {
+    const { app } = await buildApp();
+    storage.getApiKeyByHash.mockResolvedValue(VALID_API_KEY);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .post(`/api/tasks/${TASK.id}/mark-returned`)
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ reason: "   " });
+
+    expect(response.status).toBe(400);
+  });
+
   it("reason длиннее 1000 → cap до 1000 (security commit dcbf298)", async () => {
     const { app } = await buildApp();
     storage.getApiKeyByHash.mockResolvedValue(VALID_API_KEY);
