@@ -15,6 +15,7 @@ import {
   getUserShortName as getUserShortNameLib,
 } from "@/lib/user-display";
 import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
+import { isJournalTask as isJournalTaskLib } from "@/lib/task-classification";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -449,13 +450,11 @@ export default function Dashboard() {
     }
   };
 
-  const isJournalTask = (task: typeof tasks[0]): boolean => {
-    const category = (task as { category?: string | null }).category ?? "";
-    const hasJournalLink = Boolean(
-      (task as { journalLink?: string | null }).journalLink
-    );
-    return hasJournalLink || category.startsWith("WeSetup · ");
-  };
+  const isJournalTask = (task: typeof tasks[0]): boolean =>
+    isJournalTaskLib({
+      category: (task as { category?: string | null }).category,
+      journalLink: (task as { journalLink?: string | null }).journalLink,
+    });
 
   // getTaskScope — обёртка над lib/task-scope.ts. Function declaration
   // (не const arrow) важна потому что используется в `scopeCounts`
