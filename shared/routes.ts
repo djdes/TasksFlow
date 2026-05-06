@@ -86,12 +86,12 @@ export const api = {
       }),
       responses: {
         201: z.object({
-          id: z.number(),
+          id: z.number().int(),
           token: z.string(),
           url: z.string(),
           position: z.string().nullable(),
           isAdmin: z.boolean(),
-          createdAt: z.number(),
+          createdAt: z.number().int(),
         }),
         400: errorSchemas.validation,
       },
@@ -125,7 +125,7 @@ export const api = {
       responses: {
         201: z.object({
           user: z.custom<typeof users.$inferSelect>(),
-          company: z.object({ id: z.number(), name: z.string() }),
+          company: z.object({ id: z.number().int(), name: z.string() }),
         }),
         400: errorSchemas.validation,
       },
