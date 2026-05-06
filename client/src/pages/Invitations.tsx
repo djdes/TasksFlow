@@ -46,8 +46,19 @@ export default function Invitations() {
 
   const activeQuery = useQuery<Invitation[]>({
     queryKey: ["invitations", "active"],
-    queryFn: async () => {
-      const r = await fetch("/api/invitations", { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const r = await fetchOrFriendlyError("/api/invitations", {
+        credentials: "include",
+        signal: combined,
+      });
       if (!r.ok) throw new Error("Не удалось загрузить");
       return r.json();
     },
@@ -56,8 +67,19 @@ export default function Invitations() {
 
   const allQuery = useQuery<Invitation[]>({
     queryKey: ["invitations", "all"],
-    queryFn: async () => {
-      const r = await fetch("/api/invitations?includeAll=true", { credentials: "include" });
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const r = await fetchOrFriendlyError("/api/invitations?includeAll=true", {
+        credentials: "include",
+        signal: combined,
+      });
       if (!r.ok) throw new Error("Не удалось загрузить");
       return r.json();
     },
@@ -69,11 +91,12 @@ export default function Invitations() {
       const body: Record<string, unknown> = {};
       if (position.trim()) body.position = position.trim();
       if (role !== "employee") body.role = role;
-      const r = await fetch("/api/invitations", {
+      const r = await fetchOrFriendlyError("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!r.ok) throw new Error((await r.json()).message || "Ошибка");
       return r.json();

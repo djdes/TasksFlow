@@ -39,9 +39,18 @@ export default function AdminUsers() {
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading } = useQuery({
     queryKey: [api.users.list.path],
-    queryFn: async () => {
-      const response = await fetch(api.users.list.path, {
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const response = await fetchOrFriendlyError(api.users.list.path, {
         credentials: "include",
+        signal: combined,
       });
       if (!response.ok) {
         throw new Error("Failed to fetch users");
@@ -54,11 +63,12 @@ export default function AdminUsers() {
   // Мутация для создания пользователя
   const createUserMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      const response = await fetch(api.users.create.path, {
+      const response = await fetchOrFriendlyError(api.users.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -79,11 +89,12 @@ export default function AdminUsers() {
   // Мутация для обновления пользователя
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: EditFormValues }) => {
-      const response = await fetch(buildUrl(api.users.update.path, { id }), {
+      const response = await fetchOrFriendlyError(buildUrl(api.users.update.path, { id }), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();

@@ -46,8 +46,19 @@ export default function ApiKeysPage() {
 
 	const { data: keys = [], isLoading } = useQuery<ApiKeyRow[]>({
 		queryKey: ["api-keys"],
-		queryFn: async () => {
-			const r = await fetch("/api/api-keys", { credentials: "include" });
+		queryFn: async ({ signal }) => {
+			const timeoutSignal = AbortSignal.timeout(30_000);
+			const combined =
+				"any" in AbortSignal && signal
+					? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+							signal,
+							timeoutSignal,
+						])
+					: timeoutSignal;
+			const r = await fetchOrFriendlyError("/api/api-keys", {
+				credentials: "include",
+				signal: combined,
+			});
 			if (!r.ok) throw new Error("Не удалось загрузить ключи");
 			return r.json();
 		},
@@ -56,11 +67,12 @@ export default function ApiKeysPage() {
 
 	const createMutation = useMutation({
 		mutationFn: async (name: string) => {
-			const r = await fetch("/api/api-keys", {
+			const r = await fetchOrFriendlyError("/api/api-keys", {
 				method: "POST",
 				credentials: "include",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ name }),
+				signal: AbortSignal.timeout(30_000),
 			});
 			if (!r.ok) {
 				const err = await r.json().catch(() => ({ message: "Ошибка" }));
