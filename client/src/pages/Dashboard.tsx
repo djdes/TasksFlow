@@ -373,20 +373,11 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  // parseJournalLinkRaw + isVerifierTask + isSubmittedFiller + isToVerify
-  // extracted в lib/task-classification. Wrappers ниже только адаптируют
-  // task type — closure'd `tasks` array вне scope'а pure helper'ов.
-  const isVerifierTask = (t: typeof tasks[0]): boolean =>
-    isVerifierTaskLib(t as { journalLink?: string | null });
-  const isSubmittedFiller = (t: typeof tasks[0]): boolean =>
-    isSubmittedFillerLib(t as { verificationStatus?: string | null });
-  const isToVerify = (t: typeof tasks[0]): boolean =>
-    isToVerifyLib(
-      t as {
-        journalLink?: string | null;
-        verificationStatus?: string | null;
-      },
-    );
+  // task-classifier'ы используем напрямую из lib — Task structurally
+  // совместим с lib's optional types (journalLink/verificationStatus).
+  const isVerifierTask = isVerifierTaskLib;
+  const isSubmittedFiller = isSubmittedFillerLib;
+  const isToVerify = isToVerifyLib;
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
