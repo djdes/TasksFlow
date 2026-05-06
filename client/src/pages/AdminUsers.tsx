@@ -20,7 +20,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
-import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
+import {
+  formatPhoneInput,
+  shouldBlockPhoneKey,
+  shouldResetPhoneCursor,
+} from "@/lib/phone-input-format";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -257,10 +261,8 @@ export default function AdminUsers() {
                             }
                           }}
                           onFocus={(e) => {
-                            if (field.value === "+7" || field.value === "") {
-                              setTimeout(() => {
-                                e.target.setSelectionRange(2, 2);
-                              }, 0);
+                            if (shouldResetPhoneCursor(field.value)) {
+                              setTimeout(() => e.target.setSelectionRange(2, 2), 0);
                             }
                           }}
                         />

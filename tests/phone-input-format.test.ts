@@ -15,6 +15,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatPhoneInput,
   shouldBlockPhoneKey,
+  shouldResetPhoneCursor,
 } from "../client/src/lib/phone-input-format";
 
 describe("formatPhoneInput — happy paths", () => {
@@ -176,5 +177,27 @@ describe("shouldBlockPhoneKey — защита '+7' префикса", () => {
   it("Enter / Tab → НЕ block", () => {
     expect(shouldBlockPhoneKey({ key: "Enter", cursor: 0 })).toBe(false);
     expect(shouldBlockPhoneKey({ key: "Tab", cursor: 0 })).toBe(false);
+  });
+});
+
+describe("shouldResetPhoneCursor — focus event помощник", () => {
+  it("'+7' (только префикс) → true", () => {
+    expect(shouldResetPhoneCursor("+7")).toBe(true);
+  });
+
+  it("'' (пустая строка) → true", () => {
+    expect(shouldResetPhoneCursor("")).toBe(true);
+  });
+
+  it("'+79991234567' (полный номер) → false (cursor сохраняется)", () => {
+    expect(shouldResetPhoneCursor("+79991234567")).toBe(false);
+  });
+
+  it("'+79' (частичный) → false", () => {
+    expect(shouldResetPhoneCursor("+79")).toBe(false);
+  });
+
+  it("'+7 ' (с пробелом) → false (не строго '+7')", () => {
+    expect(shouldResetPhoneCursor("+7 ")).toBe(false);
   });
 });

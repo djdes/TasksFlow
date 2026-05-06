@@ -51,3 +51,18 @@ export function shouldBlockPhoneKey(input: {
   if (input.key === "Delete") return input.cursor < 2;
   return false;
 }
+
+/**
+ * Должен ли при focus event'е cursor быть сдвинут к позиции 2
+ * (после фиксированного «+7»). Возвращает true когда value пустое
+ * или содержит только префикс — иначе оставляем cursor где был
+ * (юзер может редактировать середину номера).
+ *
+ *   shouldResetPhoneCursor("+7")           → true
+ *   shouldResetPhoneCursor("")             → true
+ *   shouldResetPhoneCursor("+79991234567") → false (не двигаем)
+ *   shouldResetPhoneCursor("+79")          → false
+ */
+export function shouldResetPhoneCursor(value: string): boolean {
+  return value === "+7" || value === "";
+}

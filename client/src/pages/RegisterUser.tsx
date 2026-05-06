@@ -16,7 +16,11 @@ import { z } from "zod";
 import { loginSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
-import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
+import {
+  formatPhoneInput,
+  shouldBlockPhoneKey,
+  shouldResetPhoneCursor,
+} from "@/lib/phone-input-format";
 
 const formSchema = z.object({
   phone: loginSchema.shape.phone,
@@ -109,10 +113,8 @@ export default function RegisterUser() {
             }
           }}
           onFocus={(e) => {
-            if (field.value === "+7" || field.value === "") {
-              setTimeout(() => {
-                e.target.setSelectionRange(2, 2);
-              }, 0);
+            if (shouldResetPhoneCursor(field.value)) {
+              setTimeout(() => e.target.setSelectionRange(2, 2), 0);
             }
           }}
         />
@@ -209,10 +211,8 @@ export default function RegisterUser() {
                         }
                       }}
                       onFocus={(e) => {
-                        if (field.value === "+7" || field.value === "") {
-                          setTimeout(() => {
-                            e.target.setSelectionRange(2, 2);
-                          }, 0);
+                        if (shouldResetPhoneCursor(field.value)) {
+                          setTimeout(() => e.target.setSelectionRange(2, 2), 0);
                         }
                       }}
                     />

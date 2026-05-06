@@ -1,6 +1,10 @@
 import { Input } from "@/components/ui/input";
 import { forwardRef } from "react";
-import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
+import {
+  formatPhoneInput,
+  shouldBlockPhoneKey,
+  shouldResetPhoneCursor,
+} from "@/lib/phone-input-format";
 
 interface PhoneInputProps {
   value: string;
@@ -47,7 +51,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           }
         }}
         onFocus={(e) => {
-          if (value === "+7" || value === "") {
+          if (shouldResetPhoneCursor(value)) {
             setTimeout(() => e.currentTarget.setSelectionRange(2, 2), 0);
           }
         }}
