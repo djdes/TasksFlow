@@ -8,7 +8,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { isJournalTask } from "../client/src/lib/task-classification";
+import {
+  isJournalTask,
+  isVerifierTask,
+} from "../client/src/lib/task-classification";
 
 describe("isJournalTask — journalLink приоритетный", () => {
   it("journalLink set → true (даже без category)", () => {
@@ -75,5 +78,82 @@ describe("isJournalTask — edge cases", () => {
 
   it("category с предшествующим пробелом не считается", () => {
     expect(isJournalTask({ category: " WeSetup · Уборка" })).toBe(false);
+  });
+});
+
+describe("isVerifierTask — taskScope='verifier' приоритет", () => {
+  it("journalLink=null → false", () => {
+    expect(isVerifierTask({ journalLink: null })).toBe(false);
+  });
+
+  it("journalLink=undefined → false", () => {
+    expect(isVerifierTask({})).toBe(false);
+  });
+
+  it("malformed journalLink → false (defensive)", () => {
+    expect(isVerifierTask({ journalLink: "not json" })).toBe(false);
+  });
+
+  it("taskScope='verifier' → true", () => {
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({
+          taskScope: "verifier",
+          kind: "wesetup-cleaning",
+        }),
+      }),
+    ).toBe(true);
+  });
+
+  it("taskScope='shared' (не verifier) → false (если kind тоже не verifier-)", () => {
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({
+          taskScope: "shared",
+          kind: "wesetup-cleaning",
+        }),
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isVerifierTask — kind prefix 'wesetup-verifier'", () => {
+  it("kind=wesetup-verifier_health → true (без taskScope)", () => {
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({
+          kind: "wesetup-verifier_health",
+          documentId: "d",
+          rowKey: "r",
+        }),
+      }),
+    ).toBe(true);
+  });
+
+  it("kind=wesetup-cleaning → false (не verifier-)", () => {
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({
+          kind: "wesetup-cleaning",
+        }),
+      }),
+    ).toBe(false);
+  });
+
+  it("kind не строка → false (typeof guard)", () => {
+    // Защита от corrupted JSON.
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({ kind: 42 }),
+      }),
+    ).toBe(false);
+  });
+
+  it("kind отсутствует → false", () => {
+    expect(
+      isVerifierTask({
+        journalLink: JSON.stringify({ documentId: "d" }),
+      }),
+    ).toBe(false);
   });
 });

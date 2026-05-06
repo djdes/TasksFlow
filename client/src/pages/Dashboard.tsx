@@ -15,8 +15,10 @@ import {
   getUserShortName as getUserShortNameLib,
 } from "@/lib/user-display";
 import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
-import { isJournalTask as isJournalTaskLib } from "@/lib/task-classification";
-import { parseJournalLinkRaw } from "@/lib/journal-link-parse";
+import {
+  isJournalTask as isJournalTaskLib,
+  isVerifierTask as isVerifierTaskLib,
+} from "@/lib/task-classification";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -369,18 +371,12 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  // parseJournalLinkRaw extracted в lib/journal-link-parse.ts. Это
-  // lenient parser (не Zod-strict), нужен для UI-only полей типа
-  // taskScope, не описанных в shared schema.
-  const isVerifierTask = (t: typeof tasks[0]): boolean => {
-    const link = parseJournalLinkRaw(
-      (t as { journalLink?: string | null }).journalLink ?? null,
-    );
-    if (!link) return false;
-    if (link.taskScope === "verifier") return true;
-    const kind = typeof link.kind === "string" ? link.kind : "";
-    return kind.startsWith("wesetup-verifier");
-  };
+  // parseJournalLinkRaw + isVerifierTask extracted в lib/. Они нужны
+  // для UI-only полей типа taskScope, не описанных в shared schema.
+  const isVerifierTask = (t: typeof tasks[0]): boolean =>
+    isVerifierTaskLib({
+      journalLink: (t as { journalLink?: string | null }).journalLink ?? null,
+    });
   const isSubmittedFiller = (t: typeof tasks[0]) =>
     (t as { verificationStatus?: string | null }).verificationStatus ===
     "submitted";
