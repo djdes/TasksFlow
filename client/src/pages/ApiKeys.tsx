@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 interface ApiKeyRow {
 	id: number;
@@ -79,7 +80,7 @@ export default function ApiKeysPage() {
 
 	const revealMutation = useMutation({
 		mutationFn: async (id: number) => {
-			const r = await fetch(`/api/api-keys/${id}/reveal`, {
+			const r = await fetchOrFriendlyError(`/api/api-keys/${id}/reveal`, {
 				method: "POST",
 				credentials: "include",
 				signal: AbortSignal.timeout(30_000),
@@ -100,7 +101,7 @@ export default function ApiKeysPage() {
 
 	const rotateMutation = useMutation({
 		mutationFn: async (id: number) => {
-			const r = await fetch(`/api/api-keys/${id}/rotate`, {
+			const r = await fetchOrFriendlyError(`/api/api-keys/${id}/rotate`, {
 				method: "POST",
 				credentials: "include",
 				signal: AbortSignal.timeout(30_000),
@@ -122,7 +123,7 @@ export default function ApiKeysPage() {
 
 	const revokeMutation = useMutation({
 		mutationFn: async (id: number) => {
-			const r = await fetch(`/api/api-keys/${id}`, {
+			const r = await fetchOrFriendlyError(`/api/api-keys/${id}`, {
 				method: "DELETE",
 				credentials: "include",
 				signal: AbortSignal.timeout(30_000),

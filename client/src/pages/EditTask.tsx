@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Edit, Calendar, RefreshCw, CalendarDays, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -158,7 +159,7 @@ export default function EditTask() {
     formData.append("photo", examplePhotoFile);
 
     try {
-      const response = await fetch(`/api/tasks/${id}/example-photo`, {
+      const response = await fetchOrFriendlyError(`/api/tasks/${id}/example-photo`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -198,7 +199,7 @@ export default function EditTask() {
 
     setIsDeletingExample(true);
     try {
-      const response = await fetch(`/api/tasks/${id}/example-photo`, {
+      const response = await fetchOrFriendlyError(`/api/tasks/${id}/example-photo`, {
         method: "DELETE",
         credentials: "include",
         signal: AbortSignal.timeout(30_000),

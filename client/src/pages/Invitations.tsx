@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -89,7 +90,7 @@ export default function Invitations() {
 
   const revokeMutation = useMutation<void, Error, number>({
     mutationFn: async (id) => {
-      const r = await fetch(`/api/invitations/${id}/revoke`, {
+      const r = await fetchOrFriendlyError(`/api/invitations/${id}/revoke`, {
         method: "POST",
         credentials: "include",
         signal: AbortSignal.timeout(30_000),

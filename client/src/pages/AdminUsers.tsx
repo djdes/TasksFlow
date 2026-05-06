@@ -19,6 +19,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -103,7 +104,7 @@ export default function AdminUsers() {
   // Мутация для сброса баланса
   const resetBalanceMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await fetch(`/api/users/${userId}/reset-balance`, {
+      const response = await fetchOrFriendlyError(`/api/users/${userId}/reset-balance`, {
         method: "POST",
         credentials: "include",
         signal: AbortSignal.timeout(30_000),
@@ -126,7 +127,7 @@ export default function AdminUsers() {
   // Мутация для удаления пользователя
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetchOrFriendlyError(`/api/users/${userId}`, {
         method: "DELETE",
         credentials: "include",
         signal: AbortSignal.timeout(30_000),

@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
 import { JournalModeComposer } from "@/components/JournalModeComposer";
@@ -389,7 +390,7 @@ export default function CreateTask() {
     formData.append("photo", examplePhotoFile);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}/example-photo`, {
+      const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/example-photo`, {
         method: "POST",
         credentials: "include",
         body: formData,
