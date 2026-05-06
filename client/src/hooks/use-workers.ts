@@ -2,20 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertWorker } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
-
-// Helper: combine TanStack Query signal с timeout signal через AbortSignal.any.
-// (Node 20+, Chrome 118+; fallback на pure timeout если any недоступен.)
-function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
-  const timeoutSignal = AbortSignal.timeout(ms);
-  if ("any" in AbortSignal && signal) {
-    return (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-      signal,
-      timeoutSignal,
-    ]);
-  }
-  return timeoutSignal;
-}
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 export function useWorkers() {
   return useQuery({

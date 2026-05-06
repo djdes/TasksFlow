@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 interface ApiKeyRow {
 	id: number;
@@ -47,17 +47,9 @@ export default function ApiKeysPage() {
 	const { data: keys = [], isLoading } = useQuery<ApiKeyRow[]>({
 		queryKey: ["api-keys"],
 		queryFn: async ({ signal }) => {
-			const timeoutSignal = AbortSignal.timeout(30_000);
-			const combined =
-				"any" in AbortSignal && signal
-					? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-							signal,
-							timeoutSignal,
-						])
-					: timeoutSignal;
 			const r = await fetchOrFriendlyError("/api/api-keys", {
 				credentials: "include",
-				signal: combined,
+				signal: withTimeout(signal, 30_000),
 			});
 			if (!r.ok) throw new Error("Не удалось загрузить ключи");
 			return r.json();

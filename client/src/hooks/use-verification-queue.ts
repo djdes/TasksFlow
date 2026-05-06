@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@shared/schema";
 import { api } from "@shared/routes";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 const QUERY_KEY = ["awaiting-verification"] as const;
 
@@ -17,17 +17,9 @@ export function useAwaitingVerification() {
   return useQuery<Task[]>({
     queryKey: QUERY_KEY,
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const res = await fetchOrFriendlyError("/api/tasks/awaiting-verification", {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!res.ok) {
         if (res.status === 401) return [];

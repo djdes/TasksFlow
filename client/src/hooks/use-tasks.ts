@@ -1,23 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertTask, Task } from "@shared/schema";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 export function useTasks() {
   return useQuery<Task[]>({
     queryKey: [api.tasks.list.path],
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const res = await fetchOrFriendlyError(api.tasks.list.path, {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!res.ok) throw new Error("Failed to fetch tasks");
       // Не используем parse чтобы сохранить weekDays и photoUrls как массивы
@@ -32,17 +24,9 @@ export function useTask(id: number) {
     enabled: !!id,
     queryFn: async ({ signal }) => {
       const url = buildUrl(api.tasks.get.path, { id });
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const res = await fetchOrFriendlyError(url, {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch task");

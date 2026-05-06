@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -47,17 +47,9 @@ export default function Invitations() {
   const activeQuery = useQuery<Invitation[]>({
     queryKey: ["invitations", "active"],
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const r = await fetchOrFriendlyError("/api/invitations", {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!r.ok) throw new Error("Не удалось загрузить");
       return r.json();
@@ -68,17 +60,9 @@ export default function Invitations() {
   const allQuery = useQuery<Invitation[]>({
     queryKey: ["invitations", "all"],
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const r = await fetchOrFriendlyError("/api/invitations?includeAll=true", {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!r.ok) throw new Error("Не удалось загрузить");
       return r.json();

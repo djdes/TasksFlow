@@ -19,20 +19,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
-
-// Integrations admin queries: combine TanStack signal с timeout. Чтобы
-// не плодить boilerplate в каждом queryFn — небольшой helper.
-function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
-  const timeoutSignal = AbortSignal.timeout(ms);
-  if ("any" in AbortSignal && signal) {
-    return (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-      signal,
-      timeoutSignal,
-    ]);
-  }
-  return timeoutSignal;
-}
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 /**
  * /admin/integrations — единый «Интеграционный центр» TasksFlow

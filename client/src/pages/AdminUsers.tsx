@@ -19,7 +19,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -40,17 +40,9 @@ export default function AdminUsers() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: [api.users.list.path],
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const response = await fetchOrFriendlyError(api.users.list.path, {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!response.ok) {
         throw new Error("Failed to fetch users");

@@ -1,7 +1,7 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
-import { apiRequest, fetchOrFriendlyError } from "@/lib/queryClient";
+import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 type User = {
   id: number;
@@ -27,17 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user = null, isLoading } = useQuery<User>({
     queryKey: ["auth", "me"],
     queryFn: async ({ signal }) => {
-      const timeoutSignal = AbortSignal.timeout(30_000);
-      const combined =
-        "any" in AbortSignal && signal
-          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-              signal,
-              timeoutSignal,
-            ])
-          : timeoutSignal;
       const response = await fetchOrFriendlyError(api.auth.me.path, {
         credentials: "include",
-        signal: combined,
+        signal: withTimeout(signal, 30_000),
       });
       if (!response.ok) {
         return null;

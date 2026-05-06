@@ -35,6 +35,30 @@ async function throwIfResNotOk(res: Response) {
 const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
 
 /**
+ * Combine TanStack Query signal (auto-abort при unmount/refetch)
+ * с timeout signal через AbortSignal.any. Первый из двух тригерит
+ * abort. Без TanStack signal — просто timeout.
+ *
+ * Используется в queryFn для useQuery, чтобы и unmount, и слишком
+ * долгий ответ оба корректно завершали запрос.
+ *
+ * Поддержка: Node 20+, Chrome 118+, Safari 17.4+. Fallback на pure
+ * timeout если AbortSignal.any недоступен.
+ */
+export function withTimeout(
+  signal: AbortSignal | undefined,
+  ms: number,
+): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(ms);
+  if ("any" in AbortSignal && signal) {
+    return (
+      AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }
+    ).any([signal, timeoutSignal]);
+  }
+  return timeoutSignal;
+}
+
+/**
  * AbortSignal.timeout() reject'ит fetch с DOMException «The operation
  * was aborted due to timeout» — английское и непонятное бабушке-воркеру.
  * Также Login.tsx ловит ApiError по `instanceof`, и DOMException туда
@@ -97,20 +121,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey, signal }) => {
-    // signal приходит из TanStack Query — auto-abort при unmount/refetch
-    // компонента. Таймаут добавляем поверх через AbortSignal.any —
-    // первый из двух сигналов тригерит abort. (Node 20+, Chrome 118+.)
-    const timeoutSignal = AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS);
-    const combined =
-      "any" in AbortSignal && signal
-        ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
-            signal,
-            timeoutSignal,
-          ])
-        : timeoutSignal;
     const res = await fetchOrFriendlyError(queryKey.join("/") as string, {
       credentials: "include",
-      signal: combined,
+      signal: withTimeout(signal, DEFAULT_FETCH_TIMEOUT_MS),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
