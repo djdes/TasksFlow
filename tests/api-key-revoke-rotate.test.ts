@@ -225,4 +225,37 @@ describe("POST /api/api-keys/:id/rotate", () => {
     const r = await request(app).post(`/api/api-keys/abc/rotate`);
     expect(r.status).toBe(400);
   });
+
+  it("response содержит rotatedFromId (старый ключ trace для UI)", async () => {
+    // UI показывает «ключ #5 ротирован → новый ключ #6». rotatedFromId
+    // позволяет связать listing-row с уведомлением «вы только что
+    // перевыпустили этот ключ» (highlight в admin-panel).
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getApiKeyById.mockResolvedValue(KEY_42);
+
+    const r = await request(app).post(`/api/api-keys/${KEY_42.id}/rotate`);
+    expect(r.status).toBe(200);
+    expect(r.body.rotatedFromId).toBe(KEY_42.id);
+    expect(r.body.id).not.toBe(KEY_42.id); // новый ключ — другой id
+  });
+
+  it("encryption: REVEAL_SECRET задан → keyEncrypted сохраняется в новом ключе", async () => {
+    const original = process.env.API_KEY_REVEAL_SECRET;
+    process.env.API_KEY_REVEAL_SECRET = "rotate-test-secret-1234567890-abc";
+    try {
+      const { app } = await buildApp({ sessionUserId: ADMIN.id });
+      storage.getUserById.mockResolvedValue(ADMIN);
+      storage.getApiKeyById.mockResolvedValue(KEY_42);
+
+      await request(app).post(`/api/api-keys/${KEY_42.id}/rotate`);
+
+      const callArg = storage.createApiKey.mock.calls[0][0];
+      expect(callArg.keyEncrypted).toBeTruthy();
+      expect(String(callArg.keyEncrypted).split(".")).toHaveLength(3);
+    } finally {
+      if (original === undefined) delete process.env.API_KEY_REVEAL_SECRET;
+      else process.env.API_KEY_REVEAL_SECRET = original;
+    }
+  });
 });
