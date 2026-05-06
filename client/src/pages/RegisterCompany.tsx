@@ -17,7 +17,7 @@ import { z } from "zod";
 import { registerCompanySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
-import { formatPhoneInput } from "@/lib/phone-input-format";
+import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
 
 const formSchema = registerCompanySchema;
 
@@ -133,19 +133,9 @@ export default function Register() {
                       value={field.value}
                       onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
                       onKeyDown={(e) => {
-                        if (e.key === "Backspace") {
-                          const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                          if (cursorPos <= 2) {
-                            e.preventDefault();
-                            return;
-                          }
-                        }
-                        if (e.key === "Delete") {
-                          const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                          if (cursorPos < 2) {
-                            e.preventDefault();
-                            return;
-                          }
+                        const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
+                        if (shouldBlockPhoneKey({ key: e.key, cursor })) {
+                          e.preventDefault();
                         }
                       }}
                       onFocus={(e) => {

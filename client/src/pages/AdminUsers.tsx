@@ -20,7 +20,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
-import { formatPhoneInput } from "@/lib/phone-input-format";
+import { formatPhoneInput, shouldBlockPhoneKey } from "@/lib/phone-input-format";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -251,19 +251,9 @@ export default function AdminUsers() {
                           value={field.value}
                           onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
                           onKeyDown={(e) => {
-                            if (e.key === "Backspace") {
-                              const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                              if (cursorPos <= 2) {
-                                e.preventDefault();
-                                return;
-                              }
-                            }
-                            if (e.key === "Delete") {
-                              const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                              if (cursorPos < 2) {
-                                e.preventDefault();
-                                return;
-                              }
+                            const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
+                            if (shouldBlockPhoneKey({ key: e.key, cursor })) {
+                              e.preventDefault();
                             }
                           }}
                           onFocus={(e) => {
@@ -334,17 +324,9 @@ export default function AdminUsers() {
                             value={editPhone}
                             onChange={(e) => setEditPhone(formatPhoneInput(e.target.value))}
                             onKeyDown={(e) => {
-                              if (e.key === "Backspace") {
-                                const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                                if (cursorPos <= 2) {
-                                  e.preventDefault();
-                                }
-                              }
-                              if (e.key === "Delete") {
-                                const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
-                                if (cursorPos < 2) {
-                                  e.preventDefault();
-                                }
+                              const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
+                              if (shouldBlockPhoneKey({ key: e.key, cursor })) {
+                                e.preventDefault();
                               }
                             }}
                             placeholder="xxx xxx xx xx"
