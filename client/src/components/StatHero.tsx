@@ -8,6 +8,7 @@ import {
   Trophy,
   type LucideIcon,
 } from "lucide-react";
+import { streakHint } from "@/lib/streak-hint";
 
 /**
  * Hero-блок сводки на главной. Заменяет minimal `progress-card`
@@ -254,15 +255,7 @@ export function StatHero({
           icon={Award}
           label="Стрик"
           value={streakDays}
-          hint={
-            streakDays === 1
-              ? "первый день"
-              : streakDays < 5
-              ? "так держать"
-              : streakDays < 14
-              ? "крутая серия!"
-              : "ты мотор смены"
-          }
+          hint={streakHint(streakDays)}
           tone="primary"
         />
       ) : null}
