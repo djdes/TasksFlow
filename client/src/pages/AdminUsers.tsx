@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { formatPhoneInput } from "@/lib/phone-input-format";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -248,20 +249,7 @@ export default function AdminUsers() {
                           placeholder="xxx xxx xx xx"
                           className="things-input"
                           value={field.value}
-                          onChange={(e) => {
-                            let value = e.target.value;
-                            // Убираем +7 в начале если есть
-                            let cleaned = value.replace(/^\+?7?/, "");
-                            // Оставляем только цифры
-                            let digits = cleaned.replace(/\D/g, "");
-                            // Если первая цифра 7 (ввод начали с 7 или вставили номер типа 79991234567)
-                            if (digits.startsWith("7") && digits.length > 1) {
-                              digits = digits.slice(1);
-                            }
-                            // Ограничиваем до 10 цифр
-                            const limitedDigits = digits.slice(0, 10);
-                            field.onChange("+7" + limitedDigits);
-                          }}
+                          onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
                           onKeyDown={(e) => {
                             if (e.key === "Backspace") {
                               const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
@@ -344,16 +332,7 @@ export default function AdminUsers() {
                           <Input
                             type="tel"
                             value={editPhone}
-                            onChange={(e) => {
-                              let value = e.target.value;
-                              let cleaned = value.replace(/^\+?7?/, "");
-                              let digits = cleaned.replace(/\D/g, "");
-                              if (digits.startsWith("7") && digits.length > 1) {
-                                digits = digits.slice(1);
-                              }
-                              const limitedDigits = digits.slice(0, 10);
-                              setEditPhone("+7" + limitedDigits);
-                            }}
+                            onChange={(e) => setEditPhone(formatPhoneInput(e.target.value))}
                             onKeyDown={(e) => {
                               if (e.key === "Backspace") {
                                 const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;

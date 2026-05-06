@@ -17,6 +17,7 @@ import { z } from "zod";
 import { registerCompanySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { formatPhoneInput } from "@/lib/phone-input-format";
 
 const formSchema = registerCompanySchema;
 
@@ -130,16 +131,7 @@ export default function Register() {
                       placeholder="xxx xxx xx xx"
                       className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
                       value={field.value}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        let cleaned = value.replace(/^\+?7?/, "");
-                        let digits = cleaned.replace(/\D/g, "");
-                        if (digits.startsWith("7") && digits.length > 1) {
-                          digits = digits.slice(1);
-                        }
-                        const limitedDigits = digits.slice(0, 10);
-                        field.onChange("+7" + limitedDigits);
-                      }}
+                      onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
                       onKeyDown={(e) => {
                         if (e.key === "Backspace") {
                           const cursorPos = (e.target as HTMLInputElement).selectionStart || 0;
