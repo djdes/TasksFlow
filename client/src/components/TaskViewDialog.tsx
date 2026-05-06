@@ -3,6 +3,7 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
 import {
   Dialog,
   DialogContent,
@@ -157,21 +158,15 @@ export function TaskViewDialog({
       });
 
       const text = await response.text();
-      let data: any = {};
-
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch {
-          // Если не JSON, игнорируем
-        }
-      }
+      const data = parseJsonOrEmpty(text);
 
       if (!response.ok) {
-        throw new Error(data.message || "Ошибка удаления фото");
+        throw new Error(
+          (data.message as string | undefined) || "Ошибка удаления фото",
+        );
       }
 
-      return data;
+      return data as { success: boolean; photoUrls: string[] };
     },
     onSuccess: async (data: { success: boolean; photoUrls: string[] }) => {
       if (currentTask) {

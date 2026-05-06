@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertTask, Task } from "@shared/schema";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
 
 export function useTasks() {
   return useQuery<Task[]>({
@@ -172,18 +173,12 @@ export function useUncompleteTask() {
       });
 
       const text = await res.text();
-      let data: any = {};
-
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch {
-          // Если не JSON, игнорируем
-        }
-      }
+      const data = parseJsonOrEmpty(text);
 
       if (!res.ok) {
-        throw new Error(data.message || "Не удалось вернуть задачу");
+        throw new Error(
+          (data.message as string | undefined) || "Не удалось вернуть задачу",
+        );
       }
 
       return data;
