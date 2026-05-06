@@ -1,14 +1,12 @@
 /**
- * Parser для task.journalLink (TEXT JSON) на клиенте. Тот же формат
- * что в shared/journal-link.ts, но без zod — только нужные поля для
- * UI. Возвращает null если поле некорректное (старая schema или мусор).
+ * Parser для task.journalLink (TEXT JSON) на клиенте.
  *
- * NB: это ОДИН ИЗ ТРЁХ parser'ов journalLink в проекте:
+ * NB: это ДВА parser'а journalLink в проекте:
+ *   • parseJournalLinkUI — strict для UI (требует kind/documentId/rowKey
+ *     как строки, поддерживает siblingVisibility и label)
+ *   • parseJournalLinkRaw — lenient (любой object, для taskScope-
+ *     проверок и других UI-only полей не описанных в shared schema)
  *   • shared/journal-link.ts: parseJournalLink (Zod-validated, строгий)
- *   • client/src/lib/journal-link-parse.ts: parseJournalLinkUI (THIS)
- *     — lightweight для UI, поддерживает siblingVisibility
- *   • client/src/pages/Dashboard.tsx: parseJournalLinkRaw (raw object,
- *     для taskScope-проверок)
  *
  * Каждый имеет свою цель — разные поля разной критичности. Использовать
  * правильный.
@@ -22,6 +20,33 @@ export type ParsedJournalLink = {
   /** Phase F — флаг «показывать siblings» от WeSetup. Default false. */
   siblingVisibility?: boolean;
 };
+
+/**
+ * Lenient parser: возвращает raw JSON-объект целиком, без проверки
+ * required полей. Подходит для access к UI-only полям таким как
+ * `taskScope` (не в shared zod schema).
+ *
+ * Возвращает null для:
+ *   • пустой строки / null / undefined
+ *   • malformed JSON
+ *   • не-object (number, string, null-literal)
+ *   • array (Array.isArray check — иначе link.kind=undefined, но
+ *     цикл итерации по числовым indices теоретически возможен)
+ */
+export function parseJournalLinkRaw(
+  raw: string | null | undefined,
+): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
 
 export function parseJournalLinkUI(
   raw: string | null | undefined,

@@ -10,7 +10,10 @@ import { describe, it, expect } from "vitest";
 // Renamed (тик 160): client/lib/journal-link-parse теперь экспортирует
 // parseJournalLinkUI чтобы не путать с shared/journal-link и Dashboard
 // local. Импортим через alias чтобы не править ВСЕ assert'ы в тестах.
-import { parseJournalLinkUI as parseJournalLink } from "../client/src/lib/journal-link-parse";
+import {
+  parseJournalLinkUI as parseJournalLink,
+  parseJournalLinkRaw,
+} from "../client/src/lib/journal-link-parse";
 
 describe("parseJournalLink — невалидные входы", () => {
   it("null → null", () => {
@@ -150,5 +153,68 @@ describe("parseJournalLink — валидные входы", () => {
     );
     expect(result).not.toBeNull();
     expect((result as Record<string, unknown>).randomGarbage).toBeUndefined();
+  });
+});
+
+describe("parseJournalLinkRaw — lenient parser", () => {
+  it("null/undefined/'' → null", () => {
+    expect(parseJournalLinkRaw(null)).toBeNull();
+    expect(parseJournalLinkRaw(undefined)).toBeNull();
+    expect(parseJournalLinkRaw("")).toBeNull();
+  });
+
+  it("malformed JSON → null", () => {
+    expect(parseJournalLinkRaw("not json{{")).toBeNull();
+  });
+
+  it("JSON-null literal → null", () => {
+    expect(parseJournalLinkRaw("null")).toBeNull();
+  });
+
+  it("number-литерал → null", () => {
+    expect(parseJournalLinkRaw("42")).toBeNull();
+  });
+
+  it("array → null (Array.isArray check)", () => {
+    // Регрессия: без Array.isArray, JSON.parse('[1,2,3]') проходил
+    // typeof===object check и возвращал array. Тогда `link.kind`
+    // undefined для array (нет такого ключа), но семантика «raw
+    // object» нарушена. Теперь явно null.
+    expect(parseJournalLinkRaw("[1,2,3]")).toBeNull();
+  });
+
+  it("happy path → возвращает все поля", () => {
+    const result = parseJournalLinkRaw(
+      JSON.stringify({
+        kind: "wesetup-cleaning",
+        documentId: "d1",
+        rowKey: "r1",
+        taskScope: "shared",
+        randomField: 42,
+      }),
+    );
+    expect(result).toEqual({
+      kind: "wesetup-cleaning",
+      documentId: "d1",
+      rowKey: "r1",
+      taskScope: "shared",
+      randomField: 42,
+    });
+  });
+
+  it("UI-only поля (taskScope) сохраняются — отличие от Zod parser", () => {
+    // Главная цель этой функции: UI-поля не описаны в shared schema
+    // (taskScope, siblingVisibility), но должны быть accessible.
+    const result = parseJournalLinkRaw(
+      JSON.stringify({ kind: "x", taskScope: "verifier" }),
+    );
+    expect(result?.taskScope).toBe("verifier");
+  });
+
+  it("отсутствующие required поля → всё равно объект (lenient)", () => {
+    // Отличие от parseJournalLinkUI: тот вернёт null если нет kind/
+    // documentId/rowKey. parseJournalLinkRaw возвращает что есть.
+    const result = parseJournalLinkRaw('{"taskScope":"verifier"}');
+    expect(result).toEqual({ taskScope: "verifier" });
   });
 });

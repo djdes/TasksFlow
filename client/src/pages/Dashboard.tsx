@@ -16,6 +16,7 @@ import {
 } from "@/lib/user-display";
 import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
 import { isJournalTask as isJournalTaskLib } from "@/lib/task-classification";
+import { parseJournalLinkRaw } from "@/lib/journal-link-parse";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -368,24 +369,13 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  // Local raw-parser (НЕ путать с shared/journal-link parseJournalLink,
-  // который через Zod-schema отбрасывает unknown-поля). Этот возвращает
-  // raw object со ВСЕМИ свойствами, потому что нам нужен `taskScope`
-  // — поле, не описанное в schema (используется только в client UI).
-  function parseJournalLinkRaw(
-    t: typeof tasks[0],
-  ): Record<string, unknown> | null {
-    const raw = (t as { journalLink?: string | null }).journalLink;
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === "object" ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
+  // parseJournalLinkRaw extracted в lib/journal-link-parse.ts. Это
+  // lenient parser (не Zod-strict), нужен для UI-only полей типа
+  // taskScope, не описанных в shared schema.
   const isVerifierTask = (t: typeof tasks[0]): boolean => {
-    const link = parseJournalLinkRaw(t);
+    const link = parseJournalLinkRaw(
+      (t as { journalLink?: string | null }).journalLink ?? null,
+    );
     if (!link) return false;
     if (link.taskScope === "verifier") return true;
     const kind = typeof link.kind === "string" ? link.kind : "";
