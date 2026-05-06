@@ -55,7 +55,7 @@ export async function ensureSessionsTable(): Promise<void> {
   }
 }
 
-function expiresFromSession(session: SessionData): number {
+export function expiresFromSession(session: SessionData): number {
   // express-session кладёт абсолютную дату в session.cookie.expires
   // когда maxAge задан в config'е. Бывает Date или ISO string после
   // json-roundtrip.
