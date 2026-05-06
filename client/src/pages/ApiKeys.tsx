@@ -7,6 +7,7 @@ import { ArrowLeft, Key, Copy, Eye, Loader2, Plus, RefreshCw, Trash2, CheckCircl
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { formatTimestamp as formatTs } from "@/lib/format-timestamp";
 
 interface ApiKeyRow {
 	id: number;
@@ -29,11 +30,6 @@ type SecretReveal = {
 	secret: string;
 	source: "created" | "revealed" | "rotated";
 };
-
-function formatTs(ts: number): string {
-	if (!ts) return "—";
-	return new Date(ts * 1000).toLocaleString("ru-RU");
-}
 
 export default function ApiKeysPage() {
 	const [, setLocation] = useLocation();

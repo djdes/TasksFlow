@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { formatTimestamp as formatTs } from "@/lib/format-timestamp";
 
 /**
  * /admin/integrations — единый «Интеграционный центр» TasksFlow
@@ -89,10 +90,7 @@ type WebhookQueueStats = {
   migrationNeeded?: boolean;
 };
 
-function formatTs(ts: number): string {
-  if (!ts) return "—";
-  return new Date(ts * 1000).toLocaleString("ru-RU");
-}
+// formatTs extracted to lib/format-timestamp.ts (DRY с ApiKeys.tsx).
 
 export default function IntegrationsPage() {
   const [, setLocation] = useLocation();
