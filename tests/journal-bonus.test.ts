@@ -128,4 +128,25 @@ describe("getJournalBonus — case-insensitive prefix", () => {
       ),
     ).toBe(50);
   });
+
+  it("kind=WESETUP-HYGIENE (uppercase) → null (NO_BONUS_JOURNAL_CODES match)", () => {
+    // Регрессия: NO_BONUS_JOURNAL_CODES check'ается ПОСЛЕ
+    // .toLowerCase(). Если кто-то уберёт toLowerCase, uppercase
+    // hygiene пройдёт фильтр и юзер увидит «50 ₽» бонус за личную
+    // гигиену — анти-цель design'а.
+    expect(
+      getJournalBonus(
+        makeTask({ ...VALID_LINK, kind: "WESETUP-HYGIENE" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("kind=Wesetup-Health_Check (mixed case) → null", () => {
+    // Третий case test: смешанный регистр + underscore.
+    expect(
+      getJournalBonus(
+        makeTask({ ...VALID_LINK, kind: "Wesetup-Health_Check" }),
+      ),
+    ).toBeNull();
+  });
 });
