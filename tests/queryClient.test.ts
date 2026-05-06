@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ApiError, apiRequest } from "../client/src/lib/queryClient";
+import { ApiError, apiRequest, withTimeout } from "../client/src/lib/queryClient";
 
 const originalFetch = globalThis.fetch;
 
@@ -279,5 +279,50 @@ describe("apiRequest — friendly errors (тик 132)", () => {
       expect((err as ApiError).status).toBe(0);
       expect((err as ApiError).message).toMatch(/Нет связи/);
     }
+  });
+});
+
+// ===================== withTimeout helper (тик 140) =====================
+//
+// Извлечён из 9 мест inlined boilerplate'а. Регрессия чтобы кто-то
+// не сломал helper при будущей правке (например, забыл fallback на
+// pure timeout для старых браузеров без AbortSignal.any).
+
+describe("withTimeout helper", () => {
+  it("возвращает AbortSignal", () => {
+    const result = withTimeout(undefined, 30_000);
+    expect(result).toBeInstanceOf(AbortSignal);
+    expect(result.aborted).toBe(false);
+  });
+
+  it("без переданного signal — просто timeout signal", () => {
+    const result = withTimeout(undefined, 30_000);
+    expect(result.aborted).toBe(false);
+    // Не проверяем что timeout actually fires — fake-timers heavyweight
+  });
+
+  it("с переданным signal — combine через AbortSignal.any (Node 20+)", () => {
+    const userController = new AbortController();
+    const result = withTimeout(userController.signal, 30_000);
+    // Если AbortSignal.any доступен (Node 20+), abort'ить userController
+    // должно abort'нуть combined signal:
+    if ("any" in AbortSignal) {
+      expect(result.aborted).toBe(false);
+      userController.abort(new Error("user cancelled"));
+      expect(result.aborted).toBe(true);
+    } else {
+      // Старый runtime — fallback на pure timeout, userController не
+      // должен влиять.
+      userController.abort();
+      expect(result.aborted).toBe(false);
+    }
+  });
+
+  it("уже aborted user signal → result aborted сразу", () => {
+    if (!("any" in AbortSignal)) return; // skip на старом runtime
+    const userController = new AbortController();
+    userController.abort(new Error("pre-aborted"));
+    const result = withTimeout(userController.signal, 30_000);
+    expect(result.aborted).toBe(true);
   });
 });
