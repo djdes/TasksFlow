@@ -43,6 +43,30 @@ describe("getTaskScope", () => {
     expect(getTaskScope({ journalLink: "not-json" })).toBe("personal");
   });
 
+  it("journalLink='' (пустая строка) → personal", () => {
+    // !raw → personal. Тест freeze: если кто-то поменяет на raw==null
+    // или typeof raw !== 'string', пустая строка пройдёт в JSON.parse и
+    // упадёт TypeError'ом.
+    expect(getTaskScope({ journalLink: "" })).toBe("personal");
+  });
+
+  it("journalLink=массив (валидный JSON, не объект) → personal", () => {
+    // JSON.parse([1,2,3]) → array. parsed.taskScope undefined → personal.
+    // Защита от runtime errors на parsed.taskScope при не-object типах.
+    expect(getTaskScope({ journalLink: "[1,2,3]" })).toBe("personal");
+  });
+
+  it("journalLink=число (валидный JSON, не объект) → personal", () => {
+    expect(getTaskScope({ journalLink: "42" })).toBe("personal");
+  });
+
+  it("journalLink=null-JSON-литерал → personal", () => {
+    // JSON.parse('null') === null. parsed?.taskScope crashes без guard'а.
+    // Текущий код не использует optional chaining — null.taskScope даст
+    // TypeError. Тест freeze'ит что обработка null'a через try/catch.
+    expect(getTaskScope({ journalLink: "null" })).toBe("personal");
+  });
+
   it("taskScope=произвольное значение → personal", () => {
     // Только строго "shared" даёт shared. Любое другое значение
     // (опечатка, legacy migration, etc) — personal по дефолту.
