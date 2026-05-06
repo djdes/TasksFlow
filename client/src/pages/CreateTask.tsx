@@ -59,7 +59,9 @@ import { useToast } from "@/hooks/use-toast";
 const formSchema = insertTaskSchema.extend({
   workerId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
   requiresPhoto: z.boolean().optional().default(false),
-  weekDays: z.array(z.number()).nullable().optional(),
+  // .int() симметрично с insertTaskSchema на сервере — без него
+  // client мог бы пропустить float [1.5, 3] и получить 400 от сервера.
+  weekDays: z.array(z.number().int()).nullable().optional(),
   monthDay: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   isRecurring: z.boolean().optional().default(true),
   price: z.string().optional().transform(val => val ? parseInt(val, 10) : 0),
