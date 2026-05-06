@@ -26,6 +26,7 @@ import {
 } from "@shared/wesetup-journal-mode";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { isFormReadyToSubmit } from "@/lib/task-form-validate";
+import { formatTaskFormValue } from "@/lib/task-form-format";
 
 type Props = {
   taskId: number;
@@ -652,35 +653,5 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-function formatValue(field: RuntimeTaskFormField, value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "—";
-    const options = Array.isArray(field.options) ? field.options : [];
-    return value
-      .map((item) => {
-        const opt = options.find((o) => o.value === String(item));
-        return opt ? `${opt.code ? opt.code + " — " : ""}${opt.label}` : String(item);
-      })
-      .join(", ");
-  }
-  if (typeof value === "object") {
-    const file = value as { name?: unknown };
-    if (typeof file.name === "string") return file.name;
-    return JSON.stringify(value);
-  }
-  switch (field.type) {
-    case "boolean":
-      return value ? "Да" : "Нет";
-    case "radio":
-    case "select": {
-      const options = Array.isArray(field.options) ? field.options : [];
-      const opt = options.find((o) => o.value === value);
-      return opt ? `${opt.code ? opt.code + " — " : ""}${opt.label}` : String(value);
-    }
-    case "number":
-      return field.unit ? `${value} ${field.unit}` : String(value);
-    default:
-      return String(value);
-  }
-}
+// formatValue extracted to lib/task-form-format.ts as formatTaskFormValue.
+const formatValue = formatTaskFormValue;
