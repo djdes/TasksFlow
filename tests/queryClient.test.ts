@@ -230,3 +230,54 @@ describe("apiRequest — AbortSignal timeout (regression)", () => {
     expect(signal.aborted).toBe(false);
   });
 });
+
+describe("apiRequest — friendly errors (тик 132)", () => {
+  it("AbortError → ApiError со status=0 и русским сообщением", async () => {
+    const abortErr = Object.assign(new Error("aborted"), {
+      name: "AbortError",
+    });
+    (globalThis.fetch as any).mockRejectedValue(abortErr);
+
+    try {
+      await apiRequest("GET", "/api/slow");
+      expect.fail("expected ApiError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(0);
+      expect((err as ApiError).message).toMatch(/Сервер не отвечает/);
+    }
+  });
+
+  it("TimeoutError (новое имя AbortSignal.timeout) тоже → ApiError", async () => {
+    // В новых браузерах AbortSignal.timeout reject'ит с name=TimeoutError
+    // вместо AbortError. Должны ловить оба.
+    const timeoutErr = Object.assign(new Error("timeout"), {
+      name: "TimeoutError",
+    });
+    (globalThis.fetch as any).mockRejectedValue(timeoutErr);
+
+    try {
+      await apiRequest("GET", "/api/slow");
+      expect.fail("expected ApiError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(0);
+    }
+  });
+
+  it("TypeError «Failed to fetch» → ApiError «нет связи»", async () => {
+    // fetch reject'ит TypeError на DNS-fail / connection-refused / CORS.
+    (globalThis.fetch as any).mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    );
+
+    try {
+      await apiRequest("GET", "/api/test");
+      expect.fail("expected ApiError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(0);
+      expect((err as ApiError).message).toMatch(/Нет связи/);
+    }
+  });
+});

@@ -34,12 +34,52 @@ async function throwIfResNotOk(res: Response) {
 // явный AbortSignal.timeout(120_000) — этот default им не подходит.
 const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
 
+/**
+ * AbortSignal.timeout() reject'ит fetch с DOMException «The operation
+ * was aborted due to timeout» — английское и непонятное бабушке-воркеру.
+ * Также Login.tsx ловит ApiError по `instanceof`, и DOMException туда
+ * не попадает → flow «не найден → /register» ломается. Переоборачиваем
+ * в ApiError со status=0 (network/timeout — отдельно от 4xx/5xx) и
+ * локализованным сообщением.
+ *
+ * fetch может также reject'ить TypeError при network-failure
+ * (DNS/connection-refused/CORS) — это тоже ловим как «нет сети».
+ */
+function isAbortError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { name?: string };
+  return e.name === "AbortError" || e.name === "TimeoutError";
+}
+async function fetchOrFriendlyError(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (isAbortError(err)) {
+      throw new ApiError(
+        "Сервер не отвечает. Проверьте интернет и попробуйте ещё раз.",
+        0,
+      );
+    }
+    if (err instanceof TypeError) {
+      // «Failed to fetch» — DNS/CORS/connection-refused.
+      throw new ApiError(
+        "Нет связи с сервером. Проверьте интернет.",
+        0,
+      );
+    }
+    throw err;
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const res = await fetchOrFriendlyError(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -68,7 +108,7 @@ export const getQueryFn: <T>(options: {
             timeoutSignal,
           ])
         : timeoutSignal;
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetchOrFriendlyError(queryKey.join("/") as string, {
       credentials: "include",
       signal: combined,
     });
