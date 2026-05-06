@@ -35,21 +35,54 @@ const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function readStoredPreference(): ThemePreference {
-  if (typeof window === "undefined") return "system";
-  try {
-    const v = window.localStorage.getItem(STORAGE_KEY);
-    if (v === "light" || v === "dark" || v === "system") return v;
-  } catch {
-    // localStorage заблокирован (incognito с настройкой) — system
-  }
+/**
+ * Парсит preference из произвольной строки (или null/undefined).
+ * Валидные значения — "light"/"dark"/"system". Что угодно другое —
+ * "system" по дефолту.
+ *
+ * Pure-функция: тестируется без window. Извлечена потому что
+ * валидация-pin критична: если кто-то случайно изменит сравнение,
+ * мусор в localStorage начнёт ломать UI («purple» как theme).
+ */
+export function parseThemePreference(
+  raw: string | null | undefined,
+): ThemePreference {
+  if (raw === "light" || raw === "dark" || raw === "system") return raw;
   return "system";
 }
 
-function resolveTheme(preference: ThemePreference): ResolvedTheme {
+function readStoredPreference(): ThemePreference {
+  if (typeof window === "undefined") return "system";
+  try {
+    return parseThemePreference(window.localStorage.getItem(STORAGE_KEY));
+  } catch {
+    // localStorage заблокирован (incognito с настройкой) — system
+    return "system";
+  }
+}
+
+/**
+ * Resolved тема (light/dark) из preference. Для preference='system'
+ * нужен matchMedia — берём через delegate (или window.matchMedia
+ * если не передан, для production runtime).
+ *
+ * Pure при переданном systemPrefersDark; нужен побочный matchMedia
+ * только в default-arg (для unit-тестов передаём bool напрямую).
+ */
+export function resolveThemeFromPreference(
+  preference: ThemePreference,
+  systemPrefersDark: boolean,
+): ResolvedTheme {
   if (preference === "light" || preference === "dark") return preference;
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia(DARK_QUERY).matches ? "dark" : "light";
+  return systemPrefersDark ? "dark" : "light";
+}
+
+function resolveTheme(preference: ThemePreference): ResolvedTheme {
+  const systemPrefersDark =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(DARK_QUERY).matches;
+  return resolveThemeFromPreference(preference, systemPrefersDark);
 }
 
 function applyHtmlClass(theme: ResolvedTheme) {
