@@ -135,6 +135,31 @@ describe("journal composer helpers", () => {
     expect(resolved.documentLabel).toBe("Документ журнала");
     expect(resolved.submitLabel).toContain("Р·РґРѕСЂРѕРІСЊСЏ");
   });
+
+  it("resolveJournalUi(null) → дефолты (без crash)", () => {
+    // Edge case: журнал может приходить как null если catalog ещё не
+    // подгрузился. UI должен рендериться с дефолтами, не валиться.
+    const resolved = resolveJournalUi(null);
+    expect(resolved).toBeDefined();
+    expect(typeof resolved.documentLabel).toBe("string");
+  });
+
+  it("resolveJournalUi(undefined) → дефолты", () => {
+    const resolved = resolveJournalUi(undefined);
+    expect(resolved).toBeDefined();
+    expect(typeof resolved.submitLabel).toBe("string");
+  });
+
+  it("resolveJournalUi(journal без ui) → все дефолты", () => {
+    const resolved = resolveJournalUi({
+      ...catalog.journals[0],
+      ui: undefined,
+    });
+    // Все поля должны быть заполнены defaults
+    expect(typeof resolved.subjectLabel).toBe("string");
+    expect(typeof resolved.documentLabel).toBe("string");
+    expect(typeof resolved.submitLabel).toBe("string");
+  });
 });
 
 describe("task form helpers", () => {
