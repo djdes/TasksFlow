@@ -34,6 +34,26 @@ describe("normalizePhone — текущее поведение (мягкое)", 
     expect(normalizePhone("+7\t999\n123 4567")).toBe("+79991234567");
   });
 
+  it("убирает NBSP (U+00A0) — copy-paste edge case", () => {
+    // Регрессия: при copy/paste из веб-страниц / Word-документов или
+    // на Android-клавиатуре между группами цифр может вставиться NBSP
+    // вместо обычного пробела. JS regex `\s` его матчит — без этого
+    // юзер «не сможет залогиниться» с тем же на вид номером.
+    const NBSP = String.fromCharCode(0x00a0);
+    expect(normalizePhone(`+7${NBSP}999${NBSP}123${NBSP}4567`)).toBe(
+      "+79991234567",
+    );
+  });
+
+  it("убирает narrow no-break space (U+202F)", () => {
+    // U+202F — другой unicode пробел, который вставляется некоторыми
+    // text-render'ами Windows и редакторами.
+    const NNBSP = String.fromCharCode(0x202f);
+    expect(normalizePhone(`+7${NNBSP}999${NNBSP}1234567`)).toBe(
+      "+79991234567",
+    );
+  });
+
   it("оставляет уже нормализованный номер без изменений", () => {
     expect(normalizePhone("+79991234567")).toBe("+79991234567");
   });
