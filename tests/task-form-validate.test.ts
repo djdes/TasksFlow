@@ -100,6 +100,24 @@ describe("isFieldValueValid — number field", () => {
     expect(isFieldValueValid({ ...numField, max: 100 }, 100.1)).toBe(false);
   });
 
+  it("Infinity → false (даже без max — defensive)", () => {
+    // Регрессия: corrupted programmatic setter может попасть Infinity.
+    // Без min/max guard'а раньше Infinity проходил как valid.
+    expect(isFieldValueValid(numField, Infinity)).toBe(false);
+  });
+
+  it("-Infinity → false (даже без min)", () => {
+    expect(isFieldValueValid(numField, -Infinity)).toBe(false);
+  });
+
+  it("Infinity с max=Infinity (bizarre edge) → false (Number.isFinite)", () => {
+    // Даже если кто-то задал max=Infinity (ужасная идея), value=Infinity
+    // не пройдёт guard. Мы проверяем Number.isFinite до min/max.
+    expect(
+      isFieldValueValid({ ...numField, max: Infinity }, Infinity),
+    ).toBe(false);
+  });
+
   it("string '36.6' для number field → true (typeof guard НЕ срабатывает)", () => {
     // Документированное поведение: если value пришёл как string
     // (например из <input type="number"> до coercion), проверка

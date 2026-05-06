@@ -50,6 +50,10 @@ export function isFieldValueValid(
   }
   if (v === null || v === undefined || v === "") return false;
   if (field.type === "number" && typeof v === "number") {
+    // Defense-in-depth: Infinity / -Infinity не должны проходить
+    // даже если min/max не заданы — это corrupted input через
+    // программный setter (UI-input не позволяет ввести).
+    if (!Number.isFinite(v)) return false;
     if (typeof field.min === "number" && v < field.min) return false;
     if (typeof field.max === "number" && v > field.max) return false;
   }
