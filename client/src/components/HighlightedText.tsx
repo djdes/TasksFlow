@@ -3,9 +3,11 @@
  * замена `{title}` на `<HighlightedText text={title} query={search}/>`
  * — без перевёрстки мест где он используется.
  *
- * Безопасно: regex-эскейп для query, без dangerouslySetInnerHTML.
- * Регистр игнорируется. Пустой query — текст без изменений.
+ * Логика разбиения — в lib/highlight.ts (pure, тестируется отдельно).
+ * Здесь только React-presentation.
  */
+
+import { splitForHighlight } from "@/lib/highlight";
 
 type Props = {
   text: string;
@@ -13,25 +15,17 @@ type Props = {
   className?: string;
 };
 
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export function HighlightedText({ text, query, className }: Props) {
-  const trimmed = (query ?? "").trim();
-  if (!trimmed) return <span className={className}>{text}</span>;
-
-  const re = new RegExp(`(${escapeRegex(trimmed)})`, "gi");
-  const parts = text.split(re);
+  const segments = splitForHighlight(text, query);
   return (
     <span className={className}>
-      {parts.map((p, i) =>
-        re.test(p) ? (
+      {segments.map((s, i) =>
+        s.isMatch ? (
           <mark key={i} className="search-highlight">
-            {p}
+            {s.text}
           </mark>
         ) : (
-          <span key={i}>{p}</span>
+          <span key={i}>{s.text}</span>
         ),
       )}
     </span>
