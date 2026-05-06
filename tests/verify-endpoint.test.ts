@@ -174,6 +174,74 @@ describe("POST /api/tasks/:id/verify — input validation", () => {
     expect(r.status).toBe(400);
   });
 
+  it("reject с reason=number → 400 (typeof guard)", async () => {
+    // typeof guard защищает от TypeError 500 на reason.trim() для
+    // не-строковых типов.
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({ decision: "reject", reason: 42 });
+    expect(r.status).toBe(400);
+  });
+
+  it("reject с reason=array → 400 (typeof===object, но не строка)", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({ decision: "reject", reason: ["переделать"] });
+    expect(r.status).toBe(400);
+  });
+
+  it("reject с reason=object → 400", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({ decision: "reject", reason: { msg: "no" } });
+    expect(r.status).toBe(400);
+  });
+
+  it("reject с reason=boolean → 400", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({ decision: "reject", reason: true });
+    expect(r.status).toBe(400);
+  });
+
+  it("decision отсутствует (undefined) → 400", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({});
+    expect(r.status).toBe(400);
+  });
+
+  it("decision=null → 400", async () => {
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+    storage.getTask.mockResolvedValue(SUBMITTED_TASK);
+
+    const r = await request(app)
+      .post(`/api/tasks/${SUBMITTED_TASK.id}/verify`)
+      .send({ decision: null });
+    expect(r.status).toBe(400);
+  });
+
   it("reason длиннее 1000 → cap до 1000", async () => {
     const { app } = await buildApp({ sessionUserId: ADMIN.id });
     storage.getUserById.mockResolvedValue(ADMIN);
