@@ -16,10 +16,10 @@ import {
 } from "@/lib/user-display";
 import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
 import {
-  isJournalTask as isJournalTaskLib,
-  isSubmittedFiller as isSubmittedFillerLib,
-  isToVerify as isToVerifyLib,
-  isVerifierTask as isVerifierTaskLib,
+  isJournalTask,
+  isSubmittedFiller,
+  isToVerify,
+  isVerifierTask,
 } from "@/lib/task-classification";
 import {
   feedbackTaskComplete,
@@ -373,11 +373,8 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  // task-classifier'ы используем напрямую из lib — Task structurally
+  // task-classifier'ы импортируются напрямую из lib — Task structurally
   // совместим с lib's optional types (journalLink/verificationStatus).
-  const isVerifierTask = isVerifierTaskLib;
-  const isSubmittedFiller = isSubmittedFillerLib;
-  const isToVerify = isToVerifyLib;
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
@@ -438,11 +435,6 @@ export default function Dashboard() {
     }
   };
 
-  const isJournalTask = (task: typeof tasks[0]): boolean =>
-    isJournalTaskLib({
-      category: (task as { category?: string | null }).category,
-      journalLink: (task as { journalLink?: string | null }).journalLink,
-    });
 
   // getTaskScope — обёртка над lib/task-scope.ts. Function declaration
   // (не const arrow) важна потому что используется в `scopeCounts`
