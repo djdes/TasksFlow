@@ -25,6 +25,7 @@ import {
   type TaskFormSchema,
 } from "@shared/wesetup-journal-mode";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { isFormReadyToSubmit } from "@/lib/task-form-validate";
 
 type Props = {
   taskId: number;
@@ -144,25 +145,10 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     void loadForm();
   }, [open, loadForm]);
 
-  const readyToSubmit = useMemo(() => {
-    if (!schema) return false;
-    for (const field of schema.fields) {
-      if (!field.required) continue;
-      const v = values[field.key];
-      if (Array.isArray(v) && v.length === 0) return false;
-      if (typeof v === "number" && Number.isNaN(v)) return false;
-      if (field.type === "file" || field.type === "photo" || field.type === "image") {
-        if (!v || typeof v !== "object") return false;
-        continue;
-      }
-      if (v === null || v === undefined || v === "") return false;
-      if (field.type === "number" && typeof v === "number") {
-        if (typeof field.min === "number" && v < field.min) return false;
-        if (typeof field.max === "number" && v > field.max) return false;
-      }
-    }
-    return true;
-  }, [schema, values]);
+  const readyToSubmit = useMemo(
+    () => isFormReadyToSubmit(schema, values),
+    [schema, values],
+  );
 
   function setField(key: string, value: unknown) {
     setValues((prev) => ({ ...prev, [key]: value }));
