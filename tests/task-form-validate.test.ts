@@ -85,6 +85,20 @@ describe("isFieldValueValid — number field", () => {
     expect(isFieldValueValid(numField, 1000)).toBe(true);
     expect(isFieldValueValid(numField, -100)).toBe(true);
   });
+  it("min=0 + value=0 → true (inclusive boundary)", () => {
+    // Edge case: счётчики/количества часто допускают 0. Проверка
+    // `v < field.min` строго less, не less-equal — 0 проходит.
+    expect(isFieldValueValid({ ...numField, min: 0 }, 0)).toBe(true);
+  });
+  it("min=0 + value=-1 → false", () => {
+    expect(isFieldValueValid({ ...numField, min: 0 }, -1)).toBe(false);
+  });
+  it("max=100 + value=100 → true (inclusive boundary)", () => {
+    expect(isFieldValueValid({ ...numField, max: 100 }, 100)).toBe(true);
+  });
+  it("max=100 + value=100.1 → false", () => {
+    expect(isFieldValueValid({ ...numField, max: 100 }, 100.1)).toBe(false);
+  });
 });
 
 describe("isFieldValueValid — array (multi-select)", () => {
