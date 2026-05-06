@@ -250,4 +250,38 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
       expect.objectContaining({ phone: "+79990001122" }),
     );
   });
+
+  it("приглашение уже used (без race) → 400 reason:used", async () => {
+    // Direct path: pre-condition guard. Между revoked и race-rollback.
+    storage.getInvitationByToken.mockResolvedValue({
+      ...ACTIVE,
+      usedAt: 100,
+      usedByUserId: 50,
+    });
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(res.status).toBe(400);
+    expect(res.body.reason).toBe("used");
+    expect(storage.createUser).not.toHaveBeenCalled();
+  });
+
+  it("happy path → company name fallback на '' если getCompanyById=undefined", async () => {
+    // Edge case: invitation валидно, но company удалена (orphan).
+    // Endpoint должен вернуть user + company-stub с companyId+name=''
+    // (UI fallback'нет на «Без названия»).
+    storage.getInvitationByToken.mockResolvedValue(ACTIVE);
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue(NEW_USER);
+    storage.markInvitationUsed.mockResolvedValue(true);
+    storage.getCompanyById.mockResolvedValue(undefined);
+
+    const { app } = await buildApp();
+    const res = await request(app)
+      .post("/api/invitations/by-token/good-token/accept")
+      .send({ phone: "+79990001122", name: "Иван" });
+    expect(res.status).toBe(201);
+    expect(res.body.company).toEqual({ id: 42, name: "" });
+  });
 });
