@@ -92,6 +92,7 @@ export default function Invitations() {
       const r = await fetch(`/api/invitations/${id}/revoke`, {
         method: "POST",
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       if (!r.ok) throw new Error((await r.json()).message || "Ошибка");
     },

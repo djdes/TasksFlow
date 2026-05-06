@@ -162,6 +162,7 @@ export default function EditTask() {
         method: "POST",
         credentials: "include",
         body: formData,
+        signal: AbortSignal.timeout(120_000),
       });
 
       if (!response.ok) {
@@ -200,6 +201,7 @@ export default function EditTask() {
       const response = await fetch(`/api/tasks/${id}/example-photo`, {
         method: "DELETE",
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!response.ok) {

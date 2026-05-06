@@ -82,6 +82,7 @@ export default function ApiKeysPage() {
 			const r = await fetch(`/api/api-keys/${id}/reveal`, {
 				method: "POST",
 				credentials: "include",
+				signal: AbortSignal.timeout(30_000),
 			});
 			const data = await r.json().catch(() => ({}));
 			if (!r.ok) {
@@ -102,6 +103,7 @@ export default function ApiKeysPage() {
 			const r = await fetch(`/api/api-keys/${id}/rotate`, {
 				method: "POST",
 				credentials: "include",
+				signal: AbortSignal.timeout(30_000),
 			});
 			const data = await r.json().catch(() => ({}));
 			if (!r.ok) {
@@ -123,6 +125,7 @@ export default function ApiKeysPage() {
 			const r = await fetch(`/api/api-keys/${id}`, {
 				method: "DELETE",
 				credentials: "include",
+				signal: AbortSignal.timeout(30_000),
 			});
 			if (!r.ok) throw new Error("Не удалось отозвать");
 			return r.json();

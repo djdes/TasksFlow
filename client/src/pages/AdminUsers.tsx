@@ -106,6 +106,7 @@ export default function AdminUsers() {
       const response = await fetch(`/api/users/${userId}/reset-balance`, {
         method: "POST",
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -128,6 +129,7 @@ export default function AdminUsers() {
       const response = await fetch(`/api/users/${userId}`, {
         method: "DELETE",
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();
