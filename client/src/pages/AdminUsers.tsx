@@ -20,11 +20,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
-import {
-  formatPhoneInput,
-  shouldBlockPhoneKey,
-  shouldResetPhoneCursor,
-} from "@/lib/phone-input-format";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const formSchema = insertUserSchema.pick({ phone: true, name: true });
 const editFormSchema = updateUserSchema;
@@ -248,23 +244,10 @@ export default function AdminUsers() {
                     <FormItem>
                       <FormLabel>Номер телефона</FormLabel>
                       <FormControl>
-                        <Input
-                          type="tel"
-                          placeholder="xxx xxx xx xx"
-                          className="things-input"
+                        <PhoneInput
                           value={field.value}
-                          onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
-                          onKeyDown={(e) => {
-                            const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-                            if (shouldBlockPhoneKey({ key: e.key, cursor })) {
-                              e.preventDefault();
-                            }
-                          }}
-                          onFocus={(e) => {
-                            if (shouldResetPhoneCursor(field.value)) {
-                              setTimeout(() => e.target.setSelectionRange(2, 2), 0);
-                            }
-                          }}
+                          onChange={field.onChange}
+                          className="things-input"
                         />
                       </FormControl>
                       <FormMessage />
@@ -321,17 +304,9 @@ export default function AdminUsers() {
                       <div className="space-y-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Телефон</label>
-                          <Input
-                            type="tel"
+                          <PhoneInput
                             value={editPhone}
-                            onChange={(e) => setEditPhone(formatPhoneInput(e.target.value))}
-                            onKeyDown={(e) => {
-                              const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-                              if (shouldBlockPhoneKey({ key: e.key, cursor })) {
-                                e.preventDefault();
-                              }
-                            }}
-                            placeholder="xxx xxx xx xx"
+                            onChange={setEditPhone}
                             className="mt-1"
                           />
                         </div>

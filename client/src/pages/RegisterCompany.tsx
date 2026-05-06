@@ -17,11 +17,7 @@ import { z } from "zod";
 import { registerCompanySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
-import {
-  formatPhoneInput,
-  shouldBlockPhoneKey,
-  shouldResetPhoneCursor,
-} from "@/lib/phone-input-format";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const formSchema = registerCompanySchema;
 
@@ -130,23 +126,10 @@ export default function Register() {
                     Телефон администратора
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="xxx xxx xx xx"
-                      className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                    <PhoneInput
                       value={field.value}
-                      onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
-                      onKeyDown={(e) => {
-                        const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-                        if (shouldBlockPhoneKey({ key: e.key, cursor })) {
-                          e.preventDefault();
-                        }
-                      }}
-                      onFocus={(e) => {
-                        if (shouldResetPhoneCursor(field.value)) {
-                          setTimeout(() => e.target.setSelectionRange(2, 2), 0);
-                        }
-                      }}
+                      onChange={field.onChange}
+                      className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
                     />
                   </FormControl>
                   <FormMessage className="text-sm mt-1" />

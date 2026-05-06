@@ -16,11 +16,7 @@ import { z } from "zod";
 import { loginSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
-import {
-  formatPhoneInput,
-  shouldBlockPhoneKey,
-  shouldResetPhoneCursor,
-} from "@/lib/phone-input-format";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const formSchema = z.object({
   phone: loginSchema.shape.phone,
@@ -93,30 +89,19 @@ export default function RegisterUser() {
     }
   };
 
-  // Phone input component for reuse
-  const PhoneInput = ({ field, label }: { field: any; label: string }) => (
+  // Local FormField wrapper над shared PhoneInput — добавляет
+  // FormLabel/FormMessage из react-hook-form. Нижний-уровневый
+  // phone-input-format helpers инкапсулированы в shared component.
+  const PhoneInputField = ({ field, label }: { field: any; label: string }) => (
     <FormItem>
       <FormLabel className="text-sm font-semibold text-foreground">
         {label}
       </FormLabel>
       <FormControl>
-        <Input
-          type="tel"
-          placeholder="xxx xxx xx xx"
-          className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+        <PhoneInput
           value={field.value}
-          onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
-          onKeyDown={(e) => {
-            const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-            if (shouldBlockPhoneKey({ key: e.key, cursor })) {
-              e.preventDefault();
-            }
-          }}
-          onFocus={(e) => {
-            if (shouldResetPhoneCursor(field.value)) {
-              setTimeout(() => e.target.setSelectionRange(2, 2), 0);
-            }
-          }}
+          onChange={field.onChange}
+          className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
         />
       </FormControl>
       <FormMessage className="text-sm mt-1" />
@@ -161,7 +146,7 @@ export default function RegisterUser() {
               control={form.control}
               name="phone"
               render={({ field }) => (
-                <PhoneInput field={field} label="Ваш телефон" />
+                <PhoneInputField field={field} label="Ваш телефон" />
               )}
             />
 
@@ -198,23 +183,10 @@ export default function RegisterUser() {
                     Телефон администратора компании
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="xxx xxx xx xx"
-                      className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
+                    <PhoneInput
                       value={field.value}
-                      onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
-                      onKeyDown={(e) => {
-                        const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
-                        if (shouldBlockPhoneKey({ key: e.key, cursor })) {
-                          e.preventDefault();
-                        }
-                      }}
-                      onFocus={(e) => {
-                        if (shouldResetPhoneCursor(field.value)) {
-                          setTimeout(() => e.target.setSelectionRange(2, 2), 0);
-                        }
-                      }}
+                      onChange={field.onChange}
+                      className="h-14 text-lg font-medium tracking-wider border-2 border-border rounded-xl px-4 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card"
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground mt-1">
