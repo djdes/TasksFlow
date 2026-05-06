@@ -23,7 +23,7 @@ import {
   type YearGroup,
 } from "@/lib/group-tasks";
 import { getJournalBonus } from "@/lib/journal-bonus";
-import { parseJournalLink } from "@/lib/journal-link-parse";
+import { parseJournalLinkUI } from "@/lib/journal-link-parse";
 import { HighlightedText } from "@/components/HighlightedText";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
@@ -152,7 +152,7 @@ export function GroupedTaskList(props: Props) {
       Array<{ rowKey: string; label: string; doneByName: string | null }>
     >();
     for (const task of completedTasks) {
-      const link = parseJournalLink(
+      const link = parseJournalLinkUI(
         (task as { journalLink?: string | null }).journalLink ?? null,
       );
       if (!link?.siblingVisibility) continue;
@@ -220,7 +220,7 @@ export function GroupedTaskList(props: Props) {
     );
     // Phase F: «соседи закрыли». Берём журнальные siblings (не свою
     // задачу) и фильтруем по siblingVisibility=true в JournalLink.
-    const taskLink = parseJournalLink(
+    const taskLink = parseJournalLinkUI(
       (task as { journalLink?: string | null }).journalLink ?? null,
     );
     const visibleSiblings =

@@ -7,7 +7,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseJournalLink } from "../client/src/lib/journal-link-parse";
+// Renamed (тик 160): client/lib/journal-link-parse теперь экспортирует
+// parseJournalLinkUI чтобы не путать с shared/journal-link и Dashboard
+// local. Импортим через alias чтобы не править ВСЕ assert'ы в тестах.
+import { parseJournalLinkUI as parseJournalLink } from "../client/src/lib/journal-link-parse";
 
 describe("parseJournalLink — невалидные входы", () => {
   it("null → null", () => {

@@ -1,7 +1,17 @@
 /**
  * Parser для task.journalLink (TEXT JSON) на клиенте. Тот же формат
- * что в server/journal-link.ts, но без zod — только нужные поля для
+ * что в shared/journal-link.ts, но без zod — только нужные поля для
  * UI. Возвращает null если поле некорректное (старая schema или мусор).
+ *
+ * NB: это ОДИН ИЗ ТРЁХ parser'ов journalLink в проекте:
+ *   • shared/journal-link.ts: parseJournalLink (Zod-validated, строгий)
+ *   • client/src/lib/journal-link-parse.ts: parseJournalLinkUI (THIS)
+ *     — lightweight для UI, поддерживает siblingVisibility
+ *   • client/src/pages/Dashboard.tsx: parseJournalLinkRaw (raw object,
+ *     для taskScope-проверок)
+ *
+ * Каждый имеет свою цель — разные поля разной критичности. Использовать
+ * правильный.
  */
 
 export type ParsedJournalLink = {
@@ -13,7 +23,9 @@ export type ParsedJournalLink = {
   siblingVisibility?: boolean;
 };
 
-export function parseJournalLink(raw: string | null | undefined): ParsedJournalLink | null {
+export function parseJournalLinkUI(
+  raw: string | null | undefined,
+): ParsedJournalLink | null {
   if (!raw) return null;
   try {
     const obj = JSON.parse(raw) as Record<string, unknown>;
