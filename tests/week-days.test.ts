@@ -22,6 +22,18 @@ describe("formatWeekDaysShort — пустые / невалидные", () => {
   it("[1, 7] (один валидный, один нет) → 'Пн'", () => {
     expect(formatWeekDaysShort([1, 7])).toBe("Пн");
   });
+
+  it("float [1.5, 3] → 'Ср' (не integer пропускается)", () => {
+    // Регрессия: без Number.isInteger guard'а 1.5 проходил range-check,
+    // но WEEK_DAY_SHORT_NAMES[1.5] = undefined → join выдавал
+    // «Пн, , Ср» (пустая ячейка между запятыми).
+    expect(formatWeekDaysShort([1.5, 3])).toBe("Ср");
+  });
+
+  it("NaN отфильтровывается", () => {
+    // typeof NaN === 'number', но Number.isInteger(NaN) === false.
+    expect(formatWeekDaysShort([NaN, 1, 3])).toBe("Пн, Ср");
+  });
 });
 
 describe("formatWeekDaysShort — single day", () => {

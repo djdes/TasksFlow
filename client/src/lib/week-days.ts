@@ -31,8 +31,12 @@ const WEEK_DAY_SHORT_NAMES: Record<number, string> = {
 export function formatWeekDaysShort(weekDays: readonly number[]): string {
   if (!weekDays.length) return "";
   const unique = Array.from(new Set(weekDays));
-  // Невалидные значения игнорируем (не в 0..6).
-  const valid = unique.filter((d) => d >= 0 && d <= 6);
+  // Невалидные значения игнорируем: не integer, или вне [0..6].
+  // Без isInteger guard'а: 1.5 проходит range-check, но WEEK_DAY_
+  // SHORT_NAMES[1.5] = undefined → join выдаёт "Пн, , Ср".
+  const valid = unique.filter(
+    (d) => Number.isInteger(d) && d >= 0 && d <= 6,
+  );
   return valid
     .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
     .map((d) => WEEK_DAY_SHORT_NAMES[d])
