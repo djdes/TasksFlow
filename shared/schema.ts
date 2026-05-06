@@ -166,8 +166,14 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   photoUrls: z.array(z.string()).nullable().optional(), // Массив URL фотографий (до 10 шт)
   examplePhotoUrl: z.string().nullable().optional(), // URL примера фото
   isCompleted: z.boolean().optional().default(false),
-  weekDays: z.array(z.number().min(0).max(6)).nullable().optional(), // массив дней недели [0-6]
-  monthDay: z.number().min(1).max(31).nullable().optional(), // день месяца (1-31)
+  // .int() обязателен: без него Zod пропустит [1.5, 3] и в UI бейджах
+  // появится «Пн, ,Ср» (WEEK_DAY_SHORT_NAMES[1.5]=undefined). Сервер
+  // тоже использует weekDays для is-task-visible-today фильтра — float
+  // никогда не совпадёт с integer dayOfWeek.
+  weekDays: z.array(z.number().int().min(0).max(6)).nullable().optional(),
+  // .int() обязателен: monthDay=15.5 !== 15 (Date.getDate()) → задача
+  // не будет показываться в свой день. Раньше Zod пропускал.
+  monthDay: z.number().int().min(1).max(31).nullable().optional(),
   isRecurring: z.boolean().optional().default(true), // повторяющаяся задача
   price: z.number().min(0).optional().default(0), // стоимость выполнения в рублях
   category: z.string().max(100).nullable().optional(), // категория задачи

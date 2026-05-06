@@ -129,6 +129,28 @@ describe("insertTaskSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("должна отклонять weekDays с float (1.5)", () => {
+    // Регрессия: float проходил `.min(0).max(6)` без .int(), потом
+    // в UI бейджах рендерился как «Пн, ,Ср» (WEEK_DAY_SHORT_NAMES[1.5]=
+    // undefined). На сервере is-task-visible-today фильтр сравнивал
+    // float !== integer dayOfWeek и задача не показывалась в свой день.
+    const result = insertTaskSchema.safeParse({
+      title: "Задача",
+      weekDays: [1.5, 3],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("должна отклонять monthDay с float (15.5)", () => {
+    // Регрессия: 15.5 проходил .min(1).max(31), но getDate() integer
+    // → задача не показывается в свой день.
+    const result = insertTaskSchema.safeParse({
+      title: "Задача",
+      monthDay: 15.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("должна отклонять отрицательную цену", () => {
     const result = insertTaskSchema.safeParse({
       title: "Задача",
