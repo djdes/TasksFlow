@@ -123,4 +123,25 @@ describe("parseManagedWorkerIds — type filter (защита от мусора)
       1, 2,
     ]);
   });
+
+  it("негативные integers пропускаются как есть (JSON-source data trust)", () => {
+    // Документированное поведение: parseManagedWorkerIds — pure filter
+    // только по типу/Number.isInteger. Семантическая валидация (id > 0)
+    // — на уровне callers (storage layer защищает от записи плохих id'ов
+    // через FK constraints). Тест freeze'ит текущее поведение, чтобы
+    // если кто-то добавит >0 фильтр — это было осознанное изменение.
+    expect(DatabaseStorage.parseManagedWorkerIds("[-1, 5, -10]")).toEqual([
+      -1, 5, -10,
+    ]);
+  });
+
+  it("дубликаты НЕ дедуп'ятся (документированное поведение)", () => {
+    // parseManagedWorkerIds возвращает array как есть после filter'а.
+    // Дедупликацию делает caller через new Set() при необходимости.
+    // Freeze: если кто-то добавит unique-фильтр, существующие тесты
+    // canAssignToWorker должны быть проверены на регрессию.
+    expect(DatabaseStorage.parseManagedWorkerIds("[7, 7, 8, 7]")).toEqual([
+      7, 7, 8, 7,
+    ]);
+  });
 });
