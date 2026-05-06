@@ -224,3 +224,42 @@ describe("POST /api/api-keys — happy path", () => {
     expect(r.body.secret.startsWith("tfk_")).toBe(true);
   });
 });
+
+describe("POST /api/api-keys — encryption (reveal-feature)", () => {
+  // setup-env.ts задаёт SESSION_SECRET ≥16 символов → reveal-feature
+  // включён по fallback. Контролируем явно через env API_KEY_REVEAL_SECRET.
+  const ORIGINAL_REVEAL = process.env.API_KEY_REVEAL_SECRET;
+  const ORIGINAL_SESSION = process.env.SESSION_SECRET;
+
+  afterEach(() => {
+    if (ORIGINAL_REVEAL === undefined) delete process.env.API_KEY_REVEAL_SECRET;
+    else process.env.API_KEY_REVEAL_SECRET = ORIGINAL_REVEAL;
+    if (ORIGINAL_SESSION === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = ORIGINAL_SESSION;
+  });
+
+  it("reveal включён → keyEncrypted сохраняется в БД", async () => {
+    process.env.API_KEY_REVEAL_SECRET = "reveal-test-secret-1234567890-abc";
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+
+    await request(app).post("/api/api-keys").send({ name: "K" });
+
+    const callArg = storage.createApiKey.mock.calls[0][0];
+    expect(callArg.keyEncrypted).toBeTruthy();
+    // Format: iv(base64).tag(base64).ciphertext(base64) — три точки-разделителя
+    expect(callArg.keyEncrypted!.split(".")).toHaveLength(3);
+  });
+
+  it("reveal off (нет env) → keyEncrypted=null", async () => {
+    delete process.env.API_KEY_REVEAL_SECRET;
+    delete process.env.SESSION_SECRET;
+    const { app } = await buildApp({ sessionUserId: ADMIN.id });
+    storage.getUserById.mockResolvedValue(ADMIN);
+
+    await request(app).post("/api/api-keys").send({ name: "K" });
+
+    const callArg = storage.createApiKey.mock.calls[0][0];
+    expect(callArg.keyEncrypted).toBeNull();
+  });
+});
