@@ -110,8 +110,6 @@ export function computeNextStreak(
   return 1;
 }
 
-type Stored = StreakStored;
-
 export function useStreak(
   userId: number | null | undefined,
   didCompleteSomethingToday: boolean,
@@ -124,7 +122,7 @@ export function useStreak(
       return;
     }
     const key = `tf_streak_${userId}`;
-    let stored: Stored | null = null;
+    let stored: StreakStored | null = null;
     try {
       const raw = window.localStorage.getItem(key);
       stored = parseStreakStored(raw);
@@ -150,7 +148,9 @@ export function useStreak(
     try {
       window.localStorage.setItem(
         key,
-        JSON.stringify({ days: nextDays, lastDate: today } satisfies Stored),
+        JSON.stringify(
+          { days: nextDays, lastDate: today } satisfies StreakStored,
+        ),
       );
     } catch {
       /* storage full / privacy mode — graceful degrade */
