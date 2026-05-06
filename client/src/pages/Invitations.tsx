@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { formatTimestamp } from "@/lib/format-timestamp";
 import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -163,7 +164,7 @@ export default function Invitations() {
                   {inv.isAdmin ? "Админ/менеджер" : "Сотрудник"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Создано: {new Date(inv.createdAt * 1000).toLocaleString("ru-RU")}
+                  Создано: {formatTimestamp(inv.createdAt)}
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
