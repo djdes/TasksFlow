@@ -9,6 +9,7 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { matchTaskBySearch } from "@/lib/task-search";
+import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -268,34 +269,25 @@ export default function Dashboard() {
   const currentDayOfWeek = new Date().getDay();
   const currentDayOfMonth = new Date().getDate();
 
-  const isTaskVisibleToday = (task: typeof tasks[0]) => {
-    const weekDays = (task as any).weekDays;
-    const monthDay = (task as any).monthDay;
+  const isTaskVisibleToday = (task: typeof tasks[0]) =>
+    isTaskVisibleOn(
+      {
+        weekDays: (task as { weekDays?: number[] | null }).weekDays,
+        monthDay: (task as { monthDay?: number | null }).monthDay,
+      },
+      currentDayOfWeek,
+      currentDayOfMonth,
+    );
 
-    if (monthDay !== null && monthDay !== undefined) {
-      if (monthDay !== currentDayOfMonth) {
-        return false;
-      }
-    }
-
-    if (weekDays && Array.isArray(weekDays) && weekDays.length > 0) {
-      if (!weekDays.includes(currentDayOfWeek)) {
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  // Quick-chip filter — применяется поверх категории/исполнителя.
-  // AND-семантика: «С премией» + «Журнальные» = только journal-задачи
-  // с price > 0.
-  const passesChips = (task: typeof tasks[0]): boolean => {
-    if (chipPhoto && !task.requiresPhoto) return false;
-    if (chipBonus && (!task.price || task.price <= 0)) return false;
-    if (chipJournal && !((task as { journalLink?: string | null }).journalLink)) return false;
-    return true;
-  };
+  const passesChips = (task: typeof tasks[0]): boolean =>
+    passesChipFilters(
+      {
+        requiresPhoto: task.requiresPhoto as boolean | null | undefined,
+        price: task.price as number | null | undefined,
+        journalLink: (task as { journalLink?: string | null }).journalLink,
+      },
+      { photo: chipPhoto, bonus: chipBonus, journal: chipJournal },
+    );
 
   // Submitted-задачи показываются ВСЕМ — admin'у в секции «На проверке»
   // (что ему верифицировать), worker'у в секции «На проверке» (что он
