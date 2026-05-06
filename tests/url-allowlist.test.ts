@@ -129,3 +129,36 @@ describe("isPublicHttpsUrl — LOCAL_INTEGRATIONS_ALLOWED escape hatch", () => {
     delete process.env.LOCAL_INTEGRATIONS_ALLOWED;
   });
 });
+
+describe("isPublicHttpsUrl — anti-bypass через URL-метаданные", () => {
+  it("userinfo в URL не обходит hostname-check (http://user@10.0.0.1)", () => {
+    // SSRF-вектор: атакующий мог бы попробовать обойти RFC1918 через
+    // userinfo в URL, рассчитывая на парсер который игнорирует
+    // префикс. WHATWG URL правильно отделяет userinfo от hostname,
+    // защита остаётся.
+    expect(isPublicHttpsUrl("http://user@10.0.0.1")).toBe(false);
+    expect(isPublicHttpsUrl("http://user:pass@127.0.0.1")).toBe(false);
+    expect(isPublicHttpsUrl("http://anything@localhost")).toBe(false);
+  });
+
+  it("port не влияет на hostname-check", () => {
+    expect(isPublicHttpsUrl("http://10.0.0.1:8080")).toBe(false);
+    expect(isPublicHttpsUrl("http://localhost:9999")).toBe(false);
+    expect(isPublicHttpsUrl("https://example.com:443")).toBe(true);
+  });
+
+  it("path/query/fragment не влияют", () => {
+    expect(
+      isPublicHttpsUrl("http://10.0.0.1/admin?token=abc#hash"),
+    ).toBe(false);
+    expect(
+      isPublicHttpsUrl("https://example.com/path?q=1"),
+    ).toBe(true);
+  });
+
+  it("malformed URL → false (не throw)", () => {
+    expect(isPublicHttpsUrl("http://")).toBe(false);
+    expect(isPublicHttpsUrl("not a url")).toBe(false);
+    expect(isPublicHttpsUrl("javascript:alert(1)")).toBe(false);
+  });
+});
