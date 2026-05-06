@@ -10,6 +10,8 @@
 import { describe, it, expect } from "vitest";
 import {
   isJournalTask,
+  isSubmittedFiller,
+  isToVerify,
   isVerifierTask,
 } from "../client/src/lib/task-classification";
 
@@ -155,5 +157,67 @@ describe("isVerifierTask — kind prefix 'wesetup-verifier'", () => {
         journalLink: JSON.stringify({ documentId: "d" }),
       }),
     ).toBe(false);
+  });
+});
+
+describe("isSubmittedFiller", () => {
+  it("verificationStatus='submitted' → true", () => {
+    expect(isSubmittedFiller({ verificationStatus: "submitted" })).toBe(true);
+  });
+
+  it("verificationStatus='approved' → false", () => {
+    expect(isSubmittedFiller({ verificationStatus: "approved" })).toBe(false);
+  });
+
+  it("verificationStatus='rejected' → false", () => {
+    expect(isSubmittedFiller({ verificationStatus: "rejected" })).toBe(false);
+  });
+
+  it("verificationStatus=null → false", () => {
+    expect(isSubmittedFiller({ verificationStatus: null })).toBe(false);
+  });
+
+  it("verificationStatus отсутствует → false", () => {
+    expect(isSubmittedFiller({})).toBe(false);
+  });
+});
+
+describe("isToVerify — combination verifier OR submitted-filler", () => {
+  it("verifier-task (kind=wesetup-verifier_x) → true", () => {
+    expect(
+      isToVerify({
+        journalLink: JSON.stringify({ kind: "wesetup-verifier_health" }),
+      }),
+    ).toBe(true);
+  });
+
+  it("submitted filler (verificationStatus='submitted') → true", () => {
+    expect(
+      isToVerify({
+        verificationStatus: "submitted",
+      }),
+    ).toBe(true);
+  });
+
+  it("обычная task (не verifier и не submitted) → false", () => {
+    expect(
+      isToVerify({
+        journalLink: JSON.stringify({ kind: "wesetup-cleaning" }),
+        verificationStatus: "approved",
+      }),
+    ).toBe(false);
+  });
+
+  it("оба условия true → true", () => {
+    expect(
+      isToVerify({
+        journalLink: JSON.stringify({ taskScope: "verifier" }),
+        verificationStatus: "submitted",
+      }),
+    ).toBe(true);
+  });
+
+  it("обе пустые → false", () => {
+    expect(isToVerify({})).toBe(false);
   });
 });

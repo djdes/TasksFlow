@@ -17,6 +17,8 @@ import {
 import { getTaskScope as getTaskScopeLib } from "@/lib/task-scope";
 import {
   isJournalTask as isJournalTaskLib,
+  isSubmittedFiller as isSubmittedFillerLib,
+  isToVerify as isToVerifyLib,
   isVerifierTask as isVerifierTaskLib,
 } from "@/lib/task-classification";
 import {
@@ -371,17 +373,20 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  // parseJournalLinkRaw + isVerifierTask extracted в lib/. Они нужны
-  // для UI-only полей типа taskScope, не описанных в shared schema.
+  // parseJournalLinkRaw + isVerifierTask + isSubmittedFiller + isToVerify
+  // extracted в lib/task-classification. Wrappers ниже только адаптируют
+  // task type — closure'd `tasks` array вне scope'а pure helper'ов.
   const isVerifierTask = (t: typeof tasks[0]): boolean =>
-    isVerifierTaskLib({
-      journalLink: (t as { journalLink?: string | null }).journalLink ?? null,
-    });
-  const isSubmittedFiller = (t: typeof tasks[0]) =>
-    (t as { verificationStatus?: string | null }).verificationStatus ===
-    "submitted";
-  const isToVerify = (t: typeof tasks[0]) =>
-    isVerifierTask(t) || isSubmittedFiller(t);
+    isVerifierTaskLib(t as { journalLink?: string | null });
+  const isSubmittedFiller = (t: typeof tasks[0]): boolean =>
+    isSubmittedFillerLib(t as { verificationStatus?: string | null });
+  const isToVerify = (t: typeof tasks[0]): boolean =>
+    isToVerifyLib(
+      t as {
+        journalLink?: string | null;
+        verificationStatus?: string | null;
+      },
+    );
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).

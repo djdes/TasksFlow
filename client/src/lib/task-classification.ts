@@ -43,3 +43,24 @@ export function isVerifierTask(task: { journalLink?: string | null }): boolean {
   const kind = typeof link.kind === "string" ? link.kind : "";
   return kind.startsWith("wesetup-verifier");
 }
+
+/**
+ * Submitted filler = task которая в Phase 1 уже отправлена воркером,
+ * ждёт approve от заведующей. UI: показывается в очереди verifier'а.
+ */
+export function isSubmittedFiller(task: {
+  verificationStatus?: string | null;
+}): boolean {
+  return task.verificationStatus === "submitted";
+}
+
+/**
+ * Объединённый флаг «задача попадает в очередь verifier'а»: либо это
+ * verifier-task сама по себе, либо filler-task в submitted-state.
+ */
+export function isToVerify(task: {
+  journalLink?: string | null;
+  verificationStatus?: string | null;
+}): boolean {
+  return isVerifierTask(task) || isSubmittedFiller(task);
+}
