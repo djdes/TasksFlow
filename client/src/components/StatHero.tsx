@@ -8,7 +8,12 @@ import {
   Trophy,
   type LucideIcon,
 } from "lucide-react";
-import { streakHint } from "@/lib/streak-hint";
+import {
+  bonusHint,
+  completedHint,
+  streakHint,
+  todayHint,
+} from "@/lib/streak-hint";
 
 /**
  * Hero-блок сводки на главной. Заменяет minimal `progress-card`
@@ -219,13 +224,7 @@ export function StatHero({
         icon={Target}
         label="Сегодня"
         value={remaining}
-        hint={
-          totalCount === 0
-            ? "Задач нет"
-            : remaining === 0
-              ? "Все сделано!"
-              : `из ${totalCount}`
-        }
+        hint={todayHint(remaining, totalCount)}
         tone="primary"
         progress={progress}
       />
@@ -233,9 +232,7 @@ export function StatHero({
         icon={Trophy}
         label="Сделано"
         value={completedCount}
-        hint={
-          totalCount > 0 ? `${Math.round(progress * 100)}%` : "Поехали!"
-        }
+        hint={completedHint(progress, totalCount)}
         tone="success"
       />
       {claimedCount > 0 ? (
@@ -271,7 +268,7 @@ export function StatHero({
             label="Премия"
             value={bonusBalance}
             suffix="₽"
-            hint={bonusBalance > 0 ? "копится" : "сделай первым"}
+            hint={bonusHint(bonusBalance)}
             tone="amber"
             pulse={bonusBalance > 0}
           />
