@@ -24,6 +24,7 @@ import {
   type TaskFormField,
   type TaskFormSchema,
 } from "@shared/wesetup-journal-mode";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 type Props = {
   taskId: number;
@@ -64,7 +65,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       // у клиента такой же запас + время на Express round-trip. Без
       // таймаута воркер с журнальной задачей видит «Загружаем форму…»
       // вечно если что-то ломается на бэкенде.
-      const response = await fetch(`/api/wesetup/task-form?taskId=${taskId}`, {
+      const response = await fetchOrFriendlyError(`/api/wesetup/task-form?taskId=${taskId}`, {
         credentials: "include",
         signal: AbortSignal.timeout(30_000),
       });
@@ -174,7 +175,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       // 35s — server timeout к WeSetup 30s + 5s запас на Express
       // round-trip и сериализацию. Hot path: каждое завершение
       // journal-задачи воркером.
-      const response = await fetch("/api/wesetup/complete-with-values", {
+      const response = await fetchOrFriendlyError("/api/wesetup/complete-with-values", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

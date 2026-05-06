@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertTask, Task } from "@shared/schema";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 export function useTasks() {
   return useQuery<Task[]>({
@@ -148,7 +149,7 @@ export function useUncompleteTask() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/tasks/${id}/uncomplete`, {
+      const res = await fetchOrFriendlyError(`/api/tasks/${id}/uncomplete`, {
         method: "POST",
         credentials: "include",
         headers: {

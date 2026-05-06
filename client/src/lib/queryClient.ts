@@ -50,7 +50,7 @@ function isAbortError(err: unknown): boolean {
   const e = err as { name?: string };
   return e.name === "AbortError" || e.name === "TimeoutError";
 }
-async function fetchOrFriendlyError(
+export async function fetchOrFriendlyError(
   url: string,
   init: RequestInit,
 ): Promise<Response> {

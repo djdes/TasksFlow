@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -83,10 +84,9 @@ export function TaskViewDialog({
       formData.append("taskId", String(currentTask.id));
 
       // 120s timeout: photo до 10MB, медленный 3G ≈ 100KB/s, реально
-      // 60-90s на upload. Без таймаута воркер с упавшим Wi-Fi'ем
-      // видит «крутится» бесконечно — лучше через 2 минуты дать
-      // explicit error toast и предложить попробовать ещё раз.
-      const response = await fetch(`/api/tasks/${currentTask.id}/photo`, {
+      // 60-90s на upload. fetchOrFriendlyError локализует AbortError
+      // и TypeError в русские «Сервер не отвечает» / «Нет связи».
+      const response = await fetchOrFriendlyError(`/api/tasks/${currentTask.id}/photo`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -147,7 +147,7 @@ export function TaskViewDialog({
 
       // 30s timeout: DELETE — лёгкая операция, server обычно отвечает <1s.
       // С таймаутом ошибки сети становятся видимыми, без — вечно spinner.
-      const response = await fetch(`/api/tasks/${currentTask.id}/photo?url=${encodeURIComponent(photoUrl)}`, {
+      const response = await fetchOrFriendlyError(`/api/tasks/${currentTask.id}/photo?url=${encodeURIComponent(photoUrl)}`, {
         method: "DELETE",
         signal: AbortSignal.timeout(30_000),
         credentials: "include",

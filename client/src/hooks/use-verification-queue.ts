@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@shared/schema";
 import { api } from "@shared/routes";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 const QUERY_KEY = ["awaiting-verification"] as const;
 
@@ -40,7 +41,7 @@ export function useVerifyTask() {
     }) => {
       // 35s: approve может тригерить proxy /complete-with-values к
       // WeSetup (30s server timeout) + запас. Hot path для верификатора.
-      const res = await fetch(`/api/tasks/${args.taskId}/verify`, {
+      const res = await fetchOrFriendlyError(`/api/tasks/${args.taskId}/verify`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
