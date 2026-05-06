@@ -141,3 +141,26 @@ describe("splitForHighlight — regex meta в query", () => {
     expect(matches).toHaveLength(2);
   });
 });
+
+describe("splitForHighlight — unicode и emoji", () => {
+  it("emoji в query → literal match", () => {
+    const result = splitForHighlight("Молодец 😀 продолжай!", "😀");
+    const matches = result.filter((s) => s.isMatch);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].text).toBe("😀");
+  });
+
+  it("кириллица с диакритикой (ё/й)", () => {
+    const result = splitForHighlight("ёжик и йогурт", "ё");
+    const matches = result.filter((s) => s.isMatch);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].text).toBe("ё");
+  });
+
+  it("кириллица case-insensitive (Ё → ё)", () => {
+    const result = splitForHighlight("Ёжик и йогурт", "ё");
+    const matches = result.filter((s) => s.isMatch);
+    // toLowerCase русских обычно работает: Ё → ё
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+});
