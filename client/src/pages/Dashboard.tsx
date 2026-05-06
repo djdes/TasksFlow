@@ -368,7 +368,13 @@ export default function Dashboard() {
   // Обе попадают в один visual-блок «На проверке» внутри Активных,
   // отделённый от «Что сделать» (filler-задач которые ещё нужно
   // выполнить).
-  function parseJournalLink(t: typeof tasks[0]): Record<string, unknown> | null {
+  // Local raw-parser (НЕ путать с shared/journal-link parseJournalLink,
+  // который через Zod-schema отбрасывает unknown-поля). Этот возвращает
+  // raw object со ВСЕМИ свойствами, потому что нам нужен `taskScope`
+  // — поле, не описанное в schema (используется только в client UI).
+  function parseJournalLinkRaw(
+    t: typeof tasks[0],
+  ): Record<string, unknown> | null {
     const raw = (t as { journalLink?: string | null }).journalLink;
     if (!raw) return null;
     try {
@@ -379,7 +385,7 @@ export default function Dashboard() {
     }
   }
   const isVerifierTask = (t: typeof tasks[0]): boolean => {
-    const link = parseJournalLink(t);
+    const link = parseJournalLinkRaw(t);
     if (!link) return false;
     if (link.taskScope === "verifier") return true;
     const kind = typeof link.kind === "string" ? link.kind : "";
