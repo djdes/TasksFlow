@@ -154,6 +154,7 @@ export function useUncompleteTask() {
         headers: {
           "Accept": "application/json",
         },
+        signal: AbortSignal.timeout(30_000),
       });
 
       const text = await res.text();

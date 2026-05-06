@@ -38,6 +38,8 @@ export function useVerifyTask() {
       decision: "approve" | "reject";
       reason?: string;
     }) => {
+      // 35s: approve может тригерить proxy /complete-with-values к
+      // WeSetup (30s server timeout) + запас. Hot path для верификатора.
       const res = await fetch(`/api/tasks/${args.taskId}/verify`, {
         method: "POST",
         credentials: "include",
@@ -46,6 +48,7 @@ export function useVerifyTask() {
           decision: args.decision,
           reason: args.reason,
         }),
+        signal: AbortSignal.timeout(35_000),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

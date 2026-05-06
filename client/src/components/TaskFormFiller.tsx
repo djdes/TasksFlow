@@ -60,8 +60,13 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     setValues({});
     setLoadError(null);
     try {
+      // 30s timeout: server-side proxy уже имеет timeout 30s к WeSetup,
+      // у клиента такой же запас + время на Express round-trip. Без
+      // таймаута воркер с журнальной задачей видит «Загружаем форму…»
+      // вечно если что-то ломается на бэкенде.
       const response = await fetch(`/api/wesetup/task-form?taskId=${taskId}`, {
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -166,6 +171,9 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     if (!readyToSubmit) return;
     setSubmitting(true);
     try {
+      // 35s — server timeout к WeSetup 30s + 5s запас на Express
+      // round-trip и сериализацию. Hot path: каждое завершение
+      // journal-задачи воркером.
       const response = await fetch("/api/wesetup/complete-with-values", {
         method: "POST",
         credentials: "include",
@@ -175,6 +183,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
           isCompleted: true,
           values,
         }),
+        signal: AbortSignal.timeout(35_000),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
