@@ -23,6 +23,7 @@ import {
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 
 const WESETUP_PENDING_KEY_STORAGE = "tasksflow:pending-wesetup-api-key";
 
@@ -50,9 +51,18 @@ export default function CompanySettings() {
   // Получаем данные компании
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company-me"],
-    queryFn: async () => {
-      const response = await fetch("/api/companies/me", {
+    queryFn: async ({ signal }) => {
+      const timeoutSignal = AbortSignal.timeout(30_000);
+      const combined =
+        "any" in AbortSignal && signal
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([
+              signal,
+              timeoutSignal,
+            ])
+          : timeoutSignal;
+      const response = await fetchOrFriendlyError("/api/companies/me", {
         credentials: "include",
+        signal: combined,
       });
       if (!response.ok) {
         throw new Error("Failed to fetch company");
@@ -98,11 +108,12 @@ export default function CompanySettings() {
       wesetupBaseUrl: string;
       wesetupApiKey: string;
     }) => {
-      const response = await fetch("/api/companies/me", {
+      const response = await fetchOrFriendlyError("/api/companies/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -128,8 +139,9 @@ export default function CompanySettings() {
 
   const checkWesetupMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/wesetup/health", {
+      const response = await fetchOrFriendlyError("/api/wesetup/health", {
         credentials: "include",
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await response.json().catch(() => ({
         ok: false,
@@ -166,11 +178,12 @@ export default function CompanySettings() {
   // Мутация для обновления имени админа
   const updateAdminMutation = useMutation({
     mutationFn: async (data: { name: string }) => {
-      const response = await fetch("/api/auth/me", {
+      const response = await fetchOrFriendlyError("/api/auth/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
         const error = await response.json();

@@ -7,6 +7,7 @@ import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/h
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import {
   feedbackTaskComplete,
   isFeedbackEnabled,
@@ -444,9 +445,12 @@ export default function Dashboard() {
    */
   const openJournalForm = async (taskId: number) => {
     try {
-      const response = await fetch(
+      const response = await fetchOrFriendlyError(
         `/api/wesetup/task-fill-url?taskId=${taskId}`,
-        { credentials: "include" }
+        {
+          credentials: "include",
+          signal: AbortSignal.timeout(30_000),
+        }
       );
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.url) {
@@ -821,7 +825,10 @@ export default function Dashboard() {
                   return;
                 }
                 try {
-                  const r = await fetch("/api/auth/me", { method: "DELETE" });
+                  const r = await fetchOrFriendlyError("/api/auth/me", {
+                    method: "DELETE",
+                    signal: AbortSignal.timeout(30_000),
+                  });
                   const d = await r.json().catch(() => ({}));
                   if (!r.ok) {
                     alert(d?.message || "Не удалось удалить аккаунт");
