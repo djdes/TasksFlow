@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:gate": "npm run check && npm test",
+    "prepare": "if [ -d .git ]; then chmod +x .husky/pre-commit 2>/dev/null || true; git config core.hooksPath .husky 2>/dev/null || true; fi",
     "db:push": "echo 'BLOCKED: drizzle-kit push --force УДАЛЁН — он 28.04.2026 уничтожил всю prod БД из-за дрейфа схемы. Используйте отдельные create-*-table / add-*-col миграции из script/. Если очень нужен push — запустите вручную: npx drizzle-kit push (БЕЗ --force, и сначала mysqldump).' && exit 1",
     "db:indexes": "tsx script/add-indexes.ts",
     "create-admin": "tsx script/create-admin.ts",

@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+# Pre-commit gate для TasksFlow. По мотивам Wesetup anti-regression
+# Phase 1 (см. C:\www\Wesetup.ru\docs\superpowers\specs\01-architecture.md).
+#
+# Защищает прод от очевидных регрессий ДО того как код попадает в master.
+# Запускается автоматически на каждый `git commit`. Можно пропустить
+# через `git commit --no-verify` (только если осознанно).
+
+set -e
+
+staged_ts=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+
+# Type-check на любые .ts/.tsx изменения. Быстро (~5 сек).
+if [ -n "$staged_ts" ]; then
+  echo "→ TypeScript type-check..."
+  npx tsc --noEmit || {
+    echo "✗ Type-check провалился. Поправьте ошибки или (только осознанно) --no-verify."
+    exit 1
+  }
+
+  echo "→ Tests..."
+  # Vitest run на все тесты — TF имеет 1325 тестов, ~40 сек. Если
+  # станет тормозить — переключим на staged-only.
+  npx vitest run || {
+    echo "✗ Tests провалились. Почините или --no-verify (только осознанно)."
+    exit 1
+  }
+fi
+
+echo "✓ pre-commit OK"
