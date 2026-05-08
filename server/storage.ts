@@ -77,6 +77,9 @@ export interface IStorage {
     sourceTaskId: number;
     documentId: string;
     journalKind: string;
+    /** rowKey источника для discrim'а в multi-row документах (cleaning
+     *  rooms-mode). Если задан — siblings матчатся также по rowKey. */
+    sourceRowKey?: string | null;
     claimedByWorkerId: number;
     companyId: number | null;
     completedAt: number;
@@ -613,6 +616,19 @@ export class DatabaseStorage implements IStorage {
     sourceTaskId: number;
     documentId: string;
     journalKind: string;
+    /**
+     * rowKey источника. Если задан — sibling'ом считается ТОЛЬКО задача
+     * с тем же documentId+kind+rowKey. Это нужно для cleaning rooms-mode
+     * (4 разных помещения = 4 разных rowKey в одном документе): закрытие
+     * одного помещения НЕ должно claim'ить остальные. Race-for-bonus
+     * срабатывает когда несколько уборщиков назначены на ОДНО помещение
+     * (одинаковый rowKey, разные workerId).
+     *
+     * Если sourceRowKey не задан — fallback на старое поведение
+     * (documentId+kind sibling — все задачи документа), для совместимости
+     * со старыми клиентами WeSetup.
+     */
+    sourceRowKey?: string | null;
     claimedByWorkerId: number;
     companyId: number | null;
     completedAt: number;
@@ -646,6 +662,19 @@ export class DatabaseStorage implements IStorage {
       if (
         parsed?.documentId !== args.documentId ||
         parsed?.kind !== args.journalKind
+      ) {
+        continue;
+      }
+      // Sibling-уточнение по rowKey (cleaning rooms-mode): закрытие
+      // задачи комнаты A не должно claim'ить задачи комнат B,C,D —
+      // у них разные rowKey хотя documentId+kind одинаковые. Если
+      // у source и candidate БУДЕТ заданный rowKey и они РАЗНЫЕ —
+      // это разные unit'ы работы, не siblings. Race включается только
+      // при совпадении rowKey (разные cleaners на одну комнату).
+      if (
+        args.sourceRowKey &&
+        typeof parsed?.rowKey === "string" &&
+        parsed.rowKey !== args.sourceRowKey
       ) {
         continue;
       }
