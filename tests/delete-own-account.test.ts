@@ -1,12 +1,14 @@
 /**
  * Тесты DELETE /api/auth/me (delete own account).
  *
- * Critical safeguard: единственный admin компании НЕ может удалить
- * себя — иначе компания останется без admin'а, никто не сможет
- * управлять задачами/пользователями. Это unrecoverable state без
- * platform-уровневого вмешательства.
+ * Поведение: удаление разрешено всегда, включая «единственный admin
+ * компании». В таком случае компания остаётся без admin'а — это
+ * сознательный выбор пользователя (например, закрытие компании).
+ * Запись делается в console.warn для аудита; промоут worker'а до
+ * admin'а — задача платформенного админа.
  *
- * Endpoint был БЕЗ тестов до этого коммита.
+ * Раньше был жёсткий 400-блок для sole admin'а; снят на запрос
+ * пользователя — кейс «удалить аккаунт главного» теперь работает.
  */
 
 import express from "express";
@@ -96,20 +98,24 @@ describe("DELETE /api/auth/me — auth", () => {
   });
 });
 
-describe("DELETE /api/auth/me — sole admin protection", () => {
-  it("единственный admin → 400, deleteUser НЕ вызвана", async () => {
-    // КРИТИЧНО: иначе компания остаётся orphan без admin'а.
+describe("DELETE /api/auth/me — sole admin self-deletion разрешено", () => {
+  it("единственный admin → success (компания остаётся без admin'а — by design)", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
     storage.getUserById.mockResolvedValue(SOLE_ADMIN);
     storage.getAllUsers.mockResolvedValue([SOLE_ADMIN, WORKER]);
 
     const r = await request(app).delete("/api/auth/me");
-    expect(r.status).toBe(400);
-    expect(r.body.message).toMatch(/единственный администратор/i);
-    expect(storage.deleteUser).not.toHaveBeenCalled();
+    expect(r.status).toBe(200);
+    expect(storage.deleteUser).toHaveBeenCalledWith(SOLE_ADMIN.id);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/loses its sole admin/i),
+    );
+    warnSpy.mockRestore();
   });
 
-  it("один из НЕСКОЛЬКИХ admin'ов → success", async () => {
+  it("один из НЕСКОЛЬКИХ admin'ов → success без warn'а", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
     storage.getUserById.mockResolvedValue(SOLE_ADMIN);
     storage.getAllUsers.mockResolvedValue([SOLE_ADMIN, SECOND_ADMIN, WORKER]);
@@ -117,6 +123,8 @@ describe("DELETE /api/auth/me — sole admin protection", () => {
     const r = await request(app).delete("/api/auth/me");
     expect(r.status).toBe(200);
     expect(storage.deleteUser).toHaveBeenCalledWith(SOLE_ADMIN.id);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
 

@@ -515,8 +515,10 @@ export async function registerRoutes(
   // Обновить имя текущего пользователя (для админа - собственное имя)
   /**
    * Self-deletion: текущий user удаляет свой аккаунт.
-   * Если он единственный admin company — отказываем (нужно сначала
-   * назначить другого admin'а, иначе компания останется без управления).
+   * Удаление разрешено всегда, включая случай «единственный admin компании».
+   * После такого удаления компания остаётся без admin'а — это сознательное
+   * решение пользователя (например, закрытие компании). Платформенный
+   * админ при необходимости может промоутнуть оставшегося worker'а.
    * Сессия после успеха уничтожается.
    */
   app.delete("/api/auth/me", requireAuth, async (req, res) => {
@@ -530,14 +532,12 @@ export async function registerRoutes(
       if (user.isAdmin && user.companyId) {
         const allUsers = await storage.getAllUsers(user.companyId);
         const otherAdmins = allUsers.filter(
-          (u) => u.isAdmin && u.id !== userId
+          (u) => u.isAdmin && u.id !== userId,
         );
         if (otherAdmins.length === 0) {
-          return res.status(400).json({
-            message:
-              "Нельзя удалить аккаунт — вы единственный администратор компании. " +
-              "Сначала назначьте другого администратора в /admin/users.",
-          });
+          console.warn(
+            `[delete-own-account] Company ${user.companyId} loses its sole admin (user ${userId}). ${allUsers.length - 1} worker(s) become unmanaged.`,
+          );
         }
       }
 
