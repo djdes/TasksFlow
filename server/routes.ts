@@ -1013,10 +1013,18 @@ export async function registerRoutes(
       // оба удалить таск (одно affectedRows=0, но без error). Теперь
       // только один из них переведёт isCompleted в false и сделает
       // дебет; остальные получат transitioned=false и пропустят.
+      //
+      // 2026-05-09: ВАЖНО — claimedByWorkerId NOT NULL означает что
+      // этот task — sibling, баланс получил claimedByWorkerId (winner),
+      // НЕ workerId (originally assigned). Reversal с workerId уведёт
+      // его balance в минус (он не получал начисления). Скипаем reversal
+      // для claimed-by-other tasks. Жалоба владельца «премия -180₽»
+      // = 3 sibling-cleanups × 60₽ списано из чужих balance'ов.
       if (
         existing.price &&
         existing.price > 0 &&
-        existing.workerId
+        existing.workerId &&
+        existing.claimedByWorkerId === null
       ) {
         try {
           const reversed = await storage.transitionTaskToUncompleted(
@@ -1678,6 +1686,11 @@ export async function registerRoutes(
       // pattern → два concurrent /uncomplete оба видели true и оба
       // вычитали price из баланса. Теперь только один из них пройдёт
       // условный UPDATE (affectedRows>0) и сделает дебет.
+      //
+      // 2026-05-09: same fix как в DELETE — claimed-by-other tasks
+      // имели начисление на claimedByWorkerId, не workerId. Reversal
+      // с workerId уводит чужой balance в минус. Skip reversal если
+      // это sibling-claimed task.
       const wasTransitioned = task.isCompleted
         ? await storage.transitionTaskToUncompleted(taskId)
         : false;
@@ -1685,7 +1698,8 @@ export async function registerRoutes(
         wasTransitioned &&
         task.price &&
         task.price > 0 &&
-        task.workerId
+        task.workerId &&
+        task.claimedByWorkerId === null
       ) {
         await storage.updateUserBalance(task.workerId, -task.price);
       }
@@ -3420,7 +3434,14 @@ export async function registerRoutes(
           const transitioned = await storage.transitionTaskToUncompleted(taskId);
           if (!transitioned) return; // уже не completed — никакого debit'а
           const fresh = await storage.getTask(taskId);
-          if (fresh?.price && fresh.price > 0 && fresh.workerId) {
+          // 2026-05-09: skip reversal для sibling-claimed tasks —
+          // balance был given to claimedByWorkerId, не workerId.
+          if (
+            fresh?.price &&
+            fresh.price > 0 &&
+            fresh.workerId &&
+            fresh.claimedByWorkerId === null
+          ) {
             await storage.updateUserBalance(fresh.workerId, -fresh.price);
           }
           return;
