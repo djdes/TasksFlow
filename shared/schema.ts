@@ -375,3 +375,45 @@ export const invitations = mysqlTable("invitations", {
 export type Invitation = typeof invitations.$inferSelect;
 export type InsertInvitation = typeof invitations.$inferInsert;
 
+/**
+ * Audit log событий жизненного цикла задач.
+ * Phase 2.10 спека Wesetup
+ * (docs/superpowers/specs/2026-05-09-wesetup-tasksflow-integration-design.md, П-17).
+ *
+ * TasksFlow пишет сюда каждое событие task lifecycle. Wesetup при
+ * рендере объединённого audit-report'а подтягивает события через
+ * GET /api/audit?since=...&taskIds=... и merge'ит хронологически с
+ * Wesetup AuditLog. Никаких физически объединённых таблиц — каждая
+ * система хранит своё, объединение только в момент рендера.
+ *
+ * Пример action'ов:
+ *   - "task.created"          (POST /api/tasks)
+ *   - "task.completed"        (POST /api/tasks/:id/complete)
+ *   - "task.uncompleted"      (POST /api/tasks/:id/uncomplete)
+ *   - "task.claimed_by_other" (claim-siblings auto-fired)
+ *   - "task.verified"         (verifier approve)
+ *   - "task.rejected"         (verifier reject)
+ *   - "task.deleted"          (DELETE /api/tasks/:id)
+ *   - "task.updated"          (PUT /api/tasks/:id)
+ *
+ * Retention: 90 дней (cron-cleanup как у webhook_deliveries) — хватает
+ * для compliance-отчётов.
+ */
+export const auditLog = mysqlTable("audit_log", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id"), // FK на companies, для multi-tenant filter
+  // Кто сделал. NULL = system action (cron, claim-siblings).
+  actorWorkerId: int("actor_worker_id"),
+  // К какой задаче относится. NULL для bulk events.
+  taskId: int("task_id"),
+  // Action type — см. список в комментарии модели.
+  action: varchar("action", { length: 64 }).notNull(),
+  // JSON details: {oldStatus, newStatus, claimedByName, ...}
+  payload: text("payload"),
+  // Unix sec момента события.
+  createdAt: int("created_at").notNull().default(0),
+});
+
+export type AuditLog = typeof auditLog.$inferSelect;
+export type InsertAuditLog = typeof auditLog.$inferInsert;
+

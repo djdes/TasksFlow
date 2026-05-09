@@ -843,6 +843,24 @@ export async function registerRoutes(
         ...input,
         companyId,
       });
+
+      // Audit log (П-17 спека Wesetup): создание задачи.
+      const { recordAudit } = await import("./audit-log");
+      const actorIdForCreate = (req as { userId?: number }).userId ?? null;
+      void recordAudit({
+        companyId: task.companyId,
+        actorWorkerId: actorIdForCreate,
+        taskId: task.id,
+        action: "task.created",
+        payload: {
+          title: task.title,
+          workerId: task.workerId,
+          requiresPhoto: task.requiresPhoto,
+          isRecurring: task.isRecurring,
+          price: task.price,
+        },
+      });
+
       res.status(201).json(task);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -1019,6 +1037,21 @@ export async function registerRoutes(
       }
 
       await storage.deleteTask(Number(req.params.id));
+
+      // Audit log (П-17 спека Wesetup): фиксируем deletion.
+      const { recordAudit } = await import("./audit-log");
+      const actorIdForDelete = (req as { userId?: number }).userId ?? null;
+      void recordAudit({
+        companyId: existing.companyId,
+        actorWorkerId: actorIdForDelete,
+        taskId: existing.id,
+        action: "task.deleted",
+        payload: {
+          title: existing.title,
+          wasCompleted: existing.isCompleted,
+          workerId: existing.workerId,
+        },
+      });
 
       // Удаляем все привязанные к задаче файлы с диска. Раньше:
       // удалённая задача оставляла photoUrls + examplePhotoUrl как
@@ -1516,6 +1549,22 @@ export async function registerRoutes(
         company?.email,
         comment
       );
+
+      // Audit log (П-17 спека Wesetup): фиксируем completion event для
+      // объединённого audit-report'а на стороне Wesetup.
+      const { recordAudit } = await import("./audit-log");
+      void recordAudit({
+        companyId: task.companyId,
+        actorWorkerId: task.workerId,
+        taskId: task.id,
+        action: "task.completed",
+        payload: {
+          title: task.title,
+          workerName,
+          hasPhoto: taskPhotoUrls.length > 0 || Boolean(task.photoUrl),
+          comment: comment ?? null,
+        },
+      });
 
       res.json(updatedTask);
     } catch (err: any) {
@@ -3689,6 +3738,63 @@ export async function registerRoutes(
       }
     },
   );
+
+  /**
+   * GET /api/audit — Phase 2.10 спека Wesetup
+   * (docs/superpowers/specs/2026-05-09-wesetup-tasksflow-integration-design.md, П-17).
+   *
+   * Возвращает audit-events за период, отфильтрованные по company.
+   * Wesetup при рендере объединённого audit-report'а merge'ит эти
+   * события с собственным AuditLog'ом по timestamp'у.
+   *
+   * Query params:
+   *   - since (Unix sec, optional, default = now - 30d)
+   *   - taskIds (comma-separated, optional — узкий filter для документа)
+   *   - limit (default 500, max 5000)
+   *
+   * Multi-tenant safety: companyId берётся из API key или session-юзера,
+   * caller не может его передавать — гарантия что org A не видит events org B.
+   */
+  app.get("/api/audit", requireAuthOrApiKey, async (req, res) => {
+    try {
+      const companyId = await getCompanyIdFromReq(req);
+      if (companyId === null) {
+        return res.status(403).json({ message: "Multi-tenant scope required" });
+      }
+
+      const sinceParam = req.query.since;
+      const since =
+        typeof sinceParam === "string"
+          ? Number(sinceParam) || undefined
+          : undefined;
+
+      const taskIdsParam = req.query.taskIds;
+      const taskIds =
+        typeof taskIdsParam === "string"
+          ? taskIdsParam
+              .split(",")
+              .map((s) => Number(s.trim()))
+              .filter((n) => Number.isInteger(n) && n > 0)
+          : undefined;
+
+      const limitParam = req.query.limit;
+      const limit =
+        typeof limitParam === "string" ? Number(limitParam) || undefined : undefined;
+
+      const { listAudit } = await import("./audit-log");
+      const events = await listAudit({
+        companyId,
+        since,
+        taskIds,
+        limit,
+      });
+
+      res.json({ events, count: events.length });
+    } catch (err) {
+      console.error("[audit] list failed", err);
+      res.status(500).json({ message: "Ошибка чтения audit log" });
+    }
+  });
 
   return httpServer;
 }
