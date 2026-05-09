@@ -12,8 +12,11 @@
   --background: 220 14% 96%;
   --foreground: 222 47% 11%;
 
-  /* Primary blue */
-  --primary: 220 100% 50%;
+  /* Primary indigo — П-11 спека интеграции с Wesetup
+     (docs/superpowers/specs/2026-05-09-wesetup-tasksflow-integration-design.md).
+     Источник: .claude/skills/design-system Wesetup'а — #5566f6 indigo
+     (rgb 85,102,246). HSL ≈ 233° 90% 65% для соответствия. */
+  --primary: 233 90% 65%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 220 14% 96%;
@@ -22,7 +25,7 @@
   --muted: 220 14% 92%;
   --muted-foreground: 220 9% 46%;
 
-  --accent: 220 100% 50%;
+  --accent: 233 90% 65%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
@@ -40,7 +43,7 @@
 
   --border: 220 13% 91%;
   --input: 220 13% 91%;
-  --ring: 220 100% 50%;
+  --ring: 233 90% 65%;
 
   --radius: 0.75rem;
 
@@ -57,7 +60,8 @@
   --background: 222 47% 8%;
   --foreground: 0 0% 98%;
 
-  --primary: 220 100% 55%;
+  /* П-11 спека: индиго #5566f6 (slightly brighter в dark для контраста). */
+  --primary: 233 90% 70%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 222 47% 14%;
@@ -66,7 +70,7 @@
   --muted: 222 47% 16%;
   --muted-foreground: 220 9% 60%;
 
-  --accent: 220 100% 55%;
+  --accent: 233 90% 70%;
   --accent-foreground: 0 0% 100%;
 
   --card: 222 47% 11%;
