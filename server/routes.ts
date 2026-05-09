@@ -1463,16 +1463,20 @@ export async function registerRoutes(
         await storage.updateUserBalance(task.workerId, task.price);
       }
 
-      // Race-for-bonus: если задача журнальная и с премией, помечаем
-      // sibling-задачи (тот же documentId+kind, другие воркеры,
-      // невыполненные) как «забранные» победителем — они переедут в
+      // Race-siblings: если задача журнальная (любая, не только с премией),
+      // помечаем sibling-задачи (тот же documentId+kind+rowKey-scope, другие
+      // воркеры, невыполненные) как «забранные» победителем — они переедут в
       // раздел «Сделано другими» в дашборде.
+      //
+      // 2026-05-09 (соответствие П-2 спека Wesetup
+      // 2026-05-09-wesetup-tasksflow-integration-design): убрали hasBonus
+      // условие — ранее race-cleanup срабатывал ТОЛЬКО для бонусных задач,
+      // что давало баг «у уборщика-2 задача не пропадает» в WeSetup
+      // cleaning race-mode (где price=0). Теперь любая journal-linked задача
+      // авто-маркирует sibling'ов при /complete.
       const journalLink = parseJournalLink(task.journalLink);
-      const hasBonus = (task.price ?? 0) > 0 ||
-        (journalLink?.bonusAmountKopecks ?? 0) > 0;
       if (
         journalLink &&
-        hasBonus &&
         task.workerId &&
         !journalLink.isFreeText
       ) {

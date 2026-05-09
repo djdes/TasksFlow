@@ -667,16 +667,26 @@ export class DatabaseStorage implements IStorage {
       }
       // Sibling-уточнение по rowKey (cleaning rooms-mode): закрытие
       // задачи комнаты A не должно claim'ить задачи комнат B,C,D —
-      // у них разные rowKey хотя documentId+kind одинаковые. Если
-      // у source и candidate БУДЕТ заданный rowKey и они РАЗНЫЕ —
-      // это разные unit'ы работы, не siblings. Race включается только
-      // при совпадении rowKey (разные cleaners на одну комнату).
-      if (
-        args.sourceRowKey &&
-        typeof parsed?.rowKey === "string" &&
-        parsed.rowKey !== args.sourceRowKey
-      ) {
-        continue;
+      // у них разные rowKey хотя documentId+kind одинаковые.
+      //
+      // 2026-05-09 fix (race-mode prefix match):
+      // - Pairs-mode: rowKey формата `cleaning_pair::N` — exact match.
+      // - Race-mode: rowKey формата `room::<roomId>::cleaner::<userId>` —
+      //   у каждого cleaner'а уникальный rowKey, но все они siblings
+      //   для ОДНОЙ комнаты. Match по префиксу `room::<roomId>::cleaner::`.
+      //
+      // Без этой ветки race-mode siblings никогда не клеймились бы
+      // (все rowKey разные → exact match всегда промахивается).
+      if (args.sourceRowKey && typeof parsed?.rowKey === "string") {
+        const raceMatch = /^room::([^:]+)::cleaner::/.exec(args.sourceRowKey);
+        if (raceMatch) {
+          const expectedPrefix = `room::${raceMatch[1]}::cleaner::`;
+          if (!parsed.rowKey.startsWith(expectedPrefix)) {
+            continue;
+          }
+        } else if (parsed.rowKey !== args.sourceRowKey) {
+          continue;
+        }
       }
       // Conditional update: между read'ом кандидатов и здесь
       // sibling-task мог завершить её собственный воркер
