@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, ClipboardList, CheckCircle2, Loader2 } from "lucide-react";
 import {
   normalizeTaskFormPayload,
   type TaskFormField,
@@ -195,39 +195,81 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     }
   }
 
-  // Summary string for the confirmation dialog. «Здоров / без
-  // температуры» etc. — gives the employee one last look before save.
-  const confirmSummary = useMemo(() => {
-    if (!schema) return "";
-    const parts: string[] = [];
+  // Pairs label-value для confirm dialog'а. Раньше plain-text join
+  // выглядел сыро — теперь рендерим аккуратными карточками с
+  // лейблом сверху и значением снизу.
+  const confirmRows = useMemo(() => {
+    if (!schema) return [] as Array<{ key: string; label: string; value: string }>;
+    const rows: Array<{ key: string; label: string; value: string }> = [];
     for (const field of schema.fields) {
       if (field.type === "hidden") continue;
       const v = values[field.key];
-      parts.push(`${field.label}: ${formatTaskFormValue(field, v)}`);
+      rows.push({
+        key: field.key,
+        label: field.label,
+        value: formatTaskFormValue(field, v) || "—",
+      });
     }
-    return parts.join("\n");
+    return rows;
   }, [schema, values]);
+
+  const visibleFieldCount = useMemo(
+    () =>
+      schema?.fields?.filter((f) => f.type !== "hidden").length ?? 0,
+    [schema],
+  );
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10">
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle className="text-xl font-bold">
-              Заполнить журнал
-            </DialogTitle>
+        <DialogContent className="max-w-md rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10 overflow-hidden">
+          {/* Header — иконка журнала + название + meta. Outline-стиль
+              совпадает с остальными dialog'ами TasksFlow. */}
+          <DialogHeader className="border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent px-6 pt-6 pb-5">
+            <div className="flex items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <ClipboardList className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-[17px] font-semibold leading-tight tracking-[-0.01em]">
+                  Заполнить журнал
+                </DialogTitle>
+                {visibleFieldCount > 0 ? (
+                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                    {visibleFieldCount === 1
+                      ? "1 поле"
+                      : visibleFieldCount < 5
+                        ? `${visibleFieldCount} поля`
+                        : `${visibleFieldCount} полей`}
+                    {" · данные сразу попадут в WeSetup"}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </DialogHeader>
           {loading ? (
-            <div className="px-6 py-10 text-center text-sm text-muted-foreground">
-              Загружаем форму…
+            <div className="space-y-3 px-6 py-6">
+              <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Загружаем форму…
+              </div>
+              {/* Skeleton 3 fields для UX ожидания. */}
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-24 animate-pulse rounded-md bg-muted" />
+                  <div className="h-11 animate-pulse rounded-xl bg-muted/60" />
+                </div>
+              ))}
             </div>
           ) : loadError ? (
-            <div className="space-y-4 px-6 py-8 text-sm">
+            <div className="space-y-4 px-6 py-6 text-sm">
               <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-destructive">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <AlertTriangle className="mt-0.5 size-5 shrink-0" />
                 <div>
                   <div className="font-semibold">Форма не загрузилась</div>
-                  <div className="mt-1 text-destructive/90">{loadError}</div>
+                  <div className="mt-1 text-[13px] leading-relaxed text-destructive/90">
+                    {loadError}
+                  </div>
                 </div>
               </div>
               <Button
@@ -236,14 +278,14 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                 onClick={() => void loadForm()}
                 className="h-11 rounded-xl"
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="mr-2 size-4" />
                 Повторить
               </Button>
             </div>
           ) : schema ? (
-            <div className="space-y-4 px-6 pb-4">
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-4 pt-4">
               {schema.intro ? (
-                <p className="rounded-2xl bg-primary/5 border border-primary/10 p-4 text-sm leading-relaxed text-foreground/90">
+                <p className="rounded-2xl border border-primary/15 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/90">
                   {schema.intro}
                 </p>
               ) : null}
@@ -280,20 +322,42 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       </Dialog>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-sm rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10">
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle className="text-xl font-bold">
-              Подтвердите данные
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 px-6 pb-4 text-sm">
-            <p className="text-muted-foreground">
-              После подтверждения данные сразу попадут в журнал WeSetup
-              — изменить можно будет только через менеджера.
-            </p>
-            <div className="whitespace-pre-line rounded-2xl border border-border/50 bg-muted/40 p-4 text-sm font-medium">
-              {confirmSummary}
+        <DialogContent className="max-w-sm rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10 overflow-hidden">
+          <DialogHeader className="border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent px-6 pt-6 pb-5">
+            <div className="flex items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <CheckCircle2 className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-[17px] font-semibold leading-tight tracking-[-0.01em]">
+                  Подтвердите данные
+                </DialogTitle>
+                <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                  После сохранения изменить можно будет только через менеджера
+                </p>
+              </div>
             </div>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto px-6 pb-4 pt-4">
+            {confirmRows.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-4 text-center text-[13px] text-muted-foreground">
+                Нет полей для подтверждения
+              </p>
+            ) : (
+              confirmRows.map((row) => (
+                <div
+                  key={row.key}
+                  className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3"
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    {row.label}
+                  </div>
+                  <div className="mt-1 text-[14px] leading-snug font-medium text-foreground">
+                    {row.value}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <DialogFooter className="gap-2 border-t border-border/40 bg-muted/30 px-6 py-4">
             <Button
