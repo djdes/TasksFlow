@@ -3817,5 +3817,70 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * POST /api/admin/reset-negative-balances
+   *
+   * Hot-fix endpoint: обнуляет отрицательные bonus_balance у workers
+   * текущей компании. Background — bug до commit ef3e8ec: sibling-claimed
+   * task'и при удалении уводили чужой balance в минус. После fix новые
+   * случаи невозможны, но накопленные negative значения в БД остаются.
+   *
+   * Auth: API key (Wesetup admin) или session admin.
+   * Multi-tenant: трогает только users текущей компании (companyId
+   * из API key или session).
+   * SAFE: только negative → 0. Положительные не трогаются.
+   * Идемпотентно — повторный POST = no-op.
+   *
+   * Returns: { reset: <count>, users: [{id,phone,name,wasBalance}] }
+   */
+  app.post(
+    "/api/admin/reset-negative-balances",
+    requireAdminOrApiKey,
+    async (req, res) => {
+      try {
+        const companyId = await getCompanyIdFromReq(req);
+        if (companyId === null) {
+          return res.status(403).json({ message: "Multi-tenant scope required" });
+        }
+
+        const { users: usersTable } = await import("@shared/schema");
+        const { eq, and, lt } = await import("drizzle-orm");
+
+        // Найти всех у кого balance < 0 в этой компании.
+        const affected = await db
+          .select({
+            id: usersTable.id,
+            phone: usersTable.phone,
+            name: usersTable.name,
+            wasBalance: usersTable.bonusBalance,
+          })
+          .from(usersTable)
+          .where(
+            and(eq(usersTable.companyId, companyId), lt(usersTable.bonusBalance, 0)),
+          );
+
+        if (affected.length === 0) {
+          return res.json({ reset: 0, users: [] });
+        }
+
+        // Обнулить negative.
+        await db
+          .update(usersTable)
+          .set({ bonusBalance: 0 })
+          .where(
+            and(eq(usersTable.companyId, companyId), lt(usersTable.bonusBalance, 0)),
+          );
+
+        console.log(
+          `[reset-balances] company=${companyId} reset ${affected.length} negative balances`,
+        );
+        res.json({ reset: affected.length, users: affected });
+      } catch (err) {
+        console.error("[reset-balances] failed", err);
+        res.status(500).json({ message: "Ошибка сброса балансов" });
+      }
+    },
+  );
+
   return httpServer;
 }
