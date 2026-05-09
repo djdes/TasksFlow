@@ -418,10 +418,10 @@ export function TaskViewDialog({
               currentTask.isCompleted ? (
                 // Журнальные задачи нельзя «вернуть в работу» —
                 // запись в журнале не должна стираться обратным
-                // toggle'ом. Вместо этого открываем форму редактирования
-                // (callback onComplete на стороне Dashboard
-                // распознаёт журнальную задачу и открывает task-fill-url
-                // с auto-prefilled значениями).
+                // toggle'ом. Вместо этого открываем inline форму
+                // редактирования (TaskFormFiller на стороне Dashboard
+                // через openJournalForm) с auto-prefilled значениями.
+                // Сотрудник никогда не покидает TasksFlow — П-1 спека.
                 <button
                   onClick={() => onComplete()}
                   className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm dark:from-white/8 dark:to-white/5 dark:hover:from-white/12 dark:hover:to-white/8 dark:border-white/10"

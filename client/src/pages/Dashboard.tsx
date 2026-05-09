@@ -405,31 +405,27 @@ export default function Dashboard() {
   const streakDays = useStreak(user?.id, ownCompletedToday);
 
   /**
-   * Открыть журнальную форму на стороне WeSetup (или fallback inline).
-   * Используется и при клике по карточке, и при клике по кружку
-   * для journal-задач — UX единообразный, не зависит от того, куда
-   * именно ткнул сотрудник.
+   * Открыть журнальную форму ВНУТРИ TasksFlow.
+   *
+   * 2026-05-09: убран redirect на wesetup.ru. Раньше открывал
+   * /api/wesetup/task-fill-url и делал window.location.href = wesetupUrl —
+   * сотрудник «улетал» из приложения на чужой сайт, путаница.
+   *
+   * Теперь — всегда inline TaskFormFiller. Он сам fetch'ит schema через
+   * /api/wesetup/task-form?taskId=N (proxy на WeSetup
+   * /api/integrations/tasksflow/task-form), рендерит native shadcn-форму
+   * и сабмитит через /api/wesetup/complete-with-values. Сотрудник
+   * никогда не покидает TasksFlow — соответствует П-1 спека Wesetup
+   * (TF — independent service, никаких redirect'ов).
+   *
+   * Преимущества:
+   *   - Одно приложение, один UX, нет «куда я попал».
+   *   - Если WeSetup недоступен — TaskFormFiller покажет inline error
+   *     (через fetchOrFriendlyError), сотрудник может retry'нуть.
+   *   - Forms унифицированы под TF design tokens (П-11 спека).
    */
-  const openJournalForm = async (taskId: number) => {
-    try {
-      const response = await fetchOrFriendlyError(
-        `/api/wesetup/task-fill-url?taskId=${taskId}`,
-        {
-          credentials: "include",
-          signal: AbortSignal.timeout(30_000),
-        }
-      );
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.url) {
-        throw new Error(data?.message || `task-fill-url ${response.status}`);
-      }
-      window.location.href = data.url;
-    } catch (err: any) {
-      console.error("[dashboard] task-fill-url failed", err);
-      // Fallback — inline-форма, чтобы сотрудник всё равно мог
-      // выполнить задачу, даже если WeSetup временно недоступен.
-      setJournalTaskId(taskId);
-    }
+  const openJournalForm = (taskId: number) => {
+    setJournalTaskId(taskId);
   };
 
 
