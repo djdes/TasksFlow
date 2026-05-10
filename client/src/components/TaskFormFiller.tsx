@@ -61,6 +61,11 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   const [requiresPhoto, setRequiresPhoto] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
+  // Per-step photos: ключ — field.key (например "step_0"), значение —
+  // массив photoUrls для этого шага. Используется когда у поля есть
+  // requirePhoto=true (per-step photo). Submit блокируется пока для
+  // КАЖДОГО photo-required шага не загружено хотя бы одно фото.
+  const [stepPhotos, setStepPhotos] = useState<Record<string, string[]>>({});
 
   const loadForm = useCallback(async () => {
     setLoading(true);
@@ -182,7 +187,23 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     void loadForm();
   }, [open, loadForm]);
 
-  const photoOk = !requiresPhoto || photoUrls.length > 0;
+  // Per-step photo validation: каждый field с requirePhoto=true должен
+  // иметь хотя бы одно фото. Если есть хотя бы один такой field —
+  // task-level photoOk считается через сумму per-step photos.
+  const fieldsRequiringPhoto = useMemo(
+    () =>
+      (schema?.fields ?? []).filter(
+        (f) => (f as { requirePhoto?: boolean }).requirePhoto === true,
+      ),
+    [schema],
+  );
+  const hasPerStepPhoto = fieldsRequiringPhoto.length > 0;
+  const allStepPhotosOk = fieldsRequiringPhoto.every(
+    (f) => (stepPhotos[f.key]?.length ?? 0) > 0,
+  );
+  const photoOk = hasPerStepPhoto
+    ? allStepPhotosOk
+    : !requiresPhoto || photoUrls.length > 0;
   const readyToSubmit = useMemo(
     () => isFormReadyToSubmit(schema, values) && photoOk,
     [schema, values, photoOk],
@@ -225,6 +246,80 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       });
     } finally {
       setPhotoUploading(false);
+    }
+  }
+
+  // Per-step photo upload — physically uploads to /api/tasks/:id/photo
+  // (auto-fills task.photoUrls на стороне TF), плюс tracks локально под
+  // ключом step_X чтобы блокировать submit когда конкретный шаг без фото.
+  async function uploadPhotoForStep(stepKey: string, file: File) {
+    if (photoUploading) return;
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/photo`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+        signal: AbortSignal.timeout(60_000),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "Не удалось загрузить фото");
+      }
+      const allUrls: string[] = Array.isArray(data?.photoUrls)
+        ? data.photoUrls
+        : [];
+      const newestUrl: string | undefined = allUrls[allUrls.length - 1];
+      setPhotoUrls(allUrls);
+      if (newestUrl) {
+        setStepPhotos((prev) => ({
+          ...prev,
+          [stepKey]: [...(prev[stepKey] ?? []), newestUrl],
+        }));
+      }
+      toast({
+        title: "Фото загружено",
+        description: `Шаг отмечен (${(stepPhotos[stepKey]?.length ?? 0) + 1})`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Ошибка",
+        description: err?.message || "Не удалось загрузить фото",
+        variant: "destructive",
+      });
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function deleteStepPhoto(stepKey: string, url: string) {
+    try {
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${taskId}/photo?url=${encodeURIComponent(url)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "Не удалось удалить фото");
+      }
+      const nextUrls = Array.isArray(data?.photoUrls) ? data.photoUrls : [];
+      setPhotoUrls(nextUrls);
+      setStepPhotos((prev) => ({
+        ...prev,
+        [stepKey]: (prev[stepKey] ?? []).filter((u) => u !== url),
+      }));
+    } catch (err: any) {
+      toast({
+        title: "Ошибка",
+        description: err?.message || "Не удалось удалить фото",
+        variant: "destructive",
+      });
     }
   }
 
@@ -387,7 +482,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                   {schema.intro}
                 </p>
               ) : null}
-              {requiresPhoto ? (
+              {requiresPhoto && !hasPerStepPhoto ? (
                 <div className="rounded-2xl border border-orange-300/60 bg-orange-50/60 p-4 dark:border-orange-400/40 dark:bg-orange-500/10">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -451,14 +546,30 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                   </label>
                 </div>
               ) : null}
-              {schema.fields.map((field) => (
-                <FieldInput
-                  key={field.key}
-                  field={field}
-                  value={values[field.key]}
-                  onChange={(v) => setField(field.key, v)}
-                />
-              ))}
+              {schema.fields.map((field) => {
+                const fieldRequiresPhoto =
+                  (field as { requirePhoto?: boolean }).requirePhoto === true;
+                return (
+                  <FieldInput
+                    key={field.key}
+                    field={field}
+                    value={values[field.key]}
+                    onChange={(v) => setField(field.key, v)}
+                    stepPhotos={fieldRequiresPhoto ? stepPhotos[field.key] ?? [] : undefined}
+                    onUploadStepPhoto={
+                      fieldRequiresPhoto
+                        ? (file) => uploadPhotoForStep(field.key, file)
+                        : undefined
+                    }
+                    onDeleteStepPhoto={
+                      fieldRequiresPhoto
+                        ? (url) => deleteStepPhoto(field.key, url)
+                        : undefined
+                    }
+                    photoUploading={photoUploading}
+                  />
+                );
+              })}
             </div>
           ) : null}
           <DialogFooter className="gap-2 border-t border-border/40 bg-muted/30 px-6 py-4">
@@ -548,10 +659,19 @@ function FieldInput({
   field,
   value,
   onChange,
+  stepPhotos,
+  onUploadStepPhoto,
+  onDeleteStepPhoto,
+  photoUploading,
 }: {
   field: RuntimeTaskFormField;
   value: unknown;
   onChange: (v: unknown) => void;
+  /** Per-step photoUrls — задано только когда field.requirePhoto=true. */
+  stepPhotos?: string[];
+  onUploadStepPhoto?: (file: File) => Promise<void> | void;
+  onDeleteStepPhoto?: (url: string) => Promise<void> | void;
+  photoUploading?: boolean;
 }) {
   const labelCls = "mb-2 block text-sm font-semibold text-foreground";
   const requiredMark = field.required ? (
@@ -639,18 +759,90 @@ function FieldInput({
           {hint}
         </div>
       );
-    case "boolean":
+    case "boolean": {
+      const photoRequired = onUploadStepPhoto !== undefined;
+      const photos = stepPhotos ?? [];
+      const photoMissing = photoRequired && photos.length === 0;
       return (
-        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-border/60 bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5">
-          <Checkbox
-            checked={Boolean(value)}
-            onCheckedChange={(v) => onChange(Boolean(v))}
-            className="size-5"
-          />
-          <span className="text-base font-medium">{field.label}</span>
-          {hint}
-        </label>
+        <div
+          className={`rounded-2xl border-2 transition-all ${
+            photoMissing
+              ? "border-orange-400/60 bg-orange-50/40 dark:border-orange-400/50 dark:bg-orange-500/5"
+              : "border-border/60 bg-card hover:border-primary/40 hover:bg-primary/5"
+          }`}
+        >
+          <label className="flex cursor-pointer items-start gap-3 p-4">
+            <Checkbox
+              checked={Boolean(value)}
+              onCheckedChange={(v) => onChange(Boolean(v))}
+              className="size-5 mt-0.5"
+            />
+            <div className="flex-1">
+              <span className="text-base font-medium">{field.label}</span>
+              {photoRequired ? (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-medium text-orange-800 dark:bg-orange-500/20 dark:text-orange-200">
+                  <Camera className="size-3" />
+                  Фото
+                </span>
+              ) : null}
+              {hint}
+            </div>
+          </label>
+          {photoRequired ? (
+            <div className="border-t border-border/40 px-4 py-3">
+              {photos.length > 0 ? (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {photos.map((url, idx) => (
+                    <div key={url} className="relative">
+                      <img
+                        src={url}
+                        alt={`Фото шага ${idx + 1}`}
+                        className="size-14 rounded-lg object-cover"
+                      />
+                      {onDeleteStepPhoto ? (
+                        <button
+                          type="button"
+                          onClick={() => void onDeleteStepPhoto(url)}
+                          className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-white shadow"
+                          aria-label="Удалить фото"
+                        >
+                          <XIcon className="size-2.5" />
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <label
+                className={`flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-orange-300 bg-white text-[12px] font-medium text-orange-900 transition-colors hover:bg-orange-50 dark:border-orange-300/40 dark:bg-white/5 dark:text-orange-100 ${
+                  photoUploading ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
+                {photoUploading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Camera className="size-3.5" />
+                )}
+                {photos.length === 0
+                  ? "Загрузить фото для этого шага"
+                  : "Добавить ещё фото"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={photoUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUploadStepPhoto) void onUploadStepPhoto(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
       );
+    }
     case "select":
       return (
         <div>

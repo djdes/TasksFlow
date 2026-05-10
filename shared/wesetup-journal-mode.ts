@@ -58,6 +58,12 @@ export type TaskFormField = {
   options?: TaskFormFieldOption[];
   defaultValue?: unknown;
   helpText?: string;
+  /**
+   * Per-step photo requirement (только для type=boolean). Когда true —
+   * TaskFormFiller рендерит inline photo upload рядом с чекбоксом
+   * шага и блокирует submit пока для этого шага не загружено фото.
+   */
+  requirePhoto?: boolean;
 };
 
 export type TaskFormSchema = {
@@ -344,6 +350,9 @@ function normalizeTaskFormField(field: unknown): TaskFormField | null {
     ...(options.length > 0 ? { options } : {}),
     ...(defaultValue !== undefined ? { defaultValue } : {}),
     ...(helpText ? { helpText } : {}),
+    ...(typeof item.requirePhoto === "boolean"
+      ? { requirePhoto: item.requirePhoto }
+      : {}),
   };
 }
 
