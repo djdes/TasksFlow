@@ -85,8 +85,29 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
         throw new Error("WeSetup вернул форму в неизвестном формате");
       }
       // Read task metadata (requiresPhoto + photoUrls) — пришло из
-      // /api/wesetup/task-form proxy который теперь включает их.
-      const taskMeta = (data as { task?: { requiresPhoto?: boolean; photoUrls?: string[] } } | null)?.task;
+      // /api/wesetup/task-form proxy который теперь включает их. Fallback
+      // на отдельный GET /api/tasks/:id если payload без task-поля
+      // (старый proxy / cached response).
+      let taskMeta = (data as { task?: { requiresPhoto?: boolean; photoUrls?: string[] } } | null)?.task;
+      if (!taskMeta) {
+        try {
+          const taskResp = await fetch(`/api/tasks/${taskId}`, {
+            credentials: "include",
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (taskResp.ok) {
+            const tdata = await taskResp.json().catch(() => null);
+            if (tdata) {
+              taskMeta = {
+                requiresPhoto: Boolean(tdata.requiresPhoto),
+                photoUrls: Array.isArray(tdata.photoUrls) ? tdata.photoUrls : [],
+              };
+            }
+          }
+        } catch {
+          // non-fatal: photo UI просто не появится
+        }
+      }
       if (taskMeta) {
         setRequiresPhoto(Boolean(taskMeta.requiresPhoto));
         setPhotoUrls(Array.isArray(taskMeta.photoUrls) ? taskMeta.photoUrls : []);
