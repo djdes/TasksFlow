@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, RefreshCw, ClipboardList, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, RefreshCw, ClipboardList, CheckCircle2, Loader2, X as XIcon } from "lucide-react";
 import {
   normalizeTaskFormPayload,
   type TaskFormField,
@@ -56,6 +56,11 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Photo enforcement (2026-05-10): когда task.requiresPhoto=true,
+  // рендерим upload-виджет и блокируем «Сделал» до загрузки фото.
+  const [requiresPhoto, setRequiresPhoto] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const loadForm = useCallback(async () => {
     setLoading(true);
@@ -78,6 +83,16 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
       const normalized = normalizeTaskFormPayload(data);
       if (!normalized) {
         throw new Error("WeSetup вернул форму в неизвестном формате");
+      }
+      // Read task metadata (requiresPhoto + photoUrls) — пришло из
+      // /api/wesetup/task-form proxy который теперь включает их.
+      const taskMeta = (data as { task?: { requiresPhoto?: boolean; photoUrls?: string[] } } | null)?.task;
+      if (taskMeta) {
+        setRequiresPhoto(Boolean(taskMeta.requiresPhoto));
+        setPhotoUrls(Array.isArray(taskMeta.photoUrls) ? taskMeta.photoUrls : []);
+      } else {
+        setRequiresPhoto(false);
+        setPhotoUrls([]);
       }
       if (!normalized.form) {
         setLoadError(
@@ -146,13 +161,75 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     void loadForm();
   }, [open, loadForm]);
 
+  const photoOk = !requiresPhoto || photoUrls.length > 0;
   const readyToSubmit = useMemo(
-    () => isFormReadyToSubmit(schema, values),
-    [schema, values],
+    () => isFormReadyToSubmit(schema, values) && photoOk,
+    [schema, values, photoOk],
   );
 
   function setField(key: string, value: unknown) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  // Загрузка фото через POST /api/tasks/:id/photo (multipart/form-data).
+  // Endpoint возвращает обновлённый список photoUrls — обновляем
+  // локальный state, чтобы readyToSubmit разблокировался.
+  async function uploadPhoto(file: File) {
+    if (photoUploading) return;
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/photo`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+        signal: AbortSignal.timeout(60_000),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "Не удалось загрузить фото");
+      }
+      const nextUrls = Array.isArray(data?.photoUrls) ? data.photoUrls : [];
+      setPhotoUrls(nextUrls);
+      toast({
+        title: "Фото загружено",
+        description: `${nextUrls.length}/10`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Ошибка",
+        description: err?.message || "Не удалось загрузить фото",
+        variant: "destructive",
+      });
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function deletePhoto(url: string) {
+    try {
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${taskId}/photo?url=${encodeURIComponent(url)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "Не удалось удалить фото");
+      }
+      const nextUrls = Array.isArray(data?.photoUrls) ? data.photoUrls : [];
+      setPhotoUrls(nextUrls);
+    } catch (err: any) {
+      toast({
+        title: "Ошибка",
+        description: err?.message || "Не удалось удалить фото",
+        variant: "destructive",
+      });
+    }
   }
 
   async function doSubmit() {
@@ -288,6 +365,70 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                 <p className="rounded-2xl border border-primary/15 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/90">
                   {schema.intro}
                 </p>
+              ) : null}
+              {requiresPhoto ? (
+                <div className="rounded-2xl border border-orange-300/60 bg-orange-50/60 p-4 dark:border-orange-400/40 dark:bg-orange-500/10">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Camera className="size-4 text-orange-600 dark:text-orange-400" />
+                      <span className="text-[13px] font-semibold text-orange-900 dark:text-orange-100">
+                        Фото обязательно
+                      </span>
+                    </div>
+                    <span className="text-[11px] tabular-nums text-orange-700 dark:text-orange-200">
+                      {photoUrls.length}/10
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-snug text-orange-700/90 dark:text-orange-200/80">
+                    Загрузите хотя бы одно фото — без этого «Сделал» заблокирована.
+                  </p>
+                  {photoUrls.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {photoUrls.map((url, idx) => (
+                        <div key={url} className="relative">
+                          <img
+                            src={url}
+                            alt={`Фото ${idx + 1}`}
+                            className="size-16 rounded-xl object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void deletePhoto(url)}
+                            className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-white shadow"
+                            aria-label="Удалить фото"
+                          >
+                            <XIcon className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <label
+                    className={`mt-3 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-400/60 bg-white/70 text-[13px] font-medium text-orange-900 transition-colors hover:bg-orange-50 dark:border-orange-300/40 dark:bg-white/5 dark:text-orange-100 ${
+                      photoUploading || photoUrls.length >= 10
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }`}
+                  >
+                    {photoUploading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Camera className="size-4" />
+                    )}
+                    {photoUploading ? "Загружаем…" : "Добавить фото"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={photoUploading || photoUrls.length >= 10}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadPhoto(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
               ) : null}
               {schema.fields.map((field) => (
                 <FieldInput

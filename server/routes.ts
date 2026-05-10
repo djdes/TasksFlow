@@ -3253,9 +3253,26 @@ export async function registerRoutes(
           ? parsedObject.journalCode
           : null;
 
+      // Photo-enforcement (2026-05-10): прокидываем task.requiresPhoto и
+      // photoUrls в ответ, чтобы TaskFormFiller знал когда показывать
+      // photo upload UI и блокировать «Сделал» без фото. Раньше форма
+      // возвращалась без этих полей → юзер просто видел checkbox-фильд
+      // «Сделал», нажимал, /complete-with-values пропускал без
+      // photo-check (теперь чек добавлен). Без UI-аплоада — юзер видел
+      // 400 «Необходимо загрузить фото» без способа загрузить.
+      const taskMeta = {
+        requiresPhoto: Boolean((task as any).requiresPhoto),
+        photoUrls: Array.isArray((task as any).photoUrls)
+          ? ((task as any).photoUrls as string[])
+          : [],
+        photoUrl: (task as any).photoUrl ?? null,
+      };
+
       if (upstream.ok) {
         if (normalized?.form) {
-          return res.status(upstream.status).json(normalized);
+          return res
+            .status(upstream.status)
+            .json({ ...normalized, task: taskMeta });
         }
         if (normalized && !upstreamJournalCode) {
           return res.status(404).json({
@@ -3265,10 +3282,12 @@ export async function registerRoutes(
         }
         const fallback = await resolveTaskFormFromCatalog(target, taskId);
         if (fallback.resolved) {
-          return res.json({ form: fallback.form });
+          return res.json({ form: fallback.form, task: taskMeta });
         }
         if (normalized || !text.trim()) {
-          return res.status(upstream.status).json({ form: null });
+          return res
+            .status(upstream.status)
+            .json({ form: null, task: taskMeta });
         }
         return res.status(502).json({
           message: "WeSetup вернул task-form в неизвестном формате",
@@ -3325,6 +3344,22 @@ export async function registerRoutes(
         return res.status(403).json({
           message: "Вы не являетесь исполнителем этой задачи",
         });
+      }
+      // 2026-05-10: photo-enforcement parity с /complete endpoint.
+      // Раньше /complete-with-values (путь journal-задач WeSetup) шёл
+      // мимо photo-check → юзер мог завершить задачу без фото даже
+      // когда task.requiresPhoto=true. Теперь блокируем как и /complete.
+      // Skip только для uncomplete (isCompleted:false) — там photo
+      // не нужен, юзер откатывает, не завершает.
+      const willComplete = Boolean(isCompleted ?? true);
+      if (willComplete && task.requiresPhoto) {
+        const taskPhotoUrls = (task as any).photoUrls || [];
+        const hasPhotos = taskPhotoUrls.length > 0 || task.photoUrl;
+        if (!hasPhotos) {
+          return res
+            .status(400)
+            .json({ message: "Необходимо загрузить фото перед завершением" });
+        }
       }
     } catch (err: any) {
       console.error("[wesetup-proxy] complete auth check failed", err);
