@@ -183,7 +183,7 @@ export default function Login() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-lg font-bold text-foreground mb-3 block">
-                    Номер телефона
+                    Телефон
                   </FormLabel>
                   <FormControl>
                     <PhoneInput value={field.value} onChange={field.onChange} />
