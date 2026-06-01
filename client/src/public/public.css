@@ -36,9 +36,13 @@
   pointer-events: none;
   z-index: -10;
 }
-.aurora .orb {
+/* База: орб всегда абсолютный (нужен ближайший positioned-предок).
+   Используется и внутри .aurora, и отдельными бликами в карточках/CTA. */
+.orb {
   position: absolute;
   border-radius: 9999px;
+}
+.aurora .orb {
   filter: blur(72px);
   opacity: 0.5;
 }
