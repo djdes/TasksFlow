@@ -1,0 +1,137 @@
+/* ============================================================
+   Публичная часть (лендинг + блог): фон, детали, анимации.
+   Всё аккуратно, в фирменном indigo, работает в светлой и тёмной
+   теме и уважает prefers-reduced-motion.
+   ============================================================ */
+
+/* ---------- Scroll-reveal ----------
+   Гейт на .reveal-ready (его ставит inline-скрипт в public.html, и
+   снимает через 3с, если бандл не активировал — тогда контент просто
+   виден). Без JS класс не ставится вовсе → контент сразу виден. */
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-ready [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Аврора / орбы ---------- */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -10;
+}
+.aurora .orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  opacity: 0.5;
+}
+.dark .aurora .orb {
+  opacity: 0.32;
+  filter: blur(86px);
+}
+
+@keyframes orbFloatA {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(0, -28px, 0) scale(1.07); }
+}
+@keyframes orbFloatB {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(22px, 20px, 0) scale(1.1); }
+}
+@keyframes orbFloatC {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-20px, 16px, 0) scale(1.05); }
+}
+.orb-a { animation: orbFloatA 15s ease-in-out infinite; }
+.orb-b { animation: orbFloatB 19s ease-in-out infinite; }
+.orb-c { animation: orbFloatC 23s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .orb-a, .orb-b, .orb-c { animation: none; }
+}
+
+/* ---------- Сетка и точки (паттерны фона) ---------- */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 78%);
+          mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 78%);
+}
+.bg-dots {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ---------- Градиентный текст ---------- */
+.text-gradient {
+  background: linear-gradient(95deg, hsl(var(--primary)) 0%, #8b5cf6 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+
+/* ---------- Карточки: всплытие + мягкая рамка-свечение ---------- */
+.hover-lift {
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -18px hsl(var(--primary) / 0.45);
+  border-color: hsl(var(--primary) / 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift:hover { transform: none; }
+}
+
+/* ---------- Shine на кнопках/CTA ---------- */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.75s ease;
+  pointer-events: none;
+}
+.shine:hover::after { left: 150%; }
+@media (prefers-reduced-motion: reduce) {
+  .shine::after { display: none; }
+}
+
+/* ---------- Декоративный «conic» бейдж/иконка ---------- */
+.icon-glow {
+  position: relative;
+  transition: transform 0.25s ease;
+}
+.group:hover .icon-glow { transform: scale(1.08) rotate(-3deg); }
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .icon-glow { transform: none; }
+}
+
+/* ---------- Тонкая линия-разделитель с градиентом ---------- */
+.divider-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent);
+}

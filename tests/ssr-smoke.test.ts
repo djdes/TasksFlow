@@ -38,7 +38,10 @@ describe("SSR render", () => {
     const data = await loadRouteData("blog-index", {});
     const r = render("/blog", data, ORIGIN);
     expect(r.routeKey).toBe("blog-index");
-    expect(r.appHtml).toContain("Блог TasksFlow");
+    // h1 теперь «Блог <span text-gradient>TasksFlow</span>» — проверяем по
+    // стабильному заголовку в head + подзаголовку в разметке.
+    expect(r.head).toContain("Блог TasksFlow");
+    expect(r.appHtml).toContain("Практические статьи");
     expect(r.head).toContain("BreadcrumbList");
   });
 

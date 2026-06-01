@@ -46,9 +46,20 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
       <ReadingProgress />
       <Nav />
+
+      {/* Декоративный фон в шапке статьи */}
+      <div className="absolute inset-x-0 top-0 h-[360px] -z-10 overflow-hidden" aria-hidden="true">
+        <div className="aurora">
+          <div className="orb orb-a" style={{ width: 420, height: 420, left: -140, top: -160, background: "radial-gradient(circle, hsl(var(--primary)/0.45), transparent 70%)" }} />
+          <div className="orb orb-c" style={{ width: 320, height: 320, right: -90, top: -60, background: "radial-gradient(circle, rgba(34,211,238,0.32), transparent 70%)" }} />
+        </div>
+        <div className="absolute inset-0 bg-grid" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
+      </div>
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         <Breadcrumbs
           items={[

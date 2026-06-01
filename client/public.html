@@ -18,6 +18,15 @@
             document.documentElement.classList.add('dark');
           }
         } catch (e) {}
+        // Scroll-reveal: прячем элементы до появления в зоне видимости.
+        // Если бандл не активировал ревил за 3с (ошибка/медленная сеть) —
+        // снимаем класс, и контент просто становится виден. Без JS этот
+        // скрипт не выполнится → контент виден сразу.
+        var de = document.documentElement;
+        de.classList.add('reveal-ready');
+        setTimeout(function () {
+          if (!window.__revealActive) de.classList.remove('reveal-ready');
+        }, 3000);
       })();
     </script>
     <!--app-head-->
