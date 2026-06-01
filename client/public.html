@@ -22,11 +22,12 @@
     </script>
     <!--app-head-->
     <style>
-      /* В SPA-кабинете body заблокирован (overflow:hidden), скроллит
-         контейнер #root. Публичные страницы рендерятся в #public-root —
-         им нужен обычный скролл документа, иначе не работает колесо.
-         !important перебивает html,body{overflow:hidden} из index.css. */
-      html, body { height: auto !important; overflow: visible !important; overflow-x: hidden !important; }
+      /* SPA-кабинет фиксирует body (position:fixed; overflow:hidden) и
+         скроллит контейнер #root — это ломало скролл колесом на публичных
+         страницах, которые рендерятся в #public-root. Возвращаем обычный
+         скролл документа. position:static — ключевое (без него body вне
+         потока и страница не прокручивается). !important перебивает index.css. */
+      html, body { height: auto !important; overflow: visible !important; position: static !important; }
       #public-root { min-height: 100vh; }
     </style>
   </head>
