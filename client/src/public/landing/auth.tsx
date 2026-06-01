@@ -1,25 +1,24 @@
 /**
- * Email-авторизация лендинга — структура как в ordersflow (yesbeat-style):
- * одно поле email + одна кнопка, авторегистрация/автологин. Цвет — indigo
- * (дизайн-токены TasksFlow), не жёлтый.
+ * Единый вход/регистрация лендинга (стиль Госуслуг): ОДНО поле — телефон
+ * ИЛИ email — и одна кнопка. Цвет indigo (токены TasksFlow).
  *
- * Поток (см. server /api/auth/start):
- *   новый email      → сервер создаёт аккаунт + ставит сессию → редирект /dashboard
- *   существующий     → сервер шлёт magic-письмо → показываем шаг «письмо
- *                      отправлено» + поле пароля (вход по паролю / новый пароль)
+ * Логика по введённому значению:
+ *   • телефон  → POST /api/auth/login. Есть аккаунт → в кабинет; нет →
+ *                на регистрацию /register?phone=… (как обычный вход TasksFlow).
+ *   • email    → POST /api/auth/start. Новый → сервер создаёт аккаунт и
+ *                ставит сессию → в кабинет; существующий → письмо +
+ *                шаг с паролем.
  *
- * Клиентская подсказка опечаток (gmail.ru→gmail.com) блокирует отправку,
- * пока пользователь не подтвердит. Сервер дополнительно проверяет MX.
- *
- * SSR-safe: при первом рендере (step="email") нет обращений к window;
- * вся логика — в обработчиках (клиент).
+ * Подсказка опечаток домена (gmail.ru→gmail.com) — только для email.
+ * SSR-safe: при первом рендере нет обращений к window.
  */
 import { useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, X } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Loader2, CheckCircle2, X } from "lucide-react";
 import { suggestEmailFix } from "./email-typo";
+import { detectIdentity } from "./identity";
 
-type Step = "email" | "sent";
+type Step = "input" | "sent";
 
 async function postJson(path: string, body: unknown) {
   const r = await fetch(path, {
@@ -44,15 +43,16 @@ export function AuthForm({
   layout?: "stacked" | "row";
   autoFocus?: boolean;
 }) {
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("input");
+  const [value, setValue] = useState(""); // телефон или email
+  const [sentEmail, setSentEmail] = useState(""); // email для шага «sent»
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function startAuth() {
+  async function startEmail(email: string) {
     setBusy(true);
     setError("");
     try {
@@ -63,6 +63,7 @@ export function AuthForm({
         return;
       }
       if (data.exists) {
+        setSentEmail(email);
         setStep("sent");
       } else {
         window.location.href = "/dashboard";
@@ -74,14 +75,44 @@ export function AuthForm({
     }
   }
 
-  function submitEmail(e: FormEvent) {
-    e.preventDefault();
-    const fix = suggestEmailFix(email);
-    if (fix && fix !== email) {
-      setSuggestion(fix);
-      return;
+  async function loginPhone(phone: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const { ok, status, data } = await postJson("/api/auth/login", { phone });
+      if (ok) {
+        window.location.href = "/dashboard";
+        return;
+      }
+      if (status === 401) {
+        // нет аккаунта по телефону → регистрация (как обычный вход TasksFlow)
+        window.location.href = `/register?phone=${encodeURIComponent(phone)}`;
+        return;
+      }
+      setError(data.message || "Не удалось войти");
+    } catch {
+      setError("Нет связи с сервером. Проверьте интернет.");
+    } finally {
+      setBusy(false);
     }
-    startAuth();
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    const id = detectIdentity(value);
+    if (id.kind === "email") {
+      const fix = suggestEmailFix(id.email);
+      if (fix && fix !== id.email) {
+        setSuggestion(fix);
+        return;
+      }
+      startEmail(id.email);
+    } else if (id.kind === "phone") {
+      loginPhone(id.phone);
+    } else {
+      setError("Введите телефон (например +7 999 123-45-67) или email");
+    }
   }
 
   async function submitPassword(e: FormEvent) {
@@ -89,7 +120,7 @@ export function AuthForm({
     setBusy(true);
     setError("");
     try {
-      const { ok, data } = await postJson("/api/auth/login-email", { email, password });
+      const { ok, data } = await postJson("/api/auth/login-email", { email: sentEmail, password });
       if (!ok) {
         setError(data.message || "Не вошли");
         return;
@@ -106,7 +137,7 @@ export function AuthForm({
     setBusy(true);
     setError("");
     try {
-      await postJson("/api/auth/recover", { email });
+      await postJson("/api/auth/recover", { email: sentEmail });
       setStep("sent");
     } catch {
       setError("Не удалось отправить письмо.");
@@ -132,7 +163,7 @@ export function AuthForm({
           </div>
           <h3 className="text-lg font-bold text-foreground">Письмо отправлено</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Проверьте <strong className="text-foreground">{email}</strong> — внутри кнопка
+            Проверьте <strong className="text-foreground">{sentEmail}</strong> — внутри кнопка
             «Открыть кабинет». Один клик — и вы внутри.
           </p>
         </div>
@@ -153,6 +184,7 @@ export function AuthForm({
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
+              autoFocus
               className={inputCls + " pr-12"}
             />
             <button
@@ -170,8 +202,8 @@ export function AuthForm({
             {busy ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Войти"}
           </button>
           <div className="flex justify-between text-sm pt-1">
-            <button type="button" onClick={() => { setStep("email"); setPassword(""); setError(""); }} className="text-muted-foreground hover:text-foreground">
-              ← Другой email
+            <button type="button" onClick={() => { setStep("input"); setPassword(""); setError(""); }} className="text-muted-foreground hover:text-foreground">
+              ← Назад
             </button>
             <button type="button" onClick={recover} disabled={busy} className="text-primary hover:underline disabled:opacity-50">
               Прислать новый пароль
@@ -182,21 +214,22 @@ export function AuthForm({
     );
   }
 
-  // step === "email"
+  // step === "input"
   const isRow = layout === "row";
   return (
-    <form onSubmit={submitEmail} className={isRow ? "w-full" : "w-full space-y-3"}>
+    <form onSubmit={submit} className={isRow ? "w-full" : "w-full space-y-3"}>
       <div className={isRow ? "flex flex-col sm:flex-row gap-3" : "space-y-3"}>
         <label className="relative block flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-            <Mail className="w-5 h-5" />
+            <User className="w-5 h-5" />
           </span>
           <input
-            type="email"
-            placeholder="Ваш email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setSuggestion(null); setError(""); }}
-            autoComplete="email"
+            type="text"
+            inputMode="email"
+            placeholder="Телефон или email"
+            value={value}
+            onChange={(e) => { setValue(e.target.value); setSuggestion(null); setError(""); }}
+            autoComplete="username"
             required
             autoFocus={autoFocus}
             className={inputCls}
@@ -210,11 +243,11 @@ export function AuthForm({
       {suggestion && (
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
           Возможно, вы имели в виду{" "}
-          <button type="button" className="font-semibold underline" onClick={() => { setEmail(suggestion); setSuggestion(null); }}>
+          <button type="button" className="font-semibold underline" onClick={() => { setValue(suggestion); setSuggestion(null); }}>
             {suggestion}
           </button>
           ?{" "}
-          <button type="button" className="text-muted-foreground underline" onClick={() => { setSuggestion(null); startAuth(); }}>
+          <button type="button" className="text-muted-foreground underline" onClick={() => { setSuggestion(null); startEmail(value.trim().toLowerCase()); }}>
             оставить как есть
           </button>
         </p>
@@ -222,7 +255,7 @@ export function AuthForm({
       {error && !suggestion && <p className="text-sm text-destructive mt-2">{error}</p>}
       {!isRow && (
         <p className="text-xs text-muted-foreground text-center">
-          Регистрация за секунду — пароль придёт на почту, входить можно сразу.
+          Телефон — вход как обычно. Email — регистрация за секунду, пароль придёт на почту.
         </p>
       )}
     </form>
@@ -250,7 +283,7 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-xl font-bold text-foreground mb-1">Вход в TasksFlow</h2>
-        <p className="text-sm text-muted-foreground mb-5">Введите email — создадим аккаунт или войдём.</p>
+        <p className="text-sm text-muted-foreground mb-5">Введите телефон или email — войдём или зарегистрируем.</p>
         <AuthForm layout="stacked" autoFocus />
       </div>
     </div>,

@@ -6,7 +6,7 @@ import { ThemeToggle } from "../landing/ThemeToggle";
 /**
  * Шапка публичной части. На лендинге ссылки ведут к якорям секций,
  * на остальных страницах — на абсолютные пути. Кнопка «Войти» открывает
- * модалку email-входа.
+ * единую модалку входа (телефон ИЛИ email — стиль Госуслуг).
  */
 export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   const [authOpen, setAuthOpen] = useState(false);
@@ -60,17 +60,12 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
               Открыть кабинет
             </a>
           ) : (
-            <>
-              <a href="/login" className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2">
-                Вход по телефону
-              </a>
-              <button
-                onClick={() => setAuthOpen(true)}
-                className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
-              >
-                Войти
-              </button>
-            </>
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+            >
+              Войти
+            </button>
           )}
           <button className="md:hidden p-2 text-foreground" onClick={() => setMenuOpen((o) => !o)} aria-label="Меню">
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -85,7 +80,12 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
               {l.label}
             </a>
           ))}
-          <a href="/login" className="block py-2 text-sm font-medium text-muted-foreground">Вход по телефону</a>
+          <button
+            onClick={() => { setMenuOpen(false); setAuthOpen(true); }}
+            className="block w-full text-left py-2 text-sm font-semibold text-primary"
+          >
+            Войти или зарегистрироваться
+          </button>
         </div>
       )}
 
