@@ -11,3 +11,4 @@ logs/
 .deploy-deps.sha256
 .claude/
 .dev-outbox/
+.playwright-mcp/
