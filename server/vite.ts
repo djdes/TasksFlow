@@ -44,6 +44,8 @@ export async function setupVite(server: Server, app: Express) {
   // SSR публичных страниц (/, /blog...) ДО SPA-catch-all, чтобы лендинг
   // и блог рендерились на сервере, а не отдавались как SPA index.html.
   const { setupPublicSsrDev } = await import("./ssr");
+  const { setupPublicAssets } = await import("./public-assets");
+  setupPublicAssets(app); // /og/:slug.svg, /sitemap.xml, /robots.txt
   setupPublicSsrDev(app, vite);
 
   app.use("*", async (req, res, next) => {

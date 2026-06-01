@@ -1,29 +1,48 @@
 /**
- * Загрузка данных для SSR публичных страниц по ключу роута.
- *
- * Фаза B: блог ещё пустой — отдаём пустые наборы (страницы рендерят
- * empty-state). Фаза D подменит ветки blog-* на реальные данные из
- * server/blog.ts (чтение content/blog/*.md).
+ * Загрузка данных для SSR публичных страниц по ключу роута. Реальные
+ * данные блога берутся из server/blog.ts (content/blog/*.md).
  */
-import { CLUSTERS } from "@shared/blog-clusters";
-
-function emptyClusterStats() {
-  return CLUSTERS.map((c) => ({ key: c.key, title: c.title, short: c.short, count: 0 }));
-}
+import {
+  getAllPosts,
+  getByCluster,
+  getFeatured,
+  getPost,
+  clusterStats,
+  totalPosts,
+} from "./blog";
 
 export async function loadRouteData(
   routeKey: string,
   params: Record<string, string>,
 ): Promise<unknown> {
   switch (routeKey) {
-    case "landing":
-      return { featuredPosts: [], totalPosts: 0 };
-    case "blog-index":
-      return { posts: [], clusters: emptyClusterStats(), featured: null, activeCluster: null, total: 0 };
-    case "blog-category":
-      return { posts: [], clusters: emptyClusterStats(), featured: null, activeCluster: params.cluster ?? null, total: 0 };
+    case "landing": {
+      const featuredPosts = getAllPosts().slice(0, 3);
+      return { featuredPosts, totalPosts: totalPosts() };
+    }
+    case "blog-index": {
+      const posts = getAllPosts();
+      return {
+        posts,
+        clusters: clusterStats(),
+        featured: getFeatured(),
+        activeCluster: null,
+        total: posts.length,
+      };
+    }
+    case "blog-category": {
+      const cluster = params.cluster ?? null;
+      const posts = cluster ? getByCluster(cluster) : getAllPosts();
+      return {
+        posts,
+        clusters: clusterStats(),
+        featured: null,
+        activeCluster: cluster,
+        total: posts.length,
+      };
+    }
     case "blog-article":
-      return { post: null };
+      return { post: getPost(params.slug) };
     default:
       return null;
   }

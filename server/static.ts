@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 import { setupPublicSsrProd } from "./ssr";
+import { setupPublicAssets } from "./public-assets";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
@@ -15,6 +16,7 @@ export function serveStatic(app: Express) {
   // с index:'index.html' отдал бы SPA index.html на "/". Регистрируем
   // GET-роуты первыми; всё остальное (assets, /login, /dashboard) идёт
   // дальше по цепочке.
+  setupPublicAssets(app); // /og/:slug.svg, /sitemap.xml, /robots.txt
   setupPublicSsrProd(app);
 
   // Статические файлы с хешами Vite (assets/*) — кэшируем на год immutable.
