@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { AuthModal } from "../landing/auth";
 import { ThemeToggle } from "../landing/ThemeToggle";
@@ -11,6 +11,22 @@ import { ThemeToggle } from "../landing/ThemeToggle";
 export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // После гидрации проверяем сессию: залогиненный видит «Открыть кабинет»
+  // вместо «Войти». SSR рендерит дефолт (не залогинен) — без mismatch,
+  // т.к. смена происходит в эффекте после маунта.
+  const [loggedIn, setLoggedIn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => {
+        if (alive && u && u.id) setLoggedIn(true);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const links = [
     { href: onLanding ? "#features" : "/#features", label: "Возможности" },
@@ -36,15 +52,26 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
 
         <div className="flex items-center gap-2">
           <ThemeToggle className="hidden sm:inline-flex" />
-          <a href="/login" className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2">
-            Вход по телефону
-          </a>
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
-          >
-            Войти
-          </button>
+          {loggedIn ? (
+            <a
+              href="/dashboard"
+              className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+            >
+              Открыть кабинет
+            </a>
+          ) : (
+            <>
+              <a href="/login" className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2">
+                Вход по телефону
+              </a>
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+              >
+                Войти
+              </button>
+            </>
+          )}
           <button className="md:hidden p-2 text-foreground" onClick={() => setMenuOpen((o) => !o)} aria-label="Меню">
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
