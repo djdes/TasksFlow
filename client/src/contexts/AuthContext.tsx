@@ -5,10 +5,12 @@ import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient
 
 type User = {
   id: number;
-  phone: string;
+  // phone nullable: email-юзеры (ветка лендинга) телефона не имеют.
+  phone?: string | null;
   name?: string | null;
   isAdmin: boolean;
   createdAt: number;
+  email?: string | null;
 } | null;
 
 interface AuthContextType {

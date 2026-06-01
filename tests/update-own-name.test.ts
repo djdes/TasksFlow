@@ -5,6 +5,9 @@
  *   • TypeError crash на name=number/object — теперь 400
  *   • silent slice(0, 200) на длинных именах — теперь cap=255 чтобы
  *     совпадал с VARCHAR(255) и Zod schema
+ *   • с email-веткой (phone стал nullable) endpoint обновляет имя через
+ *     storage.setUserName(id, name) — БЕЗ phone, иначе normalizePhone(null)
+ *     падал бы на email-юзерах без телефона.
  *
  * Был БЕЗ тестов — регрессия в normalize-логике могла снова
  * вернуть 500 на нестроковом name (UX «программа сломалась»).
@@ -21,7 +24,7 @@ const storage = {
   getApiKeyByHash: vi.fn(),
   updateApiKeyLastUsed: vi.fn(),
   getUserById: vi.fn(),
-  updateUser: vi.fn(),
+  setUserName: vi.fn(),
 };
 
 vi.mock("../server/storage", () => ({ storage }));
@@ -53,49 +56,46 @@ const USER: User = {
   companyId: 42,
   managedWorkerIds: null,
   position: null,
+  email: null,
+  passwordHash: null,
+  magicToken: null,
+  magicTokenExpiresAt: null,
 };
 
 afterEach(() => vi.restoreAllMocks());
 
 beforeEach(() => {
   Object.values(storage).forEach((m) => m.mockReset?.());
-  storage.updateUser.mockImplementation(async (id: number, patch: any) => ({
+  storage.setUserName.mockImplementation(async (id: number, name: string | null) => ({
     ...USER,
     id,
-    ...patch,
+    name,
   }));
 });
 
 describe("PUT /api/auth/me — auth", () => {
   it("без session → 401", async () => {
     const { app } = await buildApp();
-    const r = await request(app)
-      .put("/api/auth/me")
-      .send({ name: "New" });
+    const r = await request(app).put("/api/auth/me").send({ name: "New" });
     expect(r.status).toBe(401);
   });
 
   it("user не найден в storage → 404", async () => {
     const { app } = await buildApp({ sessionUserId: 99 });
     storage.getUserById.mockResolvedValue(undefined);
-    const r = await request(app)
-      .put("/api/auth/me")
-      .send({ name: "X" });
+    const r = await request(app).put("/api/auth/me").send({ name: "X" });
     expect(r.status).toBe(404);
   });
 });
 
 describe("PUT /api/auth/me — name string", () => {
-  it("обычное имя → передаётся в updateUser", async () => {
+  it("обычное имя → передаётся в setUserName", async () => {
     const { app } = await buildApp({ sessionUserId: USER.id });
     storage.getUserById.mockResolvedValue(USER);
 
     const r = await request(app).put("/api/auth/me").send({ name: "Иван" });
     expect(r.status).toBe(200);
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: "Иван",
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, "Иван");
   });
 
   it("trim лишних пробелов («  Иван  » → «Иван»)", async () => {
@@ -103,10 +103,7 @@ describe("PUT /api/auth/me — name string", () => {
     storage.getUserById.mockResolvedValue(USER);
 
     await request(app).put("/api/auth/me").send({ name: "  Иван  " });
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: "Иван",
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, "Иван");
   });
 
   it("длина 255 → проходит как есть", async () => {
@@ -115,10 +112,7 @@ describe("PUT /api/auth/me — name string", () => {
     const longName = "и".repeat(255);
 
     await request(app).put("/api/auth/me").send({ name: longName });
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: longName,
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, longName);
   });
 
   it("длина 256+ → cap до 255 (VARCHAR(255) sync)", async () => {
@@ -127,9 +121,9 @@ describe("PUT /api/auth/me — name string", () => {
     const tooLong = "и".repeat(500);
 
     await request(app).put("/api/auth/me").send({ name: tooLong });
-    const callArg = storage.updateUser.mock.calls[0][1];
-    expect(callArg.name.length).toBe(255);
-    expect(callArg.name).toBe("и".repeat(255));
+    const callArg = storage.setUserName.mock.calls[0][1];
+    expect(callArg.length).toBe(255);
+    expect(callArg).toBe("и".repeat(255));
   });
 
   it("только пробелы («   ») → null (treated as empty)", async () => {
@@ -137,10 +131,7 @@ describe("PUT /api/auth/me — name string", () => {
     storage.getUserById.mockResolvedValue(USER);
 
     await request(app).put("/api/auth/me").send({ name: "   " });
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: null,
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, null);
   });
 });
 
@@ -150,56 +141,43 @@ describe("PUT /api/auth/me — name null/undefined", () => {
     storage.getUserById.mockResolvedValue(USER);
 
     await request(app).put("/api/auth/me").send({ name: null });
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: null,
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, null);
   });
 
-  it("body без name (undefined) → updateUser с null (defensive default)", async () => {
+  it("body без name (undefined) → setUserName с null (defensive default)", async () => {
     const { app } = await buildApp({ sessionUserId: USER.id });
     storage.getUserById.mockResolvedValue(USER);
 
     await request(app).put("/api/auth/me").send({});
-    expect(storage.updateUser).toHaveBeenCalledWith(USER.id, {
-      phone: USER.phone,
-      name: null,
-    });
+    expect(storage.setUserName).toHaveBeenCalledWith(USER.id, null);
   });
 });
 
 describe("PUT /api/auth/me — type validation (anti-crash)", () => {
   it("name=number → 400 (раньше TypeError 500)", async () => {
-    // Регрессия: name=42 раньше падал на name?.trim() с TypeError →
-    // catch → 500 «Ошибка обновления». Теперь явный 400 с понятным
-    // сообщением.
     const { app } = await buildApp({ sessionUserId: USER.id });
     storage.getUserById.mockResolvedValue(USER);
 
     const r = await request(app).put("/api/auth/me").send({ name: 42 });
     expect(r.status).toBe(400);
     expect(r.body.message).toMatch(/строкой/i);
-    expect(storage.updateUser).not.toHaveBeenCalled();
+    expect(storage.setUserName).not.toHaveBeenCalled();
   });
 
   it("name=object → 400", async () => {
     const { app } = await buildApp({ sessionUserId: USER.id });
     storage.getUserById.mockResolvedValue(USER);
 
-    const r = await request(app)
-      .put("/api/auth/me")
-      .send({ name: { foo: "bar" } });
+    const r = await request(app).put("/api/auth/me").send({ name: { foo: "bar" } });
     expect(r.status).toBe(400);
-    expect(storage.updateUser).not.toHaveBeenCalled();
+    expect(storage.setUserName).not.toHaveBeenCalled();
   });
 
   it("name=array → 400", async () => {
     const { app } = await buildApp({ sessionUserId: USER.id });
     storage.getUserById.mockResolvedValue(USER);
 
-    const r = await request(app)
-      .put("/api/auth/me")
-      .send({ name: ["a", "b"] });
+    const r = await request(app).put("/api/auth/me").send({ name: ["a", "b"] });
     expect(r.status).toBe(400);
   });
 

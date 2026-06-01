@@ -39,6 +39,7 @@ const IntegrationsPage = lazy(() => import("@/pages/Integrations"));
 const VerificationPage = lazy(() => import("@/pages/Verification"));
 const Invitations = lazy(() => import("@/pages/Invitations"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
+const Account = lazy(() => import("@/pages/Account"));
 
 function RouteSuspenseFallback() {
   return (
@@ -83,6 +84,8 @@ function Router() {
         <Suspense fallback={<RouteSuspenseFallback />}>
           <Switch>
             <Route path="/" component={Login} />
+            <Route path="/login" component={Login} />
+            <Route path="/account" component={Account} />
             <Route path="/register" component={Register} />
             <Route path="/register/company" component={RegisterCompany} />
             <Route path="/register/user" component={RegisterUser} />

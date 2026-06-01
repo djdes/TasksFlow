@@ -543,7 +543,7 @@ export default function CompanySettings() {
                   Телефон
                 </label>
                 <Input
-                  value={user.phone}
+                  value={user.phone ?? user.email ?? ""}
                   disabled
                   className="h-12 bg-muted/50"
                 />

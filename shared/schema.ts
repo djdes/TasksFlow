@@ -18,7 +18,11 @@ export const companies = mysqlTable("companies", {
 
 export const users = mysqlTable("users", {
   id: int("id").primaryKey().autoincrement(),
-  phone: varchar("phone", { length: 20 }).notNull().unique(),
+  // Телефон БОЛЬШЕ не обязателен: email-ветка авторизации (лендинг,
+  // как в ordersflow) создаёт админов без телефона. MySQL unique-индекс
+  // допускает несколько NULL, поэтому уникальность телефонных юзеров
+  // сохраняется. Телефонный вход просто не находит email-юзеров (phone NULL).
+  phone: varchar("phone", { length: 20 }).unique(),
   name: varchar("name", { length: 255 }),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: int("created_at").notNull().default(0),
@@ -40,6 +44,16 @@ export const users = mysqlTable("users", {
   // Dashboard для отображения «ФИО · Должность» и для сортировки
   // секций группы-по-сотруднику.
   position: varchar("position", { length: 120 }),
+  // ===== Email-авторизация (лендинг, ветка как в ordersflow) =====
+  // Заполняются только при регистрации через email-форму лендинга.
+  // Телефонные юзеры имеют здесь NULL. email уникален (несколько NULL ок).
+  email: varchar("email", { length: 255 }).unique(),
+  // scrypt-хэш в формате `scrypt$14$salt$hash` (см. server/crypto-password.ts).
+  passwordHash: varchar("password_hash", { length: 255 }),
+  // Одноразовый токен magic-ссылки входа (32 hex). NULL когда не активен.
+  magicToken: varchar("magic_token", { length: 64 }),
+  // Unix sec истечения magic-токена (TTL 7 дней). NULL когда нет токена.
+  magicTokenExpiresAt: int("magic_token_expires_at"),
 });
 
 export const workers = mysqlTable("workers", {
@@ -152,6 +166,37 @@ export const loginSchema = z.object({
     "Неверный формат номера телефона (формат: +7XXXXXXXXX или +7XXXXXXXXXX)"
   ),
 });
+
+// ===== Email-авторизация (лендинг) =====
+// Формат email валидируем мягко (min(1)); строгая проверка (regex + MX +
+// подсказка опечаток) — на сервере в server/email-validate.ts, чтобы
+// shared-схема не зависела от DNS и работала и на клиенте.
+export const startSchema = z.object({
+  email: z.string().min(1, "Введите email"),
+});
+
+export const loginEmailSchema = z.object({
+  email: z.string().min(1, "Введите email"),
+  password: z.string().min(1, "Введите пароль"),
+});
+
+export const recoverSchema = z.object({
+  email: z.string().min(1, "Введите email"),
+});
+
+export const updateEmailSchema = z.object({
+  email: z.string().min(1, "Введите email"),
+});
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, "Пароль должен быть не короче 6 символов").max(128),
+});
+
+export type StartInput = z.infer<typeof startSchema>;
+export type LoginEmailInput = z.infer<typeof loginEmailSchema>;
+export type UpdateEmailInput = z.infer<typeof updateEmailSchema>;
+export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 
 export const insertWorkerSchema = createInsertSchema(workers).pick({
   name: true,

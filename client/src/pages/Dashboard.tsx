@@ -235,7 +235,7 @@ export default function Dashboard() {
   const getUserName = (userId: number | null) => {
     if (!userId) return "Не назначен";
     const foundUser = users.find(u => u.id === userId);
-    return foundUser ? (foundUser.name || foundUser.phone) : "Неизвестный";
+    return foundUser ? (foundUser.name || foundUser.phone || foundUser.email || "Неизвестный") : "Неизвестный";
   };
 
   /**

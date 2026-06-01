@@ -11,7 +11,20 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { sendTaskCompletedEmail } from "./mail";
 import { isPublicHttpsUrl } from "./url-allowlist";
-import { registerCompanySchema, loginSchema, tasks } from "@shared/schema";
+import {
+  registerCompanySchema,
+  loginSchema,
+  tasks,
+  startSchema,
+  loginEmailSchema,
+  recoverSchema,
+  updateEmailSchema,
+  updatePasswordSchema,
+} from "@shared/schema";
+import { validateEmailForAuth, normalizeEmail } from "./email-validate";
+import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
+import { sendMail } from "./mailer";
+import { autoRegisterByEmail, MAGIC_TTL_SEC } from "./auto-register";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
@@ -204,10 +217,42 @@ async function getCompanyIdFromReq(req: Request): Promise<number | null> {
   return null;
 }
 
+// Поля юзера, которые НИКОГДА не должны уезжать клиенту. Появились с
+// email-авторизацией: db.select().from(users) тянет всю строку, и старые
+// res.json(user) начали бы отдавать хэш пароля и активный magic-токен.
+// Глобальный sanitizer ниже вырезает их из ЛЮБОГО JSON-ответа — не нужно
+// помнить про каждый из ~15 эндпоинтов, отдающих user, и про будущие.
+const SENSITIVE_USER_KEYS = new Set([
+  "passwordHash",
+  "magicToken",
+  "magicTokenExpiresAt",
+]);
+
+function stripSensitive(value: any): any {
+  if (Array.isArray(value)) return value.map(stripSensitive);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SENSITIVE_USER_KEYS.has(k)) continue;
+      out[k] = stripSensitive(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // Глобально оборачиваем res.json, чтобы вырезать чувствительные поля
+  // юзера (passwordHash / magicToken) из всех ответов. Ставим первым.
+  app.use((_req, res, next) => {
+    const orig = res.json.bind(res);
+    res.json = (body: any) => orig(stripSensitive(body));
+    next();
+  });
 
   // Rate-limit login и публичные регистрационные endpoint'ы. TasksFlow
   // авторизуется только по телефону (без пароля!) — без лимитера
@@ -224,6 +269,9 @@ export async function registerRoutes(
     message: { message: "Слишком много попыток входа. Подождите минуту." },
   });
   app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/start", authLimiter);
+  app.use("/api/auth/login-email", authLimiter);
+  app.use("/api/auth/recover", authLimiter);
   app.use("/api/companies/register", authLimiter);
   // /api/users/register — открытый endpoint регистрации воркера к
   // существующей компании. Без strict-лимита бот мог через
@@ -302,6 +350,179 @@ export async function registerRoutes(
       }
       res.json({ success: true });
     });
+  });
+
+  // ============ Email-авторизация (лендинг, ветка как в ordersflow) ============
+
+  // Единая точка входа: одно поле email.
+  //   новый email   → авторегистрация + СРАЗУ сессия + welcome-письмо → {exists:false}
+  //   существующий  → magic-login письмо → {exists:true} (клиент покажет шаг с паролем)
+  app.post("/api/auth/start", async (req, res) => {
+    try {
+      const { email } = startSchema.parse(req.body);
+      const check = await validateEmailForAuth(email);
+      if (!check.ok) {
+        return res.status(400).json({
+          message: check.error,
+          field: "email",
+          suggestion: check.suggestion,
+        });
+      }
+      const normalized = check.normalized;
+      const base = getPublicTasksflowBaseUrl(req);
+
+      const existing = await storage.getUserByEmail(normalized);
+      if (existing) {
+        const token = generateMagicToken();
+        const expiresAt = Math.floor(Date.now() / 1000) + MAGIC_TTL_SEC;
+        await storage.setMagicToken(existing.id, token, expiresAt);
+        await sendMail({
+          to: normalized,
+          kind: "login-link",
+          data: { email: normalized, magicUrl: `${base}/api/auth/magic/${token}` },
+        }).catch((e) => console.error("[auth/start] login-link mail failed", e));
+        return res.json({ exists: true });
+      }
+
+      // Новый email → авторегистрация + мгновенный автологин (на почту идти не надо)
+      const { user, password, magicToken } = await autoRegisterByEmail(normalized);
+      req.session.userId = user.id;
+      await sendMail({
+        to: normalized,
+        kind: "welcome",
+        data: { email: normalized, password, magicUrl: `${base}/api/auth/magic/${magicToken}` },
+      }).catch((e) => console.error("[auth/start] welcome mail failed", e));
+      return res.status(201).json({ exists: false, user });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error in /api/auth/start:", err);
+      res.status(500).json({ message: "Ошибка входа" });
+    }
+  });
+
+  // Вход по email + пароль (шаг «sent» в модалке для существующего email).
+  app.post("/api/auth/login-email", async (req, res) => {
+    try {
+      const { email, password } = loginEmailSchema.parse(req.body);
+      const normalized = normalizeEmail(email);
+      const user = await storage.getUserByEmail(normalized);
+      if (!user || !verifyPassword(password, user.passwordHash)) {
+        return res.status(401).json({ message: "Неверный email или пароль", field: "password" });
+      }
+      req.session.userId = user.id;
+      res.json(user);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error in /api/auth/login-email:", err);
+      res.status(500).json({ message: "Ошибка входа" });
+    }
+  });
+
+  // Сброс пароля: новый пароль + magic-токен на почту. Всегда 200 (анти-энумерация).
+  app.post("/api/auth/recover", async (req, res) => {
+    try {
+      const { email } = recoverSchema.parse(req.body);
+      const normalized = normalizeEmail(email);
+      const user = await storage.getUserByEmail(normalized);
+      if (user) {
+        const password = generatePassword(12);
+        await storage.updateUserPassword(user.id, hashPassword(password));
+        const token = generateMagicToken();
+        const expiresAt = Math.floor(Date.now() / 1000) + MAGIC_TTL_SEC;
+        await storage.setMagicToken(user.id, token, expiresAt);
+        const base = getPublicTasksflowBaseUrl(req);
+        await sendMail({
+          to: normalized,
+          kind: "recovery",
+          data: { email: normalized, password, magicUrl: `${base}/api/auth/magic/${token}` },
+        }).catch((e) => console.error("[auth/recover] mail failed", e));
+      }
+      res.json({ ok: true });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error in /api/auth/recover:", err);
+      res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
+  // Magic-ссылка из письма: одноразовый вход → сессия → редирект в кабинет.
+  app.get("/api/auth/magic/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      if (!/^[a-f0-9]{32}$/.test(token)) {
+        return res.redirect("/login?magic=invalid");
+      }
+      const user = await storage.findUserByMagicToken(token);
+      if (!user) {
+        return res.redirect("/login?magic=expired");
+      }
+      await storage.clearMagicToken(user.id);
+      req.session.userId = user.id;
+      res.redirect("/dashboard");
+    } catch (err: any) {
+      console.error("Error in /api/auth/magic:", err);
+      res.redirect("/login?magic=error");
+    }
+  });
+
+  // ===== Аккаунт пользователя (кабинет /account): смена email и пароля =====
+  app.put("/api/account/email", requireAuth, async (req, res) => {
+    try {
+      const { email } = updateEmailSchema.parse(req.body);
+      const check = await validateEmailForAuth(email);
+      if (!check.ok) {
+        return res.status(400).json({ message: check.error, field: "email", suggestion: check.suggestion });
+      }
+      const existing = await storage.getUserByEmail(check.normalized);
+      if (existing && existing.id !== req.session.userId) {
+        return res.status(400).json({ message: "Этот email уже используется", field: "email" });
+      }
+      const updated = await storage.updateUserEmail(req.session.userId!, check.normalized);
+      res.json(updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join(".") });
+      }
+      console.error("Error updating account email:", err);
+      res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
+  app.put("/api/account/password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = updatePasswordSchema.parse(req.body);
+      const user = await storage.getUserById(req.session.userId!);
+      if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+      // Если пароль уже задан — требуем подтвердить текущий.
+      if (user.passwordHash) {
+        if (!currentPassword || !verifyPassword(currentPassword, user.passwordHash)) {
+          return res.status(400).json({ message: "Текущий пароль неверный", field: "currentPassword" });
+        }
+      }
+      await storage.updateUserPassword(user.id, hashPassword(newPassword));
+      res.json({ ok: true });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join(".") });
+      }
+      console.error("Error updating account password:", err);
+      res.status(500).json({ message: "Ошибка" });
+    }
   });
 
   // Регистрация новой компании и администратора
@@ -583,10 +804,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Имя должно быть строкой" });
       }
 
-      const updated = await storage.updateUser(user.id, {
-        phone: user.phone,
-        name: normalizedName,
-      });
+      const updated = await storage.setUserName(user.id, normalizedName);
 
       res.json(updated);
     } catch (err: any) {

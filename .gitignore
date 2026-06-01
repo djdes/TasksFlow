@@ -10,3 +10,4 @@ logs/
 *.log
 .deploy-deps.sha256
 .claude/
+.dev-outbox/

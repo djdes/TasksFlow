@@ -31,7 +31,7 @@ import {
   type Invitation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, lte, asc, isNull, or, sql } from "drizzle-orm";
+import { eq, and, desc, lte, gte, asc, isNull, or, sql } from "drizzle-orm";
 import { normalizePhone } from "./phone-normalize";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
@@ -55,10 +55,28 @@ export interface IStorage {
   updateUser(id: number, user: UpdateUser): Promise<User | undefined>;
   setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined>;
   setUserPosition(id: number, position: string | null): Promise<User | undefined>;
+  setUserName(id: number, name: string | null): Promise<User | undefined>;
   updateUserBalance(id: number, amount: number): Promise<User | undefined>;
   resetUserBalance(id: number): Promise<User | undefined>;
   setManagedWorkers(userId: number, workerIds: number[]): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
+
+  // ===== Email-авторизация (лендинг) =====
+  getUserByEmail(email: string): Promise<User | undefined>;
+  /** Создаёт админа без телефона (email-ветка). phone остаётся NULL. */
+  createEmailUser(data: {
+    email: string;
+    passwordHash: string;
+    name?: string | null;
+    companyId: number;
+    isAdmin: boolean;
+  }): Promise<User>;
+  setMagicToken(id: number, token: string, expiresAt: number): Promise<void>;
+  clearMagicToken(id: number): Promise<void>;
+  /** Находит юзера по непросроченному magic-токену. */
+  findUserByMagicToken(token: string): Promise<User | undefined>;
+  updateUserEmail(id: number, email: string): Promise<User | undefined>;
+  updateUserPassword(id: number, passwordHash: string): Promise<User | undefined>;
 
   // Workers
   getWorkers(companyId?: number): Promise<Worker[]>;
@@ -221,6 +239,78 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  // ===================== EMAIL-АВТОРИЗАЦИЯ =====================
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const normalized = email.trim().toLowerCase();
+    const [user] = await db.select().from(users).where(eq(users.email, normalized));
+    return user || undefined;
+  }
+
+  /**
+   * Создание админа без телефона (email-ветка лендинга). phone=NULL,
+   * email/passwordHash заданы. Уникальность email — на DB-индексе.
+   */
+  async createEmailUser(data: {
+    email: string;
+    passwordHash: string;
+    name?: string | null;
+    companyId: number;
+    isAdmin: boolean;
+  }): Promise<User> {
+    const [result] = await db.insert(users).values({
+      phone: null,
+      name: data.name ?? null,
+      email: data.email.trim().toLowerCase(),
+      passwordHash: data.passwordHash,
+      isAdmin: data.isAdmin,
+      companyId: data.companyId,
+      createdAt: Math.floor(Date.now() / 1000),
+    });
+    const insertId = (result as any).insertId;
+    const [user] = await db.select().from(users).where(eq(users.id, insertId));
+    if (!user) throw new Error("Failed to create email user");
+    return user;
+  }
+
+  async setMagicToken(id: number, token: string, expiresAt: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ magicToken: token, magicTokenExpiresAt: expiresAt })
+      .where(eq(users.id, id));
+  }
+
+  async clearMagicToken(id: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ magicToken: null, magicTokenExpiresAt: null })
+      .where(eq(users.id, id));
+  }
+
+  async findUserByMagicToken(token: string): Promise<User | undefined> {
+    const now = Math.floor(Date.now() / 1000);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.magicToken, token), gte(users.magicTokenExpiresAt, now)));
+    return user || undefined;
+  }
+
+  async updateUserEmail(id: number, email: string): Promise<User | undefined> {
+    await db
+      .update(users)
+      .set({ email: email.trim().toLowerCase() })
+      .where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async updateUserPassword(id: number, passwordHash: string): Promise<User | undefined> {
+    await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
   async getAllUsers(companyId?: number): Promise<User[]> {
     if (companyId) {
       return await db.select().from(users).where(eq(users.companyId, companyId));
@@ -249,6 +339,17 @@ export class DatabaseStorage implements IStorage {
    */
   async setUserPosition(id: number, position: string | null): Promise<User | undefined> {
     await db.update(users).set({ position }).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  /**
+   * Точечное обновление имени (PUT /api/auth/me). Отдельно от updateUser,
+   * который требует phone — email-юзеры телефона не имеют, и
+   * normalizePhone(null) бы упал.
+   */
+  async setUserName(id: number, name: string | null): Promise<User | undefined> {
+    await db.update(users).set({ name }).where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }

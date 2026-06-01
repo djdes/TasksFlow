@@ -8,7 +8,10 @@
 
 type DisplayUser = {
   name?: string | null;
-  phone: string;
+  // phone теперь nullable: email-юзеры (ветка лендинга) телефона не имеют.
+  // Для них в качестве запасного отображения используем email.
+  phone?: string | null;
+  email?: string | null;
 };
 
 /**
@@ -22,8 +25,8 @@ type DisplayUser = {
  */
 export function getUserShortName(user: DisplayUser | null | undefined): string {
   if (!user) return "Не назначен";
-  const full = (user.name || user.phone).trim();
-  if (!full) return user.phone;
+  const full = (user.name || user.phone || user.email || "").trim();
+  if (!full) return "Не назначен";
   const parts = full.split(/\s+/);
   return parts.length >= 2 ? parts[parts.length - 1] : parts[0];
 }
@@ -39,7 +42,7 @@ export function getUserShortName(user: DisplayUser | null | undefined): string {
  */
 export function getUserInitials(user: DisplayUser | null | undefined): string {
   if (!user) return "?";
-  const name = (user.name || user.phone).trim();
+  const name = (user.name || user.phone || user.email || "").trim();
   if (!name) return "?";
   const parts = name.split(/\s+/);
   if (parts.length >= 2 && parts[0].length > 0 && parts[1].length > 0) {
