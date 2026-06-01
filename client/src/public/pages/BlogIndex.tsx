@@ -3,6 +3,7 @@ import { Footer } from "../components/Footer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
 import { CoverImage } from "../components/CoverImage";
+import { Pagination } from "../components/Pagination";
 import { CLUSTER_BY_KEY, clusterTitle } from "../clusters";
 import type { BlogIndexData } from "../types";
 
@@ -11,6 +12,10 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
   const clusters = data?.clusters ?? [];
   const featured = data?.featured ?? null;
   const active = data?.activeCluster ?? null;
+  const page = data?.page ?? 1;
+  const totalPages = data?.totalPages ?? 1;
+  const total = data?.total ?? posts.length;
+  const basePath = active ? `/blog/category/${active}` : "/blog";
 
   const crumbs = active
     ? [
@@ -77,6 +82,16 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
           </a>
         )}
 
+        {/* Счётчик + страница */}
+        {total > 0 && (
+          <div className="flex items-center justify-between mb-4 text-sm text-muted-foreground">
+            <span>
+              {active ? `${total} ст.` : `${total} статей`} в разделе
+            </span>
+            {totalPages > 1 && <span>Страница {page} из {totalPages}</span>}
+          </div>
+        )}
+
         {/* Сетка */}
         {posts.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -85,6 +100,8 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
         ) : (
           <p className="text-muted-foreground py-16 text-center">Статьи скоро появятся.</p>
         )}
+
+        <Pagination page={page} totalPages={totalPages} basePath={basePath} />
       </div>
       <Footer />
     </div>

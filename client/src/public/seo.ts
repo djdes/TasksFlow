@@ -34,15 +34,19 @@ interface HeadInput {
   ogImage?: string;
   type?: "website" | "article";
   jsonLdBlocks?: unknown[];
+  prev?: string;
+  next?: string;
 }
 
 function renderHead(input: HeadInput): string {
-  const { title, description, canonical, ogImage, type = "website", jsonLdBlocks = [] } = input;
+  const { title, description, canonical, ogImage, type = "website", jsonLdBlocks = [], prev, next } = input;
   const img = ogImage || `${new URL(canonical).origin}/og/default.svg`;
   return [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(description)}" />`,
     `<link rel="canonical" href="${esc(canonical)}" />`,
+    ...(prev ? [`<link rel="prev" href="${esc(prev)}" />`] : []),
+    ...(next ? [`<link rel="next" href="${esc(next)}" />`] : []),
     `<meta property="og:type" content="${type}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     `<meta property="og:title" content="${esc(title)}" />`,
@@ -137,15 +141,18 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
 
     case "blog-index": {
       const d = data as BlogIndexData;
-      const active = d?.activeCluster;
-      const title = active
-        ? `${clusterTitle(active)} — блог TasksFlow`
-        : "Блог TasksFlow — задачи, контроль персонала, кейсы";
+      const page = d?.page ?? 1;
+      const totalPages = d?.totalPages ?? 1;
+      const base = `${origin}/blog`;
+      const pageUrl = (n: number) => (n <= 1 ? base : `${base}?page=${n}`);
+      const baseTitle = "Блог TasksFlow — задачи, контроль персонала, кейсы";
       return renderHead({
-        title,
+        title: page > 1 ? `${baseTitle} — страница ${page}` : baseTitle,
         description:
           "Практические статьи о постановке и контроле задач, мотивации персонала и автоматизации выездных команд.",
-        canonical: active ? `${origin}/blog/category/${active}` : `${origin}/blog`,
+        canonical: pageUrl(page),
+        prev: page > 1 ? pageUrl(page - 1) : undefined,
+        next: page < totalPages ? pageUrl(page + 1) : undefined,
         jsonLdBlocks: [
           breadcrumbLd([
             { name: "Главная", url: `${origin}/` },
@@ -157,10 +164,18 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
 
     case "blog-category": {
       const key = route.params.cluster;
+      const d = data as BlogIndexData;
+      const page = d?.page ?? 1;
+      const totalPages = d?.totalPages ?? 1;
+      const base = `${origin}/blog/category/${key}`;
+      const pageUrl = (n: number) => (n <= 1 ? base : `${base}?page=${n}`);
+      const baseTitle = `${clusterTitle(key)} — блог TasksFlow`;
       return renderHead({
-        title: `${clusterTitle(key)} — блог TasksFlow`,
+        title: page > 1 ? `${baseTitle} — страница ${page}` : baseTitle,
         description: `Статьи раздела «${clusterTitle(key)}» в блоге TasksFlow.`,
-        canonical: `${origin}/blog/category/${key}`,
+        canonical: pageUrl(page),
+        prev: page > 1 ? pageUrl(page - 1) : undefined,
+        next: page < totalPages ? pageUrl(page + 1) : undefined,
         jsonLdBlocks: [
           breadcrumbLd([
             { name: "Главная", url: `${origin}/` },

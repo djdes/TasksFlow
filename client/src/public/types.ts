@@ -48,6 +48,9 @@ export interface BlogIndexData {
   featured: PostMeta | null;
   activeCluster: string | null;
   total: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
 }
 
 export interface ArticleData {

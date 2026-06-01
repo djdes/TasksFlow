@@ -64,7 +64,11 @@ async function renderAndSend(
   const pathname = req.path;
   const matched = ssr.matchRoute(pathname);
   const origin = getPublicTasksflowBaseUrl(req);
-  const data = await loadRouteData(matched.key, matched.params);
+  // Пагинация блога — через ?page=N. Прокидываем в loadRouteData вместе
+  // с параметрами роута (cluster/slug). render() данные уже получает
+  // готовыми, так что номер страницы ему не нужен.
+  const pageParam = typeof req.query.page === "string" ? req.query.page : "1";
+  const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam });
   const { appHtml, head } = ssr.render(pathname, data, origin);
   const dataScript = `<script>window.__SSR_DATA__=${safeJson(data)}</script>` + analyticsSnippet();
   const html = template
