@@ -26,7 +26,7 @@ describe("SSR render", () => {
   it("лендинг → h1 + title + JSON-LD + canonical", () => {
     const r = render("/", { featuredPosts: [], totalPosts: 0 }, ORIGIN);
     expect(r.routeKey).toBe("landing");
-    expect(r.appHtml).toContain("Задачи под контролем");
+    expect(r.appHtml).toContain("Контролируйте смену");
     expect(r.head).toContain("<title>");
     expect(r.head).toContain("application/ld+json");
     expect(r.head).toContain(`${ORIGIN}/`);

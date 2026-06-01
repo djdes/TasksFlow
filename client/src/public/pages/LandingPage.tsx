@@ -1,6 +1,6 @@
 import {
-  ClipboardCheck, Camera, Repeat, Wallet, ShieldCheck, Users, BarChart3,
-  CheckCircle2, ArrowRight, Smartphone, Bell, Star, Sparkles,
+  Check, Camera, ClipboardCheck, Repeat, Wallet, ShieldCheck, BarChart3,
+  Smartphone, CheckCircle2, ArrowRight, Star, Sparkles,
 } from "lucide-react";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
@@ -19,49 +19,111 @@ function Aurora({ orbs }: { orbs: Array<{ cls: string; style: React.CSSPropertie
   );
 }
 
-const FEATURES = [
-  { icon: ClipboardCheck, title: "Задачи и чек-листы", text: "Ставьте задачи сотрудникам, разбивайте на чек-листы и регламенты. Видно, что сделано, а что нет." },
-  { icon: Camera, title: "Фотоотчёты", text: "Требуйте фото выполнения. Сотрудник прикладывает снимок — вы проверяете не выходя с объекта." },
-  { icon: Repeat, title: "Повторяющиеся задачи", text: "Ежедневные и еженедельные задачи сбрасываются автоматически. Рутина — на автопилоте." },
-  { icon: Wallet, title: "Бонусы и штрафы", text: "Начисляйте премии за выполнение и KPI. Прозрачная мотивация прямо в задачах." },
-  { icon: ShieldCheck, title: "Двухстадийная проверка", text: "Сотрудник сдал — ответственный подтвердил. Премия начисляется только после проверки." },
-  { icon: BarChart3, title: "Контроль и аналитика", text: "Кто, что и когда выполнил. Полная картина по сотрудникам и объектам в реальном времени." },
-];
+/** Наглядный макет продукта: список задач на смену с фото и премией. */
+function ProductMock() {
+  const items = [
+    { t: "Открыть смену", done: true },
+    { t: "Протереть витрину", photo: true },
+    { t: "Выложить товар по полкам", done: true },
+    { t: "Проверить ценники", photo: true },
+  ];
+  return (
+    <div className="relative mx-auto w-full max-w-sm">
+      <div className="absolute -inset-8 -z-10 rounded-[2.5rem] bg-primary/20 blur-3xl" aria-hidden="true" />
+      <div className="float-card rounded-3xl border border-border bg-card soft-card p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-xs text-muted-foreground">Магазин на Ленина</div>
+            <div className="font-extrabold text-lg">Задачи на сегодня</div>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary grid place-items-center text-sm font-bold">М</div>
+        </div>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+            <div className="h-full w-1/2 bg-primary rounded-full" />
+          </div>
+          <span className="text-xs font-medium text-muted-foreground">2 из 4</span>
+        </div>
+        <ul className="space-y-2.5">
+          {items.map((it, i) => (
+            <li key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background px-3 py-2.5">
+              <span
+                className={`w-5 h-5 rounded-md grid place-items-center shrink-0 ${
+                  it.done ? "tick bg-primary text-primary-foreground" : "border-2 border-muted-foreground/30"
+                }`}
+              >
+                {it.done && <Check className="w-3.5 h-3.5" />}
+              </span>
+              <span className={`text-sm flex-1 ${it.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                {it.t}
+              </span>
+              {it.photo && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  <Camera className="w-3 h-3" /> фото
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+        <button className="mt-4 w-full rounded-xl bg-primary text-primary-foreground font-semibold py-2.5 text-sm">
+          Отправить отчёт
+        </button>
+      </div>
+      <div className="absolute -right-3 -bottom-4 sm:-right-7 rounded-2xl border border-border bg-card soft-card px-3.5 py-2.5 flex items-center gap-2">
+        <span className="w-7 h-7 rounded-full bg-green-500/15 text-green-600 dark:text-green-400 grid place-items-center">
+          <Check className="w-4 h-4" />
+        </span>
+        <div className="leading-tight">
+          <div className="text-[11px] text-muted-foreground">Премия начислена</div>
+          <div className="text-sm font-bold">+300 ₽</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const INDUSTRIES = ["Клининг", "Общепит", "Розница", "Сервис и ремонт", "Логистика", "Охрана", "Производство"];
 
 const STEPS = [
-  { icon: Smartphone, title: "Зарегистрируйтесь за секунду", text: "Введите телефон или email — аккаунт создан, вы сразу в кабинете." },
-  { icon: Users, title: "Добавьте сотрудников", text: "Пригласите команду по QR-коду или телефону. Они входят в один тап без паролей." },
-  { icon: ClipboardCheck, title: "Поставьте задачи", text: "Создайте задачи с чек-листами, фото и премиями. Назначьте исполнителей и проверяющих." },
-  { icon: Bell, title: "Контролируйте", text: "Получайте фотоотчёты и видите прогресс. Подтверждайте выполнение и начисляйте бонусы." },
+  { icon: ClipboardCheck, title: "1. Поставьте задачи", text: "Напишите, что нужно сделать. Добавьте чек-лист и фото-пример — за пару минут." },
+  { icon: Smartphone, title: "2. Сотрудник выполняет", text: "Видит список на день в телефоне. Отмечает «готово» и прикладывает фото." },
+  { icon: ShieldCheck, title: "3. Вы контролируете", text: "Видите, что и как сделано. Подтверждаете и начисляете премию." },
 ];
 
-const INDUSTRIES = [
-  { title: "Клининг", text: "Уборка по чек-листам, фото до/после, контроль выездных бригад." },
-  { title: "Общепит и розница", text: "Открытие/закрытие смены, санитария, выкладка — всё под контролем." },
-  { title: "Сервис и ремонт", text: "Выездные мастера, заявки, фотофиксация работ на объекте." },
-  { title: "Охрана и эксплуатация", text: "Обходы, регламенты, отметки о выполнении в срок." },
-  { title: "Логистика", text: "Задачи водителям и складу, повторяющиеся маршруты и проверки." },
-  { title: "Производство", text: "Контроль производственных процессов и дисциплины смен." },
+const FEATURES = [
+  { icon: ClipboardCheck, title: "Задачи и чек-листы", text: "Понятный список дел на смену для каждого сотрудника." },
+  { icon: Camera, title: "Фото-отчёты", text: "Сделано — значит есть фото. Никаких «сделал, честно»." },
+  { icon: Repeat, title: "Повторяющиеся задачи", text: "Ежедневная рутина ставится сама, без напоминаний." },
+  { icon: Wallet, title: "Премии за результат", text: "Прозрачная мотивация: бонус приходит за выполненное." },
+  { icon: ShieldCheck, title: "Проверка «сдал — принял»", text: "Старший подтверждает работу. Премия — только после проверки." },
+  { icon: BarChart3, title: "Отчёты по людям", text: "Видно, кто молодец, а кто отстаёт. В реальном времени." },
 ];
 
-const COMPARISON = [
-  { them: "Мессенджеры (WhatsApp/Telegram)", us: "Задачи теряются в чате", usText: "Структура, статусы, фотоотчёты и история по каждому" },
-  { them: "Бумага и Excel", us: "Нет контроля в реальном времени", usText: "Онлайн-картина по всем сотрудникам и объектам" },
-  { them: "Тяжёлые CRM/таск-трекеры", us: "Долгое внедрение, не для «полевых»", usText: "Запуск за день, простой вход для линейного персонала" },
+const BEFORE = [
+  "Задачи теряются в чатах и на словах",
+  "«Сделал» — без доказательств",
+  "Рутину забывают делать",
+  "Не видно, кто отстаёт",
+];
+const AFTER = [
+  "Все задачи — в одном списке",
+  "Фото подтверждает выполнение",
+  "Повторяющиеся ставятся сами",
+  "Видно каждого в реальном времени",
 ];
 
 const PRICING = [
-  { name: "Старт", price: "0 ₽", note: "заглушка — поправите", features: ["До 5 сотрудников", "Задачи и чек-листы", "Фотоотчёты", "Email-поддержка"], cta: "Начать бесплатно", highlight: false },
-  { name: "Команда", price: "990 ₽", note: "/мес · заглушка", features: ["До 30 сотрудников", "Повторяющиеся задачи", "Бонусы и KPI", "Двухстадийная проверка", "QR-приглашения"], cta: "Попробовать", highlight: true },
-  { name: "Бизнес", price: "по запросу", note: "заглушка", features: ["Без лимита сотрудников", "Интеграции и API", "Приоритетная поддержка", "Онбординг команды"], cta: "Обсудить", highlight: false },
+  { name: "Старт", price: "0 ₽", note: "навсегда", features: ["До 5 сотрудников", "Задачи и чек-листы", "Фото-отчёты"], cta: "Начать бесплатно", highlight: false },
+  { name: "Команда", price: "990 ₽", note: "в месяц · примерно", features: ["До 30 сотрудников", "Повторяющиеся задачи", "Премии и проверка", "Приглашение по QR"], cta: "Попробовать", highlight: true },
+  { name: "Бизнес", price: "по запросу", note: "для сети точек", features: ["Без лимита сотрудников", "Интеграции и API", "Помощь с запуском"], cta: "Обсудить", highlight: false },
 ];
 
 const FAQ = [
-  { q: "Нужно ли что-то устанавливать?", a: "Нет. TasksFlow работает в браузере и на телефоне. Регистрация занимает секунду — введите телефон или email." },
-  { q: "Подходит ли для выездных сотрудников?", a: "Да, продукт создан именно для линейного и выездного персонала: простой вход, фотоотчёты с телефона, понятный список задач на день." },
-  { q: "Как сотрудники входят в систему?", a: "По телефону без пароля или по QR-приглашению от руководителя. Это занимает один тап." },
-  { q: "Можно ли контролировать выполнение по фото?", a: "Да. Для задачи можно включить обязательный фотоотчёт — сотрудник прикладывает снимок, а вы проверяете и подтверждаете." },
-  { q: "Сколько стоит?", a: "Есть бесплатный тариф для небольших команд. Платные тарифы на странице «Тарифы» (сейчас это заглушка — финальные цены появятся позже)." },
+  { q: "Нужно ли что-то устанавливать?", a: "Нет. TasksFlow открывается в браузере и на телефоне. Регистрация — за секунду: введите телефон или email." },
+  { q: "А сотрудникам сложно разобраться?", a: "Нет. Сотрудник видит простой список задач на день, отмечает «готово» и прикладывает фото. Учить никого не нужно." },
+  { q: "Как сотрудники входят?", a: "По телефону без пароля или по QR-коду от руководителя — в один тап." },
+  { q: "Подходит для выездных бригад?", a: "Да, для этого и создано: фото-отчёты с объекта, задачи на день, контроль без звонков." },
+  { q: "Сколько стоит?", a: "Есть бесплатный тариф для небольших команд. Платные тарифы — на странице «Тарифы» (цифры пока примерные)." },
 ];
 
 export function LandingPage({ data }: { data: LandingData | null }) {
@@ -70,175 +132,167 @@ export function LandingPage({ data }: { data: LandingData | null }) {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Nav onLanding />
 
-      {/* Hero */}
+      {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <Aurora
           orbs={[
-            { cls: "orb-a", style: { width: 560, height: 560, left: -140, top: -160, background: "radial-gradient(circle, hsl(var(--primary)/0.6), transparent 70%)" } },
-            { cls: "orb-b", style: { width: 480, height: 480, right: -120, top: 20, background: "radial-gradient(circle, rgba(139,92,246,0.55), transparent 70%)" } },
-            { cls: "orb-c", style: { width: 420, height: 420, left: "38%", top: 200, background: "radial-gradient(circle, rgba(34,211,238,0.4), transparent 70%)" } },
+            { cls: "orb-a", style: { width: 560, height: 560, left: -160, top: -180, background: "radial-gradient(circle, hsl(var(--primary)/0.55), transparent 70%)" } },
+            { cls: "orb-b", style: { width: 480, height: 480, right: -140, top: -40, background: "radial-gradient(circle, rgba(139,92,246,0.5), transparent 70%)" } },
           ]}
         />
         <div className="absolute inset-0 -z-10 bg-grid" aria-hidden="true" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-background/30 to-background" aria-hidden="true" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-background/20 to-background" aria-hidden="true" />
 
-        <div className="max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
-          <div data-reveal className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-4 py-1.5 text-xs font-medium text-muted-foreground mb-6">
-            <Star className="w-3.5 h-3.5 text-primary" /> Контроль выездных и линейных команд
+        <div className="max-w-6xl mx-auto px-4 pt-16 pb-20 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          {/* Текст */}
+          <div className="text-center lg:text-left">
+            <div data-reveal className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-4 py-1.5 text-xs font-semibold text-muted-foreground mb-6">
+              <Star className="w-3.5 h-3.5 text-primary" /> Контроль выездных и линейных команд
+            </div>
+            <h1 data-reveal style={{ transitionDelay: "70ms" }} className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
+              Ставьте задачи.<br />
+              Получайте <span className="text-gradient">фото</span>.<br />
+              Контролируйте смену.
+            </h1>
+            <p data-reveal style={{ transitionDelay: "140ms" }} className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
+              TasksFlow — простой контроль работы сотрудников «в полях»: задачи,
+              чек-листы, фото-отчёты и премии. Запуск за день, без обучения.
+            </p>
+            <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-md mx-auto lg:mx-0">
+              <AuthForm layout="row" />
+            </div>
+            <div data-reveal style={{ transitionDelay: "280ms" }} className="mt-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Бесплатно для старта</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Без установки</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Вход в один тап</span>
+            </div>
           </div>
-          <h1 data-reveal style={{ transitionDelay: "70ms" }} className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.05]">
-            Задачи под контролем.<br />
-            <span className="text-gradient">Сотрудники — на результат.</span>
-          </h1>
-          <p data-reveal style={{ transitionDelay: "140ms" }} className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-            TasksFlow — это постановка задач, чек-листы, фотоотчёты, повторяющиеся задачи
-            и бонусы для выездных и линейных сотрудников. Запуск за день.
-          </p>
-          <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-xl mx-auto">
-            <AuthForm layout="row" />
+          {/* Макет */}
+          <div data-reveal style={{ transitionDelay: "160ms" }} className="lg:pl-6">
+            <ProductMock />
           </div>
-          <div data-reveal style={{ transitionDelay: "280ms" }} className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Бесплатно для старта</span>
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Без установки</span>
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Запуск за день</span>
+        </div>
+
+        {/* Отрасли — простой ряд */}
+        <div className="max-w-6xl mx-auto px-4 pb-10">
+          <div data-reveal className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
+            <span className="text-muted-foreground">Работает в:</span>
+            {INDUSTRIES.map((it) => (
+              <span key={it} className="rounded-full border border-border bg-card px-3 py-1 font-medium">{it}</span>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Боль/решение */}
-      <section className="max-w-5xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div data-reveal className="rounded-2xl border border-border bg-card p-7 hover-lift">
-            <h2 className="text-xl font-bold mb-4">Знакомо?</h2>
-            <ul className="space-y-3 text-muted-foreground">
-              {["Задачи теряются в переписке и на словах", "Не видно, кто и что реально сделал", "Сотрудники «забывают» рутинные задачи", "Нет доказательств выполнения — только «сделал, честно»"].map((t) => (
-                <li key={t} className="flex gap-3"><span className="text-destructive mt-1">✕</span><span>{t}</span></li>
-              ))}
-            </ul>
+      {/* ===== Как это работает ===== */}
+      <section id="how" className="relative bg-muted/30 border-y border-border overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-dots opacity-60" aria-hidden="true" />
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Три простых шага</h2>
+            <p className="mt-3 text-muted-foreground text-lg">От «поставил задачу» до «вижу результат» — за один день.</p>
           </div>
-          <div data-reveal style={{ transitionDelay: "100ms" }} className="relative rounded-2xl border border-primary/30 bg-primary/5 p-7 overflow-hidden hover-lift">
-            <div className="orb orb-b" aria-hidden="true" style={{ width: 240, height: 240, right: -80, top: -80, background: "radial-gradient(circle, hsl(var(--primary)/0.35), transparent 70%)", filter: "blur(50px)" }} />
-            <h2 className="relative text-xl font-bold mb-4">С TasksFlow</h2>
-            <ul className="relative space-y-3">
-              {["Каждая задача — со статусом, сроком и исполнителем", "Фотоотчёт подтверждает выполнение", "Повторяющиеся задачи ставятся сами", "Прозрачная мотивация: бонусы за результат"].map((t) => (
-                <li key={t} className="flex gap-3"><CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" /><span>{t}</span></li>
-              ))}
-            </ul>
+          <div className="grid md:grid-cols-3 gap-6">
+            {STEPS.map((s, i) => (
+              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 90}ms` }} className="group rounded-3xl border border-border bg-card soft-card p-7 hover-lift">
+                <div className="icon-glow w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-5">
+                  <s.icon className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{s.title}</h3>
+                <p className="text-muted-foreground">{s.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Возможности */}
-      <section id="features" className="max-w-6xl mx-auto px-4 py-16">
-        <div data-reveal className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold">Всё для <span className="text-gradient">контроля задач</span></h2>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Инструменты, которые реально используют — без лишней сложности.</p>
+      {/* ===== Возможности ===== */}
+      <section id="features" className="max-w-6xl mx-auto px-4 py-20">
+        <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-extrabold">Всё для <span className="text-gradient">контроля задач</span></h2>
+          <p className="mt-3 text-muted-foreground text-lg">Понятные инструменты — без лишней сложности.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURES.map((f, i) => (
             <div key={f.title} data-reveal style={{ transitionDelay: `${(i % 3) * 80}ms` }} className="group rounded-2xl border border-border bg-card p-6 hover-lift">
-              <div className="icon-glow w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <div className="icon-glow w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
                 <f.icon className="w-6 h-6" />
               </div>
-              <h3 className="font-semibold mb-2">{f.title}</h3>
-              <p className="text-sm text-muted-foreground">{f.text}</p>
+              <h3 className="font-bold text-lg mb-1.5">{f.title}</h3>
+              <p className="text-muted-foreground">{f.text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Как работает */}
-      <section id="how" className="relative bg-muted/30 border-y border-border overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-dots opacity-60" aria-hidden="true" />
-        <div className="max-w-6xl mx-auto px-4 py-16">
-          <div data-reveal className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold">Как это работает</h2>
-            <p className="mt-3 text-muted-foreground">Четыре шага от регистрации до контроля.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {STEPS.map((s, i) => (
-              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 80}ms` }} className="group relative rounded-2xl border border-border bg-card p-6 hover-lift">
-                <div className="text-5xl font-extrabold text-primary/15 absolute top-3 right-4">{i + 1}</div>
-                <div className="icon-glow w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
-                  <s.icon className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold mb-2">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Отрасли */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div data-reveal className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold">Для кого</h2>
-          <p className="mt-3 text-muted-foreground">TasksFlow закрывает контроль задач в любой «полевой» команде.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {INDUSTRIES.map((it, i) => (
-            <div key={it.title} data-reveal style={{ transitionDelay: `${(i % 3) * 80}ms` }} className="rounded-2xl border border-border bg-card p-6 hover-lift">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <span className="w-1.5 h-5 rounded-full bg-primary/70" /> {it.title}
-              </h3>
-              <p className="text-sm text-muted-foreground">{it.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Сравнение */}
+      {/* ===== Было / Стало ===== */}
       <section className="relative bg-muted/30 border-y border-border overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-grid opacity-50" aria-hidden="true" />
-        <div className="max-w-5xl mx-auto px-4 py-16">
-          <div data-reveal className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold">Почему не «как раньше»</h2>
+        <div className="max-w-5xl mx-auto px-4 py-20">
+          <div data-reveal className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Почувствуйте разницу</h2>
           </div>
-          <div className="space-y-4">
-            {COMPARISON.map((c, i) => (
-              <div key={c.them} data-reveal style={{ transitionDelay: `${i * 70}ms` }} className="grid md:grid-cols-2 gap-4 rounded-2xl border border-border bg-card p-6 hover-lift">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">{c.them}</div>
-                  <div className="text-destructive flex gap-2"><span>✕</span><span>{c.us}</span></div>
-                </div>
-                <div className="md:border-l md:border-border md:pl-6">
-                  <div className="text-sm font-medium text-primary mb-1">TasksFlow</div>
-                  <div className="flex gap-2"><CheckCircle2 className="w-5 h-5 text-primary shrink-0" /><span>{c.usText}</span></div>
-                </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div data-reveal className="rounded-3xl border border-border bg-card p-7">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-5">
+                <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/40" /> Без TasksFlow
               </div>
-            ))}
+              <ul className="space-y-3.5">
+                {BEFORE.map((t) => (
+                  <li key={t} className="flex gap-3 text-muted-foreground">
+                    <span className="mt-0.5 w-5 h-5 rounded-full bg-destructive/10 text-destructive grid place-items-center text-xs shrink-0">✕</span>
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div data-reveal style={{ transitionDelay: "100ms" }} className="relative rounded-3xl border-2 border-primary/30 bg-primary/5 p-7 overflow-hidden soft-card">
+              <div className="orb orb-b" aria-hidden="true" style={{ width: 220, height: 220, right: -70, top: -70, background: "radial-gradient(circle, hsl(var(--primary)/0.35), transparent 70%)", filter: "blur(45px)" }} />
+              <div className="relative inline-flex items-center gap-2 text-sm font-semibold text-primary mb-5">
+                <Sparkles className="w-4 h-4" /> С TasksFlow
+              </div>
+              <ul className="relative space-y-3.5">
+                {AFTER.map((t) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="mt-0.5 w-5 h-5 rounded-full bg-primary text-primary-foreground grid place-items-center shrink-0"><Check className="w-3.5 h-3.5" /></span>
+                    <span className="font-medium">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Тарифы */}
-      <section id="pricing" className="max-w-6xl mx-auto px-4 py-16">
-        <div data-reveal className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold">Тарифы</h2>
-          <p className="mt-3 text-muted-foreground">Цифры пока примерные — финальные тарифы появятся позже.</p>
+      {/* ===== Тарифы ===== */}
+      <section id="pricing" className="max-w-6xl mx-auto px-4 py-20">
+        <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-extrabold">Простые тарифы</h2>
+          <p className="mt-3 text-muted-foreground text-lg">Начните бесплатно. Платите, когда вырастете.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 items-start">
           {PRICING.map((p, i) => (
             <div
               key={p.name}
               data-reveal
               style={{ transitionDelay: `${i * 90}ms` }}
-              className={`relative rounded-2xl border p-7 flex flex-col overflow-hidden ${p.highlight ? "border-primary ring-2 ring-primary/30 bg-card md:-translate-y-2 shadow-xl shadow-primary/10" : "border-border bg-card hover-lift"}`}
+              className={`relative rounded-3xl border p-7 flex flex-col overflow-hidden ${p.highlight ? "border-2 border-primary bg-card soft-card md:-translate-y-3" : "border-border bg-card hover-lift"}`}
             >
               {p.highlight && (
-                <div className="orb orb-a" aria-hidden="true" style={{ width: 260, height: 260, right: -90, top: -90, background: "radial-gradient(circle, hsl(var(--primary)/0.4), transparent 70%)", filter: "blur(50px)" }} />
+                <div className="orb orb-a" aria-hidden="true" style={{ width: 240, height: 240, right: -80, top: -80, background: "radial-gradient(circle, hsl(var(--primary)/0.35), transparent 70%)", filter: "blur(45px)" }} />
               )}
-              {p.highlight && <div className="relative inline-flex items-center gap-1 text-xs font-semibold text-primary mb-2"><Sparkles className="w-3.5 h-3.5" /> Популярный</div>}
-              <h3 className="relative font-bold text-lg">{p.name}</h3>
-              <div className="relative mt-2 mb-1 text-3xl font-extrabold">{p.price}</div>
-              <div className="relative text-xs text-muted-foreground mb-5">{p.note}</div>
-              <ul className="relative space-y-2 text-sm flex-1">
+              {p.highlight && <div className="relative inline-flex items-center gap-1 text-xs font-bold text-primary mb-2"><Sparkles className="w-3.5 h-3.5" /> Популярный</div>}
+              <h3 className="relative font-bold text-xl">{p.name}</h3>
+              <div className="relative mt-3 flex items-end gap-1">
+                <span className="text-4xl font-extrabold">{p.price}</span>
+              </div>
+              <div className="relative text-sm text-muted-foreground mb-6">{p.note}</div>
+              <ul className="relative space-y-3 text-sm flex-1">
                 {p.features.map((f) => (
-                  <li key={f} className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" /><span>{f}</span></li>
+                  <li key={f} className="flex gap-2.5"><CheckCircle2 className="w-5 h-5 text-primary mt-px shrink-0" /><span>{f}</span></li>
                 ))}
               </ul>
-              <a href="/" className={`relative mt-6 inline-flex justify-center rounded-full px-5 py-2.5 text-sm font-semibold ${p.highlight ? "bg-primary text-primary-foreground shine" : "border border-border hover:bg-muted"}`}>
+              <a href="/" className={`relative mt-7 inline-flex justify-center rounded-full px-5 py-3 text-sm font-bold ${p.highlight ? "bg-primary text-primary-foreground shine" : "border border-border hover:bg-muted"}`}>
                 {p.cta}
               </a>
             </div>
@@ -246,16 +300,16 @@ export function LandingPage({ data }: { data: LandingData | null }) {
         </div>
       </section>
 
-      {/* Блог-тизер */}
+      {/* ===== Блог-тизер ===== */}
       {featured.length > 0 && (
         <section className="bg-muted/30 border-y border-border">
-          <div className="max-w-6xl mx-auto px-4 py-16">
-            <div data-reveal className="flex items-end justify-between mb-8">
+          <div className="max-w-6xl mx-auto px-4 py-20">
+            <div data-reveal className="flex items-end justify-between mb-10">
               <div>
-                <h2 className="text-3xl font-extrabold">Из блога</h2>
-                <p className="mt-2 text-muted-foreground">Практика контроля задач и мотивации персонала.</p>
+                <h2 className="text-3xl sm:text-4xl font-extrabold">Полезное в блоге</h2>
+                <p className="mt-3 text-muted-foreground text-lg">Как наводить порядок в задачах и мотивировать команду.</p>
               </div>
-              <a href="/blog" className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              <a href="/blog" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
                 Все статьи <ArrowRight className="w-4 h-4" />
               </a>
             </div>
@@ -266,32 +320,32 @@ export function LandingPage({ data }: { data: LandingData | null }) {
         </section>
       )}
 
-      {/* FAQ */}
-      <section className="max-w-3xl mx-auto px-4 py-16">
-        <div data-reveal className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold">Частые вопросы</h2>
+      {/* ===== FAQ ===== */}
+      <section className="max-w-3xl mx-auto px-4 py-20">
+        <div data-reveal className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-extrabold">Частые вопросы</h2>
         </div>
         <div className="space-y-3">
           {FAQ.map((f, i) => (
-            <details key={f.q} data-reveal style={{ transitionDelay: `${i * 50}ms` }} className="group rounded-xl border border-border bg-card p-5 open:border-primary/30 transition-colors">
-              <summary className="font-semibold cursor-pointer list-none flex justify-between items-center">
+            <details key={f.q} data-reveal style={{ transitionDelay: `${i * 50}ms` }} className="group rounded-2xl border border-border bg-card p-5 open:border-primary/40 transition-colors">
+              <summary className="font-bold cursor-pointer list-none flex justify-between items-center gap-4">
                 {f.q}
-                <span className="text-primary text-xl leading-none group-open:rotate-45 transition-transform">+</span>
+                <span className="text-primary text-2xl leading-none group-open:rotate-45 transition-transform shrink-0">+</span>
               </summary>
-              <p className="mt-3 text-sm text-muted-foreground">{f.a}</p>
+              <p className="mt-3 text-muted-foreground">{f.a}</p>
             </details>
           ))}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="max-w-4xl mx-auto px-4 pb-20">
-        <div data-reveal className="relative rounded-3xl bg-primary text-primary-foreground p-10 text-center overflow-hidden">
-          <div className="orb" aria-hidden="true" style={{ width: 360, height: 360, left: -100, top: -120, background: "radial-gradient(circle, rgba(255,255,255,0.4), transparent 70%)", filter: "blur(60px)", opacity: 0.5 }} />
-          <div className="orb orb-c" aria-hidden="true" style={{ width: 320, height: 320, right: -90, bottom: -120, background: "radial-gradient(circle, rgba(34,211,238,0.5), transparent 70%)", filter: "blur(60px)", opacity: 0.5 }} />
-          <h2 className="relative text-3xl font-extrabold mb-3">Наведите порядок в задачах сегодня</h2>
-          <p className="relative opacity-90 mb-7 max-w-xl mx-auto">Регистрация за секунду — по телефону или email. Бесплатно для старта, без установки.</p>
-          <div className="relative max-w-md mx-auto bg-card text-foreground rounded-2xl p-5 shadow-2xl">
+      {/* ===== CTA ===== */}
+      <section className="max-w-4xl mx-auto px-4 pb-24">
+        <div data-reveal className="relative rounded-[2rem] bg-primary text-primary-foreground p-10 sm:p-14 text-center overflow-hidden">
+          <div className="orb" aria-hidden="true" style={{ width: 380, height: 380, left: -110, top: -130, background: "radial-gradient(circle, rgba(255,255,255,0.4), transparent 70%)", filter: "blur(60px)", opacity: 0.5 }} />
+          <div className="orb orb-c" aria-hidden="true" style={{ width: 340, height: 340, right: -100, bottom: -130, background: "radial-gradient(circle, rgba(34,211,238,0.5), transparent 70%)", filter: "blur(60px)", opacity: 0.5 }} />
+          <h2 className="relative text-3xl sm:text-4xl font-extrabold mb-3">Наведите порядок уже сегодня</h2>
+          <p className="relative opacity-90 mb-8 max-w-xl mx-auto text-lg">Регистрация за секунду — по телефону или email. Бесплатно для старта.</p>
+          <div className="relative max-w-md mx-auto bg-card text-foreground rounded-2xl p-5 soft-card">
             <AuthForm layout="stacked" />
           </div>
         </div>

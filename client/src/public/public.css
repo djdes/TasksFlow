@@ -139,3 +139,41 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent);
 }
+
+/* ---------- Шрифт публичной части (кабинет не трогаем) ---------- */
+#public-root {
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+#public-root h1,
+#public-root h2,
+#public-root h3 {
+  letter-spacing: -0.022em;
+}
+
+/* ---------- Мягкая карточка с тёплой тенью ---------- */
+.soft-card {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 14px 36px -14px rgba(16, 24, 40, 0.14);
+}
+.dark .soft-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 44px -16px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Лёгкое «парение» макета продукта ---------- */
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float-card { animation: floatCard 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .float-card { animation: none; }
+}
+
+/* ---------- Появление галочки в чек-листе ---------- */
+@keyframes tick {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.reveal-ready [data-reveal].in .tick { animation: tick 0.45s ease both; }
