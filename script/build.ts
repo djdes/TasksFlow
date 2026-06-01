@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import path from "path";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -35,8 +36,35 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
-  console.log("building client...");
-  await viteBuild();
+  const clientRoot = path.resolve("client");
+
+  // Клиент: две HTML-точки входа — SPA-кабинет (index.html → main.tsx) и
+  // публичная часть (public.html → entry-client.tsx). Vite положит обе в
+  // dist/public с общими хешированными чанками.
+  console.log("building client (SPA + public)...");
+  await viteBuild({
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.join(clientRoot, "index.html"),
+          public: path.join(clientRoot, "public.html"),
+        },
+      },
+    },
+  });
+
+  // SSR-бандл публичной части (renderToString) → dist/server/entry-server.js.
+  console.log("building public SSR bundle...");
+  await viteBuild({
+    build: {
+      ssr: path.resolve("client/src/public/entry-server.tsx"),
+      outDir: path.resolve("dist/server"),
+      emptyOutDir: false,
+      rollupOptions: {
+        output: { entryFileNames: "entry-server.js", format: "esm" },
+      },
+    },
+  });
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));

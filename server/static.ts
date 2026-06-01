@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { setupPublicSsrProd } from "./ssr";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
@@ -10,11 +11,20 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // SSR публичных страниц (/, /blog...) — ДО express.static, иначе static
+  // с index:'index.html' отдал бы SPA index.html на "/". Регистрируем
+  // GET-роуты первыми; всё остальное (assets, /login, /dashboard) идёт
+  // дальше по цепочке.
+  setupPublicSsrProd(app);
+
   // Статические файлы с хешами Vite (assets/*) — кэшируем на год immutable.
   // HTML — не кэшируем (новый bundle ссылается на новые хеши, старый html
   // надо обновлять). Иначе — стандартный 1y без immutable.
   app.use(express.static(distPath, {
     maxAge: '1y',
+    // index:false — "/" обслуживает SSR-лендинг (выше), не статичный
+    // index.html (это SPA-кабинет). SPA отдаётся через "*"-fallback ниже.
+    index: false,
     setHeaders: (res, filePath) => {
       // Vite пишет хеши в base64url-варианте: index-Bh37p_Mr.js,
       // CompanySettings-QVmoLW9d.js, B_Y-k1I5.js. Старая регулярка

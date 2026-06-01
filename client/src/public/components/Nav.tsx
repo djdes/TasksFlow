@@ -1,0 +1,68 @@
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import { AuthModal } from "../landing/auth";
+import { ThemeToggle } from "../landing/ThemeToggle";
+
+/**
+ * Шапка публичной части. На лендинге ссылки ведут к якорям секций,
+ * на остальных страницах — на абсолютные пути. Кнопка «Войти» открывает
+ * модалку email-входа.
+ */
+export function Nav({ onLanding = false }: { onLanding?: boolean }) {
+  const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const links = [
+    { href: onLanding ? "#features" : "/#features", label: "Возможности" },
+    { href: onLanding ? "#how" : "/#how", label: "Как работает" },
+    { href: "/blog", label: "Блог" },
+    { href: onLanding ? "#pricing" : "/#pricing", label: "Тарифы" },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
+          Tasks<span className="text-primary">Flow</span>
+        </a>
+
+        <nav className="hidden md:flex items-center gap-7">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
+              {l.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <a href="/login" className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2">
+            Вход по телефону
+          </a>
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+          >
+            Войти
+          </button>
+          <button className="md:hidden p-2 text-foreground" onClick={() => setMenuOpen((o) => !o)} aria-label="Меню">
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div className="md:hidden border-t border-border bg-background px-4 py-3 space-y-1">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </a>
+          ))}
+          <a href="/login" className="block py-2 text-sm font-medium text-muted-foreground">Вход по телефону</a>
+        </div>
+      )}
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+    </header>
+  );
+}

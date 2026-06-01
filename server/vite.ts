@@ -41,6 +41,11 @@ export async function setupVite(server: Server, app: Express) {
   app.use(vite.middlewares);
   console.log("[Vite] Vite middleware mounted");
 
+  // SSR публичных страниц (/, /blog...) ДО SPA-catch-all, чтобы лендинг
+  // и блог рендерились на сервере, а не отдавались как SPA index.html.
+  const { setupPublicSsrDev } = await import("./ssr");
+  setupPublicSsrDev(app, vite);
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
