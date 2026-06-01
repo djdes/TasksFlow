@@ -309,6 +309,30 @@ process.on("unhandledRejection", (reason, promise) => {
     );
   }
 
+  // Auto-migration колонок email-авторизации (лендинг). Идемпотентно:
+  // пытаемся добавить users.email; если уже есть (ER_DUP_FIELDNAME) —
+  // значит миграция пройдена, выходим. Если добавили впервые — досоздаём
+  // остальные колонки и делаем phone nullable. Без этого первый
+  // /api/auth/start падал с «Unknown column 'email'».
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`ALTER TABLE \`users\` ADD COLUMN \`email\` VARCHAR(255) NULL`);
+    // email не было — впервые мигрируем остальное (каждый под своим catch).
+    await db.execute(sql`ALTER TABLE \`users\` MODIFY COLUMN \`phone\` VARCHAR(20) NULL`).catch(() => {});
+    await db.execute(sql`ALTER TABLE \`users\` ADD COLUMN \`password_hash\` VARCHAR(255) NULL`).catch(() => {});
+    await db.execute(sql`ALTER TABLE \`users\` ADD COLUMN \`magic_token\` VARCHAR(64) NULL`).catch(() => {});
+    await db.execute(sql`ALTER TABLE \`users\` ADD COLUMN \`magic_token_expires_at\` INT NULL`).catch(() => {});
+    await db.execute(sql`ALTER TABLE \`users\` ADD UNIQUE INDEX \`users_email_unique\` (\`email\`)`).catch(() => {});
+    logger.info("[email-auth] колонки добавлены (auto-migration)");
+  } catch (err: any) {
+    if (err?.code !== "ER_DUP_FIELDNAME") {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[email-auth] auto-migration не прошла — email-вход может не работать",
+      );
+    }
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -20,22 +20,31 @@ Notes:
 
 ## Email-авторизация и PHP-почта (лендинг)
 
-Письма (welcome / magic-login / recovery) уходят СТРОГО через PHP-реле
-`php-relay/send.php`, которое кладётся в веб-корень домена.
+Письма (welcome / magic-login / recovery) уходят СТРОГО через PHP.
+
+**По умолчанию в production** mailer вызывает `php -r` с нативным `mail()`
+(транспорт `php-cli`). Это НЕ требует ни env, ни токена, ни правок nginx —
+нужен только установленный PHP на хосте (на FastPanel/Linux он есть).
+
+Выбор транспорта (`server/mailer.ts`):
+- `PHP_RELAY_URL` + `PHP_RELAY_TOKEN` заданы → `php-relay` (HTTP `send.php`);
+- иначе `NODE_ENV=production` → `php-cli` (`php -r` mail()) — **дефолт**;
+- иначе → `dev` (письма пишутся в `.dev-outbox/*.html`, не отправляются).
 
 ```
-# URL реле и общий секрет (тот же, что RELAY_TOKEN внутри send.php)
-PHP_RELAY_URL=https://tasksflow.ru/send.php
-PHP_RELAY_TOKEN=<длинный_рандом_>=32_символа>
-# Необязательно: отображаемый From (по умолчанию задаётся в send.php)
+# Необязательно: путь к php, если не в PATH
+PHP_BIN=/usr/bin/php
+# Необязательно: отображаемый отправитель (envelope-from берётся отсюда же)
 MAIL_FROM="TasksFlow <noreply@tasksflow.ru>"
+
+# Альтернатива php-cli — HTTP-реле send.php в веб-корне (если так удобнее):
+# PHP_RELAY_URL=https://tasksflow.ru/send.php
+# PHP_RELAY_TOKEN=<длинный_рандом_>=32_символа, тот же что в send.php>
 ```
 
-- Без `PHP_RELAY_URL` + `PHP_RELAY_TOKEN` mailer работает в dev-режиме:
-  пишет письма в `.dev-outbox/*.html` и НИЧЕГО не отправляет.
-- Деплой: скопировать `php-relay/send.php` в веб-корень, поменять в нём
-  `RELAY_TOKEN` на тот же секрет, и для доставляемости добавить SPF-запись
-  в DNS домена (`v=spf1 ip4:<IP сервера> ~all`).
+- Доставляемость: для писем нужна корректная DNS/SPF домена
+  (`v=spf1 ip4:<IP сервера> ~all`) и рабочий локальный MTA (exim/postfix),
+  иначе Gmail может отклонять письма от `mail()`.
 
 ## Аналитика (опционально, для SEO-трафика)
 

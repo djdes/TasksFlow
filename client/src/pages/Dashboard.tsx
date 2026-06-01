@@ -201,9 +201,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      setLocation("/");
+      // Жёсткий переход: "/" обслуживает SSR-лендинг (Express), а не
+      // SPA-роут "/". Через setLocation остался бы старый экран входа.
+      window.location.href = "/";
     }
-  }, [user, authLoading, setLocation]);
+  }, [user, authLoading]);
 
   const { toast } = useToast();
   const handleRefresh = async () => {
@@ -749,7 +751,8 @@ export default function Dashboard() {
               onClick={async () => {
                 setIsMenuOpen(false);
                 await logout();
-                setLocation("/");
+                // Жёсткий переход на SSR-лендинг (а не SPA-роут "/").
+                window.location.href = "/";
               }}
             >
               <LogOut className="w-5 h-5" />

@@ -57,6 +57,13 @@ describe("mailer transport", () => {
     expect(resolveTransport()).toBe("php-relay");
   });
 
+  it("resolveTransport=php-cli в production без relay", () => {
+    const old = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    expect(resolveTransport()).toBe("php-cli");
+    process.env.NODE_ENV = old;
+  });
+
   it("sendMail php-relay POST-ит на URL с токеном и телом", async () => {
     process.env.PHP_RELAY_URL = "https://tasksflow.ru/send.php";
     process.env.PHP_RELAY_TOKEN = "secret-token-secret-token-secret";
