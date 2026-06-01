@@ -23,7 +23,7 @@ import {
 } from "@shared/schema";
 import { validateEmailForAuth, normalizeEmail } from "./email-validate";
 import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
-import { sendMail, resolveTransport, phpVersion } from "./mailer";
+import { sendMail } from "./mailer";
 import { autoRegisterByEmail, MAGIC_TTL_SEC } from "./auto-register";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -478,31 +478,6 @@ export async function registerRoutes(
       console.error("Error in /api/auth/magic:", err);
       res.redirect("/login?magic=error");
     }
-  });
-
-  // ВРЕМЕННАЯ диагностика почты (PHP на хосте + тестовое письмо). Защищена
-  // токеном. УДАЛИТЬ после проверки прод-доставки.
-  app.get("/api/_diag/mail", async (req, res) => {
-    if (req.query.token !== "tfdiag_9f3a2c7b1e5d") {
-      return res.status(404).json({ message: "Not found" });
-    }
-    const transport = resolveTransport();
-    const php = await phpVersion();
-    let sent: unknown = null;
-    const to = typeof req.query.to === "string" ? req.query.to : null;
-    if (to) {
-      try {
-        await sendMail({
-          to,
-          kind: "login-link",
-          data: { email: to, magicUrl: getPublicTasksflowBaseUrl(req) + "/blog" },
-        });
-        sent = { ok: true, to };
-      } catch (e: any) {
-        sent = { ok: false, error: e?.message || String(e) };
-      }
-    }
-    res.json({ transport, nodeEnv: process.env.NODE_ENV || null, php, sent });
   });
 
   // ===== Аккаунт пользователя (кабинет /account): смена email и пароля =====
