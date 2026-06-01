@@ -38,7 +38,11 @@ function fromEmail(): string {
     const m = raw.match(/<([^>]+)>/);
     return (m ? m[1] : raw).trim();
   }
-  return "noreply@tasksflow.ru";
+  // По умолчанию шлём от домена сервера (yesbeat.ru) — он аутентифицирован
+  // (SPF/DKIM/PTR), поэтому From и конверт совпадают по домену и Gmail НЕ
+  // показывает «via …». Чтобы слать от noreply@tasksflow.ru без «via» —
+  // задайте MAIL_FROM и пропишите SPF+DKIM для tasksflow.ru.
+  return "noreply@yesbeat.ru";
 }
 
 const DEV_OUTBOX = () => process.env.MAIL_DEV_OUTBOX?.trim() || ".dev-outbox";
