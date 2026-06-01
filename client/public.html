@@ -21,6 +21,14 @@
       })();
     </script>
     <!--app-head-->
+    <style>
+      /* В SPA-кабинете body заблокирован (overflow:hidden), скроллит
+         контейнер #root. Публичные страницы рендерятся в #public-root —
+         им нужен обычный скролл документа, иначе не работает колесо.
+         !important перебивает html,body{overflow:hidden} из index.css. */
+      html, body { height: auto !important; overflow: visible !important; overflow-x: hidden !important; }
+      #public-root { min-height: 100vh; }
+    </style>
   </head>
   <body>
     <div id="public-root"><!--app-html--></div>
