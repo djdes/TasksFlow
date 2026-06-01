@@ -57,22 +57,23 @@ async function sendDev(to: string, subject: string, html: string): Promise<void>
 const PHP_SEND = [
   "$to=$argv[1];",
   "$s=base64_decode($argv[2]);",
-  "$from=$argv[3];$fn=$argv[4];",
+  "$from=$argv[3];$fn=$argv[4];$envFlag=$argv[5];",
   "$b=stream_get_contents(STDIN);",
   '$es="=?UTF-8?B?".base64_encode($s)."?=";',
-  '$h="MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit";',
-  // From/envelope подменяем ТОЛЬКО если задан MAIL_FROM (и под него настроен
-  // SPF). По умолчанию $from пуст → шлём как консольный `mail`: дефолтным
-  // отправителем сервера (с его PTR), который реально доставляется.
-  'if($from!==""){$fh="=?UTF-8?B?".base64_encode($fn)."?= <".$from.">";$h.="\r\nFrom: ".$fh."\r\nReply-To: ".$from;$ok=@mail($to,$es,$b,$h,"-f".$from);}else{$ok=@mail($to,$es,$b,$h);}',
+  '$fh="=?UTF-8?B?".base64_encode($fn)."?= <".$from.">";',
+  '$h="MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\nFrom: ".$fh."\r\nReply-To: ".$from;',
+  // Видимый From всегда брендовый. Конверт (-f) подменяем на этот же домен
+  // ТОЛЬКО если MAIL_FROM задан явно (значит под него настроен SPF). Иначе
+  // return-path остаётся дефолтным отправителем сервера — он аутентифицирован
+  // (PTR/SPF домена сервера), поэтому письмо доставляется, а From красивый.
+  'if($envFlag==="1"){$ok=@mail($to,$es,$b,$h,"-f".$from);}else{$ok=@mail($to,$es,$b,$h);}',
   "exit($ok?0:1);",
 ].join("");
 
 function sendViaPhpCli(to: string, subject: string, html: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Пусто = дефолтный отправитель сервера (как `echo ... | mail`); если
-    // задан MAIL_FROM — используем его (требует SPF на этом домене).
-    const from = process.env.MAIL_FROM?.trim() ? fromEmail() : "";
+    const from = fromEmail(); // по умолчанию noreply@tasksflow.ru
+    const envFlag = process.env.MAIL_FROM?.trim() ? "1" : "0";
     const args = [
       "-r",
       PHP_SEND,
@@ -80,6 +81,7 @@ function sendViaPhpCli(to: string, subject: string, html: string): Promise<void>
       Buffer.from(subject, "utf8").toString("base64"),
       from,
       FROM_NAME,
+      envFlag,
     ];
     let child;
     try {
