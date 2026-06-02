@@ -3,6 +3,7 @@ import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
+import { Particles } from "../components/Particles";
 import { AuthForm } from "../landing/auth";
 import { clusterTitle } from "../clusters";
 import type { ArticleData } from "../types";
@@ -51,11 +52,12 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
       <Nav />
 
       {/* Декоративный фон в шапке статьи */}
-      <div className="absolute inset-x-0 top-0 h-[360px] -z-10 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-x-0 top-0 h-[400px] -z-10 overflow-hidden" aria-hidden="true">
         <div className="aurora">
           <div className="orb orb-a" style={{ width: 420, height: 420, left: -140, top: -160, background: "radial-gradient(circle, hsl(var(--primary)/0.45), transparent 70%)" }} />
           <div className="orb orb-c" style={{ width: 320, height: 320, right: -90, top: -60, background: "radial-gradient(circle, rgba(34,211,238,0.32), transparent 70%)" }} />
         </div>
+        <Particles />
         <div className="absolute inset-0 bg-grid" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
       </div>

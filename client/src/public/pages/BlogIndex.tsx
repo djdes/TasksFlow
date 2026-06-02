@@ -4,6 +4,7 @@ import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
 import { CoverImage } from "../components/CoverImage";
 import { Pagination } from "../components/Pagination";
+import { Particles } from "../components/Particles";
 import { CLUSTER_BY_KEY, clusterTitle } from "../clusters";
 import type { BlogIndexData } from "../types";
 
@@ -30,11 +31,12 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
       <Nav />
 
       {/* Декоративный фон в шапке блога */}
-      <div className="absolute inset-x-0 top-0 h-[420px] -z-10 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-x-0 top-0 h-[460px] -z-10 overflow-hidden" aria-hidden="true">
         <div className="aurora">
           <div className="orb orb-a" style={{ width: 420, height: 420, left: -120, top: -140, background: "radial-gradient(circle, hsl(var(--primary)/0.5), transparent 70%)" }} />
           <div className="orb orb-b" style={{ width: 360, height: 360, right: -100, top: -80, background: "radial-gradient(circle, rgba(139,92,246,0.45), transparent 70%)" }} />
         </div>
+        <Particles />
         <div className="absolute inset-0 bg-grid" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
       </div>

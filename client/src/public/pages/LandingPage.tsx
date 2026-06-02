@@ -5,6 +5,7 @@ import {
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { ArticleCard } from "../components/ArticleCard";
+import { Particles } from "../components/Particles";
 import { AuthForm } from "../landing/auth";
 import type { LandingData } from "../types";
 
@@ -133,13 +134,14 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       <Nav onLanding />
 
       {/* ===== Hero ===== */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden grain">
         <Aurora
           orbs={[
             { cls: "orb-a", style: { width: 560, height: 560, left: -160, top: -180, background: "radial-gradient(circle, hsl(var(--primary)/0.55), transparent 70%)" } },
             { cls: "orb-b", style: { width: 480, height: 480, right: -140, top: -40, background: "radial-gradient(circle, rgba(139,92,246,0.5), transparent 70%)" } },
           ]}
         />
+        <Particles />
         <div className="absolute inset-0 -z-10 bg-grid" aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-background/20 to-background" aria-hidden="true" />
 
@@ -192,9 +194,11 @@ export function LandingPage({ data }: { data: LandingData | null }) {
             <h2 className="text-3xl sm:text-4xl font-extrabold">Три простых шага</h2>
             <p className="mt-3 text-muted-foreground text-lg">От «поставил задачу» до «вижу результат» — за один день.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="relative grid md:grid-cols-3 gap-6">
+            {/* Пунктирная линия, соединяющая шаги (видна в зазорах, desktop) */}
+            <div aria-hidden="true" className="hidden md:block absolute left-[16%] right-[16%] top-[64px] border-t-2 border-dashed border-primary/25" />
             {STEPS.map((s, i) => (
-              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 90}ms` }} className="group rounded-3xl border border-border bg-card soft-card p-7 hover-lift">
+              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 90}ms` }} className="group relative rounded-3xl border border-border bg-card soft-card p-7 hover-lift">
                 <div className="icon-glow w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <s.icon className="w-7 h-7" />
                 </div>
@@ -207,7 +211,8 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       </section>
 
       {/* ===== Возможности ===== */}
-      <section id="features" className="max-w-6xl mx-auto px-4 py-20">
+      <section id="features" className="relative overflow-hidden max-w-6xl mx-auto px-4 py-20">
+        <Particles />
         <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold">Всё для <span className="text-gradient">контроля задач</span></h2>
           <p className="mt-3 text-muted-foreground text-lg">Понятные инструменты — без лишней сложности.</p>

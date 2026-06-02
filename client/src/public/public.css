@@ -177,3 +177,66 @@
   100% { transform: scale(1); opacity: 1; }
 }
 .reveal-ready [data-reveal].in .tick { animation: tick 0.45s ease both; }
+
+/* ---------- Плавающие частицы фона ---------- */
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -5;
+}
+.particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: hsl(var(--primary) / 0.5);
+  box-shadow: 0 0 14px hsl(var(--primary) / 0.4);
+  opacity: 0.4;
+  animation-name: drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.dark .particle { opacity: 0.55; }
+.particle.p-violet { background: rgba(139, 92, 246, 0.55); box-shadow: 0 0 14px rgba(139, 92, 246, 0.4); }
+.particle.p-cyan { background: rgba(34, 211, 238, 0.5); box-shadow: 0 0 14px rgba(34, 211, 238, 0.4); }
+.particle.p-ring {
+  background: transparent;
+  border: 1.5px solid hsl(var(--primary) / 0.35);
+  box-shadow: none;
+}
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(8px, -16px, 0); }
+  50% { transform: translate3d(-6px, -8px, 0); }
+  75% { transform: translate3d(5px, -20px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .particle { animation: none !important; }
+}
+
+/* ---------- Анимированный градиентный текст (мягкое мерцание) ---------- */
+.text-gradient {
+  background-size: 220% auto;
+  animation: gradientShift 7s ease infinite;
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-gradient { animation: none; }
+}
+
+/* ---------- Тонкая зернистость для глубины ---------- */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .grain::before { opacity: 0.06; }
+
