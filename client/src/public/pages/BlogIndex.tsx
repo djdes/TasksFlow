@@ -27,7 +27,7 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
     : [{ name: "Главная", href: "/" }, { name: "Блог" }];
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="relative isolate min-h-screen bg-background text-foreground overflow-x-hidden">
       <Nav />
 
       {/* Декоративный фон в шапке блога */}

@@ -47,7 +47,7 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
   }
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="relative isolate min-h-screen bg-background text-foreground overflow-x-hidden">
       <ReadingProgress />
       <Nav />
 

@@ -134,7 +134,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       <Nav onLanding />
 
       {/* ===== Hero ===== */}
-      <section className="relative overflow-hidden grain">
+      <section className="relative isolate overflow-hidden grain">
         <Aurora
           orbs={[
             { cls: "orb-a", style: { width: 560, height: 560, left: -160, top: -180, background: "radial-gradient(circle, hsl(var(--primary)/0.55), transparent 70%)" } },
@@ -190,7 +190,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       </section>
 
       {/* ===== Как это работает ===== */}
-      <section id="how" className="relative bg-muted/30 border-y border-border overflow-hidden">
+      <section id="how" className="relative isolate bg-muted/30 border-y border-border overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-dots opacity-60" aria-hidden="true" />
         <div className="max-w-6xl mx-auto px-4 py-20">
           <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
@@ -214,7 +214,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       </section>
 
       {/* ===== Возможности ===== */}
-      <section id="features" className="relative overflow-hidden max-w-6xl mx-auto px-4 py-20">
+      <section id="features" className="relative isolate overflow-hidden max-w-6xl mx-auto px-4 py-20">
         <Particles />
         <div data-reveal className="text-center mb-14 max-w-2xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold">Всё для <span className="text-gradient">контроля задач</span></h2>
@@ -234,7 +234,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       </section>
 
       {/* ===== Было / Стало ===== */}
-      <section className="relative bg-muted/30 border-y border-border overflow-hidden">
+      <section className="relative isolate bg-muted/30 border-y border-border overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-grid opacity-50" aria-hidden="true" />
         <div className="max-w-5xl mx-auto px-4 py-20">
           <div data-reveal className="text-center mb-14">
