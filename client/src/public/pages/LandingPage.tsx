@@ -142,6 +142,9 @@ export function LandingPage({ data }: { data: LandingData | null }) {
           ]}
         />
         <Particles />
+        <div className="shape shape-ring" aria-hidden="true" style={{ width: 280, height: 280, left: -100, top: 20 }} />
+        <div className="shape shape-ring2" aria-hidden="true" style={{ width: 200, height: 200, right: -70, bottom: -50 }} />
+        <div className="shape shape-sq" aria-hidden="true" style={{ width: 84, height: 84, left: "8%", bottom: "12%", transform: "rotate(12deg)" }} />
         <div className="absolute inset-0 -z-10 bg-grid" aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-background/20 to-background" aria-hidden="true" />
 
