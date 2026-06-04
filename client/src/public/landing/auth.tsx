@@ -39,9 +39,11 @@ async function postJson(path: string, body: unknown) {
 export function AuthForm({
   layout = "stacked",
   autoFocus = false,
+  submitLabel = "Войти или зарегистрироваться",
 }: {
   layout?: "stacked" | "row";
   autoFocus?: boolean;
+  submitLabel?: string;
 }) {
   const [step, setStep] = useState<Step>("input");
   const [value, setValue] = useState(""); // телефон или email
@@ -232,11 +234,11 @@ export function AuthForm({
             autoComplete="username"
             required
             autoFocus={autoFocus}
-            className={inputCls}
+            className={inputCls + (isRow ? " sm:py-4 sm:text-base" : "")}
           />
         </label>
-        <button type="submit" disabled={busy} className={btnCls + (isRow ? " px-7 py-3 whitespace-nowrap" : " w-full py-3")}>
-          {busy ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Войти или зарегистрироваться"}
+        <button type="submit" disabled={busy} className={btnCls + (isRow ? " px-7 py-4 text-base whitespace-nowrap" : " w-full py-3")}>
+          {busy ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : submitLabel}
         </button>
       </div>
 

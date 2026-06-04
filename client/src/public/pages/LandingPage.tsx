@@ -163,13 +163,11 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               TasksFlow — простой контроль работы сотрудников «в полях»: задачи,
               чек-листы, фото-отчёты и премии. Запуск за день, без обучения.
             </p>
-            <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-md mx-auto lg:mx-0">
-              <AuthForm layout="row" />
-            </div>
-            <div data-reveal style={{ transitionDelay: "280ms" }} className="mt-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Бесплатно для старта</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Без установки</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> Вход в один тап</span>
+            <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
+              <AuthForm layout="row" submitLabel="Создать кабинет бесплатно" />
+              <p className="mt-2.5 text-sm font-medium text-foreground/70">
+                Бесплатно для старта · карта не нужна · готово за минуту
+              </p>
             </div>
           </div>
           {/* Макет */}
