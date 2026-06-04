@@ -266,3 +266,51 @@
 }
 .dark .grain::before { opacity: 0.06; }
 
+/* ---------- Плавный скролл к якорям (только публичная часть) ----------
+   public.css грузится лишь в публичном бандле, кабинет не задевает. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* ---------- Навигация: подчёркивание, растущее из центра ---------- */
+.nav-underline { position: relative; }
+.nav-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  height: 2px;
+  width: 100%;
+  background: hsl(var(--primary));
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.nav-underline:hover::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) {
+  .nav-underline::after { transition: none; }
+}
+
+/* ---------- Содержание статьи: бегущий индикатор ---------- */
+.toc-indicator {
+  transition: top 0.3s cubic-bezier(0.22, 0.61, 0.36, 1),
+              height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toc-indicator { transition: none; }
+}
+
+/* ---------- Лёгкое «нажатие» интерактивных элементов ---------- */
+.press { transition: transform 0.12s ease; }
+.press:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .press:active { transform: none; }
+}
+
+/* ---------- Появление вверх с задержкой (для списков) ---------- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+

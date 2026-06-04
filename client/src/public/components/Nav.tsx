@@ -47,7 +47,7 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
 
         <nav className="hidden md:flex items-center gap-7">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
+            <a key={l.href} href={l.href} className="nav-underline text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {l.label}
             </a>
           ))}
@@ -58,14 +58,14 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
           {loggedIn ? (
             <a
               href="/dashboard"
-              className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+              className="shine press rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
             >
               Открыть кабинет
             </a>
           ) : (
             <button
               onClick={() => setAuthOpen(true)}
-              className="rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
+              className="shine press rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
             >
               Войти
             </button>

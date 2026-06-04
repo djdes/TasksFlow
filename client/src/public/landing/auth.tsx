@@ -153,7 +153,7 @@ export function AuthForm({
     "placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 " +
     "focus:ring-ring/30 transition";
   const btnCls =
-    "rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 " +
+    "shine press rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 " +
     "hover:shadow-xl hover:shadow-primary/40 hover:brightness-105 disabled:opacity-60 transition";
 
   if (step === "sent") {

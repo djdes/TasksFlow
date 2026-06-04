@@ -5,6 +5,7 @@ import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
 import { Particles } from "../components/Particles";
 import { ContentBanner } from "../components/ContentBanner";
+import { TableOfContents } from "../components/TableOfContents";
 import { AuthForm } from "../landing/auth";
 import { clusterTitle } from "../clusters";
 import type { ArticleData } from "../types";
@@ -48,7 +49,7 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
   }
 
   return (
-    <div className="relative isolate min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="relative isolate min-h-screen bg-background text-foreground overflow-x-clip">
       <ReadingProgress />
       <Nav />
 
@@ -113,23 +114,10 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
             </div>
           </article>
 
-          {/* TOC */}
+          {/* TOC — закреплено + подсветка активного раздела */}
           {post.toc.length > 0 && (
             <aside className="hidden lg:block">
-              <div className="sticky top-24">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Содержание</div>
-                <nav className="space-y-1.5 text-sm">
-                  {post.toc.map((t) => (
-                    <a
-                      key={t.id}
-                      href={`#${t.id}`}
-                      className={`block text-muted-foreground hover:text-foreground transition ${t.level === 3 ? "pl-3" : ""}`}
-                    >
-                      {t.text}
-                    </a>
-                  ))}
-                </nav>
-              </div>
+              <TableOfContents items={post.toc} />
             </aside>
           )}
         </div>
