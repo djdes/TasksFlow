@@ -333,6 +333,21 @@ process.on("unhandledRejection", (reason, promise) => {
     }
   }
 
+  // Auto-migration колонки users.is_root (root-доступ к управлению сайтом).
+  // Идемпотентно: ER_DUP_FIELDNAME = колонка уже есть.
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`ALTER TABLE \`users\` ADD COLUMN \`is_root\` BOOLEAN NOT NULL DEFAULT false`);
+    logger.info("[root] колонка users.is_root добавлена (auto-migration)");
+  } catch (err: any) {
+    if (err?.code !== "ER_DUP_FIELDNAME") {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[root] auto-migration is_root не прошла",
+      );
+    }
+  }
+
   // Auto-migration таблицы промо-баннеров. Идемпотентно (CREATE TABLE IF NOT EXISTS).
   try {
     const { sql } = await import("drizzle-orm");

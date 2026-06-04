@@ -55,7 +55,7 @@ const emptyForm = {
 export default function AdminBannersPage() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
-  const isOwner = !!(user as any)?.isOwner;
+  const isRoot = !!(user as any)?.isRoot;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -72,7 +72,7 @@ export default function AdminBannersPage() {
       if (!r.ok) throw new Error("Не удалось загрузить баннеры");
       return r.json();
     },
-    enabled: isOwner,
+    enabled: isRoot,
   });
 
   const resetForm = () => {
@@ -170,11 +170,11 @@ export default function AdminBannersPage() {
     );
   }
 
-  if (!isOwner) {
+  if (!isRoot) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Раздел доступен только владельцу сайта</p>
+          <p className="text-muted-foreground mb-4">Раздел доступен только для root</p>
           <Button onClick={() => setLocation("/dashboard")}>На главную</Button>
         </div>
       </div>

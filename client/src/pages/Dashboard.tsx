@@ -693,6 +693,21 @@ export default function Dashboard() {
                 </button>
               </>
             )}
+            {/* Root-раздел — только для владельца сайта (users.is_root).
+                Регистрацией не получить, обычный админ компании не видит. */}
+            {(user as any).isRoot && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setLocation("/admin/banners");
+                }}
+              >
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                <span className="font-medium">Root: промо-баннеры</span>
+              </button>
+            )}
             {/* Помощь — доступна ВСЕМ. Особенно нужна сотрудникам в
                 возрасте: понятные пошаговые инструкции и FAQ. */}
             <button

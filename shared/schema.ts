@@ -25,6 +25,10 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 20 }).unique(),
   name: varchar("name", { length: 255 }),
   isAdmin: boolean("is_admin").notNull().default(false),
+  // Root (владелец сайта). НЕ выдаётся регистрацией и не равен isAdmin
+  // (тот — админ своей компании). Только root управляет глобальными
+  // вещами вроде промо-баннеров лендинга. Ставится вручную в БД.
+  isRoot: boolean("is_root").notNull().default(false),
   createdAt: int("created_at").notNull().default(0),
   bonusBalance: int("bonus_balance").notNull().default(0), // Баланс дополнительной премии
   companyId: int("company_id"), // FK на companies
