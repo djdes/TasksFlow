@@ -4,6 +4,7 @@ import { Footer } from "../components/Footer";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
 import { Particles } from "../components/Particles";
+import { ContentBanner } from "../components/ContentBanner";
 import { AuthForm } from "../landing/auth";
 import { clusterTitle } from "../clusters";
 import type { ArticleData } from "../types";
@@ -100,6 +101,9 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
                 </div>
               </section>
             )}
+
+            {/* Промо-баннер в контенте статьи (если активен) */}
+            <ContentBanner className="mt-12" />
 
             {/* CTA */}
             <div className="mt-12 rounded-2xl bg-primary/5 border border-primary/20 p-7">

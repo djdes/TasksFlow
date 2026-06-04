@@ -6,6 +6,7 @@ import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { ArticleCard } from "../components/ArticleCard";
 import { Particles } from "../components/Particles";
+import { ContentBanner } from "../components/ContentBanner";
 import { AuthForm } from "../landing/auth";
 import type { LandingData } from "../types";
 
@@ -269,6 +270,11 @@ export function LandingPage({ data }: { data: LandingData | null }) {
           </div>
         </div>
       </section>
+
+      {/* ===== Промо-баннер в контенте (если активен) ===== */}
+      <div className="max-w-6xl mx-auto px-4 pt-14">
+        <ContentBanner />
+      </div>
 
       {/* ===== Тарифы ===== */}
       <section id="pricing" className="max-w-6xl mx-auto px-4 py-20">
