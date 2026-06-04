@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { AuthModal } from "../landing/auth";
 import { ThemeToggle } from "../landing/ThemeToggle";
+import { TopBanner } from "./TopBanner";
 
 /**
  * Шапка публичной части. На лендинге ссылки ведут к якорям секций,
@@ -36,6 +37,8 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   ];
 
   return (
+    <>
+    <TopBanner />
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
@@ -91,5 +94,6 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </header>
+    </>
   );
 }
