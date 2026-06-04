@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Countdown } from "./Countdown";
 
 type Banner = {
   id: number;
@@ -7,6 +8,7 @@ type Banner = {
   linkLabel: string | null;
   bgColor: string | null;
   textColor: string | null;
+  endsAt: number | null;
 };
 
 /**
@@ -48,7 +50,13 @@ export function ContentBanner({ className = "" }: { className?: string }) {
       role="region"
       aria-label="Промо-блок"
     >
-      <p className="flex-1 text-base sm:text-lg font-semibold leading-snug">{banner.text}</p>
+      <div className="flex-1">
+        <p className="text-base sm:text-lg font-semibold leading-snug">{banner.text}</p>
+        <Countdown
+          endsAt={banner.endsAt}
+          className="mt-1 inline-block rounded-full bg-black/15 px-2.5 py-0.5 text-sm font-semibold whitespace-nowrap"
+        />
+      </div>
       {banner.linkUrl && (
         <a
           href={banner.linkUrl}

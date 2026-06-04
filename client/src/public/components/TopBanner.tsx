@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Countdown } from "./Countdown";
 
 type Banner = {
   id: number;
@@ -8,6 +9,7 @@ type Banner = {
   linkLabel: string | null;
   bgColor: string | null;
   textColor: string | null;
+  endsAt: number | null;
 };
 
 const dismissKey = (id: number) => "tf_banner_dismiss_" + id;
@@ -65,6 +67,10 @@ export function TopBanner() {
   const content = (
     <span className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
       <span>{banner.text}</span>
+      <Countdown
+        endsAt={banner.endsAt}
+        className="rounded-full bg-black/15 px-2 py-0.5 font-semibold whitespace-nowrap"
+      />
       {banner.linkUrl && banner.linkLabel && (
         <span className="font-semibold underline underline-offset-2 whitespace-nowrap">
           {banner.linkLabel} →
