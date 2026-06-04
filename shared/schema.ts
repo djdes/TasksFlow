@@ -462,3 +462,48 @@ export const auditLog = mysqlTable("audit_log", {
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
 
+// ===== Промо-баннеры (узкая полоса сверху + вставка в контент) =====
+// Глобальные маркетинговые баннеры публичного сайта. Управляются из
+// админки (раздел «Баннеры»), отдаются публичным API активных баннеров.
+export const banners = mysqlTable("banners", {
+  id: int("id").primaryKey().autoincrement(),
+  // Текст баннера (можно с эмодзи). Обязателен.
+  text: varchar("text", { length: 500 }).notNull(),
+  // Куда ведёт (URL или внутренний путь). NULL = баннер некликабельный.
+  linkUrl: varchar("link_url", { length: 500 }),
+  // Подпись кнопки/ссылки. NULL = весь баннер кликается без отдельной кнопки.
+  linkLabel: varchar("link_label", { length: 120 }),
+  // Где показывать: 'top' (полоса сверху), 'content' (блок в контенте), 'both'.
+  placement: varchar("placement", { length: 16 }).notNull().default("top"),
+  // Цвета — любой CSS-цвет/градиент. NULL = дефолтная тема.
+  bgColor: varchar("bg_color", { length: 64 }),
+  textColor: varchar("text_color", { length: 64 }),
+  // Включён ли. Выключенные не показываются и не отдаются публичным API.
+  active: boolean("active").notNull().default(true),
+  // Окно показа (unix sec). NULL = без ограничения с этой стороны.
+  startsAt: int("starts_at"),
+  endsAt: int("ends_at"),
+  // Порядок при нескольких активных (меньше = выше/раньше).
+  position: int("position").notNull().default(0),
+  createdAt: int("created_at").notNull().default(0),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+export type Banner = typeof banners.$inferSelect;
+export type InsertBanner = typeof banners.$inferInsert;
+
+// Валидация тела запроса при создании/правке баннера из админки.
+export const bannerInputSchema = z.object({
+  text: z.string().trim().min(1, "Текст обязателен").max(500),
+  linkUrl: z.string().trim().max(500).nullish(),
+  linkLabel: z.string().trim().max(120).nullish(),
+  placement: z.enum(["top", "content", "both"]).default("top"),
+  bgColor: z.string().trim().max(64).nullish(),
+  textColor: z.string().trim().max(64).nullish(),
+  active: z.boolean().default(true),
+  startsAt: z.number().int().nullish(),
+  endsAt: z.number().int().nullish(),
+  position: z.number().int().default(0),
+});
+export type BannerInput = z.infer<typeof bannerInputSchema>;
+

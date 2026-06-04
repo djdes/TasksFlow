@@ -20,6 +20,7 @@ import {
   recoverSchema,
   updateEmailSchema,
   updatePasswordSchema,
+  bannerInputSchema,
 } from "@shared/schema";
 import { validateEmailForAuth, normalizeEmail } from "./email-validate";
 import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
@@ -131,6 +132,32 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const user = await storage.getUserById(req.session.userId);
   if (!user || !user.isAdmin) {
     return res.status(403).json({ message: "Требуются права администратора" });
+  }
+  next();
+}
+
+// Владелец сайта — управление глобальными промо-баннерами. Это НЕ
+// каждый админ компании (иначе клиент правил бы твой лендинг), а только
+// перечисленные в OWNER_EMAILS (через запятую). Если OWNER_EMAILS не
+// задан — падаем на обычный isAdmin (чтобы не заблокировать владельца в
+// простом сетапе); в проде стоит задать OWNER_EMAILS.
+async function requireOwner(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Требуется авторизация" });
+  }
+  const user = await storage.getUserById(req.session.userId);
+  if (!user || !user.isAdmin) {
+    return res.status(403).json({ message: "Требуются права администратора" });
+  }
+  const ownerList = (process.env.OWNER_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (ownerList.length > 0) {
+    const email = (user.email || "").toLowerCase();
+    if (!email || !ownerList.includes(email)) {
+      return res.status(403).json({ message: "Доступ только владельцу сайта" });
+    }
   }
   next();
 }
@@ -252,6 +279,53 @@ export async function registerRoutes(
     const orig = res.json.bind(res);
     res.json = (body: any) => orig(stripSensitive(body));
     next();
+  });
+
+  // ===================== БАННЕРЫ =====================
+  // Публичный список активных баннеров под место показа. Без авторизации —
+  // используется публичными страницами (полоса сверху + блок в контенте).
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const placement = req.query.placement === "content" ? "content" : "top";
+      const list = await storage.listActiveBanners(placement);
+      res.json(list);
+    } catch (err) {
+      console.error("[banners] не удалось получить активные баннеры", err);
+      res.status(500).json({ message: "Не удалось получить баннеры" });
+    }
+  });
+
+  // Управление баннерами — только владелец сайта (requireOwner).
+  app.get("/api/admin/banners", requireOwner, async (_req, res) => {
+    res.json(await storage.listAllBanners());
+  });
+
+  app.post("/api/admin/banners", requireOwner, async (req, res) => {
+    const parsed = bannerInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Некорректные данные баннера", errors: parsed.error.flatten() });
+    }
+    const created = await storage.createBanner(parsed.data);
+    res.status(201).json(created);
+  });
+
+  app.patch("/api/admin/banners/:id", requireOwner, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ message: "Некорректный id" });
+    const parsed = bannerInputSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Некорректные данные баннера", errors: parsed.error.flatten() });
+    }
+    const updated = await storage.updateBanner(id, parsed.data);
+    if (!updated) return res.status(404).json({ message: "Баннер не найден" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/banners/:id", requireOwner, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ message: "Некорректный id" });
+    await storage.deleteBanner(id);
+    res.json({ ok: true });
   });
 
   // Rate-limit login и публичные регистрационные endpoint'ы. TasksFlow

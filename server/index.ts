@@ -333,6 +333,35 @@ process.on("unhandledRejection", (reason, promise) => {
     }
   }
 
+  // Auto-migration таблицы промо-баннеров. Идемпотентно (CREATE TABLE IF NOT EXISTS).
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`banners\` (
+        \`id\` int NOT NULL AUTO_INCREMENT,
+        \`text\` varchar(500) NOT NULL,
+        \`link_url\` varchar(500),
+        \`link_label\` varchar(120),
+        \`placement\` varchar(16) NOT NULL DEFAULT 'top',
+        \`bg_color\` varchar(64),
+        \`text_color\` varchar(64),
+        \`active\` boolean NOT NULL DEFAULT true,
+        \`starts_at\` int,
+        \`ends_at\` int,
+        \`position\` int NOT NULL DEFAULT 0,
+        \`created_at\` int NOT NULL DEFAULT 0,
+        \`updated_at\` int NOT NULL DEFAULT 0,
+        PRIMARY KEY (\`id\`),
+        KEY \`banners_active_placement_idx\` (\`active\`, \`placement\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[banners] auto-create таблицы не прошла — баннеры не работают",
+    );
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

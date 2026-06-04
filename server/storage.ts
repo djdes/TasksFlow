@@ -29,6 +29,9 @@ import {
   type WebhookDelivery,
   type InsertWebhookDelivery,
   type Invitation,
+  banners,
+  type Banner,
+  type BannerInput,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, lte, gte, asc, isNull, or, sql } from "drizzle-orm";
@@ -157,6 +160,16 @@ export interface IStorage {
   /** Атомарный mark-as-used. Возвращает true если успели первыми. */
   markInvitationUsed(id: number, usedByUserId: number): Promise<boolean>;
   revokeInvitation(id: number): Promise<Invitation | undefined>;
+
+  // ===== Баннеры =====
+  /** Все баннеры (для админки), порядок: position asc, новее выше. */
+  listAllBanners(): Promise<Banner[]>;
+  /** Активные баннеры под место показа (top/content), с учётом окна дат. */
+  listActiveBanners(placement: "top" | "content"): Promise<Banner[]>;
+  getBanner(id: number): Promise<Banner | undefined>;
+  createBanner(data: BannerInput): Promise<Banner>;
+  updateBanner(id: number, data: Partial<BannerInput>): Promise<Banner | undefined>;
+  deleteBanner(id: number): Promise<void>;
 }
 
 /** Реализация хранилища с MySQL через Drizzle ORM */
@@ -1154,6 +1167,61 @@ export class DatabaseStorage implements IStorage {
         ),
       );
     return await this.getInvitationById(id);
+  }
+
+  // ===================== BANNERS =====================
+
+  async listAllBanners(): Promise<Banner[]> {
+    return await db
+      .select()
+      .from(banners)
+      .orderBy(asc(banners.position), desc(banners.createdAt));
+  }
+
+  async listActiveBanners(placement: "top" | "content"): Promise<Banner[]> {
+    const now = Math.floor(Date.now() / 1000);
+    return await db
+      .select()
+      .from(banners)
+      .where(
+        and(
+          eq(banners.active, true),
+          or(eq(banners.placement, placement), eq(banners.placement, "both")),
+          or(isNull(banners.startsAt), lte(banners.startsAt, now)),
+          or(isNull(banners.endsAt), gte(banners.endsAt, now)),
+        ),
+      )
+      .orderBy(asc(banners.position), desc(banners.createdAt));
+  }
+
+  async getBanner(id: number): Promise<Banner | undefined> {
+    const [b] = await db.select().from(banners).where(eq(banners.id, id));
+    return b || undefined;
+  }
+
+  async createBanner(data: BannerInput): Promise<Banner> {
+    const now = Math.floor(Date.now() / 1000);
+    const [result] = await db.insert(banners).values({
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const insertId = (result as any).insertId;
+    const [created] = await db.select().from(banners).where(eq(banners.id, insertId));
+    if (!created) throw new Error("Failed to create banner");
+    return created;
+  }
+
+  async updateBanner(id: number, data: Partial<BannerInput>): Promise<Banner | undefined> {
+    await db
+      .update(banners)
+      .set({ ...data, updatedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(banners.id, id));
+    return await this.getBanner(id);
+  }
+
+  async deleteBanner(id: number): Promise<void> {
+    await db.delete(banners).where(eq(banners.id, id));
   }
 }
 
