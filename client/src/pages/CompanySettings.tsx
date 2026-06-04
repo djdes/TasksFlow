@@ -604,6 +604,25 @@ export default function CompanySettings() {
                 </Button>
               </div>
             </div>
+
+            {(user as any)?.isOwner && (
+              <div className="bg-card rounded-lg border p-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">Промо-баннеры</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Полоса акции сверху сайта и блок в контенте
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation("/admin/banners")}
+                  >
+                    Управлять
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

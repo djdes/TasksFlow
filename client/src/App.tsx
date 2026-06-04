@@ -38,6 +38,7 @@ const ApiKeysPage = lazy(() => import("@/pages/ApiKeys"));
 const IntegrationsPage = lazy(() => import("@/pages/Integrations"));
 const VerificationPage = lazy(() => import("@/pages/Verification"));
 const Invitations = lazy(() => import("@/pages/Invitations"));
+const AdminBanners = lazy(() => import("@/pages/AdminBanners"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const Account = lazy(() => import("@/pages/Account"));
 
@@ -98,6 +99,7 @@ function Router() {
             <Route path="/admin/integrations" component={IntegrationsPage} />
             <Route path="/admin/verification" component={VerificationPage} />
             <Route path="/admin/invitations" component={Invitations} />
+            <Route path="/admin/banners" component={AdminBanners} />
             <Route path="/join/:token" component={JoinByInvite} />
             <Route path="/tasks/new" component={CreateTask} />
             <Route path="/tasks/:id/edit" component={EditTask} />

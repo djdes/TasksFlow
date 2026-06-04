@@ -141,6 +141,17 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
 // перечисленные в OWNER_EMAILS (через запятую). Если OWNER_EMAILS не
 // задан — падаем на обычный isAdmin (чтобы не заблокировать владельца в
 // простом сетапе); в проде стоит задать OWNER_EMAILS.
+function isSiteOwner(user: { isAdmin: boolean; email: string | null }): boolean {
+  if (!user.isAdmin) return false;
+  const ownerList = (process.env.OWNER_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (ownerList.length === 0) return true; // OWNER_EMAILS не задан — любой админ
+  const email = (user.email || "").toLowerCase();
+  return !!email && ownerList.includes(email);
+}
+
 async function requireOwner(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
@@ -149,15 +160,8 @@ async function requireOwner(req: Request, res: Response, next: NextFunction) {
   if (!user || !user.isAdmin) {
     return res.status(403).json({ message: "Требуются права администратора" });
   }
-  const ownerList = (process.env.OWNER_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (ownerList.length > 0) {
-    const email = (user.email || "").toLowerCase();
-    if (!email || !ownerList.includes(email)) {
-      return res.status(403).json({ message: "Доступ только владельцу сайта" });
-    }
+  if (!isSiteOwner(user)) {
+    return res.status(403).json({ message: "Доступ только владельцу сайта" });
   }
   next();
 }
@@ -410,7 +414,8 @@ export async function registerRoutes(
       }
       
       const user = await storage.getUserById(req.session.userId);
-      res.json(user || null);
+      // isOwner — для UI: показывать ли раздел управления баннерами.
+      res.json(user ? { ...user, isOwner: isSiteOwner(user) } : null);
     } catch (err: any) {
       console.error('Error fetching user:', err);
       res.status(500).json({ message: 'Ошибка' });
