@@ -44,6 +44,7 @@ vi.mock("../server/email-validate", () => ({
     normalized: e.trim().toLowerCase(),
   })),
   normalizeEmail: (e: string) => e.trim().toLowerCase(),
+  isEmailFormat: (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim().toLowerCase()),
 }));
 
 import { validateEmailForAuth } from "../server/email-validate";
@@ -154,7 +155,10 @@ describe("POST /api/auth/start", () => {
     expect(r.status).toBe(400);
     expect(r.body.field).toBe("email");
     expect(r.body.suggestion).toBe("x@gmail.com");
-    expect(storage.getUserByEmail).not.toHaveBeenCalled();
+    // Новый email с опечаткой/без MX не регистрируется и не логинит.
+    // (getUserByEmail теперь вызывается — существующий аккаунт имеет право
+    // войти даже если у его домена нет MX, напр. admin@tasksflow.ru.)
+    expect(storage.createEmailUser).not.toHaveBeenCalled();
   });
 });
 

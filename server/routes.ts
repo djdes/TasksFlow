@@ -22,7 +22,7 @@ import {
   updatePasswordSchema,
   bannerInputSchema,
 } from "@shared/schema";
-import { validateEmailForAuth, normalizeEmail } from "./email-validate";
+import { validateEmailForAuth, normalizeEmail, isEmailFormat } from "./email-validate";
 import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
 import { sendMail } from "./mailer";
 import { autoRegisterByEmail, MAGIC_TTL_SEC } from "./auto-register";
@@ -439,6 +439,28 @@ export async function registerRoutes(
   app.post("/api/auth/start", async (req, res) => {
     try {
       const { email } = startSchema.parse(req.body);
+      const base = getPublicTasksflowBaseUrl(req);
+
+      // Существующий аккаунт → вход. MX/типо-проверку НЕ делаем: домен уже
+      // «подтверждён» тем, что аккаунт есть (иначе свой же домен без MX,
+      // напр. admin@tasksflow.ru, не смог бы войти). Достаточно формата.
+      const normalizedEarly = normalizeEmail(email);
+      if (isEmailFormat(normalizedEarly)) {
+        const existing = await storage.getUserByEmail(normalizedEarly);
+        if (existing) {
+          const token = generateMagicToken();
+          const expiresAt = Math.floor(Date.now() / 1000) + MAGIC_TTL_SEC;
+          await storage.setMagicToken(existing.id, token, expiresAt);
+          await sendMail({
+            to: normalizedEarly,
+            kind: "login-link",
+            data: { email: normalizedEarly, magicUrl: `${base}/api/auth/magic/${token}` },
+          }).catch((e) => console.error("[auth/start] login-link mail failed", e));
+          return res.json({ exists: true });
+        }
+      }
+
+      // Новый email → строгая проверка (типо + MX), чтобы не регистрировать мусор.
       const check = await validateEmailForAuth(email);
       if (!check.ok) {
         return res.status(400).json({
@@ -448,20 +470,6 @@ export async function registerRoutes(
         });
       }
       const normalized = check.normalized;
-      const base = getPublicTasksflowBaseUrl(req);
-
-      const existing = await storage.getUserByEmail(normalized);
-      if (existing) {
-        const token = generateMagicToken();
-        const expiresAt = Math.floor(Date.now() / 1000) + MAGIC_TTL_SEC;
-        await storage.setMagicToken(existing.id, token, expiresAt);
-        await sendMail({
-          to: normalized,
-          kind: "login-link",
-          data: { email: normalized, magicUrl: `${base}/api/auth/magic/${token}` },
-        }).catch((e) => console.error("[auth/start] login-link mail failed", e));
-        return res.json({ exists: true });
-      }
 
       // Новый email → авторегистрация + мгновенный автологин (на почту идти не надо)
       const { user, password, magicToken } = await autoRegisterByEmail(normalized);
