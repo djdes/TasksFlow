@@ -2,6 +2,7 @@ import {
   Check, Camera, ClipboardCheck, Repeat, Wallet, ShieldCheck, BarChart3,
   Smartphone, CheckCircle2, ArrowRight, Sparkles,
 } from "lucide-react";
+import { useState } from "react";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { ArticleCard } from "../components/ArticleCard";
@@ -22,13 +23,23 @@ function Aurora({ orbs }: { orbs: Array<{ cls: string; style: React.CSSPropertie
 }
 
 /** Наглядный макет продукта: список задач на смену с фото и премией. */
+// Интерактивный макет: галочки реально переключаются, прогресс живой,
+// «Отправить отчёт» закрывает все задачи и показывает начисление премии.
+// SSR-безопасно: начальное состояние детерминировано (2 из 4).
 function ProductMock() {
-  const items = [
-    { t: "Открыть смену", done: true },
-    { t: "Протереть витрину", photo: true },
-    { t: "Выложить товар по полкам", done: true },
-    { t: "Проверить ценники", photo: true },
-  ];
+  const [items, setItems] = useState([
+    { t: "Открыть смену", done: true, photo: false },
+    { t: "Протереть витрину", done: false, photo: true },
+    { t: "Выложить товар по полкам", done: true, photo: false },
+    { t: "Проверить ценники", done: false, photo: true },
+  ]);
+  const doneCount = items.filter((i) => i.done).length;
+  const allDone = doneCount === items.length;
+
+  const toggle = (idx: number) =>
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, done: !it.done } : it)));
+  const submitAll = () => setItems((prev) => prev.map((it) => ({ ...it, done: true })));
+
   return (
     <div className="relative mx-auto w-full max-w-sm">
       <div className="absolute -inset-8 -z-10 rounded-[2.5rem] bg-primary/20 blur-3xl" aria-hidden="true" />
@@ -42,36 +53,54 @@ function ProductMock() {
         </div>
         <div className="flex items-center gap-2 mb-4">
           <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-            <div className="h-full w-1/2 bg-primary rounded-full" />
+            <div
+              className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
+              style={{ width: `${(doneCount / items.length) * 100}%` }}
+            />
           </div>
-          <span className="text-xs font-medium text-muted-foreground">2 из 4</span>
+          <span className="text-xs font-medium text-muted-foreground tabular-nums">{doneCount} из {items.length}</span>
         </div>
         <ul className="space-y-2.5">
           {items.map((it, i) => (
-            <li key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background px-3 py-2.5">
-              <span
-                className={`w-5 h-5 rounded-md grid place-items-center shrink-0 ${
-                  it.done ? "tick bg-primary text-primary-foreground" : "border-2 border-muted-foreground/30"
-                }`}
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => toggle(i)}
+                className="w-full flex items-center gap-3 rounded-xl border border-border/70 bg-background px-3 py-2.5 text-left cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/40 press"
+                aria-pressed={it.done}
               >
-                {it.done && <Check className="w-3.5 h-3.5" />}
-              </span>
-              <span className={`text-sm flex-1 ${it.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                {it.t}
-              </span>
-              {it.photo && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                  <Camera className="w-3 h-3" /> фото
+                <span
+                  className={`w-5 h-5 rounded-md grid place-items-center shrink-0 border-2 transition-colors ${
+                    it.done ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30"
+                  }`}
+                >
+                  <Check className={`w-3.5 h-3.5 transition-transform duration-200 ${it.done ? "scale-100" : "scale-0"}`} />
                 </span>
-              )}
+                <span className={`text-sm flex-1 transition-colors ${it.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                  {it.t}
+                </span>
+                {it.photo && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    <Camera className="w-3 h-3" /> фото
+                  </span>
+                )}
+              </button>
             </li>
           ))}
         </ul>
-        <button className="mt-4 w-full rounded-xl bg-primary text-primary-foreground font-semibold py-2.5 text-sm">
-          Отправить отчёт
+        <button
+          type="button"
+          onClick={submitAll}
+          className="shine press mt-4 w-full rounded-xl bg-primary text-primary-foreground font-semibold py-2.5 text-sm transition disabled:opacity-100"
+        >
+          {allDone ? "Отчёт отправлен ✓" : "Отправить отчёт"}
         </button>
       </div>
-      <div className="absolute -right-3 -bottom-4 sm:-right-7 rounded-2xl border border-border bg-card soft-card px-3.5 py-2.5 flex items-center gap-2">
+      <div
+        className={`absolute -right-3 -bottom-4 sm:-right-7 rounded-2xl border bg-card soft-card px-3.5 py-2.5 flex items-center gap-2 transition-all duration-300 ${
+          allDone ? "scale-105 border-green-500/40 ring-2 ring-green-500/25" : "border-border"
+        }`}
+      >
         <span className="w-7 h-7 rounded-full bg-green-500/15 text-green-600 dark:text-green-400 grid place-items-center">
           <Check className="w-4 h-4" />
         </span>
@@ -165,7 +194,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               чек-листы, фото-отчёты и премии. Запуск за день, без обучения.
             </p>
             <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
-              <AuthForm layout="row" submitLabel="Создать кабинет бесплатно" />
+              <AuthForm layout="row" submitLabel="Начать прямо сейчас" />
               <p className="mt-2.5 text-sm font-medium text-foreground/70">
                 Карта не нужна · запуск за минуту · без обучения
               </p>
