@@ -40,8 +40,24 @@ function ProductMock() {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, done: !it.done } : it)));
   const submitAll = () => setItems((prev) => prev.map((it) => ({ ...it, done: true })));
 
+  // Лёгкий 3D-параллакс от мыши (desktop). Reduced-motion — выключаем.
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
+  const onMove = (e: React.MouseEvent) => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    setTilt({ rx: -py * 6, ry: px * 6 });
+  };
+  const onLeave = () => setTilt({ rx: 0, ry: 0 });
+
   return (
-    <div className="relative mx-auto w-full max-w-sm">
+    <div
+      className="relative mx-auto w-full max-w-sm"
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      style={{ transform: `perspective(900px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`, transition: "transform 0.2s ease-out" }}
+    >
       <div className="card-halo absolute -inset-10 -z-10 rounded-[3rem] blur-2xl" aria-hidden="true" />
       <div className="float-card relative overflow-hidden rounded-3xl border border-white/50 dark:border-white/10 bg-card/80 backdrop-blur-xl soft-card p-5 sm:p-6">
         <span className="sheen-top" aria-hidden="true" />
@@ -217,7 +233,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
           <div data-reveal className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
             <span className="text-muted-foreground">Работает в:</span>
             {INDUSTRIES.map((it) => (
-              <span key={it} className="rounded-full border border-border bg-card px-3 py-1 font-medium">{it}</span>
+              <span key={it} className="rounded-full border border-border bg-card px-3 py-1 font-medium transition-colors hover:border-primary/40 hover:text-primary">{it}</span>
             ))}
           </div>
         </div>
@@ -235,8 +251,9 @@ export function LandingPage({ data }: { data: LandingData | null }) {
             {/* Пунктирная линия, соединяющая шаги (видна в зазорах, desktop) */}
             <div aria-hidden="true" className="hidden md:block absolute left-[16%] right-[16%] top-[64px] border-t-2 border-dashed border-primary/25" />
             {STEPS.map((s, i) => (
-              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 90}ms` }} className="group relative rounded-3xl border border-border bg-card soft-card p-7 hover-lift">
-                <div className="icon-glow w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-5">
+              <div key={s.title} data-reveal style={{ transitionDelay: `${i * 90}ms` }} className="group relative overflow-hidden rounded-3xl border border-border bg-card soft-card p-7 hover-lift">
+                <span className="sheen-top" aria-hidden="true" />
+                <div className="icon-glow w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 text-primary flex items-center justify-center mb-5 ring-1 ring-primary/15">
                   <s.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">{s.title}</h3>
@@ -256,12 +273,14 @@ export function LandingPage({ data }: { data: LandingData | null }) {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURES.map((f, i) => (
-            <div key={f.title} data-reveal style={{ transitionDelay: `${(i % 3) * 80}ms` }} className="group rounded-2xl border border-border bg-card p-6 hover-lift">
-              <div className="icon-glow w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+            <div key={f.title} data-reveal style={{ transitionDelay: `${(i % 3) * 80}ms` }} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 hover-lift">
+              <span className="sheen-top" aria-hidden="true" />
+              <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 w-28 h-28 rounded-full bg-primary/0 blur-2xl transition-colors duration-300 group-hover:bg-primary/15" />
+              <div className="icon-glow relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary/25 to-primary/5 text-primary flex items-center justify-center mb-4 ring-1 ring-primary/15">
                 <f.icon className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-lg mb-1.5">{f.title}</h3>
-              <p className="text-muted-foreground">{f.text}</p>
+              <h3 className="relative font-bold text-lg mb-1.5">{f.title}</h3>
+              <p className="relative text-muted-foreground">{f.text}</p>
             </div>
           ))}
         </div>
@@ -325,6 +344,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               style={{ transitionDelay: `${i * 90}ms` }}
               className={`relative rounded-3xl border p-7 flex flex-col overflow-hidden ${p.highlight ? "border-2 border-primary bg-card soft-card md:-translate-y-3" : "border-border bg-card hover-lift"}`}
             >
+              <span className="sheen-top" aria-hidden="true" />
               {p.highlight && (
                 <div className="orb orb-a" aria-hidden="true" style={{ width: 240, height: 240, right: -80, top: -80, background: "radial-gradient(circle, hsl(var(--primary)/0.35), transparent 70%)", filter: "blur(45px)" }} />
               )}
