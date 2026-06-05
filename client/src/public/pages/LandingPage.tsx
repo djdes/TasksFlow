@@ -1,6 +1,6 @@
 import {
   Check, Camera, ClipboardCheck, Repeat, Wallet, ShieldCheck, BarChart3,
-  Smartphone, CheckCircle2, ArrowRight, Star, Sparkles,
+  Smartphone, CheckCircle2, ArrowRight, Sparkles,
 } from "lucide-react";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
@@ -152,8 +152,8 @@ export function LandingPage({ data }: { data: LandingData | null }) {
         <div className="max-w-6xl mx-auto px-4 pt-16 pb-20 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           {/* Текст */}
           <div className="text-center lg:text-left">
-            <div data-reveal className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-4 py-1.5 text-xs font-semibold text-muted-foreground mb-6">
-              <Star className="w-3.5 h-3.5 text-primary" /> Контроль выездных и линейных команд
+            <div data-reveal className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary mb-6">
+              <Sparkles className="w-3.5 h-3.5" /> Бесплатно навсегда — команда до 5 человек
             </div>
             <h1 data-reveal style={{ transitionDelay: "70ms" }} className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
               Ставьте задачи.<br />
@@ -167,7 +167,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
             <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
               <AuthForm layout="row" submitLabel="Создать кабинет бесплатно" />
               <p className="mt-2.5 text-sm font-medium text-foreground/70">
-                Бесплатно для старта · карта не нужна · готово за минуту
+                Карта не нужна · запуск за минуту · без обучения
               </p>
             </div>
           </div>
