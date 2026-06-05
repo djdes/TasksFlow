@@ -181,8 +181,8 @@ export function LandingPage({ data }: { data: LandingData | null }) {
         <div className="max-w-6xl mx-auto px-4 pt-16 pb-20 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           {/* Текст */}
           <div className="text-center lg:text-left">
-            <div data-reveal className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary mb-6">
-              <Sparkles className="w-3.5 h-3.5" /> Бесплатно навсегда — команда до 5 человек
+            <div data-reveal className="inline-flex items-center gap-2 rounded-full cta-grad text-white px-4 py-1.5 text-xs sm:text-sm font-bold shadow-lg shadow-primary/30 mb-6">
+              <Sparkles className="w-4 h-4" /> Бесплатно навсегда для команды до 5 человек
             </div>
             <h1 data-reveal style={{ transitionDelay: "70ms" }} className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
               Ставьте задачи.<br />
@@ -194,7 +194,12 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               чек-листы, фото-отчёты и премии. Запуск за день, без обучения.
             </p>
             <div data-reveal style={{ transitionDelay: "210ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
-              <AuthForm layout="row" submitLabel="Начать прямо сейчас" />
+              <AuthForm
+                layout="row"
+                submitLabel="Начать прямо сейчас"
+                submitArrow
+                submitClassName="cta-pulse cta-grad text-base sm:text-lg font-bold"
+              />
               <p className="mt-2.5 text-sm font-medium text-foreground/70">
                 Карта не нужна · запуск за минуту · без обучения
               </p>
