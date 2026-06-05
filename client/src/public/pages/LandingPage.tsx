@@ -42,8 +42,9 @@ function ProductMock() {
 
   return (
     <div className="relative mx-auto w-full max-w-sm">
-      <div className="absolute -inset-8 -z-10 rounded-[2.5rem] bg-primary/20 blur-3xl" aria-hidden="true" />
-      <div className="float-card rounded-3xl border border-border bg-card soft-card p-5 sm:p-6">
+      <div className="card-halo absolute -inset-10 -z-10 rounded-[3rem] blur-2xl" aria-hidden="true" />
+      <div className="float-card relative overflow-hidden rounded-3xl border border-white/50 dark:border-white/10 bg-card/80 backdrop-blur-xl soft-card p-5 sm:p-6">
+        <span className="sheen-top" aria-hidden="true" />
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-xs text-muted-foreground">Магазин на Ленина</div>
@@ -186,7 +187,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
             </div>
             <h1 data-reveal style={{ transitionDelay: "70ms" }} className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
               Ставьте задачи.<br />
-              Получайте <span className="text-gradient">фото</span>.<br />
+              Получайте <span className="text-gradient mark-underline">фото</span>.<br />
               Контролируйте смену.
             </h1>
             <p data-reveal style={{ transitionDelay: "140ms" }} className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">

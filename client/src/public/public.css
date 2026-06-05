@@ -336,3 +336,42 @@
   .cta-grad { animation: none; }
 }
 
+/* ---------- Акцент-подчёркивание под ключевым словом заголовка ---------- */
+.mark-underline { position: relative; }
+.mark-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.04em;
+  height: 0.1em;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+  opacity: 0.6;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: markGrow 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.55s forwards;
+}
+@keyframes markGrow { to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mark-underline::after { animation: none; transform: scaleX(1); }
+}
+
+/* ---------- Цветной мягкий ореол под карточкой-макетом ---------- */
+.card-halo {
+  background:
+    radial-gradient(55% 55% at 28% 18%, rgba(124, 58, 237, 0.40), transparent 70%),
+    radial-gradient(50% 50% at 82% 85%, rgba(34, 211, 238, 0.30), transparent 70%);
+}
+
+/* ---------- Верхний блик у стеклянных карточек ---------- */
+.sheen-top {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  pointer-events: none;
+}
+.dark .sheen-top { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent); }
+
