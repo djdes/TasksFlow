@@ -714,7 +714,15 @@ export async function registerRoutes(
         return res.json(null);
       }
       const company = await storage.getCompanyById(companyId);
-      res.json(company || null);
+      // wesetupConfigured — НАСТРОИЛА ЛИ ИНТЕГРАЦИЮ САМА КОМПАНИЯ (свои
+      // baseUrl+apiKey). По нему кабинет показывает журнальный режим.
+      // Глобальный env WESETUP_* СПЕЦИАЛЬНО не учитываем: иначе журнальный
+      // режим включился бы у всех. TasksFlow для публики — просто «ставить
+      // задачи»; журналы WeSetup — только для тех, кто сам подключил интеграцию.
+      const wesetupConfigured = !!(
+        company?.wesetupBaseUrl?.trim() && company?.wesetupApiKey?.trim()
+      );
+      res.json(company ? { ...company, wesetupConfigured } : null);
     } catch (err: any) {
       console.error('Error fetching company:', err);
       res.status(500).json({ message: 'Ошибка' });

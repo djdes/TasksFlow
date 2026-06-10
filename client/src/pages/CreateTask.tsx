@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
+import { useWesetupEnabled } from "@/hooks/use-wesetup";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
@@ -97,7 +98,16 @@ export default function CreateTask() {
   const [freeModeWorkerIds, setFreeModeWorkerIds] = useState<number[]>([]);
 
   // ──── WeSetup journal mode ────
+  // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
+  // с WeSetup. Без неё TasksFlow — просто «ставить задачи» (свободный режим).
+  const wesetupEnabled = useWesetupEnabled();
+
   const [mode, setMode] = useState<"free" | "journal">("free");
+
+  // Страховка: если интеграция не настроена, не даём залипнуть в журнальном режиме.
+  useEffect(() => {
+    if (!wesetupEnabled && mode === "journal") setMode("free");
+  }, [wesetupEnabled, mode]);
   const [catalog, setCatalog] = useState<WesetupCatalog | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
@@ -625,7 +635,8 @@ export default function CreateTask() {
         </div>
 
         <div className="content-panel">
-          {/* Mode toggle: Free vs Journal */}
+          {/* Mode toggle: Free vs Journal — только если настроена интеграция WeSetup */}
+          {wesetupEnabled && (
           <div className="mb-6 flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
@@ -667,6 +678,7 @@ export default function CreateTask() {
               </p>
             </button>
           </div>
+          )}
 
           {mode === "journal" ? (
             <>

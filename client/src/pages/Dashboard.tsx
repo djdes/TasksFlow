@@ -34,6 +34,7 @@ import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
+import { useWesetupEnabled } from "@/hooks/use-wesetup";
 import { GreetingBanner } from "@/components/GreetingBanner";
 import { TipOfTheDay } from "@/components/TipOfTheDay";
 import { StreakAchievement } from "@/components/StreakAchievement";
@@ -128,6 +129,8 @@ export default function Dashboard() {
   const [chipPhoto, setChipPhoto] = useState(false);
   const [chipBonus, setChipBonus] = useState(false);
   const [chipJournal, setChipJournal] = useState(false);
+  // Фильтр «Журнальные» показываем только при настроенной интеграции WeSetup.
+  const wesetupEnabled = useWesetupEnabled();
   const [searchQuery, setSearchQuery] = useState("");
   // Таб «Мои задачи» / «Общие задачи смены» / «Все».
   // - personal: задачи лично сотруднику (закрепленные за ним)
@@ -1025,14 +1028,16 @@ export default function Dashboard() {
               <Coins className="w-3.5 h-3.5" />
               <span>С премией</span>
             </button>
-            <button
-              type="button"
-              className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
-              onClick={() => setChipJournal((v) => !v)}
-            >
-              <Tag className="w-3.5 h-3.5" />
-              <span>Журнальные</span>
-            </button>
+            {wesetupEnabled && (
+              <button
+                type="button"
+                className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
+                onClick={() => setChipJournal((v) => !v)}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Журнальные</span>
+              </button>
+            )}
             {chipPhoto || chipBonus || chipJournal ? (
               <button
                 type="button"
