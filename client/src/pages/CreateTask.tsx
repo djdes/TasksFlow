@@ -24,6 +24,7 @@ import {
   X,
   BookOpen,
   Sparkles,
+  Check,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -872,12 +873,23 @@ export default function CreateTask() {
                             ? "bg-primary/10 text-primary"
                             : "hover:bg-muted/30"
                         }`}
+                        role="checkbox"
+                        aria-checked={checked}
                       >
-                        <Checkbox
-                          checked={checked}
-                          tabIndex={-1}
-                          className="shrink-0"
-                        />
+                        {/* Визуальный чекбокс (НЕ radix-кнопка): radix Checkbox —
+                            это <button>, а вложенный <button> внутри <button>-строки
+                            вызывал бесконечный цикл ref'ов («Maximum update depth»)
+                            и подвешивал создание задачи на сотрудника. */}
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                            checked
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {checked && <Check className="h-3 w-3" />}
+                        </span>
                         <span className="truncate">
                           {user.name || user.phone}
                         </span>
