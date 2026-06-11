@@ -21,19 +21,30 @@ import { detectIdentity } from "./identity";
 type Step = "input" | "sent";
 
 async function postJson(path: string, body: unknown) {
-  const r = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  let data: any = {};
+  // Жёсткий таймаут через AbortController (поддержан везде, в т.ч. старый
+  // iOS Safari — в отличие от AbortSignal.timeout). Без него зависший на
+  // мобиле запрос не резолвится никогда → спиннер крутится вечно («зависает»).
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
-    data = await r.json();
-  } catch {
-    /* пустое тело */
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+    let data: any = {};
+    try {
+      data = await r.json();
+    } catch {
+      /* пустое тело */
+    }
+    return { ok: r.ok, status: r.status, data };
+  } finally {
+    clearTimeout(timer);
   }
-  return { ok: r.ok, status: r.status, data };
 }
 
 export function AuthForm({
