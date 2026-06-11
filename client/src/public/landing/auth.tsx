@@ -201,7 +201,6 @@ export function AuthForm({
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              autoFocus
               className={inputCls + " pr-12"}
             />
             <button
@@ -293,10 +292,16 @@ export function AuthForm({
 export function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open || typeof document === "undefined") return null;
   return createPortal(
+    // Скролл-контейнер + центрирование через min-h-full: на iOS Safari
+    // фикс-модалка с items-center «уезжала» за пределы ужатого клавиатурой
+    // вьюпорта после сабмита (форма казалась пустой). Так контент всегда
+    // достижим скроллом и не клипается. Без autoFocus — чтобы клавиатура
+    // не дёргала раскладку на открытии.
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/75"
       onClick={onClose}
     >
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
         className="relative w-full max-w-md rounded-2xl bg-card border border-border p-6 sm:p-7 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -312,7 +317,8 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
         </button>
         <h2 className="text-xl font-bold text-foreground mb-1">Вход в TasksFlow</h2>
         <p className="text-sm text-muted-foreground mb-5">Введите телефон или email — войдём или зарегистрируем.</p>
-        <AuthForm layout="stacked" autoFocus />
+        <AuthForm layout="stacked" />
+      </div>
       </div>
     </div>,
     document.body,
