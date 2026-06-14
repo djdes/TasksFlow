@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import {
   Award,
-  Coins,
   Flame,
   Target,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
 import {
-  bonusHint,
   completedHint,
   streakHint,
   todayHint,
@@ -256,24 +254,8 @@ export function StatHero({
           tone="primary"
         />
       ) : null}
-      {!isAdmin ? (
-        <button
-          type="button"
-          onClick={onBonusClick}
-          className="stat-tile-button"
-          aria-label="Подробнее о премии"
-        >
-          <StatTile
-            icon={Coins}
-            label="Премия"
-            value={bonusBalance}
-            suffix="₽"
-            hint={bonusHint(bonusBalance)}
-            tone="amber"
-            pulse={bonusBalance > 0}
-          />
-        </button>
-      ) : null}
+      {/* Премия больше НЕ тут — вынесена в шапку (бейдж рядом с именем).
+          Не дублируем плитку, чтобы не было двух мест с одним балансом. */}
     </motion.div>
   );
 }

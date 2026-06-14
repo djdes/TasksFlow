@@ -35,8 +35,6 @@ import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { useWesetupEnabled } from "@/hooks/use-wesetup";
-import { GreetingBanner } from "@/components/GreetingBanner";
-import { TipOfTheDay } from "@/components/TipOfTheDay";
 import { StreakAchievement } from "@/components/StreakAchievement";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
@@ -582,15 +580,15 @@ export default function Dashboard() {
               как нажимаемое. Меняем на <button>, чтобы VoiceOver/TalkBack
               корректно произносили «кнопка, подробнее о премии», а
               Tab/Enter работали для пользователей без мыши. */}
-          {!user.isAdmin && (user as any).bonusBalance > 0 && (
+          {!user.isAdmin && (
             <button
               type="button"
               className="bonus-badge"
               onClick={() => setIsBonusInfoOpen(true)}
-              aria-label="Подробнее о премии"
+              aria-label="Премия — подробнее"
             >
               <Coins className="w-5 h-5 text-yellow-300" />
-              <span className="bonus-badge-text">{(user as any).bonusBalance} ₽</span>
+              <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
             </button>
           )}
         </div>
@@ -841,18 +839,6 @@ export default function Dashboard() {
             ) : null}
           </div>
         ) : null}
-
-        {/* Приветствие — «Доброе утро, Иван» + день недели. Помогает
-            воркеру сразу понять «программа меня узнала», плюс легче
-            ориентироваться какой сегодня день. Не админу. */}
-        {!canManageTasks && user ? (
-          <GreetingBanner name={user.name ?? null} />
-        ) : null}
-
-        {/* Совет дня — одна короткая фраза для воркера. Не баннер,
-            не реклама — мягкий приём «общаемся, а не работаем».
-            Можно закрыть крестиком, тогда не покажем до завтра. */}
-        {!canManageTasks ? <TipOfTheDay /> : null}
 
         {/* «На проверке» баннер — для админа/руководителя. Раньше
             очередь была inline-блоком над списком задач, и заведующая
