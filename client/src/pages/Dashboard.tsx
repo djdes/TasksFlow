@@ -580,17 +580,22 @@ export default function Dashboard() {
               как нажимаемое. Меняем на <button>, чтобы VoiceOver/TalkBack
               корректно произносили «кнопка, подробнее о премии», а
               Tab/Enter работали для пользователей без мыши. */}
-          {!user.isAdmin && (
-            <button
-              type="button"
-              className="bonus-badge"
-              onClick={() => setIsBonusInfoOpen(true)}
-              aria-label="Премия — подробнее"
-            >
-              <Coins className="w-5 h-5 text-yellow-300" />
-              <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
-            </button>
-          )}
+          {/* Премия в шапке — только если она вообще релевантна сотруднику:
+              есть начисленный баланс ИЛИ есть задача с премией (price>0).
+              Нет задач с премией и баланс 0 → блок не показываем. */}
+          {!user.isAdmin &&
+            (((user as any).bonusBalance ?? 0) > 0 ||
+              tasks.some((t) => ((t.price as number | null | undefined) ?? 0) > 0)) && (
+              <button
+                type="button"
+                className="bonus-badge"
+                onClick={() => setIsBonusInfoOpen(true)}
+                aria-label="Премия — подробнее"
+              >
+                <Coins className="w-5 h-5 text-yellow-300" />
+                <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
+              </button>
+            )}
         </div>
 
         {/* Dropdown menu — простой conditional render. Раньше был
