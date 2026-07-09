@@ -1466,6 +1466,98 @@ export async function registerRoutes(
     });
   });
 
+  // ===== Чек-лист (подзадачи): фото на пункт =====
+  // Загрузка фото к пункту чек-листа → пункт помечается выполненным.
+  // Фото на каждый пункт обязательно (галочку без фото не поставить).
+  app.post("/api/tasks/:id/checklist/:itemId/photo", requireAuth, (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    upload.single("photo")(req, res, async (err: any) => {
+      let needCleanup = false;
+      try {
+        if (err) return res.status(400).json({ message: err.message || "Ошибка загрузки файла" });
+        if (!req.file) return res.status(400).json({ message: "Файл не загружен" });
+        needCleanup = true;
+
+        const taskId = Number(req.params.id);
+        const task = await storage.getTask(taskId);
+        if (!task) return res.status(404).json({ message: "Задача не найдена" });
+
+        const currentUser = await storage.getUserById(req.session.userId!);
+        if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
+          return res.status(404).json({ message: "Задача не найдена" });
+        }
+        const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
+        if (!isAllowed) return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
+
+        const checklist = task.checklist || [];
+        const idx = checklist.findIndex((it) => it.id === req.params.itemId);
+        if (idx === -1) return res.status(404).json({ message: "Пункт чек-листа не найден" });
+        if ((checklist[idx].photoUrls?.length ?? 0) >= 5) {
+          return res.status(400).json({ message: "Достигнут лимит фото на пункт (5)" });
+        }
+
+        const photoUrl = `/uploads/${req.file.filename}`;
+        const newChecklist = checklist.map((it, i) =>
+          i === idx ? { ...it, done: true, photoUrls: [...(it.photoUrls || []), photoUrl] } : it,
+        );
+        const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
+        if (!updatedTask) return res.status(500).json({ message: "Ошибка обновления задачи" });
+
+        needCleanup = false;
+        return res.json({ photoUrl, task: updatedTask });
+      } catch (uploadErr: any) {
+        console.error("Error uploading checklist photo:", uploadErr);
+        return res.status(500).json({ message: "Ошибка загрузки фото", error: uploadErr.message });
+      } finally {
+        if (needCleanup && req.file) {
+          const abs = resolveUploadAbs(req.file.filename);
+          if (abs) {
+            const { unlink } = await import("fs/promises");
+            await unlink(abs).catch(() => null);
+          }
+        }
+      }
+    });
+  });
+
+  // Убрать фото у пункта чек-листа (переснять) → если фото не осталось, пункт снова не выполнен.
+  app.delete("/api/tasks/:id/checklist/:itemId/photo", requireAuth, async (req, res) => {
+    try {
+      const taskId = Number(req.params.id);
+      const task = await storage.getTask(taskId);
+      if (!task) return res.status(404).json({ message: "Задача не найдена" });
+
+      const currentUser = await storage.getUserById(req.session.userId!);
+      if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
+      if (!isAllowed) return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
+
+      const url = typeof req.query.url === "string" ? req.query.url : "";
+      const checklist = task.checklist || [];
+      const idx = checklist.findIndex((it) => it.id === req.params.itemId);
+      if (idx === -1) return res.status(404).json({ message: "Пункт чек-листа не найден" });
+
+      const remaining = (checklist[idx].photoUrls || []).filter((u) => u !== url);
+      const newChecklist = checklist.map((it, i) =>
+        i === idx ? { ...it, photoUrls: remaining, done: remaining.length > 0 } : it,
+      );
+      const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
+
+      // Удаляем сам файл с диска (best-effort).
+      const abs = resolveUploadAbs(url.replace(/^\/uploads\//, ""));
+      if (abs) {
+        const { unlink } = await import("fs/promises");
+        await unlink(abs).catch(() => null);
+      }
+      return res.json({ task: updatedTask });
+    } catch (e: any) {
+      console.error("Error deleting checklist photo:", e);
+      return res.status(500).json({ message: "Ошибка удаления фото" });
+    }
+  });
+
   // Загрузка примера фото для задачи (только админ)
   app.post("/api/tasks/:id/example-photo", requireAuth, requireAdmin, (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
@@ -1742,6 +1834,16 @@ export async function registerRoutes(
       const hasPhotos = taskPhotoUrls.length > 0 || task.photoUrl;
       if (task.requiresPhoto && !hasPhotos) {
         return res.status(400).json({ message: "Необходимо загрузить фото перед завершением" });
+      }
+
+      // Чек-лист: задачу нельзя завершить, пока не все пункты выполнены
+      // (каждый пункт закрывается фото). Задачи без чек-листа не затрагиваются.
+      const completeChecklist = task.checklist || [];
+      if (completeChecklist.length > 0 && !completeChecklist.every((it) => it.done)) {
+        const doneCount = completeChecklist.filter((it) => it.done).length;
+        return res.status(400).json({
+          message: `Отметьте все пункты чек-листа с фото (${doneCount}/${completeChecklist.length})`,
+        });
       }
 
       // Phase 1 двухстадийной верификации:

@@ -103,6 +103,44 @@ async function resetRecurringTasks() {
       }
     }
 
+    // ===== Сброс чек-листов (подзадач) =====
+    // Ежедневно чистим прогресс по пунктам у ВСЕХ повторяющихся задач с
+    // чек-листом (не только завершённых): галочки и фото пунктов
+    // обнуляются, заголовки/id остаются. Иначе частично выполненный вчера
+    // чек-лист «переехал» бы на сегодня.
+    const [checklistTasks] = await connection.execute<any[]>(`
+      SELECT id, checklist FROM tasks
+      WHERE is_recurring = 1 AND checklist IS NOT NULL AND checklist <> '[]'
+    `);
+    console.log(`Найдено ${checklistTasks.length} повторяющихся задач с чек-листом`);
+    for (const task of checklistTasks) {
+      let items: any[];
+      try {
+        items = JSON.parse(task.checklist);
+      } catch (e) {
+        console.error(`Ошибка парсинга checklist для задачи ${task.id}:`, e);
+        continue;
+      }
+      if (!Array.isArray(items) || items.length === 0) continue;
+      // Удаляем файлы фото пунктов с диска.
+      for (const item of items) {
+        for (const photoUrl of item?.photoUrls || []) {
+          const p = resolveSafeUploadPath(photoUrl);
+          if (!p) continue;
+          try {
+            await unlink(p);
+          } catch (err: any) {
+            if (err.code !== "ENOENT") console.error(`Ошибка удаления фото пункта ${task.id}:`, err.message);
+          }
+        }
+      }
+      const reset = items.map((it) => ({ ...it, done: false, photoUrls: [] }));
+      await connection.execute(`UPDATE tasks SET checklist = ? WHERE id = ?`, [
+        JSON.stringify(reset),
+        task.id,
+      ]);
+    }
+
     // Сбрасываем статус и все фото для всех повторяющихся задач
     const [result] = await connection.execute(`
       UPDATE tasks

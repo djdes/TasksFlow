@@ -556,6 +556,7 @@ export class DatabaseStorage implements IStorage {
     verifiedAt: tasks.verifiedAt,
     rejectReason: tasks.rejectReason,
     submittedValues: tasks.submittedValues,
+    checklist: tasks.checklist,
   } as const;
 
   /**
@@ -577,6 +578,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
       photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
+      checklist: task.checklist ? JSON.parse(task.checklist) : [],
     })) as Task[];
   }
 
@@ -590,6 +592,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
       photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
+      checklist: task.checklist ? JSON.parse(task.checklist) : [],
     } as Task;
   }
 
@@ -615,6 +618,7 @@ export class DatabaseStorage implements IStorage {
       ...insertTask,
       weekDays: insertTask.weekDays ? JSON.stringify(insertTask.weekDays) : null,
       photoUrls: insertTask.photoUrls ? JSON.stringify(insertTask.photoUrls) : null,
+      checklist: insertTask.checklist ? JSON.stringify(insertTask.checklist) : null,
       monthDay: insertTask.monthDay ?? null,
       isRecurring: insertTask.isRecurring ?? true,
       price: insertTask.price ?? 0,
@@ -654,6 +658,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
       photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
+      checklist: task.checklist ? JSON.parse(task.checklist) : [],
     } as Task;
   }
 
@@ -677,6 +682,9 @@ export class DatabaseStorage implements IStorage {
         : undefined,
       photoUrls: updates.photoUrls !== undefined
         ? (updates.photoUrls ? JSON.stringify(updates.photoUrls) : null)
+        : undefined,
+      checklist: updates.checklist !== undefined
+        ? (updates.checklist ? JSON.stringify(updates.checklist) : null)
         : undefined,
     };
     // Stamp completedAt whenever isCompleted flips. Setting true assigns
@@ -704,6 +712,7 @@ export class DatabaseStorage implements IStorage {
       ...task,
       weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
       photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
+      checklist: task.checklist ? JSON.parse(task.checklist) : [],
     } as Task;
   }
 

@@ -484,6 +484,13 @@ export default function Dashboard() {
       return;
     }
 
+    // Задачу с чек-листом нельзя закрыть в один тап по кружку —
+    // нужно открыть диалог и сфотографировать каждый пункт.
+    if ((task.checklist?.length ?? 0) > 0) {
+      handleTaskClick(task);
+      return;
+    }
+
     completeTask.mutate({ id: taskId, comment });
     // Тактильный + аудио feedback для воркера — физическое
     // подтверждение «отметка прошла». Срабатывает только если

@@ -348,6 +348,20 @@ process.on("unhandledRejection", (reason, promise) => {
     }
   }
 
+  // Auto-migration колонки tasks.checklist (подзадачи/чек-лист внутри задачи).
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`ALTER TABLE \`tasks\` ADD COLUMN \`checklist\` TEXT NULL`);
+    logger.info("[checklist] колонка tasks.checklist добавлена (auto-migration)");
+  } catch (err: any) {
+    if (err?.code !== "ER_DUP_FIELDNAME") {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[checklist] auto-migration tasks.checklist не прошла",
+      );
+    }
+  }
+
   // Auto-migration таблицы промо-баннеров. Идемпотентно (CREATE TABLE IF NOT EXISTS).
   try {
     const { sql } = await import("drizzle-orm");

@@ -31,7 +31,8 @@
     "add-verification-cols": "tsx script/_add-verification-cols.ts",
     "add-email-auth-cols": "tsx script/_add-email-auth-cols.ts",
     "add-banners-table": "tsx script/_add-banners-table.ts",
-    "add-is-root-col": "tsx script/_add-is-root-col.ts"
+    "add-is-root-col": "tsx script/_add-is-root-col.ts",
+    "add-checklist-col": "tsx script/_add-checklist-col.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

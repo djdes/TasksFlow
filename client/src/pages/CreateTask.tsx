@@ -98,6 +98,18 @@ export default function CreateTask() {
   // gets their own task instance (same pattern as journal-mode batch).
   const [freeModeWorkerIds, setFreeModeWorkerIds] = useState<number[]>([]);
 
+  // Чек-лист (подзадачи): админ задаёт заголовки пунктов. done/фото
+  // заполняет сотрудник. Пусто → обычная задача.
+  const [checklistItems, setChecklistItems] = useState<{ id: string; title: string }[]>([]);
+  const newChecklistId = () =>
+    (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
+  const addChecklistItem = () =>
+    setChecklistItems((prev) => [...prev, { id: newChecklistId(), title: "" }]);
+  const updateChecklistItem = (id: string, title: string) =>
+    setChecklistItems((prev) => prev.map((it) => (it.id === id ? { ...it, title } : it)));
+  const removeChecklistItem = (id: string) =>
+    setChecklistItems((prev) => prev.filter((it) => it.id !== id));
+
   // ──── WeSetup journal mode ────
   // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
   // с WeSetup. Без неё TasksFlow — просто «ставить задачи» (свободный режим).
@@ -560,6 +572,13 @@ export default function CreateTask() {
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
+      // Чек-лист: только непустые пункты; done/фото стартуют пустыми.
+      checklist: (() => {
+        const items = checklistItems
+          .map((it) => ({ id: it.id, title: it.title.trim(), done: false, photoUrls: [] as string[] }))
+          .filter((it) => it.title.length > 0);
+        return items.length > 0 ? items : null;
+      })(),
     };
 
     // Fire one create per selected worker; surface a single summary
@@ -900,6 +919,52 @@ export default function CreateTask() {
               )}
               <p className="text-xs text-muted-foreground">
                 Каждый выбранный сотрудник получит свою копию задачи.
+              </p>
+            </FormItem>
+
+            {/* Чек-лист (подзадачи) */}
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-primary" />
+                Подзадачи (чек-лист)
+              </FormLabel>
+              <div className="space-y-2">
+                {checklistItems.map((it, i) => (
+                  <div key={it.id} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-5 shrink-0 text-center">{i + 1}.</span>
+                    <Input
+                      value={it.title}
+                      onChange={(e) => updateChecklistItem(it.id, e.target.value)}
+                      placeholder="Например: холодильник"
+                      maxLength={200}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeChecklistItem(it.id)}
+                      aria-label="Удалить пункт"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addChecklistItem}
+                  className="w-full"
+                  disabled={checklistItems.length >= 30}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Добавить пункт
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Необязательно. Если добавить пункты — сотрудник закроет задачу, только
+                сфотографировав каждый пункт. Фото на каждый пункт обязательно.
               </p>
             </FormItem>
 

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import type { Task } from "@shared/schema";
+import type { Task, ChecklistItem } from "@shared/schema";
 
 interface TaskViewDialogProps {
   task: Task | null;
@@ -57,6 +57,14 @@ export function TaskViewDialog({
 
   const photoUrls = getPhotoUrls(currentTask);
   const canAddMorePhotos = photoUrls.length < 10;
+
+  // Чек-лист (подзадачи). Пункт считается выполненным, когда есть фото.
+  const checklist: ChecklistItem[] = (currentTask?.checklist as ChecklistItem[] | undefined) || [];
+  const hasChecklist = checklist.length > 0;
+  const checklistDoneCount = checklist.filter((i) => i.done).length;
+  const allChecklistDone = hasChecklist && checklistDoneCount === checklist.length;
+  const checklistFileInputRef = useRef<HTMLInputElement>(null);
+  const checklistUploadItemIdRef = useRef<string | null>(null);
 
   React.useEffect(() => {
     if (task) {
@@ -202,6 +210,71 @@ export function TaskViewDialog({
     }
   };
 
+  // ===== Чек-лист: фото на пункт =====
+  const uploadChecklistPhotoMutation = useMutation({
+    mutationFn: async ({ file, itemId }: { file: File; itemId: string }) => {
+      if (!currentTask) throw new Error("Задача не выбрана");
+      const formData = new FormData();
+      formData.append("photo", file);
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${currentTask.id}/checklist/${encodeURIComponent(itemId)}/photo`,
+        { method: "POST", credentials: "include", body: formData, signal: AbortSignal.timeout(120_000) },
+      );
+      if (!response.ok) {
+        let message = "Ошибка загрузки фото";
+        try { const e = await response.json(); message = e.message || message; } catch { /* ignore */ }
+        throw new Error(message);
+      }
+      return response.json() as Promise<{ photoUrl: string; task: Task }>;
+    },
+    onSuccess: async (data) => {
+      if (data.task) { setCurrentTask(data.task); onTaskUpdate?.(data.task); }
+      await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка", description: error.message || "Не удалось загрузить фото", variant: "destructive" });
+    },
+  });
+
+  const deleteChecklistPhotoMutation = useMutation({
+    mutationFn: async ({ itemId, url }: { itemId: string; url: string }) => {
+      if (!currentTask) throw new Error("Задача не выбрана");
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${currentTask.id}/checklist/${encodeURIComponent(itemId)}/photo?url=${encodeURIComponent(url)}`,
+        { method: "DELETE", credentials: "include", signal: AbortSignal.timeout(30_000), headers: { Accept: "application/json" } },
+      );
+      const text = await response.text();
+      const d = parseJsonOrEmpty(text);
+      if (!response.ok) throw new Error((d.message as string | undefined) || "Ошибка удаления фото");
+      return d as { task: Task };
+    },
+    onSuccess: async (data) => {
+      if (data.task) { setCurrentTask(data.task); onTaskUpdate?.(data.task); }
+      await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка", description: error.message || "Не удалось удалить фото", variant: "destructive" });
+    },
+  });
+
+  const openChecklistPhotoPicker = (itemId: string) => {
+    checklistUploadItemIdRef.current = itemId;
+    checklistFileInputRef.current?.click();
+  };
+  const handleChecklistFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const itemId = checklistUploadItemIdRef.current;
+    if (file && itemId) {
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Ошибка", description: "Выберите изображение", variant: "destructive" });
+      } else {
+        uploadChecklistPhotoMutation.mutate({ file, itemId });
+      }
+    }
+    if (checklistFileInputRef.current) checklistFileInputRef.current.value = "";
+    checklistUploadItemIdRef.current = null;
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -236,6 +309,14 @@ export function TaskViewDialog({
       toast({
         title: "Ошибка",
         description: "Сначала загрузите фотографию",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (hasChecklist && !allChecklistDone) {
+      toast({
+        title: "Не всё готово",
+        description: `Закройте все пункты чек-листа с фото (${checklistDoneCount}/${checklist.length})`,
         variant: "destructive",
       });
       return;
@@ -286,8 +367,9 @@ export function TaskViewDialog({
             </button>
           )}
 
-          {/* Photo upload section */}
-          {(currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
+          {/* Photo upload section — скрываем, если у задачи есть чек-лист
+              (там фото идёт по каждому пункту отдельно). */}
+          {!hasChecklist && (currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
             <div className="bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-2xl p-4 border border-orange-200/60 dark:from-orange-500/12 dark:to-amber-500/8 dark:border-orange-400/25">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
@@ -391,6 +473,118 @@ export function TaskViewDialog({
             </div>
           )}
 
+          {/* Чек-лист (подзадачи) — фото на каждый пункт */}
+          {hasChecklist && (
+            <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl p-4 border border-primary/15">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">Подзадачи</span>
+                </div>
+                <span
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    allChecklistDone
+                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
+                      : "bg-primary/10 text-primary"
+                  }`}
+                >
+                  {checklistDoneCount}/{checklist.length}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-3">
+                <div
+                  className="h-full bg-primary rounded-full transition-[width] duration-300"
+                  style={{ width: `${(checklistDoneCount / checklist.length) * 100}%` }}
+                />
+              </div>
+              <div className="space-y-2">
+                {checklist.map((item) => {
+                  const itemPhotos = item.photoUrls || [];
+                  const busy =
+                    uploadChecklistPhotoMutation.isPending &&
+                    uploadChecklistPhotoMutation.variables?.itemId === item.id;
+                  const editable = canComplete && !currentTask.isCompleted;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`rounded-xl border p-2.5 flex items-center gap-3 ${
+                        item.done
+                          ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+                          : "border-border bg-background"
+                      }`}
+                    >
+                      <span
+                        className={`w-6 h-6 rounded-md grid place-items-center shrink-0 border-2 ${
+                          item.done
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-muted-foreground/30"
+                        }`}
+                      >
+                        {item.done && <Check className="w-3.5 h-3.5" />}
+                      </span>
+                      <span
+                        className={`flex-1 text-sm ${
+                          item.done ? "text-muted-foreground line-through" : "text-foreground"
+                        }`}
+                      >
+                        {item.title}
+                      </span>
+                      {item.done && itemPhotos[0] ? (
+                        <div className="relative shrink-0">
+                          <img
+                            src={itemPhotos[0]}
+                            alt=""
+                            className="w-11 h-11 rounded-lg object-cover border border-emerald-300"
+                          />
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deleteChecklistPhotoMutation.mutate({ itemId: item.id, url: itemPhotos[0] })
+                              }
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white grid place-items-center shadow"
+                              aria-label="Переснять"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        editable && (
+                          <button
+                            type="button"
+                            onClick={() => openChecklistPhotoPicker(item.id)}
+                            disabled={busy}
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 disabled:opacity-60 active:scale-[0.98] transition"
+                          >
+                            {busy ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Camera className="w-4 h-4" />
+                            )}
+                            Фото
+                          </button>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <input
+                ref={checklistFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleChecklistFileSelect}
+                className="hidden"
+              />
+              <p className="mt-3 text-xs text-muted-foreground">
+                Отметьте каждый пункт фото — тогда задачу можно завершить.
+              </p>
+            </div>
+          )}
+
           {/* User comment field */}
           {canComplete && !currentTask.isCompleted && (
             <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-4 border border-slate-200/60 dark:from-white/5 dark:to-white/[0.02] dark:border-white/10">
@@ -434,16 +628,20 @@ export function TaskViewDialog({
               ) : (
                 <button
                   onClick={handleComplete}
-                  disabled={currentTask.requiresPhoto && photoUrls.length === 0}
+                  disabled={
+                    (currentTask.requiresPhoto && photoUrls.length === 0) ||
+                    (hasChecklist && !allChecklistDone)
+                  }
                   className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white rounded-2xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/30 active:scale-[0.98]"
                 >
                   <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
                     <Check className="w-4 h-4" />
                   </div>
-                  {currentTask.requiresPhoto && photoUrls.length === 0
-                    ? "Сначала загрузите фото"
-                    : "Завершить задачу"
-                  }
+                  {hasChecklist && !allChecklistDone
+                    ? `Закройте пункты (${checklistDoneCount}/${checklist.length})`
+                    : currentTask.requiresPhoto && photoUrls.length === 0
+                      ? "Сначала загрузите фото"
+                      : "Завершить задачу"}
                 </button>
               )
             )}

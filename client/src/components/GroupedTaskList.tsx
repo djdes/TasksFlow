@@ -186,6 +186,10 @@ export function GroupedTaskList(props: Props) {
     const categoryValue = (task as unknown as { category?: string })
       .category;
     const requiresPhoto = task.requiresPhoto && !task.photoUrl;
+    const checklistItems =
+      (task as unknown as { checklist?: { done: boolean }[] }).checklist || [];
+    const checklistTotal = checklistItems.length;
+    const checklistDone = checklistItems.filter((i) => i.done).length;
     const weekDays = (task as unknown as { weekDays?: number[] | null })
       .weekDays;
     // Phase E.UI: если задача была отклонена verifier'ом —
@@ -291,6 +295,12 @@ export function GroupedTaskList(props: Props) {
                 <div className="task-badge photo">
                   <Camera className="w-3.5 h-3.5" />
                   <span>Фото</span>
+                </div>
+              )}
+              {checklistTotal > 0 && !isCompleted && (
+                <div className="task-badge photo">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{checklistDone}/{checklistTotal}</span>
                 </div>
               )}
               {hasPrice && (

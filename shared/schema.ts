@@ -129,6 +129,14 @@ export const tasks = mysqlTable("tasks", {
   // журнал WeSetup. NULL = legacy-задача или verification не нужен.
   // См. routes.ts /api/wesetup/complete-with-values + verify-handler.
   submittedValues: text("submitted_values"),
+  // Чек-лист (подзадачи) внутри задачи. JSON-массив пунктов:
+  //   [{ id: string, title: string, done: boolean, photoUrls: string[] }]
+  // NULL или [] = обычная задача без чек-листа (поведение как раньше).
+  // Пункт нельзя отметить готовым без фото (requiresPhoto на уровне пункта
+  // подразумевается). Задача считается выполненной, когда все пункты done.
+  // При ежедневном сбросе повторяющейся задачи у пунктов чистятся done+photoUrls,
+  // заголовки остаются.
+  checklist: text("checklist"),
 });
 
 export const insertUserSchema = z.object({
@@ -206,11 +214,23 @@ export const insertWorkerSchema = createInsertSchema(workers).pick({
   name: true,
 });
 
+// Пункт чек-листа (подзадача). done ставится только вместе с фото —
+// это проверяется на сервере в эндпоинте отметки пункта.
+export const checklistItemSchema = z.object({
+  id: z.string().min(1).max(64),
+  title: z.string().trim().min(1, "Название пункта обязательно").max(200),
+  done: z.boolean().optional().default(false),
+  photoUrls: z.array(z.string()).optional().default([]),
+});
+export type ChecklistItem = z.infer<typeof checklistItemSchema>;
+
 export const insertTaskSchema = createInsertSchema(tasks).pick({
   title: true,
   workerId: true,
   requiresPhoto: true,
 }).extend({
+  // Чек-лист (подзадачи). Пустой/отсутствует = обычная задача.
+  checklist: z.array(checklistItemSchema).max(30).nullable().optional(),
   photoUrl: z.string().nullable().optional(), // Устаревшее, для совместимости
   photoUrls: z.array(z.string()).nullable().optional(), // Массив URL фотографий (до 10 шт)
   examplePhotoUrl: z.string().nullable().optional(), // URL примера фото
@@ -296,10 +316,11 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type Worker = typeof workers.$inferSelect;
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
-// Переопределяем Task чтобы weekDays и photoUrls были массивами (парсятся из JSON в storage.ts)
-export type Task = Omit<typeof tasks.$inferSelect, 'weekDays' | 'photoUrls'> & {
+// Переопределяем Task чтобы weekDays, photoUrls и checklist были массивами (парсятся из JSON в storage.ts)
+export type Task = Omit<typeof tasks.$inferSelect, 'weekDays' | 'photoUrls' | 'checklist'> & {
   weekDays: number[] | null;
   photoUrls: string[];
+  checklist: ChecklistItem[];
 };
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
