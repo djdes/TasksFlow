@@ -55,8 +55,14 @@ MAIL_FROM="TasksFlow <noreply@tasksflow.ru>"
 одна строка, сервер работает ровно как раньше.
 
 ```
+# Принимаются ОБА имени. TELEGRAM_BOT_TOKEN — то, как переменная зовётся
+# в ProjectsFlow и DocsFlow, поэтому его кладут по привычке; работать
+# будет любое. Если заданы оба — выигрывает TASKSFLOW_BOT_TOKEN.
 TASKSFLOW_BOT_TOKEN=8810015596:AA...
-# Нужен Login Widget'у на странице «Аккаунт» и для ссылки t.me/<username>
+# TELEGRAM_BOT_TOKEN=8810015596:AA...
+
+# Необязателен: имя бот берёт из getMe. Нужен только как запасной
+# источник для ссылки t.me/<username>.
 TELEGRAM_BOT_USERNAME=thetasksflowbot
 
 # auto | webhook | polling | off
@@ -86,7 +92,20 @@ RU-провайдеры местами не маршрутизируют под�
 TELEGRAM_HTTP_PROXY=http://user:pass@proxy-host:3128
 # 2. Свой relay вместо api.telegram.org
 TELEGRAM_API_BASE_URL=https://tg-relay.example.com
+# 3. Пришпилить IPv4 (приём из DocsFlow): домен не резолвится, а адрес
+#    доступен. Подменяется только DNS, TLS-SNI остаётся api.telegram.org.
+TELEGRAM_API_IP=149.154.167.220
 ```
+
+### Проверка «поднялся ли бот»
+
+```
+GET /api/telegram/health   →  { "configured": true, "username": "…",
+                                "mode": "polling", "tokenEnv": "…" }
+```
+
+Публичный, секретов не отдаёт. `configured: false` означает, что сервер
+не увидел токен; `tokenEnv` показывает, какое имя переменной сработало.
 
 Тот же приём используется в ProjectsFlow — прокси там уже настроен, его
 значение можно взять из `.env` на прод-сервере ProjectsFlow.

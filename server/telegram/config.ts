@@ -23,6 +23,12 @@ export type TelegramConfig = {
    */
   apiBaseUrl: string;
   httpProxy: string | undefined;
+  /**
+   * IPv4 api.telegram.org, если хостинг ломает DNS/IPv6 (типично для РФ:
+   * домен не резолвится, а конкретный адрес доступен). Тот же приём, что
+   * в DocsFlow. TLS-SNI при этом остаётся api.telegram.org.
+   */
+  apiIp: string | undefined;
   /** Ссылка на бота для кнопки «Открыть бота» после привязки. */
   botDeepLink: string | null;
 };
@@ -34,7 +40,11 @@ export type TelegramConfig = {
 export function loadTelegramConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): TelegramConfig | null {
-  const botToken = (env.TASKSFLOW_BOT_TOKEN || "").trim();
+  // Оба имени намеренно: TELEGRAM_BOT_TOKEN — то, как переменная зовётся
+  // в ProjectsFlow и DocsFlow, и именно его кладут по привычке. Требовать
+  // ровно TASKSFLOW_BOT_TOKEN значит ловить «токен положил, а бот молчит»
+  // каждый раз при настройке нового сервера.
+  const botToken = (env.TASKSFLOW_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN || "").trim();
   if (!botToken) return null;
 
   const botId = botToken.split(":")[0] || "";
@@ -44,6 +54,7 @@ export function loadTelegramConfig(
   const apiBaseUrl =
     (env.TELEGRAM_API_BASE_URL || "").trim() || "https://api.telegram.org";
   const httpProxy = (env.TELEGRAM_HTTP_PROXY || "").trim() || undefined;
+  const apiIp = (env.TELEGRAM_API_IP || "").trim() || undefined;
 
   const rawMode = (env.TELEGRAM_MODE || "auto").trim().toLowerCase();
   let mode: TelegramMode;
@@ -69,6 +80,7 @@ export function loadTelegramConfig(
     webhookSecret,
     apiBaseUrl,
     httpProxy,
+    apiIp,
     botDeepLink: botUsername ? `https://t.me/${botUsername}?start=ready` : null,
   };
 }

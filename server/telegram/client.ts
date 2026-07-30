@@ -11,8 +11,40 @@
  * ETIMEDOUT только на нём.
  */
 
-import { fetch as undiciFetch, ProxyAgent, type Dispatcher } from "undici";
+import { fetch as undiciFetch, Agent, ProxyAgent, type Dispatcher } from "undici";
 import type { TelegramConfig } from "./config";
+
+/**
+ * Диспетчер под конфиг: прокси, пришпиленный IP или ничего.
+ *
+ * Пришпиливание IP — приём из DocsFlow: РФ-хостинги ломают DNS/IPv6 для
+ * api.telegram.org, но конкретный IPv4 остаётся доступен. Подменяем
+ * только резолв; TLS-SNI и Host остаются доменом, иначе Telegram
+ * оборвёт handshake.
+ */
+function buildDispatcher(config: TelegramConfig): Dispatcher | undefined {
+  if (config.httpProxy) return new ProxyAgent(config.httpProxy);
+  if (!config.apiIp) return undefined;
+
+  const ip = config.apiIp;
+  return new Agent({
+    connect: {
+      lookup: (
+        _hostname: string,
+        options: { all?: boolean },
+        cb: (
+          err: NodeJS.ErrnoException | null,
+          address: string | Array<{ address: string; family: number }>,
+          family?: number,
+        ) => void,
+      ) => {
+        // Node зовёт lookup либо с all=true (ждёт массив), либо без него.
+        if (options?.all) cb(null, [{ address: ip, family: 4 }]);
+        else cb(null, ip, 4);
+      },
+    },
+  });
+}
 
 export type TgUser = {
   id: number;
@@ -98,9 +130,7 @@ export class TelegramClient {
     const cleaned = config.apiBaseUrl.replace(/\/$/, "");
     this.base = `${cleaned}/bot${config.botToken}`;
     this.fileBase = `${cleaned}/file/bot${config.botToken}`;
-    this.dispatcher = config.httpProxy
-      ? new ProxyAgent(config.httpProxy)
-      : undefined;
+    this.dispatcher = buildDispatcher(config);
   }
 
   /** Единственная точка исходящих запросов — здесь подмешивается прокси. */

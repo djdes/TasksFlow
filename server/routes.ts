@@ -621,6 +621,13 @@ export async function registerRoutes(
         configured: Boolean(rt),
         username: rt?.me.username ?? null,
         mode: rt?.config.mode ?? null,
+        // Какое имя переменной сработало — самая частая причина «токен
+        // положил, а бот молчит»: в ProjectsFlow и DocsFlow оно другое.
+        tokenEnv: process.env.TASKSFLOW_BOT_TOKEN
+          ? "TASKSFLOW_BOT_TOKEN"
+          : process.env.TELEGRAM_BOT_TOKEN
+            ? "TELEGRAM_BOT_TOKEN"
+            : null,
       });
     } catch {
       res.json({ configured: false, username: null, mode: null });
