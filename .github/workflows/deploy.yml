@@ -29,11 +29,23 @@ jobs:
     steps:
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Незаданные секреты приходят пустой строкой — upsert_env их
+          # пропускает, .env на сервере остаётся как был.
+          TASKSFLOW_BOT_TOKEN: ${{ secrets.TASKSFLOW_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
+          TELEGRAM_MODE: ${{ secrets.TELEGRAM_MODE }}
+          TELEGRAM_HTTP_PROXY: ${{ secrets.TELEGRAM_HTTP_PROXY }}
+          TELEGRAM_API_BASE_URL: ${{ secrets.TELEGRAM_API_BASE_URL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          # Секреты бота — чтобы не ходить на сервер руками ради двух строк
+          # в .env. Пустые значения ничего не меняют: .env на сервере
+          # остаётся источником правды, как в ProjectsFlow.
+          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL
           script: |
             set -Eeuo pipefail
 
@@ -62,6 +74,30 @@ jobs:
             fi
             git reset --hard origin/main
             git log --oneline -1
+
+            # Переменные Telegram-бота из GitHub Secrets → .env сервера.
+            # Идемпотентно: заданный секрет перезаписывает строку, пустой
+            # не трогает ничего. Значения не печатаем — только имена.
+            #
+            # .env остаётся источником правды (как в ProjectsFlow, где он
+            # исключён из синхронизации): секреты лишь позволяют выставить
+            # переменную, не заходя на сервер по SSH.
+            upsert_env() {
+              local key="$1" value="$2"
+              [ -n "$value" ] || return 0
+              touch .env
+              if grep -q "^${key}=" .env; then
+                grep -v "^${key}=" .env > .env.tmp && mv .env.tmp .env
+              fi
+              printf '%s=%s\n' "$key" "$value" >> .env
+              chmod 600 .env
+              echo ">>> .env: $key обновлён из secrets"
+            }
+            upsert_env TASKSFLOW_BOT_TOKEN "${TASKSFLOW_BOT_TOKEN:-}"
+            upsert_env TELEGRAM_BOT_USERNAME "${TELEGRAM_BOT_USERNAME:-}"
+            upsert_env TELEGRAM_MODE "${TELEGRAM_MODE:-}"
+            upsert_env TELEGRAM_HTTP_PROXY "${TELEGRAM_HTTP_PROXY:-}"
+            upsert_env TELEGRAM_API_BASE_URL "${TELEGRAM_API_BASE_URL:-}"
 
             DEPS_STAMP=".deploy-deps.sha256"
             DEPS_HASH="$(sha256sum package.json package-lock.json | sha256sum | awk '{print $1}')"
