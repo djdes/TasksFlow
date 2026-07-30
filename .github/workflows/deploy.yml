@@ -32,11 +32,15 @@ jobs:
         env:
           # Незаданные секреты приходят пустой строкой — upsert_env их
           # пропускает, .env на сервере остаётся как был.
+          # Оба имени токена: приложение понимает любое, и деплой тоже —
+          # чтобы секрет сработал независимо от того, как его назвали.
           TASKSFLOW_BOT_TOKEN: ${{ secrets.TASKSFLOW_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
           TELEGRAM_MODE: ${{ secrets.TELEGRAM_MODE }}
           TELEGRAM_HTTP_PROXY: ${{ secrets.TELEGRAM_HTTP_PROXY }}
           TELEGRAM_API_BASE_URL: ${{ secrets.TELEGRAM_API_BASE_URL }}
+          TELEGRAM_API_IP: ${{ secrets.TELEGRAM_API_IP }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -45,7 +49,7 @@ jobs:
           # Секреты бота — чтобы не ходить на сервер руками ради двух строк
           # в .env. Пустые значения ничего не меняют: .env на сервере
           # остаётся источником правды, как в ProjectsFlow.
-          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL
+          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP
           script: |
             set -Eeuo pipefail
 
@@ -94,10 +98,20 @@ jobs:
               echo ">>> .env: $key обновлён из secrets"
             }
             upsert_env TASKSFLOW_BOT_TOKEN "${TASKSFLOW_BOT_TOKEN:-}"
+            upsert_env TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN:-}"
             upsert_env TELEGRAM_BOT_USERNAME "${TELEGRAM_BOT_USERNAME:-}"
             upsert_env TELEGRAM_MODE "${TELEGRAM_MODE:-}"
             upsert_env TELEGRAM_HTTP_PROXY "${TELEGRAM_HTTP_PROXY:-}"
             upsert_env TELEGRAM_API_BASE_URL "${TELEGRAM_API_BASE_URL:-}"
+            upsert_env TELEGRAM_API_IP "${TELEGRAM_API_IP:-}"
+
+            # Явно сообщаем результат: в логе деплоя сразу видно, дошёл
+            # токен или секрет так и не создали.
+            if grep -qE '^(TASKSFLOW|TELEGRAM)_BOT_TOKEN=.+' .env; then
+              echo ">>> токен бота в .env есть"
+            else
+              echo ">>> ВНИМАНИЕ: токена бота в .env нет — бот не поднимется"
+            fi
 
             DEPS_STAMP=".deploy-deps.sha256"
             DEPS_HASH="$(sha256sum package.json package-lock.json | sha256sum | awk '{print $1}')"
