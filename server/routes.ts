@@ -711,6 +711,35 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * Ссылка привязки через бота — основной путь.
+   *
+   * Login Widget требует /setdomain в BotFather, доступного telegram.org
+   * в браузере и неблокированного попапа. Здесь ничего этого не нужно:
+   * пользователь просто открывает бота по ссылке с одноразовым кодом.
+   */
+  app.post("/api/me/telegram/link-code", requireAuth, async (req, res) => {
+    try {
+      const { getTelegramRuntime } = await import("./telegram");
+      const rt = getTelegramRuntime();
+      if (!rt) return res.status(503).json({ message: "Telegram-бот не настроен" });
+      if (!rt.me.username) {
+        return res.status(503).json({ message: "Не удалось определить имя бота" });
+      }
+
+      const { issueTelegramLinkCode } = await import("./telegram/link");
+      const { code, expiresAt } = await issueTelegramLinkCode(req.session.userId!);
+
+      res.json({
+        url: `https://t.me/${rt.me.username}?start=${code}`,
+        expiresAt,
+      });
+    } catch (err) {
+      console.error("Error issuing telegram link code:", err);
+      res.status(500).json({ message: "Не удалось создать ссылку привязки" });
+    }
+  });
+
   app.delete("/api/me/telegram", requireAuth, async (req, res) => {
     try {
       await storage.clearTelegramLink(req.session.userId!);

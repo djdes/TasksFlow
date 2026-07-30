@@ -72,6 +72,11 @@ export const users = mysqlTable("users", {
   // Unix sec привязки аккаунта и первого /start соответственно.
   tgLinkedAt: int("tg_linked_at"),
   tgStartedAt: int("tg_started_at"),
+  // Одноразовый код привязки через бота (t.me/bot?start=<код>).
+  // Основной путь: в отличие от Login Widget не требует /setdomain,
+  // доступности telegram.org в браузере и рабочего попапа.
+  tgLinkCode: varchar("tg_link_code", { length: 32 }),
+  tgLinkCodeExpiresAt: int("tg_link_code_expires_at"),
 });
 
 export const workers = mysqlTable("workers", {

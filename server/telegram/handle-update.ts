@@ -162,6 +162,34 @@ async function handleMessage(
   }
 
   // ===== Личка =====
+
+  // /start с кодом из ссылки на сайте — привязка аккаунта. Проверяем ДО
+  // «не вижу твой аккаунт»: смысл кода как раз в том, что связи ещё нет.
+  const startCode = /^\/start(?:@\S+)?\s+([A-Za-z0-9_-]{6,64})$/.exec(text)?.[1];
+  if (startCode && message.from) {
+    const { linkTelegramByCode } = await import("./link");
+    const result = await linkTelegramByCode({
+      code: startCode,
+      telegramUserId: tgUserId,
+      telegramUsername: message.from.username ?? null,
+      telegramFirstName: message.from.first_name ?? null,
+      chatId,
+    });
+
+    if (result.ok) {
+      await sendGreeting(chatId, result.user, runtime);
+      return;
+    }
+    await runtime.client.sendMessage({
+      chat_id: chatId,
+      text:
+        result.reason === "already_linked_other"
+          ? "Этот Telegram уже привязан к другому аккаунту TasksFlow."
+          : "Ссылка устарела. Открой страницу «Аккаунт» на сайте и нажми «Привязать» ещё раз.",
+    });
+    return;
+  }
+
   if (!user) {
     await sendNotLinked(chatId, runtime, message.message_id);
     return;

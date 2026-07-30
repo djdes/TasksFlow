@@ -391,6 +391,8 @@ process.on("unhandledRejection", (reason, promise) => {
     ["tg_chat_id", "ALTER TABLE `users` ADD COLUMN `tg_chat_id` BIGINT NULL"],
     ["tg_linked_at", "ALTER TABLE `users` ADD COLUMN `tg_linked_at` INT NULL"],
     ["tg_started_at", "ALTER TABLE `users` ADD COLUMN `tg_started_at` INT NULL"],
+    ["tg_link_code", "ALTER TABLE `users` ADD COLUMN `tg_link_code` VARCHAR(32) NULL"],
+    ["tg_link_code_expires_at", "ALTER TABLE `users` ADD COLUMN `tg_link_code_expires_at` INT NULL"],
   ] as const) {
     try {
       const { sql } = await import("drizzle-orm");

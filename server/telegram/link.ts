@@ -13,7 +13,7 @@
  *     к двум сотрудникам, и непонятно, от чьего имени бот ставит задачи.
  */
 
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { storage } from "../storage";
 import type { User } from "@shared/schema";
@@ -134,4 +134,64 @@ export async function connectTelegramAccount(params: {
 
 export function isTelegramLinkError(err: unknown): err is TelegramLinkError {
   return err instanceof TelegramLinkError;
+}
+
+// ===== Привязка через бота одноразовым кодом =====
+//
+// Основной путь, потому что Login Widget требует сразу трёх условий:
+// домен прописан в BotFather, telegram.org доступен из браузера и попап
+// не заблокирован. Код-ссылка не требует ничего — открывается сам бот.
+
+/** 10 минут: успеть открыть бота, но не оставлять код валидным надолго. */
+const LINK_CODE_TTL_SEC = 10 * 60;
+
+/** Код в ссылке t.me/bot?start=<code> — только [A-Za-z0-9_-], до 64 символов. */
+export function generateLinkCode(): string {
+  return randomBytes(12).toString("hex");
+}
+
+export async function issueTelegramLinkCode(userId: number): Promise<{
+  code: string;
+  expiresAt: number;
+}> {
+  const code = generateLinkCode();
+  const expiresAt = Math.floor(Date.now() / 1000) + LINK_CODE_TTL_SEC;
+  await storage.setTelegramLinkCode(userId, code, expiresAt);
+  return { code, expiresAt };
+}
+
+export type LinkByCodeResult =
+  | { ok: true; user: User }
+  | { ok: false; reason: "unknown_code" | "already_linked_other" };
+
+/**
+ * Привязка по коду из /start. Код одноразовый: гасим его сразу, чтобы
+ * пересланная кому-то ссылка не привязала чужой Telegram к аккаунту.
+ */
+export async function linkTelegramByCode(params: {
+  code: string;
+  telegramUserId: number;
+  telegramUsername?: string | null;
+  telegramFirstName?: string | null;
+  chatId: number;
+}): Promise<LinkByCodeResult> {
+  const owner = await storage.findUserByTelegramLinkCode(params.code);
+  if (!owner) return { ok: false, reason: "unknown_code" };
+
+  const existing = await storage.findUserByTelegramUserId(params.telegramUserId);
+  if (existing && existing.id !== owner.id) {
+    return { ok: false, reason: "already_linked_other" };
+  }
+
+  await storage.saveTelegramLink(owner.id, {
+    telegramUserId: params.telegramUserId,
+    telegramUsername: params.telegramUsername ?? null,
+    telegramFirstName: params.telegramFirstName ?? null,
+  });
+  // Код сгорел — повторное использование ссылки ничего не даст.
+  await storage.setTelegramLinkCode(owner.id, "", 0);
+  await storage.markTelegramStarted(owner.id, params.chatId);
+
+  const fresh = await storage.getUserById(owner.id);
+  return { ok: true, user: fresh ?? owner };
 }

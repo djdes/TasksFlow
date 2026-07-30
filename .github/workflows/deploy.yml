@@ -144,6 +144,7 @@ jobs:
             npm run add-due-date-col || echo "due-date col migration failed (non-fatal)"
             npm run add-example-photos-col || echo "example-photos col migration failed (non-fatal)"
             npm run create-telegram-tables || echo "telegram tables migration failed (non-fatal)"
+            npm run add-tg-link-code-cols || echo "tg-link-code cols migration failed (non-fatal)"
 
             echo ">>> build"
             npm run build

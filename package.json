@@ -36,7 +36,8 @@
     "add-telegram-cols": "tsx script/_add-telegram-cols.ts",
     "add-due-date-col": "tsx script/_add-due-date-col.ts",
     "add-example-photos-col": "tsx script/_add-example-photos-col.ts",
-    "create-telegram-tables": "tsx script/_create-telegram-tables.ts"
+    "create-telegram-tables": "tsx script/_create-telegram-tables.ts",
+    "add-tg-link-code-cols": "tsx script/_add-tg-link-code-cols.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

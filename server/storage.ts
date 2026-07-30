@@ -95,6 +95,10 @@ export interface IStorage {
   clearTelegramLink(userId: number): Promise<User | undefined>;
   /** Кэш chat_id после /start — до него бот не может написать первым. */
   markTelegramStarted(userId: number, chatId: number): Promise<void>;
+  /** Выдать одноразовый код привязки через бота. */
+  setTelegramLinkCode(userId: number, code: string, expiresAt: number): Promise<void>;
+  /** Найти по непросроченному коду. Код одноразовый — гасится при привязке. */
+  findUserByTelegramLinkCode(code: string): Promise<User | undefined>;
 
   // Workers
   getWorkers(companyId?: number): Promise<Worker[]>;
@@ -394,6 +398,26 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ tgChatId: chatId, tgStartedAt: Math.floor(Date.now() / 1000) })
       .where(eq(users.id, userId));
+  }
+
+  async setTelegramLinkCode(
+    userId: number,
+    code: string,
+    expiresAt: number,
+  ): Promise<void> {
+    await db
+      .update(users)
+      .set({ tgLinkCode: code, tgLinkCodeExpiresAt: expiresAt })
+      .where(eq(users.id, userId));
+  }
+
+  async findUserByTelegramLinkCode(code: string): Promise<User | undefined> {
+    const now = Math.floor(Date.now() / 1000);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.tgLinkCode, code), gte(users.tgLinkCodeExpiresAt, now)));
+    return user || undefined;
   }
 
   async getAllUsers(companyId?: number): Promise<User[]> {

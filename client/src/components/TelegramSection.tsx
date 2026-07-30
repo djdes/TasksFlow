@@ -77,18 +77,38 @@ export function TelegramSection() {
       setWidgetReady(true);
       return;
     }
+
+    let cancelled = false;
     const existing = document.querySelector<HTMLScriptElement>(
       `script[src="${TELEGRAM_WIDGET_SRC}"]`,
     );
-    if (existing) {
-      existing.addEventListener("load", () => setWidgetReady(true));
-      return;
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = TELEGRAM_WIDGET_SRC;
+      script.async = true;
+      document.head.appendChild(script);
     }
-    const script = document.createElement("script");
-    script.src = TELEGRAM_WIDGET_SRC;
-    script.async = true;
-    script.onload = () => setWidgetReady(true);
-    document.head.appendChild(script);
+
+    // Опрашиваем, а не слушаем 'load': на уже загруженном теге (SPA,
+    // повторный вход на страницу) событие давно прошло, и слушатель не
+    // сработает никогда — кнопка оставалась заблокированной навсегда.
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (cancelled) return;
+      if (window.Telegram?.Login) {
+        setWidgetReady(true);
+        window.clearInterval(timer);
+      } else if (Date.now() - started > 8000) {
+        // telegram.org недоступен — виджета не будет, но привязка через
+        // бота работает и без него.
+        window.clearInterval(timer);
+      }
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [needWidget]);
 
   const connect = useCallback(() => {
@@ -121,6 +141,40 @@ export function TelegramSection() {
       })();
     });
   }, [status?.botId, queryClient, toast]);
+
+  /**
+   * Привязка через бота — основной путь.
+   *
+   * Не зависит ни от /setdomain в BotFather, ни от доступности
+   * telegram.org в браузере, ни от попапов. Сайт выдаёт одноразовый код,
+   * ссылка открывает бота, бот связывает аккаунт.
+   */
+  const connectViaBot = async () => {
+    setBusy(true);
+    try {
+      const res = await apiRequest("POST", "/api/me/telegram/link-code");
+      const { url } = (await res.json()) as { url: string };
+      // Открываем в контексте клика — иначе браузер заблокирует.
+      window.open(url, "_blank", "noopener");
+      toast({
+        title: "Открываю бота",
+        description: "Нажми Start в Telegram — аккаунт привяжется сам.",
+      });
+      // Пользователь уйдёт в Telegram и вернётся: обновим статус, чтобы
+      // секция сама переключилась на «привязан».
+      setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["me", "telegram"] });
+      }, 5000);
+    } catch (err) {
+      toast({
+        title: "Не удалось создать ссылку",
+        description: err instanceof ApiError ? err.message : "Ошибка",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const disconnect = async () => {
     setBusy(true);
@@ -204,15 +258,30 @@ export function TelegramSection() {
           <p className="text-sm text-muted-foreground">
             Ставь задачи и закрывай их фотографией прямо из Telegram.
           </p>
-          <Button onClick={connect} disabled={busy || !widgetReady}>
-            {busy ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" /> Привязать Telegram
-              </>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Основная кнопка: работает всегда, без зависимости от
+                telegram.org в браузере и /setdomain у бота. */}
+            <Button onClick={connectViaBot} disabled={busy}>
+              {busy ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" /> Привязать Telegram
+                </>
+              )}
+            </Button>
+            {/* Виджет — только если он реально загрузился. Раньше кнопка
+                просто висела заблокированной, если скрипт не пришёл. */}
+            {widgetReady && (
+              <Button variant="outline" onClick={connect} disabled={busy}>
+                Войти через Telegram
+              </Button>
             )}
-          </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Откроется бот {status.botUsername ? `@${status.botUsername}` : ""} — нажми
+            в нём «Start», и аккаунт свяжется. Ссылка живёт 10 минут.
+          </p>
         </div>
       )}
     </section>
