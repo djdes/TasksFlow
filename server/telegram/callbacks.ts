@@ -38,7 +38,10 @@ export type CallbackAction =
   | { kind: "taskOpen"; taskId: number }
   | { kind: "taskPhoto"; taskId: number }
   | { kind: "taskItemPhoto"; taskId: number; itemId: string }
-  | { kind: "tasksRefresh" };
+  | { kind: "tasksRefresh" }
+  /** Групповое меню: чьи задачи показать и задачи конкретного сотрудника. */
+  | { kind: "workerMenu" }
+  | { kind: "workerTasks"; workerId: number };
 
 export type RecurPreset = "daily" | "workdays" | "mwf" | "none";
 export type DuePreset = "today" | "tomorrow" | "week" | "none";
@@ -81,6 +84,8 @@ function encodeAction(a: CallbackAction): string {
     case "taskPhoto": return `tp:${a.taskId}`;
     case "taskItemPhoto": return `ti:${a.taskId}:${a.itemId}`;
     case "tasksRefresh": return "tr";
+    case "workerMenu": return "wm";
+    case "workerTasks": return `wt:${a.workerId}`;
   }
 }
 
@@ -185,6 +190,12 @@ export function parseCallback(data: string | undefined): CallbackAction | null {
     }
     case "tr":
       return { kind: "tasksRefresh" };
+    case "wm":
+      return { kind: "workerMenu" };
+    case "wt": {
+      const w = num(1);
+      return w !== null ? { kind: "workerTasks", workerId: w } : null;
+    }
     default:
       return null;
   }

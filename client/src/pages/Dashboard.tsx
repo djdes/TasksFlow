@@ -70,6 +70,7 @@ import {
   Search,
   Palette,
   QrCode,
+  UserCog,
   Gift,
   CalendarCheck,
   MessageCircle,
@@ -665,6 +666,22 @@ export default function Dashboard() {
                 ) : null}
               </button>
             )}
+            {/* «Мой аккаунт» — ВСЕМ, включая воркеров: там привязка
+                Telegram, а закрывать задачи из бота нужно как раз им.
+                Раньше страница существовала, но ссылки на неё не было
+                нигде — попасть можно было только вбив /account руками. */}
+            <button
+              type="button"
+              className="dropdown-item w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setLocation("/account");
+              }}
+              data-testid="menu-account"
+            >
+              <UserCog className="w-5 h-5 text-primary" />
+              <span className="font-medium">Мой аккаунт</span>
+            </button>
             {/* «Сотрудники» и «Настройки компании» — только админ.
                 Руководителю эти страницы не нужны: списком своих
                 подчинённых он управляет на стороне WeSetup

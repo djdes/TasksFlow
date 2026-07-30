@@ -41,7 +41,8 @@ export type TgDocument = {
 export type TgMessage = {
   message_id: number;
   from?: TgUser;
-  chat: { id: number; type: string };
+  /** title есть у group/supergroup — используем для понятных логов. */
+  chat: { id: number; type: string; title?: string };
   date: number;
   text?: string;
   caption?: string;
@@ -189,6 +190,16 @@ export class TelegramClient {
     media: Array<{ type: "photo"; media: string; caption?: string }>;
   }): Promise<TgMessage[]> {
     return this.call<TgMessage[]>("sendMediaGroup", params);
+  }
+
+  /**
+   * Кто мы. Username берём отсюда, а не из env: в группах бот обязан
+   * узнавать упоминание себя, и полагаться на то, что руками проставили
+   * TELEGRAM_BOT_USERNAME, нельзя — ошибутся один раз, и бот молча
+   * перестанет отвечать в группах.
+   */
+  async getMe(): Promise<{ id: number; username?: string; first_name?: string }> {
+    return this.call("getMe");
   }
 
   async setMyCommands(

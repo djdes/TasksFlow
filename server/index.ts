@@ -463,6 +463,16 @@ process.on("unhandledRejection", (reason, promise) => {
         \`updated_at\`       INT         NOT NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`telegram_group_owners\` (
+        \`chat_id\`       BIGINT       NOT NULL PRIMARY KEY,
+        \`owner_user_id\` INT          NOT NULL,
+        \`company_id\`    INT          NOT NULL,
+        \`chat_title\`    VARCHAR(255) NULL,
+        \`created_at\`    INT          NOT NULL,
+        KEY \`idx_tgo_owner\` (\`owner_user_id\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
   } catch (err) {
     logger.warn(
       { err: err instanceof Error ? err.message : String(err) },

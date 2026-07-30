@@ -26,6 +26,7 @@ import type { TgCallbackQuery, TgMessage, TgReplyMarkup } from "./client";
 import { buildCallback, type CallbackAction } from "./callbacks";
 import { escapeHtml } from "./util";
 import { extractAttachment, MAX_FILE_BYTES } from "./attachments";
+import { loadAssignableWorkers } from "./composer";
 
 /** «Жду фото» живёт 15 минут — дальше это забытый тап по кнопке. */
 const AWAIT_TTL_SEC = 15 * 60;
@@ -48,11 +49,13 @@ export async function handleTasksCommand(
   chatId: number,
   user: User,
   runtime: TelegramRuntime,
+  replyTo?: number,
 ): Promise<void> {
   const view = await renderTaskList(user);
   const sent = await runtime.client.sendMessage({
     chat_id: chatId,
     parse_mode: "HTML",
+    reply_to_message_id: replyTo,
     text: view.text,
     reply_markup: view.reply_markup,
   });
@@ -96,6 +99,79 @@ async function renderTaskList(
   return { text: lines.join("\n"), reply_markup: { inline_keyboard: keyboard } };
 }
 
+/**
+ * Меню «чьи задачи показать» — по пустому упоминанию бота в группе.
+ * Кнопка на сотрудника, а не список текстом: в группе с десятком человек
+ * список превратился бы в простыню.
+ */
+export async function renderWorkerTasksMenu(
+  workers: Array<{ id: number; name: string; position: string | null }>,
+  viewer: User,
+): Promise<{ text: string; reply_markup: TgReplyMarkup }> {
+  const tasks = viewer.companyId ? await storage.getTasks(viewer.companyId) : [];
+  const now = new Date();
+  const dow = now.getDay();
+  const dom = now.getDate();
+
+  const openByWorker = new Map<number, number>();
+  for (const t of tasks) {
+    if (!t.workerId || t.isCompleted) continue;
+    if (!isTaskVisibleOn(t, dow, dom)) continue;
+    openByWorker.set(t.workerId, (openByWorker.get(t.workerId) ?? 0) + 1);
+  }
+
+  const keyboard: TgReplyMarkup["inline_keyboard"] = workers
+    .slice(0, 20)
+    .map((w) => {
+      const open = openByWorker.get(w.id) ?? 0;
+      return [
+        {
+          text: open > 0 ? `${w.name} · ${open}` : `${w.name} · —`,
+          callback_data: buildCallback({ kind: "workerTasks", workerId: w.id }),
+        },
+      ];
+    });
+
+  return {
+    text: "👥 <b>Чьи задачи показать?</b>",
+    reply_markup: { inline_keyboard: keyboard },
+  };
+}
+
+/** Открытые задачи конкретного сотрудника на сегодня. */
+export async function renderWorkerTasks(
+  workerId: number,
+  workerName: string,
+  viewer: User,
+): Promise<{ text: string; reply_markup: TgReplyMarkup }> {
+  const all = viewer.companyId ? await storage.getTasks(viewer.companyId) : [];
+  const now = new Date();
+  const dow = now.getDay();
+  const dom = now.getDate();
+
+  const tasks = all
+    .filter((t) => t.workerId === workerId)
+    .filter((t) => isTaskVisibleOn(t, dow, dom))
+    .sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted) || a.id - b.id);
+
+  const lines = [`📋 <b>${escapeHtml(workerName)}</b> — задач на сегодня: ${tasks.length}`];
+  if (tasks.length === 0) {
+    lines.push("", "Пусто.");
+  } else {
+    lines.push("");
+    tasks.forEach((t, i) => lines.push(`${i + 1}. ${taskLine(t)}`));
+  }
+
+  return {
+    text: lines.join("\n"),
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "👥 Другой сотрудник", callback_data: buildCallback({ kind: "workerMenu" }) }],
+      ],
+    },
+  };
+}
+
 function taskLine(task: Task): string {
   const chips: string[] = [];
   if (task.checklist.length > 0) {
@@ -117,7 +193,8 @@ function taskLine(task: Task): string {
 export async function handleTaskCallback(
   action: Extract<
     CallbackAction,
-    { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" } | { kind: "tasksRefresh" }
+    | { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" }
+    | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
   >,
   query: TgCallbackQuery,
   user: User,
@@ -131,6 +208,36 @@ export async function handleTaskCallback(
       .catch(() => null);
 
   if (!chatId || !messageId) {
+    await answer();
+    return;
+  }
+
+  // Групповое меню: чьи задачи показать.
+  if (action.kind === "workerMenu" || action.kind === "workerTasks") {
+    const workers = await loadAssignableWorkers(user);
+    const view =
+      action.kind === "workerMenu"
+        ? await renderWorkerTasksMenu(workers, user)
+        : await (async () => {
+            // Показывать можно только тех, кто в охвате смотрящего.
+            const w = workers.find((x) => x.id === action.workerId);
+            if (!w) return null;
+            return renderWorkerTasks(w.id, w.name, user);
+          })();
+
+    if (!view) {
+      await answer("Нет доступа к задачам этого сотрудника", true);
+      return;
+    }
+    await runtime.client
+      .editMessageText({
+        chat_id: chatId,
+        message_id: messageId,
+        text: view.text,
+        parse_mode: "HTML",
+        reply_markup: view.reply_markup,
+      })
+      .catch(() => null);
     await answer();
     return;
   }

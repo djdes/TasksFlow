@@ -19,6 +19,11 @@ export type TelegramRuntime = {
   config: TelegramConfig;
   client: TelegramClient;
   poller: TelegramPoller | null;
+  /**
+   * Реальные id и username бота из getMe. Нужны для работы в группах:
+   * по username опознаём упоминание, по id — reply на своё сообщение.
+   */
+  me: { id: number; username: string | null };
 };
 
 let runtime: TelegramRuntime | null = null;
@@ -42,7 +47,26 @@ export async function startTelegramBot(): Promise<void> {
   }
 
   const client = new TelegramClient(config);
-  runtime = { config, client, poller: null };
+
+  // getMe до всего остального: он же проверяет, что токен живой и сеть
+  // до Bot API есть. Без username бот не сможет работать в группах.
+  let me: { id: number; username: string | null };
+  try {
+    const info = await client.getMe();
+    me = { id: info.id, username: info.username ?? config.botUsername };
+    logger.info(
+      { botId: info.id, username: me.username },
+      "[telegram] бот подключён",
+    );
+  } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[telegram] getMe не прошёл — токен неверный или нет сети до Bot API",
+    );
+    return;
+  }
+
+  runtime = { config, client, poller: null, me };
 
   // Меню команд. Не критично: если не прошло — бот работает, просто без
   // подсказок в интерфейсе Telegram.

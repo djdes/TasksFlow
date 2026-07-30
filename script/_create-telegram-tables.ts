@@ -57,6 +57,18 @@ async function main() {
   `);
   console.log("[migrate] telegram_chat_state ready");
 
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`telegram_group_owners\` (
+      \`chat_id\`       BIGINT       NOT NULL PRIMARY KEY,
+      \`owner_user_id\` INT          NOT NULL,
+      \`company_id\`    INT          NOT NULL,
+      \`chat_title\`    VARCHAR(255) NULL,
+      \`created_at\`    INT          NOT NULL,
+      KEY \`idx_tgo_owner\` (\`owner_user_id\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  console.log("[migrate] telegram_group_owners ready");
+
   process.exit(0);
 }
 main().catch((err) => { console.error("[migrate] failed", err); process.exit(1); });

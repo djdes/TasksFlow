@@ -87,9 +87,16 @@ export function failureMessage(reason: PfAiFailureReason): string {
   }
 }
 
+/**
+ * Колбэк прогресса. Нужен, чтобы бот показывал живой статус, а не молчал
+ * до полутора минут: человек в чате должен видеть, что происходит.
+ */
+export type StageReporter = (stage: string) => void;
+
 export async function requestTaskParse(
   envelope: WorkerEnvelope,
   config: PfAiConfig | null = loadPfAiConfig(),
+  onStage?: StageReporter,
 ): Promise<PfAiResult> {
   if (!config) return { ok: false, reason: "not_configured" };
 
@@ -100,6 +107,7 @@ export async function requestTaskParse(
 
   let jobId: string;
   try {
+    onStage?.("Отправляю на разбор");
     const res = await fetch(`${config.apiUrl}/agent/ai-prompt-jobs`, {
       method: "POST",
       headers: {
@@ -136,15 +144,21 @@ export async function requestTaskParse(
     return { ok: false, reason: "network" };
   }
 
-  return waitForJob(jobId, config);
+  return waitForJob(jobId, config, onStage);
 }
 
 async function waitForJob(
   jobId: string,
   config: PfAiConfig,
+  onStage?: StageReporter,
 ): Promise<PfAiResult> {
   for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
     try {
+      onStage?.(
+        attempt === 0
+          ? "Жду очередь диспетчера"
+          : `Думаю над задачей (${attempt * POLL_WAIT_SEC}с)`,
+      );
       const res = await fetch(
         `${config.apiUrl}/agent/ai-prompt-jobs/${jobId}?wait=${POLL_WAIT_SEC}`,
         {

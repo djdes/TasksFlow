@@ -209,6 +209,26 @@ export const telegramTaskMessages = mysqlTable("telegram_task_messages", {
 });
 
 /**
+ * Привязка группового чата к аккаунту-владельцу.
+ *
+ * Смысл: в рабочей группе задачу может попросить любой — повар, курьер,
+ * кто угодно, — и у большинства из них нет аккаунта TasksFlow. Отшивать
+ * их сообщением «привяжи аккаунт» значит сделать бота бесполезным для
+ * всей смены. Вместо этого задача создаётся в компании владельца группы,
+ * а имя просившего уходит в описание.
+ *
+ * Владелец — тот, кто первым сказал /start в этой группе (first-writer-wins).
+ */
+export const telegramGroupOwners = mysqlTable("telegram_group_owners", {
+  chatId: bigint("chat_id", { mode: "number" }).primaryKey(),
+  ownerUserId: int("owner_user_id").notNull(),
+  companyId: int("company_id").notNull(),
+  /** Название группы на момент привязки — для понятных логов. */
+  chatTitle: varchar("chat_title", { length: 255 }),
+  createdAt: int("created_at").notNull(),
+});
+
+/**
  * Состояние чата для пути без reply: нажал «📸 Фото» → следующее фото
  * в чате уходит в эту задачу. TTL 15 минут.
  */
@@ -422,6 +442,7 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type TelegramTaskDraft = typeof telegramTaskDrafts.$inferSelect;
 export type TelegramTaskMessage = typeof telegramTaskMessages.$inferSelect;
 export type TelegramChatStateRow = typeof telegramChatState.$inferSelect;
+export type TelegramGroupOwner = typeof telegramGroupOwners.$inferSelect;
 
 // API Keys — для server-to-server интеграций (managermagday и других).
 //
