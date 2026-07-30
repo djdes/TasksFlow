@@ -624,6 +624,15 @@ export async function registerRoutes(
         // Токен есть, но бот не встал — почти всегда сеть до Bot API.
         // Без этого поля причину было видно только в логе сервера.
         startupError: getTelegramStartupError(),
+        // Чем бот разбирает текст. "none" = разбирать нечем, каждая
+        // задача уйдёт в ручной черновик — самая частая жалоба
+        // «AI не работает», которую иначе не видно снаружи.
+        ai: await (async () => {
+          const { loadPfAiConfig } = await import("./telegram/pf-ai");
+          if (loadPfAiConfig()) return "projectsflow";
+          const { isLocalAiAvailable } = await import("./telegram/local-ai");
+          return isLocalAiAvailable() ? "local" : "none";
+        })(),
         // Какое имя переменной сработало — самая частая причина «токен
         // положил, а бот молчит»: в ProjectsFlow и DocsFlow оно другое.
         tokenEnv: process.env.TASKSFLOW_BOT_TOKEN
