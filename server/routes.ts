@@ -606,6 +606,28 @@ export async function registerRoutes(
   // ===== Привязка Telegram (бот @thetasksflowbot) =====
 
   /**
+   * Публичная проверка «поднялся ли бот».
+   *
+   * Нужна, чтобы не гадать вслепую: положили токен в .env, перезапустили —
+   * и одним curl видно, подхватил сервер бота или нет. Секретов не
+   * отдаёт: username бота публичен по определению, токена и chat_id тут
+   * нет. Без неё диагностика упиралась в «залогинься и посмотри глазами».
+   */
+  app.get("/api/telegram/health", async (_req, res) => {
+    try {
+      const { getTelegramRuntime } = await import("./telegram");
+      const rt = getTelegramRuntime();
+      res.json({
+        configured: Boolean(rt),
+        username: rt?.me.username ?? null,
+        mode: rt?.config.mode ?? null,
+      });
+    } catch {
+      res.json({ configured: false, username: null, mode: null });
+    }
+  });
+
+  /**
    * Статус привязки для страницы «Аккаунт».
    * botId отдаём осознанно — Login Widget'у он нужен на клиенте, и это
    * публичная часть токена (всё до двоеточия).
