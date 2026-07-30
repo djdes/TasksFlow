@@ -9,7 +9,11 @@
  * (webhook, /api/me/telegram), и фоновый таймер уборки драфтов.
  */
 
-import { loadTelegramConfig, type TelegramConfig } from "./config";
+import {
+  loadTelegramConfig,
+  TELEGRAM_FALLBACK_IP,
+  type TelegramConfig,
+} from "./config";
 import { TelegramClient } from "./client";
 import { TelegramPoller } from "./poller";
 import { handleUpdate } from "./handle-update";
@@ -47,7 +51,9 @@ export function getTelegramRuntime(): TelegramRuntime | null {
 }
 
 export async function startTelegramBot(): Promise<void> {
-  const config = loadTelegramConfig();
+  // let, а не const: при фолбэке на пришпиленный IP конфиг заменяется
+  // на сработавший вариант, и runtime должен хранить именно его.
+  let config = loadTelegramConfig();
   if (!config) {
     logger.info(
       "[telegram] TASKSFLOW_BOT_TOKEN не задан — бот не запущен, сервер работает без него",
@@ -59,25 +65,53 @@ export async function startTelegramBot(): Promise<void> {
     return;
   }
 
-  const client = new TelegramClient(config);
-
   // getMe до всего остального: он же проверяет, что токен живой и сеть
   // до Bot API есть. Без username бот не сможет работать в группах.
-  let me: { id: number; username: string | null };
-  try {
-    const info = await client.getMe();
-    me = { id: info.id, username: info.username ?? config.botUsername };
-    logger.info(
-      { botId: info.id, username: me.username },
-      "[telegram] бот подключён",
-    );
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    startupError = reason;
+  //
+  // Если обычное соединение не прошло, пробуем ещё раз с пришпиленным
+  // IPv4: РФ-хостинги не резолвят api.telegram.org по DNS/IPv6, хотя сам
+  // адрес доступен. Раньше это означало «бот молчит, разбирайся по логам».
+  const attempts: Array<{ cfg: TelegramConfig; label: string }> = [
+    { cfg: config, label: "обычное соединение" },
+  ];
+  if (!config.apiIp && !config.httpProxy) {
+    attempts.push({
+      cfg: { ...config, apiIp: TELEGRAM_FALLBACK_IP },
+      label: `пришпиленный IP ${TELEGRAM_FALLBACK_IP}`,
+    });
+  }
+
+  let client: TelegramClient | null = null;
+  let me: { id: number; username: string | null } | null = null;
+
+  for (const attempt of attempts) {
+    const candidate = new TelegramClient(attempt.cfg);
+    try {
+      const info = await candidate.getMe();
+      client = candidate;
+      me = { id: info.id, username: info.username ?? attempt.cfg.botUsername };
+      config = attempt.cfg;
+      startupError = null;
+      logger.info(
+        { botId: info.id, username: me.username, via: attempt.label },
+        "[telegram] бот подключён",
+      );
+      break;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      startupError = `${attempt.label}: ${reason}`;
+      logger.warn(
+        { err: reason, via: attempt.label },
+        "[telegram] getMe не прошёл",
+      );
+    }
+  }
+
+  if (!client || !me) {
     logger.error(
-      { err: reason, apiBase: config.apiBaseUrl, proxy: Boolean(config.httpProxy), apiIp: config.apiIp ?? null },
-      "[telegram] getMe не прошёл — токен неверный или нет сети до Bot API. " +
-        "Если хостинг не резолвит api.telegram.org, задайте TELEGRAM_API_IP=149.154.167.220",
+      { err: startupError },
+      "[telegram] бот не поднялся: неверный токен либо нет сети до Bot API " +
+        "даже по прямому IP. Помогут TELEGRAM_HTTP_PROXY или TELEGRAM_API_BASE_URL",
     );
     return;
   }

@@ -8,6 +8,13 @@
 
 export type TelegramMode = "webhook" | "polling" | "off";
 
+/**
+ * IPv4 api.telegram.org — фолбэк, когда хостинг не резолвит домен.
+ * Тот же адрес зашит в DocsFlow, который живёт на таком же хостинге.
+ * Используется только после провала обычного соединения.
+ */
+export const TELEGRAM_FALLBACK_IP = "149.154.167.220";
+
 export type TelegramConfig = {
   botToken: string;
   /** Публичен по дизайну: числовая часть токена до `:`. Нужен Login Widget'у. */
