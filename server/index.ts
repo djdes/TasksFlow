@@ -475,6 +475,14 @@ process.on("unhandledRejection", (reason, promise) => {
         KEY \`idx_tgo_owner\` (\`owner_user_id\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    // Дедлайн авто-создания у черновиков: таблица могла быть создана
+    // прошлой версией, поэтому колонку добавляем отдельно.
+    try {
+      await db.execute(sql`ALTER TABLE \`telegram_task_drafts\` ADD COLUMN \`auto_create_at\` INT NULL`);
+      logger.info("[telegram] колонка telegram_task_drafts.auto_create_at добавлена");
+    } catch (e: any) {
+      if (e?.code !== "ER_DUP_FIELDNAME") throw e;
+    }
   } catch (err) {
     logger.warn(
       { err: err instanceof Error ? err.message : String(err) },
@@ -592,6 +600,20 @@ process.on("unhandledRejection", (reason, promise) => {
         logger.warn(
           { err: err instanceof Error ? err.message : String(err) },
           "[telegram] уборка не прошла",
+        );
+      });
+
+    // Черновики, провисевшие 10 минут без ответа, создаются сами:
+    // руководитель часто пишет задачу и уходит, и терять её нельзя.
+    import("./telegram/composer")
+      .then(({ processDueAutoCreate }) => processDueAutoCreate())
+      .then((n) => {
+        if (n > 0) logger.info({ drafts: n }, "[telegram] авто-создание задач");
+      })
+      .catch((err: unknown) => {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          "[telegram] авто-создание не прошло",
         );
       });
   }, 30_000);

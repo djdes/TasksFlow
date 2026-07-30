@@ -14,6 +14,7 @@ import type { TelegramRuntime } from "./index";
 import type { TgCallbackQuery } from "./client";
 import { parseCallback, type CallbackAction } from "./callbacks";
 import {
+  claimDraftForCreation,
   findDraftByShortId,
   saveAttachments,
   saveSegments,
@@ -159,6 +160,15 @@ async function dispatch(
     }
 
     case "create": {
+      // Забираем черновик атомарно: фоновый тик авто-создания мог начать
+      // ту же работу секунду назад, и без этого задачи завелись бы дважды.
+      if (!(await claimDraftForCreation(draft.id))) {
+        await rerender({
+          text: "Задачи уже создаются — секунду.",
+          reply_markup: { inline_keyboard: [] },
+        });
+        return;
+      }
       const summary = await createTasksFromDraft({ runtime, draft, author: user });
       await rerender({ text: summary, reply_markup: { inline_keyboard: [] } });
       return;

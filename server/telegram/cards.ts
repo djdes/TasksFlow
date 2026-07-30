@@ -74,6 +74,12 @@ export function renderSegmentCard(
     lines.push("");
     lines.push("<i>Задача исключена — создана не будет.</i>");
   }
+  if (opts.standalone) {
+    // Говорим заранее: человек должен знать, что бездействие = создать,
+    // а не «черновик протухнет».
+    lines.push("");
+    lines.push("<i>⏱ Без ответа создам автоматически через 10 минут.</i>");
+  }
 
   const keyboard: TgReplyMarkup["inline_keyboard"] = [];
   if (opts.standalone) {
@@ -155,6 +161,9 @@ export function renderSummaryCard(
       `<i>Показаны первые ${segments.length}, ещё ${truncated} не поместились — пришли их отдельным сообщением.</i>`,
     );
   }
+
+  lines.push("");
+  lines.push("<i>⏱ Без ответа создам автоматически через 10 минут.</i>");
 
   const keyboard: TgReplyMarkup["inline_keyboard"] = [
     [

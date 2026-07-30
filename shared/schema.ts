@@ -198,6 +198,14 @@ export const telegramTaskDrafts = mysqlTable("telegram_task_drafts", {
   attachments: text("attachments"),
   createdAt: int("created_at").notNull(),
   expiresAt: int("expires_at").notNull(),
+  /**
+   * Когда создать задачи без подтверждения.
+   *
+   * Руководитель часто пишет задачу и уходит, не нажав «Создать» —
+   * без этого работа просто терялась вместе с протухшим черновиком.
+   * NULL = авто-создание отключено (черновик уже обработан).
+   */
+  autoCreateAt: int("auto_create_at"),
 });
 
 /**

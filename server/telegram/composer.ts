@@ -28,7 +28,10 @@ import {
 import { requestLocalParse } from "./local-ai";
 import { parseMessage, matchWorker } from "./parse-message";
 import {
+  claimDraftForCreation,
   createDraft,
+  listDueForAutoCreate,
+  releaseDraft,
   saveSegments,
   setMessageId,
   setStatus,
@@ -367,8 +370,10 @@ export async function createTasksFromDraft(params: {
   runtime: TelegramRuntime;
   draft: Draft;
   author: User;
+  /** true — сработал дедлайн, а не кнопка. Влияет только на текст сводки. */
+  automatic?: boolean;
 }): Promise<string> {
-  const { runtime, draft, author } = params;
+  const { runtime, draft, author, automatic } = params;
   const results: Array<{ title: string; taskId: number | null; error: string | null }> = [];
 
   for (let index = 0; index < draft.segments.length; index++) {
@@ -438,5 +443,70 @@ export async function createTasksFromDraft(params: {
   if (results.length === 0) {
     return "Ни одной задачи не выбрано — создавать нечего.";
   }
-  return renderCreatedSummary(results);
+  const summary = renderCreatedSummary(results);
+  return automatic
+    ? `${summary}\n\n⏱ Создано автоматически: карточка провисела 10 минут без ответа.`
+    : summary;
+}
+
+/**
+ * Фоновый тик: создаёт задачи по черновикам, которым вышел срок.
+ *
+ * Вызывается из общего таймера в server/index.ts. Черновик забирается
+ * атомарно — если в ту же секунду нажали «Создать», выиграет кто-то один
+ * и задачи не задвоятся.
+ */
+export async function processDueAutoCreate(limit = 25): Promise<number> {
+  const { getTelegramRuntime } = await import("./index");
+  const runtime = getTelegramRuntime();
+  if (!runtime) return 0;
+
+  const due = await listDueForAutoCreate(limit);
+  let processed = 0;
+
+  for (const draft of due) {
+    if (!(await claimDraftForCreation(draft.id))) continue;
+    processed++;
+
+    try {
+      const author = await storage.getUserById(draft.userId);
+      if (!author) {
+        logger.warn({ draftId: draft.id }, "[tg-auto] автор черновика исчез");
+        continue;
+      }
+
+      const summary = await createTasksFromDraft({
+        runtime,
+        draft,
+        author,
+        automatic: true,
+      });
+
+      // Карточку правим на месте: пользователь увидит результат там же,
+      // где висели кнопки, а не отдельным сообщением в конце дня.
+      if (draft.messageId) {
+        await runtime.client
+          .editMessageText({
+            chat_id: draft.chatId,
+            message_id: draft.messageId,
+            text: summary,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: [] },
+          })
+          .catch(() => null);
+      } else {
+        await runtime.client
+          .sendMessage({ chat_id: draft.chatId, text: summary, parse_mode: "HTML" })
+          .catch(() => null);
+      }
+    } catch (err) {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err), draftId: draft.id },
+        "[tg-auto] авто-создание не прошло — вернём в очередь",
+      );
+      await releaseDraft(draft.id).catch(() => null);
+    }
+  }
+
+  return processed;
 }

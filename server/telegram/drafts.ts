@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, lte, sql } from "drizzle-orm";
 import { db } from "../db";
 import { telegramTaskDrafts } from "@shared/schema";
 import type { NormalizedSegment } from "./normalize";
@@ -18,6 +18,18 @@ import type { DraftAttachment } from "./attachments";
 
 /** Черновик живёт 30 минут — дальше руководитель уже забыл, о чём он. */
 export const DRAFT_TTL_SEC = 30 * 60;
+
+/**
+ * Через сколько создать задачи, если кнопку так и не нажали.
+ *
+ * Написал задачу и ушёл — обычное поведение занятого руководителя.
+ * Без авто-создания работа терялась вместе с черновиком, поэтому
+ * умолчание «создать» безопаснее умолчания «выбросить»: лишнюю задачу
+ * видно в списке и её легко удалить, а забытую — нет.
+ */
+export const AUTO_CREATE_SEC = 10 * 60;
+/** Повтор после сбоя: не долбим Telegram каждые 30 секунд. */
+export const AUTO_RETRY_SEC = 60;
 
 export type DraftStatus =
   | "composing"
@@ -39,6 +51,8 @@ export type Draft = {
   truncated: number;
   createdAt: number;
   expiresAt: number;
+  /** Дедлайн авто-создания; null = отключено. */
+  autoCreateAt: number | null;
 };
 
 type SegmentsBlob = {
@@ -69,6 +83,8 @@ export async function createDraft(params: {
     truncated: 0,
     createdAt: now,
     expiresAt: now + DRAFT_TTL_SEC,
+    // Ставится при показе карточки — до неё создавать нечего.
+    autoCreateAt: null,
   };
 
   await db.insert(telegramTaskDrafts).values({
@@ -132,7 +148,61 @@ export async function saveSegments(
   const blob: SegmentsBlob = { segments, truncated };
   await db
     .update(telegramTaskDrafts)
-    .set({ segments: JSON.stringify(blob), status: "confirming" })
+    .set({
+      segments: JSON.stringify(blob),
+      status: "confirming",
+      // Отсчёт до авто-создания идёт с момента показа карточки, а не с
+      // прихода сообщения: разбор мог занять полторы минуты.
+      autoCreateAt: Math.floor(Date.now() / 1000) + AUTO_CREATE_SEC,
+    })
+    .where(eq(telegramTaskDrafts.id, id));
+}
+
+/** Черновики, которым пора создаться без подтверждения. */
+export async function listDueForAutoCreate(limit = 25): Promise<Draft[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await db
+    .select()
+    .from(telegramTaskDrafts)
+    .where(
+      and(
+        eq(telegramTaskDrafts.status, "confirming"),
+        lte(telegramTaskDrafts.autoCreateAt, now),
+      ),
+    )
+    .limit(limit);
+  return rows.map(rowToDraft);
+}
+
+/**
+ * Атомарно забрать черновик на создание.
+ *
+ * Возвращает true только тому, кто реально перевёл его из confirming.
+ * Без этого фоновый тик и нажатие «Создать» могли сработать одновременно
+ * и завести задачи дважды — а это реальные задачи у реальных людей.
+ */
+export async function claimDraftForCreation(id: string): Promise<boolean> {
+  const res: any = await db
+    .update(telegramTaskDrafts)
+    .set({ status: "confirmed", autoCreateAt: null })
+    .where(
+      and(
+        eq(telegramTaskDrafts.id, id),
+        eq(telegramTaskDrafts.status, "confirming"),
+      ),
+    );
+  const affected = res?.[0]?.affectedRows ?? res?.affectedRows ?? 0;
+  return affected > 0;
+}
+
+/** Вернуть черновик в очередь после сбоя — попробуем ещё раз позже. */
+export async function releaseDraft(id: string): Promise<void> {
+  await db
+    .update(telegramTaskDrafts)
+    .set({
+      status: "confirming",
+      autoCreateAt: Math.floor(Date.now() / 1000) + AUTO_RETRY_SEC,
+    })
     .where(eq(telegramTaskDrafts.id, id));
 }
 
@@ -217,5 +287,6 @@ function rowToDraft(row: typeof telegramTaskDrafts.$inferSelect): Draft {
     truncated,
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
+    autoCreateAt: row.autoCreateAt,
   };
 }
