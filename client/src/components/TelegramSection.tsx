@@ -149,9 +149,22 @@ export function TelegramSection() {
       {isLoading ? (
         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       ) : !status?.botConfigured ? (
-        <p className="text-sm text-muted-foreground">
-          Бот не настроен на этом сервере.
-        </p>
+        // Токена бота нет в окружении сервера. Раньше здесь была одна
+        // строка «бот не настроен» — админ видел тупик и не понимал,
+        // что именно сделать, чтобы кнопка появилась.
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Бот не подключён на этом сервере — привязывать пока нечего.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Чтобы кнопка появилась, добавьте в <code>.env</code> сервера{" "}
+            <code className="px-1 rounded bg-muted">TASKSFLOW_BOT_TOKEN</code> и{" "}
+            <code className="px-1 rounded bg-muted">TELEGRAM_BOT_USERNAME</code>,
+            перезапустите приложение, а в BotFather выполните{" "}
+            <code className="px-1 rounded bg-muted">/setdomain</code> на домен сайта —
+            без него Telegram не пустит привязку.
+          </p>
+        </div>
       ) : status.connected ? (
         <div className="space-y-3">
           <p className="text-sm">
