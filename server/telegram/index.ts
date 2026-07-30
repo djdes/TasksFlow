@@ -28,6 +28,19 @@ export type TelegramRuntime = {
 
 let runtime: TelegramRuntime | null = null;
 
+/**
+ * Почему бот не поднялся, если токен есть.
+ *
+ * Без этого «нет токена» и «токен есть, но Telegram недоступен»
+ * выглядели одинаково — configured:false, и дальше только гадать.
+ * Типичная причина второго — РФ-хостинг не резолвит api.telegram.org.
+ */
+let startupError: string | null = null;
+
+export function getTelegramStartupError(): string | null {
+  return startupError;
+}
+
 /** null, если бот не сконфигурирован. Роуты обязаны это проверять. */
 export function getTelegramRuntime(): TelegramRuntime | null {
   return runtime;
@@ -59,9 +72,12 @@ export async function startTelegramBot(): Promise<void> {
       "[telegram] бот подключён",
     );
   } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    startupError = reason;
     logger.error(
-      { err: err instanceof Error ? err.message : String(err) },
-      "[telegram] getMe не прошёл — токен неверный или нет сети до Bot API",
+      { err: reason, apiBase: config.apiBaseUrl, proxy: Boolean(config.httpProxy), apiIp: config.apiIp ?? null },
+      "[telegram] getMe не прошёл — токен неверный или нет сети до Bot API. " +
+        "Если хостинг не резолвит api.telegram.org, задайте TELEGRAM_API_IP=149.154.167.220",
     );
     return;
   }

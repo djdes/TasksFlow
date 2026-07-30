@@ -615,12 +615,15 @@ export async function registerRoutes(
    */
   app.get("/api/telegram/health", async (_req, res) => {
     try {
-      const { getTelegramRuntime } = await import("./telegram");
+      const { getTelegramRuntime, getTelegramStartupError } = await import("./telegram");
       const rt = getTelegramRuntime();
       res.json({
         configured: Boolean(rt),
         username: rt?.me.username ?? null,
         mode: rt?.config.mode ?? null,
+        // Токен есть, но бот не встал — почти всегда сеть до Bot API.
+        // Без этого поля причину было видно только в логе сервера.
+        startupError: getTelegramStartupError(),
         // Какое имя переменной сработало — самая частая причина «токен
         // положил, а бот молчит»: в ProjectsFlow и DocsFlow оно другое.
         tokenEnv: process.env.TASKSFLOW_BOT_TOKEN
