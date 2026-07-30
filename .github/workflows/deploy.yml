@@ -41,6 +41,11 @@ jobs:
           TELEGRAM_HTTP_PROXY: ${{ secrets.TELEGRAM_HTTP_PROXY }}
           TELEGRAM_API_BASE_URL: ${{ secrets.TELEGRAM_API_BASE_URL }}
           TELEGRAM_API_IP: ${{ secrets.TELEGRAM_API_IP }}
+          # Очередь AI-разбора ProjectsFlow: без неё бот собирает задачи
+          # вручную, потому что claude CLI на прод-сервере нет.
+          PF_API_URL: ${{ secrets.PF_API_URL }}
+          PF_AGENT_TOKEN: ${{ secrets.PF_AGENT_TOKEN }}
+          PF_TASKSFLOW_PROJECT_ID: ${{ secrets.PF_TASKSFLOW_PROJECT_ID }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -49,7 +54,7 @@ jobs:
           # Секреты бота — чтобы не ходить на сервер руками ради двух строк
           # в .env. Пустые значения ничего не меняют: .env на сервере
           # остаётся источником правды, как в ProjectsFlow.
-          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP
+          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP,PF_API_URL,PF_AGENT_TOKEN,PF_TASKSFLOW_PROJECT_ID
           script: |
             set -Eeuo pipefail
 
@@ -104,6 +109,9 @@ jobs:
             upsert_env TELEGRAM_HTTP_PROXY "${TELEGRAM_HTTP_PROXY:-}"
             upsert_env TELEGRAM_API_BASE_URL "${TELEGRAM_API_BASE_URL:-}"
             upsert_env TELEGRAM_API_IP "${TELEGRAM_API_IP:-}"
+            upsert_env PF_API_URL "${PF_API_URL:-}"
+            upsert_env PF_AGENT_TOKEN "${PF_AGENT_TOKEN:-}"
+            upsert_env PF_TASKSFLOW_PROJECT_ID "${PF_TASKSFLOW_PROJECT_ID:-}"
 
             # Явно сообщаем результат: в логе деплоя сразу видно, дошёл
             # токен или секрет так и не создали.
