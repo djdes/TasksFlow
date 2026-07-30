@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Edit, Calendar, RefreshCw, CalendarDays, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Calendar, RefreshCw, CalendarDays, CalendarClock, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
+import { parseDueDateInput, formatDueDateInput } from "@shared/task-visibility";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { coerceWeekDays } from "@/lib/coerce-week-days";
@@ -42,6 +43,9 @@ const formSchema = insertTaskSchema.extend({
   price: z.string().optional().transform(val => val ? parseInt(val, 10) : 0),
   category: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
   description: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
+  // Срок из <input type="date"> — строка YYYY-MM-DD, конвертируется в
+  // unix-секунды локальной полуночи в onSubmit.
+  dueDateInput: z.string().optional(),
 });
 
 type FormValues = z.input<typeof formSchema>;
@@ -86,8 +90,12 @@ export default function EditTask() {
       price: "0",
       category: "",
       description: "",
+      dueDateInput: "",
     },
   });
+
+  // Срок отключает блоки повторения — см. CreateTask.
+  const hasDueDate = Boolean(form.watch("dueDateInput"));
 
   // Обновляем форму когда задача загружена
   useEffect(() => {
@@ -105,6 +113,7 @@ export default function EditTask() {
         price: (task as any).price ? (task as any).price.toString() : "0",
         category: (task as any).category || "",
         description: (task as any).description || "",
+        dueDateInput: formatDueDateInput((task as any).dueDate),
       });
 
       // Устанавливаем текущее пример фото если есть
@@ -237,14 +246,22 @@ export default function EditTask() {
 
   const onSubmit = (values: FormValues) => {
     if (!id) return;
+    const dueDate = parseDueDateInput(values.dueDateInput);
     const taskData = {
       id: Number(id),
       title: values.title,
       workerId: values.workerId,
       requiresPhoto: values.requiresPhoto ?? false,
-      weekDays: values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
-      monthDay: values.monthDay || null,
-      isRecurring: values.isRecurring ?? true,
+      // Срок и повторение взаимоисключены — см. CreateTask.
+      weekDays:
+        dueDate !== null
+          ? null
+          : values.weekDays && values.weekDays.length > 0
+            ? values.weekDays
+            : null,
+      monthDay: dueDate !== null ? null : values.monthDay || null,
+      dueDate,
+      isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
@@ -576,9 +593,50 @@ export default function EditTask() {
 
             <FormField
               control={form.control}
-              name="weekDays"
+              name="dueDateInput"
               render={({ field }) => (
                 <FormItem className="rounded-md border border-border/50 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CalendarClock className="w-4 h-4 text-muted-foreground" />
+                    <FormLabel className="text-sm font-medium">Срок</FormLabel>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Разовая задача с датой. Видна сразу, после срока не исчезает —
+                    получает бейдж «Просрочено». Срок отключает повторение.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="max-w-[200px]"
+                      data-testid="input-due-date"
+                    />
+                    {field.value && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => field.onChange("")}
+                      >
+                        Убрать
+                      </Button>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weekDays"
+              render={({ field }) => (
+                <FormItem
+                  className={`rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     <FormLabel className="text-sm font-medium">Дни недели</FormLabel>
@@ -621,7 +679,11 @@ export default function EditTask() {
               control={form.control}
               name="monthDay"
               render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4">
+                <FormItem
+                  className={`rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <CalendarDays className="w-4 h-4 text-muted-foreground" />
                     <FormLabel className="text-sm font-medium">День месяца</FormLabel>
@@ -656,11 +718,16 @@ export default function EditTask() {
               control={form.control}
               name="isRecurring"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-4">
+                <FormItem
+                  className={`flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={hasDueDate ? false : field.value}
                       onCheckedChange={field.onChange}
+                      disabled={hasDueDate}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -669,7 +736,9 @@ export default function EditTask() {
                       Повторяющаяся задача
                     </FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Задача будет автоматически сбрасываться каждый день. Фотографии удаляются, статус выполнения сбрасывается.
+                      {hasDueDate
+                        ? "Недоступно: у задачи задан срок, она разовая."
+                        : "Задача будет автоматически сбрасываться каждый день. Фотографии удаляются, статус выполнения сбрасывается."}
                     </p>
                   </div>
                 </FormItem>

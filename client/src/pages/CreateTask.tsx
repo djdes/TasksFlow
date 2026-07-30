@@ -25,7 +25,9 @@ import {
   BookOpen,
   Sparkles,
   Check,
+  CalendarClock,
 } from "lucide-react";
+import { parseDueDateInput } from "@shared/task-visibility";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -69,6 +71,10 @@ const formSchema = insertTaskSchema.extend({
   price: z.string().optional().transform(val => val ? parseInt(val, 10) : 0),
   category: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
   description: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
+  // Срок из <input type="date"> — строка YYYY-MM-DD. В unix-секунды
+  // локальной полуночи превращаем в onSubmit, а не здесь: transform
+  // сработал бы и на промежуточных значениях при вводе.
+  dueDateInput: z.string().optional(),
 });
 
 type FormValues = z.input<typeof formSchema>;
@@ -357,8 +363,13 @@ export default function CreateTask() {
       price: "0",
       category: "",
       description: "",
+      dueDateInput: "",
     },
   });
+
+  // Срок отключает блоки повторения: повторяющаяся задача сбрасывается
+  // каждый день и «съела» бы срок.
+  const hasDueDate = Boolean(form.watch("dueDateInput"));
 
   // Проверка прав администратора — после всех хуков, иначе React
   // ругается на «Rendered more hooks than during the previous render»,
@@ -562,13 +573,21 @@ export default function CreateTask() {
       });
       return;
     }
+    // Срок и повторение взаимоисключены: повторяющаяся задача сбрасывается
+    // каждый день и «съела» бы срок, поэтому при заданном сроке форсим разовую.
+    const dueDate = parseDueDateInput(values.dueDateInput);
     const base = {
       title: values.title,
       requiresPhoto: values.requiresPhoto ?? false,
       weekDays:
-        values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
-      monthDay: values.monthDay || null,
-      isRecurring: values.isRecurring ?? true,
+        dueDate !== null
+          ? null
+          : values.weekDays && values.weekDays.length > 0
+            ? values.weekDays
+            : null,
+      monthDay: dueDate !== null ? null : values.monthDay || null,
+      dueDate,
+      isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
@@ -1097,9 +1116,50 @@ export default function CreateTask() {
 
             <FormField
               control={form.control}
-              name="weekDays"
+              name="dueDateInput"
               render={({ field }) => (
                 <FormItem className="rounded-md border border-border/50 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CalendarClock className="w-4 h-4 text-muted-foreground" />
+                    <FormLabel className="text-sm font-medium">Срок</FormLabel>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Разовая задача с датой. Видна сразу, после срока не исчезает —
+                    получает бейдж «Просрочено». Срок отключает повторение.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="max-w-[200px]"
+                      data-testid="input-due-date"
+                    />
+                    {field.value && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => field.onChange("")}
+                      >
+                        Убрать
+                      </Button>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weekDays"
+              render={({ field }) => (
+                <FormItem
+                  className={`rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     <FormLabel className="text-sm font-medium">Дни недели</FormLabel>
@@ -1142,7 +1202,11 @@ export default function CreateTask() {
               control={form.control}
               name="monthDay"
               render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4">
+                <FormItem
+                  className={`rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <CalendarDays className="w-4 h-4 text-muted-foreground" />
                     <FormLabel className="text-sm font-medium">День месяца</FormLabel>
@@ -1177,11 +1241,16 @@ export default function CreateTask() {
               control={form.control}
               name="isRecurring"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-4">
+                <FormItem
+                  className={`flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-4 ${
+                    hasDueDate ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={hasDueDate ? false : field.value}
                       onCheckedChange={field.onChange}
+                      disabled={hasDueDate}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -1190,7 +1259,9 @@ export default function CreateTask() {
                       Повторяющаяся задача
                     </FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Задача будет автоматически сбрасываться каждый день. Фотографии удаляются, статус выполнения сбрасывается.
+                      {hasDueDate
+                        ? "Недоступно: у задачи задан срок, она разовая."
+                        : "Задача будет автоматически сбрасываться каждый день. Фотографии удаляются, статус выполнения сбрасывается."}
                     </p>
                   </div>
                 </FormItem>

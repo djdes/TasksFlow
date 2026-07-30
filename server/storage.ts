@@ -81,6 +81,21 @@ export interface IStorage {
   updateUserEmail(id: number, email: string): Promise<User | undefined>;
   updateUserPassword(id: number, passwordHash: string): Promise<User | undefined>;
 
+  // ===== Привязка Telegram (бот @thetasksflowbot) =====
+  findUserByTelegramUserId(telegramUserId: number): Promise<User | undefined>;
+  saveTelegramLink(
+    userId: number,
+    data: {
+      telegramUserId: number;
+      telegramUsername?: string | null;
+      telegramFirstName?: string | null;
+      telegramPhotoUrl?: string | null;
+    },
+  ): Promise<User | undefined>;
+  clearTelegramLink(userId: number): Promise<User | undefined>;
+  /** Кэш chat_id после /start — до него бот не может написать первым. */
+  markTelegramStarted(userId: number, chatId: number): Promise<void>;
+
   // Workers
   getWorkers(companyId?: number): Promise<Worker[]>;
   getWorker(id: number): Promise<Worker | undefined>;
@@ -324,6 +339,63 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  // ===== Привязка Telegram =====
+
+  async findUserByTelegramUserId(telegramUserId: number): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramUserId, telegramUserId));
+    return user || undefined;
+  }
+
+  async saveTelegramLink(
+    userId: number,
+    data: {
+      telegramUserId: number;
+      telegramUsername?: string | null;
+      telegramFirstName?: string | null;
+      telegramPhotoUrl?: string | null;
+    },
+  ): Promise<User | undefined> {
+    await db
+      .update(users)
+      .set({
+        telegramUserId: data.telegramUserId,
+        telegramUsername: data.telegramUsername ?? null,
+        telegramFirstName: data.telegramFirstName ?? null,
+        telegramPhotoUrl: data.telegramPhotoUrl ?? null,
+        tgLinkedAt: Math.floor(Date.now() / 1000),
+      })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user || undefined;
+  }
+
+  async clearTelegramLink(userId: number): Promise<User | undefined> {
+    await db
+      .update(users)
+      .set({
+        telegramUserId: null,
+        telegramUsername: null,
+        telegramFirstName: null,
+        telegramPhotoUrl: null,
+        tgChatId: null,
+        tgLinkedAt: null,
+        tgStartedAt: null,
+      })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user || undefined;
+  }
+
+  async markTelegramStarted(userId: number, chatId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ tgChatId: chatId, tgStartedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(users.id, userId));
+  }
+
   async getAllUsers(companyId?: number): Promise<User[]> {
     if (companyId) {
       return await db.select().from(users).where(eq(users.companyId, companyId));
@@ -557,7 +629,43 @@ export class DatabaseStorage implements IStorage {
     rejectReason: tasks.rejectReason,
     submittedValues: tasks.submittedValues,
     checklist: tasks.checklist,
+    dueDate: tasks.dueDate,
+    examplePhotoUrls: tasks.examplePhotoUrls,
   } as const;
+
+  /**
+   * Один парсер строки задачи для всех четырёх путей чтения
+   * (getTasks / getTask / createTask / updateTask). Раньше эти три строки
+   * были скопированы в каждый — и при добавлении колонки про какой-нибудь
+   * из них регулярно забывали.
+   *
+   * examplePhotoUrls читается с fallback на legacy-колонку
+   * example_photo_url: задачи, созданные до появления массива, обязаны
+   * продолжать показывать свой единственный пример фото.
+   */
+  private static parseTaskRow(row: Record<string, any>): Task {
+    let examplePhotoUrls: string[] = [];
+    if (row.examplePhotoUrls) {
+      try {
+        const parsed = JSON.parse(row.examplePhotoUrls);
+        if (Array.isArray(parsed)) examplePhotoUrls = parsed.filter(Boolean);
+      } catch {
+        // Битый JSON в колонке не должен ронять чтение задачи —
+        // деградируем до legacy-поля ниже.
+        examplePhotoUrls = [];
+      }
+    }
+    if (examplePhotoUrls.length === 0 && row.examplePhotoUrl) {
+      examplePhotoUrls = [row.examplePhotoUrl];
+    }
+    return {
+      ...row,
+      weekDays: row.weekDays ? JSON.parse(row.weekDays) : null,
+      photoUrls: row.photoUrls ? JSON.parse(row.photoUrls) : [],
+      checklist: row.checklist ? JSON.parse(row.checklist) : [],
+      examplePhotoUrls,
+    } as Task;
+  }
 
   /**
    * Получение всех задач
@@ -573,13 +681,8 @@ export class DatabaseStorage implements IStorage {
       ? await query.where(eq(tasks.companyId, companyId))
       : await query;
 
-    // Парсим weekDays и photoUrls из JSON строки в массив
-    return result.map(task => ({
-      ...task,
-      weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
-      photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
-      checklist: task.checklist ? JSON.parse(task.checklist) : [],
-    })) as Task[];
+    // Парсим weekDays, photoUrls, checklist и examplePhotoUrls из JSON
+    return result.map((task) => DatabaseStorage.parseTaskRow(task));
   }
 
   async getTask(id: number): Promise<Task | undefined> {
@@ -588,12 +691,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.id, id));
     if (!task) return undefined;
-    return {
-      ...task,
-      weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
-      photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
-      checklist: task.checklist ? JSON.parse(task.checklist) : [],
-    } as Task;
+    return DatabaseStorage.parseTaskRow(task);
   }
 
   /**
@@ -624,7 +722,15 @@ export class DatabaseStorage implements IStorage {
       price: insertTask.price ?? 0,
       category: insertTask.category ?? null,
       description: insertTask.description ?? null,
-      examplePhotoUrl: insertTask.examplePhotoUrl ?? null,
+      // Примеры фото: пишем массив в новую колонку и дублируем первый URL
+      // в legacy-колонку, чтобы старые клиенты и старые запросы, читающие
+      // example_photo_url напрямую, продолжали видеть пример.
+      examplePhotoUrls: insertTask.examplePhotoUrls?.length
+        ? JSON.stringify(insertTask.examplePhotoUrls)
+        : null,
+      examplePhotoUrl:
+        insertTask.examplePhotoUrl ?? insertTask.examplePhotoUrls?.[0] ?? null,
+      dueDate: insertTask.dueDate ?? null,
       companyId: insertTask.companyId ?? null,
       journalLink: insertTask.journalLink ?? null,
       createdAt: Math.floor(Date.now() / 1000),
@@ -654,12 +760,7 @@ export class DatabaseStorage implements IStorage {
       .select(DatabaseStorage.TASK_SELECT)
       .from(tasks)
       .where(eq(tasks.id, insertId));
-    return {
-      ...task,
-      weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
-      photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
-      checklist: task.checklist ? JSON.parse(task.checklist) : [],
-    } as Task;
+    return DatabaseStorage.parseTaskRow(task);
   }
 
   /**
@@ -686,7 +787,17 @@ export class DatabaseStorage implements IStorage {
       checklist: updates.checklist !== undefined
         ? (updates.checklist ? JSON.stringify(updates.checklist) : null)
         : undefined,
+      examplePhotoUrls: updates.examplePhotoUrls !== undefined
+        ? (updates.examplePhotoUrls?.length
+            ? JSON.stringify(updates.examplePhotoUrls)
+            : null)
+        : undefined,
     };
+    // Массив примеров обновили — синхронизируем legacy-колонку первым URL,
+    // иначе старые читатели example_photo_url увидят устаревший пример.
+    if (updates.examplePhotoUrls !== undefined && updates.examplePhotoUrl === undefined) {
+      updateData.examplePhotoUrl = updates.examplePhotoUrls?.[0] ?? null;
+    }
     // Stamp completedAt whenever isCompleted flips. Setting true assigns
     // «now» (seconds); setting false clears the column so the next toggle
     // gets a fresh timestamp. Recurring tasks auto-reset elsewhere — they
@@ -708,12 +819,7 @@ export class DatabaseStorage implements IStorage {
       .from(tasks)
       .where(eq(tasks.id, id));
     if (!task) return undefined;
-    return {
-      ...task,
-      weekDays: task.weekDays ? JSON.parse(task.weekDays) : null,
-      photoUrls: task.photoUrls ? JSON.parse(task.photoUrls) : [],
-      checklist: task.checklist ? JSON.parse(task.checklist) : [],
-    } as Task;
+    return DatabaseStorage.parseTaskRow(task);
   }
 
   async deleteTask(id: number): Promise<void> {

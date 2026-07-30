@@ -46,6 +46,72 @@ MAIL_FROM="TasksFlow <noreply@tasksflow.ru>"
   (`v=spf1 ip4:<IP сервера> ~all`) и рабочий локальный MTA (exim/postfix),
   иначе Gmail может отклонять письма от `mail()`.
 
+## Telegram-бот (@thetasksflowbot)
+
+Бот принимает задачи текстом, показывает карточку и создаёт задачи, а
+сотрудникам даёт `/tasks` и закрытие фотографией.
+
+**Без `TASKSFLOW_BOT_TOKEN` модуль бота не стартует вовсе** — в лог уходит
+одна строка, сервер работает ровно как раньше.
+
+```
+TASKSFLOW_BOT_TOKEN=8810015596:AA...
+# Нужен Login Widget'у на странице «Аккаунт» и для ссылки t.me/<username>
+TELEGRAM_BOT_USERNAME=thetasksflowbot
+
+# auto | webhook | polling | off
+# auto = webhook, если заданы URL и секрет; иначе long-poll getUpdates
+TELEGRAM_MODE=auto
+TELEGRAM_WEBHOOK_URL=https://tasksflow.ru/api/telegram/webhook
+TELEGRAM_WEBHOOK_SECRET=<рандом ≥32 символов>
+```
+
+Замечания:
+- **Привязка аккаунта работает только на домене из BotFather** (`/setdomain
+  tasksflow.ru`) и только по https. На localhost Telegram откажет — это
+  ограничение их стороны. Для локальной проверки проставьте
+  `users.telegram_user_id` вручную в БД.
+- `TELEGRAM_WEBHOOK_SECRET` обязателен в webhook-режиме: без него вебхук
+  отбрасывает все апдейты (принимать что угодно от кого угодно нельзя).
+- **Polling предпочтительнее за прокси**: он не требует входящей
+  доступности вообще, обе стороны идут через один и тот же прокси.
+
+### Если хостинг не пускает к api.telegram.org
+
+RU-провайдеры местами не маршрутизируют подсети Telegram (типично
+`ETIMEDOUT`). Два варианта, любой из них:
+
+```
+# 1. HTTP-прокси (через него идут и sendMessage, и getUpdates)
+TELEGRAM_HTTP_PROXY=http://user:pass@proxy-host:3128
+# 2. Свой relay вместо api.telegram.org
+TELEGRAM_API_BASE_URL=https://tg-relay.example.com
+```
+
+Тот же приём используется в ProjectsFlow — прокси там уже настроен, его
+значение можно взять из `.env` на прод-сервере ProjectsFlow.
+
+## AI-разбор задач через очередь ProjectsFlow
+
+Бот кладёт сообщение в очередь ProjectsFlow, воркер ralph зовёт Claude с
+промптом `prompts/tasksflow-task.md` и возвращает JSON с сегментами.
+
+```
+PF_API_URL=https://projectsflow.ru/api
+PF_AGENT_TOKEN=pfat_...
+PF_TASKSFLOW_PROJECT_ID=bcc868e6-853c-4c8b-a592-6f3fcb20a298
+```
+
+Если переменные не заданы или AI недоступен (лимит, таймаут, битый ответ),
+бот **не ломается**: он отдаёт ручной черновик с той же карточкой, и
+руководитель доставляет поля кнопками. Сообщение не теряется никогда.
+
+Известное ограничение: ProjectsFlow лимитирует режим `improve` как 60
+job'ов в час на пользователя-инициатора, а инициатор один — владелец
+`PF_AGENT_TOKEN`. Значит потолок 60 разборов в час на всех пользователей
+бота. Сверху есть свой лимит 20 разборов в час на пользователя, чтобы один
+чат не выел общий.
+
 ## Аналитика (опционально, для SEO-трафика)
 
 Счётчики грузятся только если задан ID, иначе ничего не подключается.

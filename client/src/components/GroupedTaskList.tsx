@@ -25,6 +25,7 @@ import {
 import { getJournalBonus } from "@/lib/journal-bonus";
 import { parseJournalLinkUI } from "@/lib/journal-link-parse";
 import { HighlightedText } from "@/components/HighlightedText";
+import { DueBadge } from "@/components/DueBadge";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -321,6 +322,9 @@ export function GroupedTaskList(props: Props) {
                   <span>{categoryValue}</span>
                 </div>
               )}
+              {/* Срок видят все: это информация для исполнителя, а не
+                  админская настройка расписания. */}
+              {!isCompleted && <DueBadge dueDate={(task as any).dueDate} />}
               {isAdmin && weekDays && weekDays.length > 0 && (
                 <div className="task-badge schedule">
                   <Calendar className="w-3.5 h-3.5" />

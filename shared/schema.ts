@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, int, boolean, text } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, int, boolean, text, bigint } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -58,6 +58,20 @@ export const users = mysqlTable("users", {
   magicToken: varchar("magic_token", { length: 64 }),
   // Unix sec истечения magic-токена (TTL 7 дней). NULL когда нет токена.
   magicTokenExpiresAt: int("magic_token_expires_at"),
+  // ===== Привязка Telegram (бот @thetasksflowbot) =====
+  // Заполняются через Telegram Login Widget на странице Аккаунт.
+  // telegram_user_id UNIQUE — один Telegram не может быть привязан к двум
+  // сотрудникам (иначе непонятно, от чьего имени бот ставит задачи).
+  telegramUserId: bigint("telegram_user_id", { mode: "number" }),
+  telegramUsername: varchar("telegram_username", { length: 64 }),
+  telegramFirstName: varchar("telegram_first_name", { length: 128 }),
+  telegramPhotoUrl: varchar("telegram_photo_url", { length: 512 }),
+  // chat_id личного чата с ботом. Известен только после /start — бот не
+  // может написать первым, пока пользователь его не запустил.
+  tgChatId: bigint("tg_chat_id", { mode: "number" }),
+  // Unix sec привязки аккаунта и первого /start соответственно.
+  tgLinkedAt: int("tg_linked_at"),
+  tgStartedAt: int("tg_started_at"),
 });
 
 export const workers = mysqlTable("workers", {
@@ -137,6 +151,72 @@ export const tasks = mysqlTable("tasks", {
   // При ежедневном сбросе повторяющейся задачи у пунктов чистятся done+photoUrls,
   // заголовки остаются.
   checklist: text("checklist"),
+  // Срок выполнения — unix sec локальной полуночи целевого дня.
+  // Семантика намеренно мягкая: задача со сроком видна СРАЗУ и не
+  // скрывается после срока, только получает бейдж «Просрочено». Так
+  // сотрудник может сделать раньше и не теряет задачу, если опоздал.
+  // Взаимоисключён с isRecurring: срок → задача разовая (иначе она
+  // воскресала бы каждый день ежедневным сбросом).
+  dueDate: int("due_date"),
+  // Примеры «как надо» — JSON-массив URL. Пришёл на смену одиночному
+  // examplePhotoUrl: Telegram-бот принимает альбом и раскладывает фото
+  // по задачам. Чтение с fallback на legacy-колонку (см. server/storage.ts),
+  // запись — всегда сюда + дубль первого URL в старую колонку.
+  examplePhotoUrls: text("example_photo_urls"),
+});
+
+// ===== Таблицы Telegram-бота =====
+
+/**
+ * Черновик задач, распознанных из сообщения. Живёт 30 минут: пользователь
+ * видит карточку, крутит кнопками поля и жмёт «Создать».
+ *
+ * Драфт создаётся ДО обращения к AI (status='composing'), чтобы апдейт
+ * Telegram был подтверждён мгновенно и бот не держал соединение на время
+ * разбора (~до 150с).
+ */
+export const telegramTaskDrafts = mysqlTable("telegram_task_drafts", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: int("user_id").notNull(),
+  companyId: int("company_id").notNull(),
+  chatId: bigint("chat_id", { mode: "number" }).notNull(),
+  // Сообщение-карточка: редактируем его вместо спама новыми сообщениями.
+  messageId: bigint("message_id", { mode: "number" }),
+  // Дедуп альбомов (media_group_id) и ретраев одного апдейта. UNIQUE.
+  sourceKey: varchar("source_key", { length: 191 }),
+  // composing | confirming | confirmed | cancelled | expired
+  status: varchar("status", { length: 20 }).notNull(),
+  rawText: text("raw_text"),
+  // JSON-массив сегментов (нормализованных) + флаг included на каждом.
+  segments: text("segments"),
+  // JSON [{ key, fileId, filename, targetSegmentIndexes[] }]
+  attachments: text("attachments"),
+  createdAt: int("created_at").notNull(),
+  expiresAt: int("expires_at").notNull(),
+});
+
+/**
+ * Соответствие «сообщение бота ↔ задача». Нужно, чтобы фото-reply на
+ * карточку задачи попало именно в эту задачу (а не в последнюю активную).
+ */
+export const telegramTaskMessages = mysqlTable("telegram_task_messages", {
+  chatId: bigint("chat_id", { mode: "number" }).notNull(),
+  messageId: bigint("message_id", { mode: "number" }).notNull(),
+  taskId: int("task_id").notNull(),
+  // Если сообщение относится к конкретному пункту чек-листа.
+  checklistItemId: varchar("checklist_item_id", { length: 64 }),
+  createdAt: int("created_at").notNull(),
+});
+
+/**
+ * Состояние чата для пути без reply: нажал «📸 Фото» → следующее фото
+ * в чате уходит в эту задачу. TTL 15 минут.
+ */
+export const telegramChatState = mysqlTable("telegram_chat_state", {
+  chatId: bigint("chat_id", { mode: "number" }).primaryKey(),
+  awaitingTaskId: int("awaiting_task_id"),
+  awaitingItemId: varchar("awaiting_item_id", { length: 64 }),
+  updatedAt: int("updated_at").notNull(),
 });
 
 export const insertUserSchema = z.object({
@@ -233,7 +313,10 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   checklist: z.array(checklistItemSchema).max(30).nullable().optional(),
   photoUrl: z.string().nullable().optional(), // Устаревшее, для совместимости
   photoUrls: z.array(z.string()).nullable().optional(), // Массив URL фотографий (до 10 шт)
-  examplePhotoUrl: z.string().nullable().optional(), // URL примера фото
+  examplePhotoUrl: z.string().nullable().optional(), // URL примера фото (legacy, одиночный)
+  // Примеры фото «как надо» — массив. Telegram-бот кладёт сюда фото из
+  // сообщения; веб-форма пока пишет одиночный examplePhotoUrl.
+  examplePhotoUrls: z.array(z.string()).nullable().optional(),
   isCompleted: z.boolean().optional().default(false),
   // .int() обязателен: без него Zod пропустит [1.5, 3] и в UI бейджах
   // появится «Пн, ,Ср» (WEEK_DAY_SHORT_NAMES[1.5]=undefined). Сервер
@@ -262,6 +345,10 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   // /complete от сотрудника НЕ переходит в done, а ждёт approve от
   // verifier'а через POST /api/tasks/:id/verify.
   verifierWorkerId: z.number().int().positive().nullable().optional(),
+  // Срок — unix sec локальной полуночи. Взаимоисключён с isRecurring:
+  // нормализация на стороне вызывающего форсит isRecurring=false при
+  // заданном dueDate (иначе ежедневный сброс воскресит разовую задачу).
+  dueDate: z.number().int().nullable().optional(),
 });
 
 // Схема валидации для регистрации компании
@@ -316,13 +403,25 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type Worker = typeof workers.$inferSelect;
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
-// Переопределяем Task чтобы weekDays, photoUrls и checklist были массивами (парсятся из JSON в storage.ts)
-export type Task = Omit<typeof tasks.$inferSelect, 'weekDays' | 'photoUrls' | 'checklist'> & {
+// Переопределяем Task чтобы weekDays, photoUrls, checklist и examplePhotoUrls
+// были массивами (парсятся из JSON в storage.ts)
+export type Task = Omit<
+  typeof tasks.$inferSelect,
+  'weekDays' | 'photoUrls' | 'checklist' | 'examplePhotoUrls'
+> & {
   weekDays: number[] | null;
   photoUrls: string[];
   checklist: ChecklistItem[];
+  // Всегда массив: при пустой колонке storage подставляет legacy
+  // examplePhotoUrl одним элементом (или [] если и его нет).
+  examplePhotoUrls: string[];
 };
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+// Типы таблиц Telegram-бота
+export type TelegramTaskDraft = typeof telegramTaskDrafts.$inferSelect;
+export type TelegramTaskMessage = typeof telegramTaskMessages.$inferSelect;
+export type TelegramChatStateRow = typeof telegramChatState.$inferSelect;
 
 // API Keys — для server-to-server интеграций (managermagday и других).
 //

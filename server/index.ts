@@ -362,6 +362,114 @@ process.on("unhandledRejection", (reason, promise) => {
     }
   }
 
+  // Auto-migration колонок tasks.due_date (срок) и tasks.example_photo_urls
+  // (массив примеров фото вместо одиночного example_photo_url).
+  for (const [col, ddl] of [
+    ["due_date", "ALTER TABLE `tasks` ADD COLUMN `due_date` INT NULL"],
+    ["example_photo_urls", "ALTER TABLE `tasks` ADD COLUMN `example_photo_urls` TEXT NULL"],
+  ] as const) {
+    try {
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql.raw(ddl));
+      logger.info(`[tasks] колонка tasks.${col} добавлена (auto-migration)`);
+    } catch (err: any) {
+      if (err?.code !== "ER_DUP_FIELDNAME") {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          `[tasks] auto-migration tasks.${col} не прошла`,
+        );
+      }
+    }
+  }
+
+  // Auto-migration колонок привязки Telegram в users (бот @thetasksflowbot).
+  for (const [col, ddl] of [
+    ["telegram_user_id", "ALTER TABLE `users` ADD COLUMN `telegram_user_id` BIGINT NULL"],
+    ["telegram_username", "ALTER TABLE `users` ADD COLUMN `telegram_username` VARCHAR(64) NULL"],
+    ["telegram_first_name", "ALTER TABLE `users` ADD COLUMN `telegram_first_name` VARCHAR(128) NULL"],
+    ["telegram_photo_url", "ALTER TABLE `users` ADD COLUMN `telegram_photo_url` VARCHAR(512) NULL"],
+    ["tg_chat_id", "ALTER TABLE `users` ADD COLUMN `tg_chat_id` BIGINT NULL"],
+    ["tg_linked_at", "ALTER TABLE `users` ADD COLUMN `tg_linked_at` INT NULL"],
+    ["tg_started_at", "ALTER TABLE `users` ADD COLUMN `tg_started_at` INT NULL"],
+  ] as const) {
+    try {
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql.raw(ddl));
+      logger.info(`[telegram] колонка users.${col} добавлена (auto-migration)`);
+    } catch (err: any) {
+      if (err?.code !== "ER_DUP_FIELDNAME") {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          `[telegram] auto-migration users.${col} не прошла`,
+        );
+      }
+    }
+  }
+  // UNIQUE на telegram_user_id: один Telegram — один сотрудник.
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(
+      sql`ALTER TABLE \`users\` ADD UNIQUE KEY \`uq_users_telegram_user_id\` (\`telegram_user_id\`)`,
+    );
+    logger.info("[telegram] unique uq_users_telegram_user_id добавлен (auto-migration)");
+  } catch (err: any) {
+    if (err?.code !== "ER_DUP_KEYNAME") {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[telegram] auto-migration uq_users_telegram_user_id не прошла",
+      );
+    }
+  }
+
+  // Auto-migration таблиц Telegram-бота. Идемпотентно (CREATE TABLE IF NOT EXISTS).
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`telegram_task_drafts\` (
+        \`id\`          CHAR(36)     NOT NULL PRIMARY KEY,
+        \`user_id\`     INT          NOT NULL,
+        \`company_id\`  INT          NOT NULL,
+        \`chat_id\`     BIGINT       NOT NULL,
+        \`message_id\`  BIGINT       NULL,
+        \`source_key\`  VARCHAR(191) NULL,
+        \`status\`      VARCHAR(20)  NOT NULL,
+        \`raw_text\`    TEXT         NULL,
+        \`segments\`    TEXT         NULL,
+        \`attachments\` TEXT         NULL,
+        \`created_at\`  INT          NOT NULL,
+        \`expires_at\`  INT          NOT NULL,
+        UNIQUE KEY \`uq_ttd_source_key\` (\`source_key\`),
+        KEY \`idx_ttd_chat\` (\`chat_id\`, \`status\`),
+        KEY \`idx_ttd_expires\` (\`expires_at\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`telegram_task_messages\` (
+        \`chat_id\`           BIGINT      NOT NULL,
+        \`message_id\`        BIGINT      NOT NULL,
+        \`task_id\`           INT         NOT NULL,
+        \`checklist_item_id\` VARCHAR(64) NULL,
+        \`created_at\`        INT         NOT NULL,
+        PRIMARY KEY (\`chat_id\`, \`message_id\`),
+        KEY \`idx_ttm_task\` (\`task_id\`),
+        KEY \`idx_ttm_created\` (\`created_at\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`telegram_chat_state\` (
+        \`chat_id\`          BIGINT      NOT NULL PRIMARY KEY,
+        \`awaiting_task_id\` INT         NULL,
+        \`awaiting_item_id\` VARCHAR(64) NULL,
+        \`updated_at\`       INT         NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[telegram] auto-create таблиц бота не прошла — бот работать не будет",
+    );
+  }
+
   // Auto-migration таблицы промо-баннеров. Идемпотентно (CREATE TABLE IF NOT EXISTS).
   try {
     const { sql } = await import("drizzle-orm");
@@ -392,6 +500,19 @@ process.on("unhandledRejection", (reason, promise) => {
   }
 
   await registerRoutes(httpServer, app);
+
+  // Telegram-бот. Стартует после роутов, потому что вебхук-режим ставит
+  // setWebhook на уже зарегистрированный /api/telegram/webhook.
+  // Падение бота НЕ должно ронять сервер — ловим всё.
+  try {
+    const { startTelegramBot } = await import("./telegram");
+    await startTelegramBot();
+  } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      "[telegram] модуль бота не стартовал — сайт работает без него",
+    );
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -447,6 +568,18 @@ process.on("unhandledRejection", (reason, promise) => {
         logger.error(
           { err: err instanceof Error ? err.message : String(err) },
           "[webhook-queue] tick failed",
+        );
+      });
+
+    // На том же тике убираем мусор Telegram-бота: протухшие черновики
+    // задач и старые связки «сообщение ↔ задача». Отдельный таймер ради
+    // этого заводить незачем.
+    import("./telegram/cleanup")
+      .then(({ cleanupTelegramData }) => cleanupTelegramData())
+      .catch((err: unknown) => {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          "[telegram] уборка не прошла",
         );
       });
   }, 30_000);

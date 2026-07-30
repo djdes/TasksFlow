@@ -39,7 +39,12 @@ function publicEnvUrl(names: string[]): URL | null {
   return null;
 }
 
-export function getPublicTasksflowBaseUrl(req: Request): string {
+/**
+ * @param req  Запрос, если он есть. Telegram-бот и другие фоновые задачи
+ *             зовут без него — там нет HTTP-контекста, и в dev мы просто
+ *             падаем на localhost-фолбэк. В проде req не используется вовсе.
+ */
+export function getPublicTasksflowBaseUrl(req?: Request): string {
   const fromEnv = publicEnvUrl([
     "TASKSFLOW_PUBLIC_URL",
     "APP_PUBLIC_URL",
@@ -56,6 +61,9 @@ export function getPublicTasksflowBaseUrl(req: Request): string {
   // hardcoded https://tasksflow.ru. В dev оставляем гибкость для
   // localhost / разных dev-портов.
   if (!isProduction()) {
+    if (!req) {
+      return `http://localhost:${process.env.PORT || 5001}`;
+    }
     const origin = parseHttpUrl(firstHeaderValue(req.headers.origin));
     if (origin) {
       return trimTrailingSlashes(origin.toString());

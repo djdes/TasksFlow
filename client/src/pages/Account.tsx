@@ -6,6 +6,7 @@ import { apiRequest, ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TelegramSection } from "@/components/TelegramSection";
 import { ArrowLeft, Loader2, Mail, KeyRound } from "lucide-react";
 
 /**
@@ -93,6 +94,9 @@ export default function Account() {
             </Button>
           </form>
         </section>
+
+        {/* Привязка Telegram-бота */}
+        <TelegramSection />
 
         {/* Смена пароля */}
         <section className="rounded-xl border border-border bg-card p-5">

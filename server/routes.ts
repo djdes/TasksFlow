@@ -52,6 +52,17 @@ import {
   getPublicWesetupBaseUrl,
   toPublicWesetupUrl,
 } from "./public-urls";
+import {
+  canAssignToWorker,
+  isTaskServiceError,
+  type TaskActor,
+} from "./services/task-actor";
+import { createTaskForActor } from "./services/task-create";
+import { completeTaskForActor } from "./services/task-complete";
+import {
+  attachTaskPhoto,
+  attachChecklistItemPhoto,
+} from "./services/task-photo";
 
 // Настройка загрузки файлов
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -195,24 +206,8 @@ async function requireAdminOrManagerOrApiKey(
     .json({ message: "Только админ или руководитель может управлять задачами" });
 }
 
-/**
- * Проверка: может ли user назначать задачи указанному workerId.
- *   • admin — всегда да
- *   • manager (managedWorkerIds set) — только если worker в scope
- *     или это он сам
- *   • обычный воркер — только себе
- */
-function canAssignToWorker(
-  user: { id: number; isAdmin: boolean; managedWorkerIds: string | null },
-  targetWorkerId: number | null | undefined
-): boolean {
-  if (user.isAdmin) return true;
-  if (!targetWorkerId) return false; // нельзя оставить «без исполнителя» если ты не админ
-  if (targetWorkerId === user.id) return true;
-  const m2 = DatabaseStorage.parseManagedWorkerIds(user.managedWorkerIds);
-  if (!Array.isArray(m2)) return false;
-  return m2.includes(targetWorkerId);
-}
+// canAssignToWorker переехал в ./services/task-actor — им пользуются и роуты,
+// и Telegram-бот. Здесь он только импортируется, второй копии нет.
 
 // Аутентификация: либо session (любой user), либо API key.
 async function requireAuthOrApiKey(req: Request, res: Response, next: NextFunction) {
@@ -220,6 +215,18 @@ async function requireAuthOrApiKey(req: Request, res: Response, next: NextFuncti
     return requireApiKey(req, res, next);
   }
   return requireAuth(req, res, next);
+}
+
+/**
+ * Хелпер: собрать TaskActor из express-запроса для сервисов задач.
+ * API key считается машинной интеграцией с правами своей компании,
+ * всё остальное — обычный session-пользователь.
+ */
+function actorFromReq(req: Request): TaskActor {
+  if (req.apiKey) {
+    return { kind: "apiKey", companyId: req.apiKey.companyId };
+  }
+  return { kind: "session", userId: req.session!.userId! };
 }
 
 /** Хелпер: получить companyId из req либо от API key, либо от session. */
@@ -593,6 +600,122 @@ export async function registerRoutes(
       }
       console.error("Error updating account password:", err);
       res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
+  // ===== Привязка Telegram (бот @thetasksflowbot) =====
+
+  /**
+   * Статус привязки для страницы «Аккаунт».
+   * botId отдаём осознанно — Login Widget'у он нужен на клиенте, и это
+   * публичная часть токена (всё до двоеточия).
+   */
+  app.get("/api/me/telegram", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session.userId!);
+      if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+      const { getTelegramRuntime } = await import("./telegram");
+      const rt = getTelegramRuntime();
+      res.json({
+        connected: user.telegramUserId != null,
+        telegramUsername: user.telegramUsername ?? null,
+        telegramFirstName: user.telegramFirstName ?? null,
+        tgStarted: user.tgStartedAt != null,
+        botConfigured: Boolean(rt),
+        botId: rt?.config.botId ?? null,
+        botUsername: rt?.config.botUsername ?? null,
+        botDeepLink: rt?.config.botDeepLink ?? null,
+      });
+    } catch (err) {
+      console.error("Error reading telegram status:", err);
+      res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
+  app.post("/api/me/telegram/connect", requireAuth, async (req, res) => {
+    try {
+      const { getTelegramRuntime } = await import("./telegram");
+      const rt = getTelegramRuntime();
+      if (!rt) {
+        return res.status(503).json({ message: "Telegram-бот не настроен" });
+      }
+      const {
+        telegramLoginPayloadSchema,
+        connectTelegramAccount,
+        isTelegramLinkError,
+      } = await import("./telegram/link");
+
+      const payload = telegramLoginPayloadSchema.parse(req.body);
+      try {
+        await connectTelegramAccount({
+          userId: req.session.userId!,
+          payload,
+          botToken: rt.config.botToken,
+        });
+      } catch (linkErr) {
+        if (isTelegramLinkError(linkErr)) {
+          return res
+            .status(linkErr.status)
+            .json({ message: linkErr.message, code: linkErr.code });
+        }
+        throw linkErr;
+      }
+
+      res.json({
+        ok: true,
+        connected: true,
+        telegramUsername: payload.username ?? null,
+        botDeepLink: rt.config.botDeepLink,
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      console.error("Error connecting telegram:", err);
+      res.status(500).json({ message: "Ошибка привязки Telegram" });
+    }
+  });
+
+  app.delete("/api/me/telegram", requireAuth, async (req, res) => {
+    try {
+      await storage.clearTelegramLink(req.session.userId!);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error unlinking telegram:", err);
+      res.status(500).json({ message: "Ошибка отвязки Telegram" });
+    }
+  });
+
+  /**
+   * Webhook Telegram. Отвечаем 200 всегда, когда апдейт принят или отброшен
+   * осознанно: 4xx заставит Telegram ретраить одно и то же сообщение.
+   * На реальной ошибке обработки отдаём 503 — вот тогда ретрай уместен.
+   */
+  app.post("/api/telegram/webhook", async (req, res) => {
+    try {
+      const { getTelegramRuntime } = await import("./telegram");
+      const rt = getTelegramRuntime();
+      if (!rt) return res.status(200).json({ ok: false });
+
+      // Секрет обязателен: без него вебхук принимает апдейты от кого угодно.
+      if (!rt.config.webhookSecret) {
+        console.warn("[telegram] webhook без TELEGRAM_WEBHOOK_SECRET — апдейт отброшен");
+        return res.status(200).json({ ok: false });
+      }
+      const got = req.header("X-Telegram-Bot-Api-Secret-Token");
+      if (got !== rt.config.webhookSecret) {
+        return res.status(200).json({ ok: false });
+      }
+
+      const { handleUpdate } = await import("./telegram/handle-update");
+      await handleUpdate(req.body, rt);
+      res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error("Error handling telegram webhook:", err);
+      res.status(503).json({ ok: false });
     }
   });
 
@@ -1105,59 +1228,11 @@ export async function registerRoutes(
       const input = api.tasks.create.input.parse(req.body);
       // companyId — из session-user или api key
       const companyId = await getCompanyIdFromReq(req);
-      if (!companyId) {
-        return res.status(400).json({ message: "Company не определена" });
-      }
-
-      // Multi-tenant scope: workerId должен принадлежать той же компании.
-      // Иначе админ компании A мог бы создать задачу со ссылкой на
-      // worker'а компании B — задача попадёт в task-list компании A
-      // с broken workerId, либо в список «моих задач» worker'а B
-      // (зависит от фильтра).
-      if (input.workerId != null) {
-        const worker = await storage.getUserById(input.workerId);
-        if (!worker || worker.companyId !== companyId) {
-          return res.status(404).json({
-            message: "Сотрудник не найден",
-          });
-        }
-      }
-
-      // Scope-check: руководитель может назначать задачи только своим
-      // подчинённым. Админ и API key пропускаются.
-      if (!req.apiKey && req.session?.userId) {
-        const me = await storage.getUserById(req.session.userId);
-        if (me && !me.isAdmin) {
-          if (!canAssignToWorker(me, input.workerId ?? null)) {
-            return res.status(403).json({
-              message: "Можно назначать задачи только своим подчинённым",
-            });
-          }
-        }
-      }
-
-      const task = await storage.createTask({
-        ...input,
+      const task = await createTaskForActor({
+        input,
+        actor: actorFromReq(req),
         companyId,
       });
-
-      // Audit log (П-17 спека Wesetup): создание задачи.
-      const { recordAudit } = await import("./audit-log");
-      const actorIdForCreate = (req as { userId?: number }).userId ?? null;
-      void recordAudit({
-        companyId: task.companyId,
-        actorWorkerId: actorIdForCreate,
-        taskId: task.id,
-        action: "task.created",
-        payload: {
-          title: task.title,
-          workerId: task.workerId,
-          requiresPhoto: task.requiresPhoto,
-          isRecurring: task.isRecurring,
-          price: task.price,
-        },
-      });
-
       res.status(201).json(task);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -1165,6 +1240,9 @@ export async function registerRoutes(
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
         });
+      }
+      if (isTaskServiceError(err)) {
+        return res.status(err.status).json({ message: err.message });
       }
       console.error('Error creating task:', err);
       res.status(500).json({ message: 'Ошибка создания задачи' });
@@ -1409,49 +1487,22 @@ export async function registerRoutes(
         // С этого момента файл лежит на диске — нужен cleanup при early-return.
         needCleanup = true;
 
-        const taskId = Number(req.params.id);
-        const task = await storage.getTask(taskId);
-        if (!task) {
-          return res.status(404).json({ message: "Задача не найдена" });
-        }
-
-        // Multi-tenant scope-check: задача должна принадлежать компании
-        // текущего юзера (защита от cross-tenant photo upload).
-        const currentUser = await storage.getUserById(req.session.userId!);
-        if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
-          return res.status(404).json({ message: "Задача не найдена" });
-        }
-
-        // Проверяем права: исполнитель или админ
-        const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
-        if (!isAllowed) {
-          return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
-        }
-
-        // Проверяем лимит фотографий (максимум 10)
-        const currentPhotos = (task as any).photoUrls || [];
-        if (currentPhotos.length >= 10) {
-          return res.status(400).json({ message: "Достигнут лимит фотографий (максимум 10)" });
-        }
-
-        const photoUrl = `/uploads/${req.file.filename}`;
-        // Добавляем новое фото в массив
-        const newPhotoUrls = [...currentPhotos, photoUrl];
-        const updatedTask = await storage.updateTask(taskId, {
-          photoUrls: newPhotoUrls,
-          photoUrl: photoUrl // Для обратной совместимости, храним последнее фото
+        const result = await attachTaskPhoto({
+          taskId: Number(req.params.id),
+          photoUrl: `/uploads/${req.file.filename}`,
+          actor: actorFromReq(req),
         });
-        if (!updatedTask) {
-          return res.status(500).json({ message: "Ошибка обновления задачи" });
-        }
 
         // UPDATE успешен — файл теперь принадлежит БД, cleanup НЕ нужен.
         needCleanup = false;
         return res.json({
-          photoUrl: photoUrl,
-          photoUrls: (updatedTask as any).photoUrls || []
+          photoUrl: result.photoUrl,
+          photoUrls: result.photoUrls,
         });
       } catch (uploadErr: any) {
+        if (isTaskServiceError(uploadErr)) {
+          return res.status(uploadErr.status).json({ message: uploadErr.message });
+        }
         console.error("Error uploading photo:", uploadErr);
         return res.status(500).json({ message: "Ошибка загрузки фото", error: uploadErr.message });
       } finally {
@@ -1478,34 +1529,19 @@ export async function registerRoutes(
         if (!req.file) return res.status(400).json({ message: "Файл не загружен" });
         needCleanup = true;
 
-        const taskId = Number(req.params.id);
-        const task = await storage.getTask(taskId);
-        if (!task) return res.status(404).json({ message: "Задача не найдена" });
-
-        const currentUser = await storage.getUserById(req.session.userId!);
-        if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
-          return res.status(404).json({ message: "Задача не найдена" });
-        }
-        const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
-        if (!isAllowed) return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
-
-        const checklist = task.checklist || [];
-        const idx = checklist.findIndex((it) => it.id === req.params.itemId);
-        if (idx === -1) return res.status(404).json({ message: "Пункт чек-листа не найден" });
-        if ((checklist[idx].photoUrls?.length ?? 0) >= 5) {
-          return res.status(400).json({ message: "Достигнут лимит фото на пункт (5)" });
-        }
-
-        const photoUrl = `/uploads/${req.file.filename}`;
-        const newChecklist = checklist.map((it, i) =>
-          i === idx ? { ...it, done: true, photoUrls: [...(it.photoUrls || []), photoUrl] } : it,
-        );
-        const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
-        if (!updatedTask) return res.status(500).json({ message: "Ошибка обновления задачи" });
+        const result = await attachChecklistItemPhoto({
+          taskId: Number(req.params.id),
+          itemId: String(req.params.itemId),
+          photoUrl: `/uploads/${req.file.filename}`,
+          actor: actorFromReq(req),
+        });
 
         needCleanup = false;
-        return res.json({ photoUrl, task: updatedTask });
+        return res.json({ photoUrl: result.photoUrl, task: result.task });
       } catch (uploadErr: any) {
+        if (isTaskServiceError(uploadErr)) {
+          return res.status(uploadErr.status).json({ message: uploadErr.message });
+        }
         console.error("Error uploading checklist photo:", uploadErr);
         return res.status(500).json({ message: "Ошибка загрузки фото", error: uploadErr.message });
       } finally {
@@ -1782,199 +1818,16 @@ export async function registerRoutes(
     try {
       const taskId = Number(req.params.id);
       const { comment } = req.body || {};
-      const task = await storage.getTask(taskId);
-      if (!task) {
-        return res.status(404).json({ message: "Задача не найдена" });
-      }
-
-      // Multi-tenant scope-check: задача должна принадлежать компании
-      // вызывающей стороны (API key чужой компании или session-юзер
-      // другой компании не должны завершать задачу).
-      const callerCompanyIdForComplete = await getCompanyIdFromReq(req);
-      if (callerCompanyIdForComplete !== null && task.companyId !== callerCompanyIdForComplete) {
-        return res.status(404).json({ message: "Задача не найдена" });
-      }
-
-      // Проверка прав: API key имеет админские права, иначе исполнитель или session-админ.
-      let isAllowed = false;
-      if (req.apiKey) {
-        isAllowed = true;
-      } else if (req.session.userId === task.workerId) {
-        isAllowed = true;
-      } else if (req.session?.userId) {
-        const currentUser = await storage.getUserById(req.session.userId);
-        if (currentUser?.isAdmin) {
-          isAllowed = true;
-        }
-      }
-
-      if (!isAllowed) {
-        return res.status(403).json({ message: "Нет прав для изменения задачи" });
-      }
-
-      // Идемпотентность: если задача уже выполнена — возвращаем 200 с
-      // текущим состоянием БЕЗ повторного начисления баланса.
-      if (task.isCompleted) {
-        return res.json(task);
-      }
-      // Phase 1 двухстадийной верификации: если задача уже в
-      // «submitted» — повторный /complete от того же воркера не
-      // должен ничего делать (она уже ждёт verifier'а). API key
-      // (machine integrations) обходит, чтобы старая интеграция не
-      // ломалась.
-      if (
-        !req.apiKey &&
-        task.verificationStatus === "submitted"
-      ) {
-        return res.json(task);
-      }
-
-      // Если требуется фото, проверяем что оно загружено
-      const taskPhotoUrls = (task as any).photoUrls || [];
-      const hasPhotos = taskPhotoUrls.length > 0 || task.photoUrl;
-      if (task.requiresPhoto && !hasPhotos) {
-        return res.status(400).json({ message: "Необходимо загрузить фото перед завершением" });
-      }
-
-      // Чек-лист: задачу нельзя завершить, пока не все пункты выполнены
-      // (каждый пункт закрывается фото). Задачи без чек-листа не затрагиваются.
-      const completeChecklist = task.checklist || [];
-      if (completeChecklist.length > 0 && !completeChecklist.every((it) => it.done)) {
-        const doneCount = completeChecklist.filter((it) => it.done).length;
-        return res.status(400).json({
-          message: `Отметьте все пункты чек-листа с фото (${doneCount}/${completeChecklist.length})`,
-        });
-      }
-
-      // Phase 1 двухстадийной верификации:
-      //   • Если у задачи есть verifier_worker_id и текущий вызов —
-      //     не от API-key (machine integrations apruvят сами) и не от
-      //     самого verifier'а (он своё approve делает через /verify),
-      //     то задача переходит в submitted. Balance НЕ начисляется
-      //     до approve. WeSetup-mirror тоже не отправляется (его
-      //     уйдёт после approve).
-      //   • Если verifier == текущий юзер — он завершает задачу как
-      //     обычно (исполнитель и проверяющий совпадают для shared-
-      //     задач, где руководитель сам в смене).
-      //   • Если verifier_worker_id == NULL/undefined — старое
-      //     поведение (legacy задачи без проверки). undefined может
-      //     прилетать на legacy-БД где schema-self-check ещё не
-      //     добавил колонки.
-      const requiresVerification =
-        !req.apiKey &&
-        typeof task.verifierWorkerId === "number" &&
-        task.verifierWorkerId !== req.session?.userId;
-      if (requiresVerification) {
-        const submitted = await storage.submitForVerification(taskId);
-        if (!submitted) {
-          // Concurrent submit или статус не позволяет (approved/already
-          // submitted). Отдаём текущий стейт.
-          const fresh = await storage.getTask(taskId);
-          return res.json(fresh ?? task);
-        }
-        const updatedTask = await storage.getTask(taskId);
-        // КРИТИЧНО: тут возвращаемся БЕЗ запуска WeSetup-mirror и БЕЗ
-        // credit'а balance. Mirror отправится только когда verifier
-        // нажмёт «Принять» в WeSetup (см. POST /verifier endpoint там),
-        // — до approve журнальный entry в WeSetup НЕ помечается
-        // выполненным.
-        return res.json(updatedTask ?? task);
-      }
-
-      // Race-safe атомарный переход isCompleted=false → true. Если
-      // одновременные POST'ы — только один получит true и начислит
-      // баланс. Остальные получат transitioned=false и пропустят
-      // updateUserBalance. Раньше storage.updateTask без conditional
-      // WHERE → два concurrent POST'а оба видели isCompleted=false,
-      // оба добавляли task.price → двойная оплата.
-      const transitioned = await storage.transitionTaskToCompleted(taskId);
-      if (!transitioned) {
-        // Кто-то параллельно уже завершил — отдаём текущий стейт.
-        const fresh = await storage.getTask(taskId);
-        return res.json(fresh ?? task);
-      }
-      const updatedTask = await storage.getTask(taskId);
-      if (!updatedTask) {
-        return res.status(500).json({ message: "Ошибка обновления задачи" });
-      }
-
-      // Если у задачи есть стоимость и исполнитель, добавляем к балансу
-      if (task.price && task.price > 0 && task.workerId) {
-        await storage.updateUserBalance(task.workerId, task.price);
-      }
-
-      // Race-siblings: если задача журнальная (любая, не только с премией),
-      // помечаем sibling-задачи (тот же documentId+kind+rowKey-scope, другие
-      // воркеры, невыполненные) как «забранные» победителем — они переедут в
-      // раздел «Сделано другими» в дашборде.
-      //
-      // 2026-05-09 (соответствие П-2 спека Wesetup
-      // 2026-05-09-wesetup-tasksflow-integration-design): убрали hasBonus
-      // условие — ранее race-cleanup срабатывал ТОЛЬКО для бонусных задач,
-      // что давало баг «у уборщика-2 задача не пропадает» в WeSetup
-      // cleaning race-mode (где price=0). Теперь любая journal-linked задача
-      // авто-маркирует sibling'ов при /complete.
-      const journalLink = parseJournalLink(task.journalLink);
-      if (
-        journalLink &&
-        task.workerId &&
-        !journalLink.isFreeText
-      ) {
-        try {
-          const claimed = await storage.claimSiblingTasks({
-            sourceTaskId: task.id,
-            documentId: journalLink.documentId,
-            journalKind: journalLink.kind,
-            sourceRowKey: journalLink.rowKey ?? null,
-            claimedByWorkerId: task.workerId,
-            companyId: task.companyId ?? null,
-            completedAt: Math.floor(Date.now() / 1000),
-          });
-          if (claimed > 0) {
-            console.log(
-              `[claim] task ${task.id} claimed ${claimed} sibling(s) for ${journalLink.kind}/${journalLink.documentId}`
-            );
-          }
-        } catch (claimErr) {
-          // Не валим основной /complete если claim не прошёл — задача
-          // выполнена, баланс начислен; sibling-claim это «приятный
-          // бонус» UX'а, а не critical path.
-          console.error("[claim] failed", claimErr);
-        }
-      }
-
-      // Отправляем email на email компании с прикрепленными фото (если есть)
-      const worker = task.workerId ? await storage.getUserById(task.workerId) : null;
-      const workerName = worker?.name || worker?.phone || "Неизвестный";
-      // Получаем email компании для уведомления (из api-key или session-юзера).
-      const companyId = await getCompanyIdFromReq(req);
-      const company = companyId ? await storage.getCompanyById(companyId) : null;
-      sendTaskCompletedEmail(
-        task.title,
-        workerName,
-        taskPhotoUrls.length > 0 ? taskPhotoUrls : (task.photoUrl ? [task.photoUrl] : null),
-        company?.email,
-        comment
-      );
-
-      // Audit log (П-17 спека Wesetup): фиксируем completion event для
-      // объединённого audit-report'а на стороне Wesetup.
-      const { recordAudit } = await import("./audit-log");
-      void recordAudit({
-        companyId: task.companyId,
-        actorWorkerId: task.workerId,
-        taskId: task.id,
-        action: "task.completed",
-        payload: {
-          title: task.title,
-          workerName,
-          hasPhoto: taskPhotoUrls.length > 0 || Boolean(task.photoUrl),
-          comment: comment ?? null,
-        },
+      const result = await completeTaskForActor({
+        taskId,
+        actor: actorFromReq(req),
+        comment,
       });
-
-      res.json(updatedTask);
+      return res.json(result.task);
     } catch (err: any) {
+      if (isTaskServiceError(err)) {
+        return res.status(err.status).json({ message: err.message });
+      }
       console.error("Error completing task:", err);
       res.status(500).json({ message: "Ошибка завершения задачи" });
     }

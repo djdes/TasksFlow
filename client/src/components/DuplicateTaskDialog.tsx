@@ -68,6 +68,8 @@ interface Task {
   weekDays?: number[] | null;
   monthDay?: number | null;
   isRecurring?: boolean;
+  /** Срок копируется вместе с остальными полями. */
+  dueDate?: number | null;
   price?: number;
   category?: string | null;
   description?: string | null;
@@ -203,6 +205,9 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
       monthDay: values.monthDay || null,
       isRecurring: values.isRecurring ?? true,
+      // Срок переносится как есть — форма его не редактирует, но терять
+      // его при дублировании нельзя: копия должна быть копией.
+      dueDate: task?.dueDate ?? null,
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,

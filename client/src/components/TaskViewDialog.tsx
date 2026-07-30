@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare, CalendarClock, AlertTriangle } from "lucide-react";
+import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
 
@@ -328,6 +329,7 @@ export function TaskViewDialog({
   if (!currentTask) return null;
 
   const hasPrice = (currentTask as any).price > 0;
+  const dueStatus = getDueStatus((currentTask as any).dueDate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -345,13 +347,36 @@ export function TaskViewDialog({
             )}
           </DialogHeader>
 
-          {/* Price badge in header */}
-          {hasPrice && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-              <Coins className="w-4 h-4 text-yellow-300" />
-              <span>+{(currentTask as any).price} ₽</span>
-            </div>
-          )}
+          {/* Бейджи в шапке: премия и срок */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {hasPrice && (
+              <div className="inline-flex items-center gap-1.5 bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
+                <Coins className="w-4 h-4 text-yellow-300" />
+                <span>+{(currentTask as any).price} ₽</span>
+              </div>
+            )}
+            {dueStatus.kind !== "none" && (
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                  dueStatus.kind === "overdue"
+                    ? "bg-rose-500/90 text-white"
+                    : "bg-white/20 text-white"
+                }`}
+                data-testid="dialog-due-badge"
+              >
+                {dueStatus.kind === "overdue" ? (
+                  <AlertTriangle className="w-4 h-4" />
+                ) : (
+                  <CalendarClock className="w-4 h-4" />
+                )}
+                <span>
+                  {dueStatus.kind === "overdue"
+                    ? `Просрочено на ${dueStatus.daysOverdue} дн.`
+                    : `Срок: ${formatDueBadge((currentTask as any).dueDate)}`}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-4 space-y-4">

@@ -6,39 +6,17 @@
  * случайная регрессия = «задача не показывается в её день».
  */
 
-type ScheduledTask = {
-  weekDays?: readonly number[] | null;
-  monthDay?: number | null;
-};
-
-/**
- * Видна ли задача СЕГОДНЯ.
- *
- *   monthDay set + не сегодня → false
- *   weekDays set + не включает сегодня → false
- *   иначе → true (включая «совсем без расписания»)
- *
- * @param task         задача со схемой расписания
- * @param dayOfWeek    new Date().getDay() — 0=воскресенье..6=суббота
- * @param dayOfMonth   new Date().getDate() — 1..31
- */
-export function isTaskVisibleOn(
-  task: ScheduledTask,
-  dayOfWeek: number,
-  dayOfMonth: number,
-): boolean {
-  if (task.monthDay !== null && task.monthDay !== undefined) {
-    if (task.monthDay !== dayOfMonth) return false;
-  }
-  if (
-    task.weekDays &&
-    Array.isArray(task.weekDays) &&
-    task.weekDays.length > 0
-  ) {
-    if (!task.weekDays.includes(dayOfWeek)) return false;
-  }
-  return true;
-}
+// isTaskVisibleOn переехал в shared/task-visibility.ts — ту же функцию
+// использует Telegram-бот для списка «задачи на сегодня». Здесь только
+// реэкспорт, чтобы не трогать существующие импорты и тесты.
+export {
+  isTaskVisibleOn,
+  getDueStatus,
+  formatDueBadge,
+  startOfLocalDay,
+  type ScheduledTask,
+  type DueStatus,
+} from "@shared/task-visibility";
 
 type ChippableTask = {
   requiresPhoto?: boolean | null;

@@ -971,6 +971,31 @@
   .task-badge.claimed {
     @apply bg-slate-100 text-slate-600;
   }
+
+  /* Срок выполнения. Задача со сроком не исчезает после дедлайна —
+     она краснеет, чтобы просроченная работа была заметнее остальных,
+     а не пропадала из списка вместе с обязательством её сделать. */
+  .task-badge.due {
+    @apply bg-sky-50 text-sky-700;
+    border: 1px solid rgba(2, 132, 199, 0.18);
+  }
+  .task-badge.due svg {
+    color: #0284c7;
+  }
+  .task-badge.due-today {
+    @apply bg-amber-50 text-amber-700 font-medium;
+    border: 1px solid rgba(217, 119, 6, 0.25);
+  }
+  .task-badge.due-today svg {
+    color: #d97706;
+  }
+  .task-badge.overdue {
+    @apply bg-rose-50 text-rose-700 font-semibold;
+    border: 1px solid rgba(225, 29, 72, 0.3);
+  }
+  .task-badge.overdue svg {
+    color: #e11d48;
+  }
   /* Минус-сумма — красно-оранжевый намёк «не твои деньги». Чисто
      визуальная семантика, никакой реальной транзакции. */
   .task-badge.claimed-bonus {
