@@ -46,6 +46,14 @@ jobs:
           PF_API_URL: ${{ secrets.PF_API_URL }}
           PF_AGENT_TOKEN: ${{ secrets.PF_AGENT_TOKEN }}
           PF_TASKSFLOW_PROJECT_ID: ${{ secrets.PF_TASKSFLOW_PROJECT_ID }}
+          # Почта: на проде письма сдаются локальному MTA FastPanel
+          # (localhost:25, без логина) — почтовый домен tasksflow.ru с DKIM
+          # живёт на том же сервере. SMTP_USER/SMTP_PASS намеренно НЕ
+          # прокидываем: с ними server/mail.ts ушёл бы в ветку внешнего
+          # SMTP с авторизацией.
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -54,7 +62,7 @@ jobs:
           # Секреты бота — чтобы не ходить на сервер руками ради двух строк
           # в .env. Пустые значения ничего не меняют: .env на сервере
           # остаётся источником правды, как в ProjectsFlow.
-          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP,PF_API_URL,PF_AGENT_TOKEN,PF_TASKSFLOW_PROJECT_ID
+          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP,PF_API_URL,PF_AGENT_TOKEN,PF_TASKSFLOW_PROJECT_ID,SMTP_HOST,SMTP_PORT,SMTP_FROM
           script: |
             set -Eeuo pipefail
 
@@ -112,6 +120,9 @@ jobs:
             upsert_env PF_API_URL "${PF_API_URL:-}"
             upsert_env PF_AGENT_TOKEN "${PF_AGENT_TOKEN:-}"
             upsert_env PF_TASKSFLOW_PROJECT_ID "${PF_TASKSFLOW_PROJECT_ID:-}"
+            upsert_env SMTP_HOST "${SMTP_HOST:-}"
+            upsert_env SMTP_PORT "${SMTP_PORT:-}"
+            upsert_env SMTP_FROM "${SMTP_FROM:-}"
 
             # Явно сообщаем результат: в логе деплоя сразу видно, дошёл
             # токен или секрет так и не создали.
