@@ -14,10 +14,21 @@ const SMTP_USER = process.env.SMTP_USER?.trim();
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM =
   process.env.SMTP_FROM?.trim() ||
-  (SMTP_USER ? `"TasksFlow" <${SMTP_USER}>` : null);
+  (SMTP_USER ? `"TasksFlow" <${SMTP_USER}>` : `"TasksFlow" <support@tasksflow.ru>`);
 
-const transporter =
-  SMTP_HOST && SMTP_USER && SMTP_PASS
+// Локальный MTA FastPanel (тот же сценарий, что на wesetup: localhost:25)
+// логина не требует — письмо сдаётся exim'у на loopback, а наружу его уже
+// подписывает DKIM почтового домена. Раньше транспорт требовал USER+PASS
+// и при localhost-конфиге молча не поднимался: SMTP_HOST задан, писем нет.
+const isLocalRelay =
+  !SMTP_USER &&
+  !SMTP_PASS &&
+  Boolean(SMTP_HOST) &&
+  ["localhost", "127.0.0.1", "::1"].includes(SMTP_HOST!.toLowerCase());
+
+const transporter = !SMTP_HOST
+  ? null
+  : SMTP_USER && SMTP_PASS
     ? nodemailer.createTransport({
         host: SMTP_HOST,
         port: SMTP_PORT,
@@ -26,11 +37,25 @@ const transporter =
         connectionTimeout: 5000,
         socketTimeout: 5000,
       })
-    : null;
+    : isLocalRelay
+      ? nodemailer.createTransport({
+          host: SMTP_HOST,
+          // Дефолт 587 осмысленен только для внешнего SMTP с логином;
+          // локальный exim слушает 25.
+          port: Number(process.env.SMTP_PORT) || 25,
+          secure: false,
+          // У локального exim сертификат самоподписанный и на другой hostname —
+          // на loopback это не риск, а проверка ломала бы STARTTLS.
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 5000,
+          socketTimeout: 5000,
+        })
+      : null;
 
 if (!transporter) {
   console.warn(
-    "[mail] SMTP не настроен (нужны SMTP_HOST + SMTP_USER + SMTP_PASS). " +
+    "[mail] SMTP не настроен: нужен либо локальный релей " +
+      "(SMTP_HOST=localhost, SMTP_PORT=25), либо SMTP_HOST + SMTP_USER + SMTP_PASS. " +
       "Email-уведомления о выполненных задачах не отправляются."
   );
 }
