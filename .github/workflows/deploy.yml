@@ -167,3 +167,21 @@ jobs:
             fi
 
             pm2 status
+
+            echo ">>> ensure autostart cron"
+            # У PM2 на этом сервере нет systemd-юнита: `pm2 startup` требует
+            # root, которого у деплой-пользователя нет. Поэтому автозапуск
+            # держим на пользовательском crontab. 08.08.2026 сервер
+            # перезагрузился и прод пролежал ~2 суток именно из-за этого.
+            #
+            # Шаг идемпотентный: старые строки вычищаются по маркеру и
+            # ставятся заново, так что crontab не растёт от деплоя к деплою.
+            WD="$DEPLOY_PATH/script/pm2-watchdog.sh"
+            chmod +x "$WD"
+            {
+              crontab -l 2>/dev/null | grep -v 'pm2-watchdog.sh'
+              echo "@reboot sleep 20 && /bin/sh $WD"
+              echo "*/5 * * * * /bin/sh $WD"
+            } | crontab -
+            echo ">>> crontab теперь:"
+            crontab -l | grep 'pm2-watchdog.sh'
