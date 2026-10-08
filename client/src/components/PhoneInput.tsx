@@ -51,8 +51,13 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           }
         }}
         onFocus={(e) => {
+          const input = e.currentTarget;
           if (shouldResetPhoneCursor(value)) {
-            setTimeout(() => e.currentTarget.setSelectionRange(2, 2), 0);
+            requestAnimationFrame(() => {
+              if (input.isConnected && document.activeElement === input && shouldResetPhoneCursor(input.value)) {
+                input.setSelectionRange(2, 2);
+              }
+            });
           }
         }}
       />

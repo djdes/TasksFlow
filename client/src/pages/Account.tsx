@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TelegramSection } from "@/components/TelegramSection";
+import { MotionToggle } from "@/components/MotionToggle";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { ArrowLeft, Loader2, Mail, KeyRound } from "lucide-react";
 
 /**
@@ -74,6 +76,12 @@ export default function Account() {
         </button>
 
         <h1 className="text-2xl font-bold mb-6">Аккаунт</h1>
+
+        <section className="rounded-xl border border-border bg-card p-5 mb-5 space-y-3">
+          <h2 className="font-semibold">Оформление</h2>
+          <ThemeSwitcher />
+          <MotionToggle />
+        </section>
 
         {/* Смена email */}
         <section className="rounded-xl border border-border bg-card p-5 mb-5">

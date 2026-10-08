@@ -26,6 +26,7 @@ import { getJournalBonus } from "@/lib/journal-bonus";
 import { parseJournalLinkUI } from "@/lib/journal-link-parse";
 import { HighlightedText } from "@/components/HighlightedText";
 import { DueBadge } from "@/components/DueBadge";
+import { useMotionPreference } from "@/contexts/MotionContext";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -38,17 +39,17 @@ const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 const dayContainer: Variants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.045, delayChildren: 0.03 },
+    transition: { staggerChildren: 0 },
   },
 };
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 10 },
-  visible: {
+  visible: (index = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.32, ease: EASE_OUT_QUINT as unknown as number[] },
-  },
+    transition: { duration: 0.24, delay: Math.min(index, 4) * .025, ease: EASE_OUT_QUINT as unknown as number[] },
+  }),
 };
 
 /** Плавный коллапс секций (Выполненные / Сделано другими). */
@@ -114,6 +115,11 @@ type Props = {
  * what's still open; managers can tap to open the archive.
  */
 export function GroupedTaskList(props: Props) {
+  const { reduced } = useMotionPreference();
+  const sectionVariants = reduced ? {
+    hidden: { opacity: 1, height: 0, transition: { duration: 0 } },
+    visible: { opacity: 1, height: "auto", transition: { duration: 0 } },
+  } : collapseVariants;
   const {
     activeTasks,
     completedTasks,
@@ -247,21 +253,24 @@ export function GroupedTaskList(props: Props) {
             <span className="task-returned-reason">{rejectReason}</span>
           </div>
         )}
-        <div className="flex items-start gap-3">
+        <div className="task-main flex items-start gap-3">
           <button
             onClick={(e) => onToggleComplete(task.id, e)}
             className={`task-checkbox ${isCompleted ? "checked" : ""}`}
+            aria-label={`${isCompleted ? "Вернуть в работу" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
           >
             {isCompleted && <Check className="w-4 h-4 text-white" />}
           </button>
 
           <div className="task-content">
             <h3 className="task-title">
-              <HighlightedText text={task.title} query={searchQuery} />
+              <button type="button" className="task-title-button" onClick={(e) => { e.stopPropagation(); onTaskClick(task); }}>
+                <HighlightedText text={task.title} query={searchQuery} />
+              </button>
             </h3>
 
             <div className="task-meta">
-              {isAdmin && task.workerId && (
+              {isAdmin && !groupByWorker && task.workerId && (
                 <div className="worker-info" title={getUserName(task.workerId)}>
                   <div className="worker-avatar">
                     {getUserInitials(task.workerId)}
@@ -360,11 +369,13 @@ export function GroupedTaskList(props: Props) {
             )}
           </div>
 
-          <div className="flex items-center">
+          <div className="task-trailing flex items-center">
             {isAdmin ? (
               <div className="task-actions">
                 <button
                   className="task-action-btn"
+                  aria-label={`Редактировать: ${task.title}`}
+                  title="Редактировать"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(task.id);
@@ -374,6 +385,8 @@ export function GroupedTaskList(props: Props) {
                 </button>
                 <button
                   className="task-action-btn"
+                  aria-label={`Дублировать: ${task.title}`}
+                  title="Дублировать"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDuplicate(task);
@@ -383,6 +396,8 @@ export function GroupedTaskList(props: Props) {
                 </button>
                 <button
                   className="task-action-btn delete"
+                  aria-label={`Удалить: ${task.title}`}
+                  title="Удалить"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(task.id);
@@ -467,12 +482,12 @@ export function GroupedTaskList(props: Props) {
         </div>
         <motion.div
           className="task-list"
-          variants={dayContainer}
-          initial="hidden"
+          variants={reduced ? undefined : dayContainer}
+          initial={reduced ? false : "hidden"}
           animate="visible"
         >
-          {day.tasks.map((task) => (
-            <motion.div key={task.id} variants={cardVariants}>
+          {day.tasks.map((task, index) => (
+            <motion.div key={task.id} custom={index} variants={reduced ? undefined : cardVariants}>
               {cardRenderer(task)}
             </motion.div>
           ))}
@@ -497,6 +512,11 @@ export function GroupedTaskList(props: Props) {
     year: YearGroup,
     cardRenderer: (task: Task) => JSX.Element = renderTaskCard
   ) {
+    // The current shift needs day labels; archive accordions only help when
+    // there are other months to navigate.
+    if (year.isCurrentYear && year.months.length === 1 && year.months[0].isCurrentMonthOfCurrentYear) {
+      return <div key={year.yearKey} className="group-current">{year.months[0].days.map(day => renderDay(day, cardRenderer))}</div>;
+    }
     return (
       <details
         key={year.yearKey}
@@ -755,7 +775,7 @@ export function GroupedTaskList(props: Props) {
           {completedOpen ? (
             <motion.div
               key="completed-body"
-              variants={collapseVariants}
+              variants={sectionVariants}
               initial="hidden"
               animate="visible"
               exit="hidden"
@@ -795,7 +815,7 @@ export function GroupedTaskList(props: Props) {
             {claimedOpen ? (
               <motion.div
                 key="claimed-body"
-                variants={collapseVariants}
+                variants={sectionVariants}
                 initial="hidden"
                 animate="visible"
                 exit="hidden"

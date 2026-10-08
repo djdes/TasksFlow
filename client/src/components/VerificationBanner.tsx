@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { plural } from "@/lib/i18n";
+import { useMotionPreference } from "@/contexts/MotionContext";
 
 /**
  * Компактный баннер на Dashboard для управленцев — «N задач ждут
@@ -15,6 +16,7 @@ import { plural } from "@/lib/i18n";
  * заведующая нажала на задачу и ушла на verification page.
  */
 export function VerificationBanner() {
+  const { reduced } = useMotionPreference();
   const [, setLocation] = useLocation();
   const { data: tasks = [], isLoading } = useAwaitingVerification();
 
@@ -34,10 +36,10 @@ export function VerificationBanner() {
         type="button"
         onClick={() => setLocation("/admin/verification")}
         className="verification-banner"
-        initial={{ opacity: 0, y: -8 }}
+        initial={reduced ? false : { opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: reduced ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
         whileHover={{ y: -1 }}
         whileTap={{ scale: 0.985 }}
       >

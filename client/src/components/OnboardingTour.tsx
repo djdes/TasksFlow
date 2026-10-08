@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, X, ListChecks, Coins, HelpCircle, Sparkles } from "lucide-react";
-import { Portal } from "@/components/Portal";
+import { ArrowRight, ListChecks, Coins, HelpCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useMotionPreference } from "@/contexts/MotionContext";
 
 /**
  * Простой 4-шаговый onboarding для нового воркера. Не лезет в DOM
@@ -50,6 +51,7 @@ const STEPS = [
 ];
 
 export function OnboardingTour() {
+  const { reduced } = useMotionPreference();
   const [step, setStep] = useState<number | null>(null);
 
   useEffect(() => {
@@ -85,106 +87,33 @@ export function OnboardingTour() {
     }
   }
 
-  if (step === null) return null;
-  const current = STEPS[step];
+  const current = STEPS[step ?? 0];
   const isLast = step === STEPS.length - 1;
-  const progress = ((step + 1) / STEPS.length) * 100;
+  const progress = (((step ?? 0) + 1) / STEPS.length) * 100;
 
-  return (
-    <Portal>
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="onboarding"
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={dismiss}
-      >
-        <motion.div
-          key={step}
-          className="relative max-w-md w-full rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl"
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 320, damping: 26 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Прогресс-бар */}
-          <div className="absolute top-0 inset-x-0 h-1 bg-muted rounded-t-3xl overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-primary to-primary/70"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4 }}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={dismiss}
-            className="absolute right-3 top-3 w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-            aria-label="Пропустить"
-            title="Пропустить (можно открыть в любой момент через «?»)"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          <div className="mt-4 flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center shrink-0">
-              {current.icon}
-            </div>
+  return <Dialog open={step !== null} onOpenChange={(open) => { if (!open) dismiss(); }}>
+    <DialogContent className="max-w-md p-6">
+      <div className="h-1 bg-muted rounded-full overflow-hidden mr-8" aria-hidden="true">
+        <motion.div className="h-full bg-primary" initial={false} animate={{ width: `${progress}%` }} />
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={step} initial={reduced ? false : { opacity: 0, filter: "blur(3px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} exit={{ opacity: 0, filter: "blur(3px)" }} transition={{ duration: reduced ? 0 : .12 }}>
+          <div className="mt-3 flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center shrink-0">{current.icon}</div>
             <div className="flex-1 pt-1">
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <Sparkles className="w-3 h-3" />
-                Шаг {step + 1} из {STEPS.length}
-              </div>
-              <h2 className="mt-1 text-xl font-bold text-foreground leading-tight">
-                {current.title}
-              </h2>
+              <div className="text-xs font-medium text-muted-foreground">Шаг {(step ?? 0) + 1} из {STEPS.length}</div>
+              <DialogTitle className="mt-1 text-xl font-bold leading-tight">{current.title}</DialogTitle>
             </div>
           </div>
-
-          <p className="mt-4 text-sm leading-relaxed text-foreground/80">
-            {current.body}
-          </p>
-
-          <div className="mt-6 flex items-center gap-2">
-            {/* Точки шагов */}
-            <div className="flex gap-1.5">
-              {STEPS.map((_, i) => (
-                <span
-                  key={i}
-                  className={`block w-2 h-2 rounded-full transition-colors ${
-                    i === step
-                      ? "bg-primary"
-                      : i < step
-                        ? "bg-primary/50"
-                        : "bg-muted"
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={dismiss}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Пропустить
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              className="inline-flex items-center gap-1.5 h-10 px-5 rounded-2xl bg-gradient-to-r from-primary to-primary/90 text-white text-sm font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all"
-            >
-              {isLast ? "Начать!" : "Дальше"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          <DialogDescription className="mt-4 text-sm leading-relaxed text-foreground/80">{current.body}</DialogDescription>
         </motion.div>
-      </motion.div>
-    </AnimatePresence>
-    </Portal>
-  );
+      </AnimatePresence>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <button type="button" onClick={dismiss} className="ui-button min-h-11 text-sm text-muted-foreground">Пропустить</button>
+        <button type="button" onClick={next} className="ui-button inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary text-white font-medium">
+          {isLast ? "Начать!" : "Дальше"}<ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </DialogContent>
+  </Dialog>;
 }

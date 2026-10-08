@@ -1,0 +1,122 @@
+/* Shared motion language: immediate feedback, one settled entrance, no bounce. */
+:root {
+  --ease-settle: cubic-bezier(.2, .8, .2, 1);
+  --motion-fast: 150ms;
+  --motion-enter: 280ms;
+}
+
+@keyframes page-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes skeleton-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes surface-enter { from { opacity: 0; scale: .97; } to { opacity: 1; scale: 1; } }
+@keyframes surface-exit { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .98; } }
+@keyframes overlay-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-exit { from { opacity: 1; } to { opacity: 0; } }
+
+.skeleton { position: relative; overflow: hidden; isolation: isolate; flex-shrink: 0; }
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 15%, hsl(var(--card) / .7) 50%, transparent 85%);
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+.skeleton-content { padding-top: 1.5rem; }
+.skeleton-content > * { animation: none; }
+.skeleton-form { max-width: 48rem; }
+.skeleton-app-header {
+  height: 60px; display: flex; align-items: center; gap: 1rem;
+  padding: 0 1rem;
+  background: hsl(var(--primary));
+}
+.skeleton-app-header .skeleton { background: rgb(255 255 255 / .2); }
+@media (min-width: 1024px) { .skeleton-app-header { height: 68px; padding-inline: 2rem; } }
+.skeleton-app-header .skeleton::after { background: linear-gradient(100deg, transparent, rgb(255 255 255 / .15), transparent); }
+
+.ui-button, .header-button, .dropdown-item, .quick-chip, .scope-tab, .theme-switcher-btn {
+  transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-settle);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.ui-button:active:not(:disabled), .header-button:active:not(:disabled), .quick-chip:active, .scope-tab:active {
+  scale: .96;
+}
+.ui-button[aria-busy="true"] { cursor: progress; }
+.button-state { display: inline-grid; align-items: center; justify-items: center; }
+.button-state > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; transition: opacity 140ms ease-out, filter 140ms ease-out; }
+.button-progress, .button-state[data-loading="true"] .button-label { opacity: 0; filter: blur(3px); }
+.button-state[data-loading="true"] .button-progress { opacity: 1; filter: blur(0); }
+.ui-button svg:not(.animate-spin) { transition: opacity var(--motion-fast), scale var(--motion-fast); }
+.page-container, .page-shell { animation: page-reveal var(--motion-enter) var(--ease-settle); }
+.page-title { text-wrap: balance; }
+
+.dialog-overlay[data-state="open"] { animation: overlay-enter 220ms ease-out; }
+.dialog-overlay[data-state="closed"] { animation: overlay-exit 180ms ease-out; }
+.desktop-dialog[data-state="open"] { animation: surface-enter var(--motion-enter) var(--ease-settle); }
+.desktop-dialog[data-state="closed"] { animation: surface-exit 180ms ease-out; }
+.dialog-surface { overscroll-behavior: contain; }
+
+/* Vaul owns the gesture transform. Never combine it with translate centering. */
+.dialog-surface.mobile-sheet {
+  inset: auto 0 0;
+  width: 100%; max-width: none;
+  max-height: calc(100dvh - max(12px, env(safe-area-inset-top)));
+  border-radius: 26px 26px 0 0;
+  border-bottom: 0;
+  overflow-x: hidden; overflow-y: auto;
+  padding-top: 32px;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  will-change: auto;
+  scroll-padding-block: 3rem;
+  -webkit-overflow-scrolling: touch;
+}
+/* Vaul's overscroll filler is for a non-scrolling outer drawer. Here Content
+   scrolls: the filler otherwise covers controls and adds two empty viewports. */
+.dialog-surface.mobile-sheet[data-vaul-drawer]::after { content: none; display: none; }
+.sheet-grip-zone { position: absolute; top: 0; left: 52px; right: 52px; height: 30px; display: grid; place-items: center; }
+.sheet-grip-zone .sheet-grip { width: 38px; height: 5px; background: hsl(var(--muted-foreground) / .4); margin: 0; }
+.mobile-sheet > .dialog-close-button { top: 4px; right: 8px; min-width: 44px; min-height: 44px; display: grid; place-items: center; background: transparent; }
+.mobile-sheet > .sheet-grip-zone + * { border-top-left-radius: 0; border-top-right-radius: 0; }
+.mobile-menu .dropdown-item { min-height: 44px; }
+.mobile-menu { gap: 0 !important; }
+.toast-viewport { padding-top: max(1rem, env(safe-area-inset-top)); }
+.mobile-menu .dropdown-theme-row { flex-wrap: wrap; }
+.mobile-sheet :is(input, textarea, select) { font-size: 16px; }
+
+.motion-toggle { display: inline-flex; align-items: center; flex-shrink: 0; width: 40px; height: 24px; border-radius: 20px; padding: 3px; background: hsl(var(--muted)); transition: background-color 180ms; }
+.motion-toggle[data-checked="true"] { background: hsl(var(--primary)); }
+.motion-toggle > span { width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0002; transform: translateX(0); transition: transform 260ms var(--ease-settle), width 150ms; }
+.motion-toggle[data-checked="true"] > span { transform: translateX(16px); }
+[role="switch"]:active .motion-toggle > span { width: 21px; }
+[role="switch"]:active .motion-toggle[data-checked="true"] > span { transform: translateX(13px); }
+
+.scope-tabs, .theme-switcher { position: relative; isolation: isolate; }
+.scope-tab, .theme-switcher-btn { position: relative; isolation: isolate; }
+.scope-tab-active, .theme-switcher-btn.is-active { background: transparent !important; box-shadow: none; }
+.tab-indicator { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: hsl(var(--primary)); }
+.scope-tab-active .scope-tab-count { background: rgb(255 255 255 / .2); color: white; }
+
+@media (max-width: 767px) {
+  #root { overscroll-behavior-y: contain; }
+  .ui-button { min-height: 44px; }
+  .skeleton-content { padding-top: 1rem; }
+}
+
+/* Both CSS and JS motion obey the same preference. Keep final states visible. */
+html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
+  animation-duration: .01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduced"] .skeleton::after { display: none; }
+html[data-motion="reduced"] .reveal-ready [data-reveal],
+html.reveal-ready[data-motion="reduced"] [data-reveal] { opacity: 1 !important; transform: none !important; }
+/* Completion stays celebratory without perpetual movement or particle bursts. */
+.all-done-emoji, .empty-state-emoji { animation: none; }
+html[data-motion="reduced"] :is(.ui-button, .header-button, .quick-chip, .scope-tab):active { scale: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { display: none; }
+  [data-vaul-drawer], [data-vaul-overlay] { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

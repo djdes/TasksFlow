@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { ListSkeleton } from "@/components/PageSkeleton";
+import { QueryError } from "@/components/QueryError";
 import { Loader2, Send, Unlink } from "lucide-react";
 
 /**
@@ -60,7 +62,7 @@ export function TelegramSection() {
   const [busy, setBusy] = useState(false);
   const [widgetReady, setWidgetReady] = useState(false);
 
-  const { data: status, isLoading } = useQuery<TelegramStatus>({
+  const { data: status, isLoading, isError, refetch } = useQuery<TelegramStatus>({
     queryKey: ["me", "telegram"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/me/telegram");
@@ -201,7 +203,9 @@ export function TelegramSection() {
       </div>
 
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        <ListSkeleton rows={1} />
+      ) : isError ? (
+        <QueryError onRetry={() => { void refetch(); }} />
       ) : !status?.botConfigured ? (
         // Токена бота нет в окружении сервера. Раньше здесь была одна
         // строка «бот не настроен» — админ видел тупик и не понимал,

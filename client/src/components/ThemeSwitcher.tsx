@@ -9,6 +9,9 @@
  * остальные мягко поднимаются.
  */
 import { Monitor, Moon, Sun } from "lucide-react";
+import { LayoutGroup, motion } from "framer-motion";
+import { useId } from "react";
+import { useMotionPreference } from "@/contexts/MotionContext";
 import { useTheme, type ThemePreference } from "@/contexts/ThemeContext";
 
 const OPTIONS: Array<{
@@ -23,9 +26,11 @@ const OPTIONS: Array<{
 
 export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   const { preference, setPreference } = useTheme();
+  const id = useId();
+  const { reduced } = useMotionPreference();
 
   return (
-    <div
+    <LayoutGroup id={id}><div
       className={`theme-switcher ${compact ? "theme-switcher--compact" : ""}`}
       role="radiogroup"
       aria-label="Тема оформления"
@@ -37,15 +42,17 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
             key={value}
             type="button"
             role="radio"
+            aria-label={label}
             aria-checked={active}
             onClick={() => setPreference(value)}
             className={`theme-switcher-btn ${active ? "is-active" : ""}`}
           >
+            {active && <motion.span className="tab-indicator" layoutId="theme" initial={false} transition={reduced ? { duration: 0 } : { type: "spring", duration: .32, bounce: 0 }} />}
             <Icon className="w-4 h-4" />
             {!compact && <span>{label}</span>}
           </button>
         );
       })}
-    </div>
+    </div></LayoutGroup>
   );
 }

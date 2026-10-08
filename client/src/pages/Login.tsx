@@ -1,3 +1,5 @@
+import { useMotionPreference } from "@/contexts/MotionContext";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -25,6 +27,7 @@ const formSchema = loginSchema;
 type FormValues = z.infer<typeof formSchema>;
 
 export default function Login() {
+  const { reduced } = useMotionPreference();
   const [, setLocation] = useLocation();
   const { login, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -66,16 +69,7 @@ export default function Login() {
     },
   });
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-base text-white/80">Загрузка...</span>
-        </div>
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton />;
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
@@ -118,9 +112,9 @@ export default function Login() {
       {/* Header */}
       <motion.div
         className="auth-hero text-center"
-        initial={{ opacity: 0, y: 16 }}
+        initial={reduced ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
+        transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1] }}
       >
         {/* Premium Icon — одна большая ClipboardCheck, чисто
             масштабируемая. Раньше внутри стеклянного контейнера была
@@ -131,14 +125,9 @@ export default function Login() {
             одинаково хорошо смотрится на 80px / 112px / 128px. */}
         <motion.div
           className="auth-hero-icon relative mx-auto mb-6"
-          initial={{ scale: 0.85, opacity: 0 }}
+          initial={reduced ? false : { scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 280,
-            damping: 22,
-            delay: 0.05,
-          }}
+          transition={reduced ? { duration: 0 } : { type: "spring", duration: .3, bounce: 0 }}
         >
           {/* Outer glow */}
           <div className="absolute -inset-3 rounded-[28px] bg-white/15 blur-2xl" />
@@ -160,9 +149,9 @@ export default function Login() {
         </motion.div>
         <motion.h1
           className="auth-title font-black drop-shadow-sm"
-          initial={{ opacity: 0, y: 8 }}
+          initial={reduced ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: 0.18 }}
+          transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1], delay: reduced ? 0 : .08 }}
         >
           Контроль производственных процессов
         </motion.h1>
@@ -171,9 +160,9 @@ export default function Login() {
       {/* Form Card */}
       <motion.div
         className="auth-card"
-        initial={{ opacity: 0, y: 22 }}
+        initial={reduced ? false : { opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1], delay: 0.24 }}
+        transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1], delay: reduced ? 0 : .1 }}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-md mx-auto">
@@ -193,13 +182,14 @@ export default function Login() {
               )}
             />
 
-            <button
+            <Button
               type="submit"
               className="ozon-btn ozon-btn-primary w-full text-xl font-bold h-16 rounded-2xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-200 active:scale-[0.98]"
-              disabled={isLoading}
+              loading={isLoading}
+              loadingLabel="Вход…"
             >
-              {isLoading ? "Вход..." : "Войти"}
-            </button>
+              Войти
+            </Button>
 
             {/* Подсказка для тех, кто впервые. Бабушки часто пугаются
                 «надо ли регистрироваться?» — здесь явно сказано: если

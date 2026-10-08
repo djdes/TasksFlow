@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +64,7 @@ export default function AdminBannersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
 
-  const { data: banners = [], isLoading } = useQuery<BannerRow[]>({
+  const { data: banners = [], isLoading, isError, refetch } = useQuery<BannerRow[]>({
     queryKey: ["admin-banners"],
     queryFn: async ({ signal }) => {
       const r = await fetchOrFriendlyError("/api/admin/banners", {
@@ -162,13 +164,7 @@ export default function AdminBannersPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton />;
 
   if (!isRoot) {
     return (
@@ -322,8 +318,10 @@ export default function AdminBannersPage() {
           </div>
 
           {isLoading ? (
-            <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-          ) : banners.length === 0 ? (
+              <ListSkeleton rows={3} />
+            ) : isError && banners.length === 0 ? (
+              <QueryError onRetry={() => { void refetch(); }} />
+            ) : banners.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">Баннеров пока нет</div>
           ) : (
             <div className="divide-y">

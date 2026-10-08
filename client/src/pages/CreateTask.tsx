@@ -1,7 +1,9 @@
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { QueryError } from "@/components/QueryError";
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
-import { useWesetupEnabled } from "@/hooks/use-wesetup";
+import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
@@ -93,7 +95,7 @@ export default function CreateTask() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const createTask = useCreateTask();
-  const { data: users = [] } = useUsers();
+  const { data: users = [], dataUpdatedAt: usersUpdatedAt, isLoading: usersLoading, isError: usersError, refetch: retryUsers } = useUsers();
   const { toast } = useToast();
   const [examplePhotoFile, setExamplePhotoFile] = useState<File | null>(null);
   const [examplePhotoPreview, setExamplePhotoPreview] = useState<string | null>(null);
@@ -119,7 +121,8 @@ export default function CreateTask() {
   // ──── WeSetup journal mode ────
   // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
   // с WeSetup. Без неё TasksFlow — просто «ставить задачи» (свободный режим).
-  const wesetupEnabled = useWesetupEnabled();
+  const wesetupConfig = useWesetupConfiguration();
+  const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured;
 
   const [mode, setMode] = useState<"free" | "journal">("free");
 
@@ -652,6 +655,9 @@ export default function CreateTask() {
       });
     }
   };
+
+  if (usersLoading || wesetupConfig.isLoading) return <PageSkeleton />;
+  if (usersError && !usersUpdatedAt) return <div className="page-container py-8"><QueryError onRetry={() => { void retryUsers(); }} /></div>;
 
   return (
     <div className="page-screen">
@@ -1279,10 +1285,10 @@ export default function CreateTask() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createTask.isPending}
+                  loading={createTask.isPending} loadingLabel="Создание…"
                   className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all"
                 >
-                  {createTask.isPending ? "Создание..." : "Создать"}
+                  Создать
                 </Button>
               </div>
             </form>

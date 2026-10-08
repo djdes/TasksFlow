@@ -3,46 +3,85 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
+import { Drawer } from "vaul"
+import { useIsMobile } from "@/hooks/use-media-query"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = DialogPrimitive.Root
+const MobileDialogContext = React.createContext(false)
+
+function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  const mobile = useIsMobile()
+  return <MobileDialogContext.Provider value={mobile}>
+    {mobile ? <Drawer.Root {...props} shouldScaleBackground={false} noBodyStyles
+      repositionInputs closeThreshold={0.18} autoFocus /> : <DialogPrimitive.Root {...props} />}
+  </MobileDialogContext.Provider>
+}
 
 const DialogTrigger = DialogPrimitive.Trigger
 
-const DialogPortal = DialogPrimitive.Portal
+function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+  const mobile = React.useContext(MobileDialogContext)
+  return mobile ? <Drawer.Portal {...props} /> : <DialogPrimitive.Portal {...props} />
+}
 
 const DialogClose = DialogPrimitive.Close
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
+>(({ className, ...props }, ref) => {
+  const mobile = React.useContext(MobileDialogContext)
+  const Overlay = mobile ? Drawer.Overlay : DialogPrimitive.Overlay
+  return <Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "dialog-overlay fixed inset-0 z-[80] bg-black/45",
       className
     )}
     {...props}
   />
-))
+})
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+  const mobile = React.useContext(MobileDialogContext)
+  const Content = mobile ? Drawer.Content : DialogPrimitive.Content
+  const opener = React.useRef<HTMLElement | null>(null)
+  return (
   <DialogPortal>
     <DialogOverlay />
-    <DialogPrimitive.Content
+    <Content
       ref={ref}
+      data-mobile-sheet={mobile || undefined}
+      onOpenAutoFocus={(event) => {
+        opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        onOpenAutoFocus?.(event)
+        // Keep keyboard closed until an input is explicitly tapped.
+        if (mobile && !event.defaultPrevented) {
+          event.preventDefault()
+          const content = event.currentTarget
+          if (content instanceof HTMLElement) content.focus()
+        }
+      }}
+      onCloseAutoFocus={(event) => {
+        onCloseAutoFocus?.(event)
+        if (!event.defaultPrevented && opener.current?.isConnected) {
+          event.preventDefault()
+          opener.current.focus({ preventScroll: true })
+        }
+      }}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl max-h-[90vh] overflow-y-auto",
+        "dialog-surface fixed z-[81] grid gap-4 border bg-background p-6 shadow-xl outline-none",
+        mobile ? "mobile-sheet" : "desktop-dialog left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl max-h-[90dvh] overflow-y-auto",
         className
       )}
       {...props}
     >
+      {mobile && <div className="sheet-grip-zone" aria-hidden="true"><Drawer.Handle className="sheet-grip" /></div>}
       {children}
       {/* Close-кнопка должна быть видима И на цветной шапке (TaskViewDialog
           с градиентным header'ом — там фон тёмный) И на белом dialog'е без
@@ -53,9 +92,10 @@ const DialogContent = React.forwardRef<
         <X className="h-4 w-4" aria-hidden="true" />
         <span className="sr-only">Закрыть</span>
       </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
+    </Content>
   </DialogPortal>
-))
+  )
+})
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({

@@ -1,3 +1,6 @@
+import { QueryError } from "@/components/QueryError";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,7 +43,7 @@ export default function ApiKeysPage() {
 	const [newName, setNewName] = useState("");
 	const [shownSecret, setShownSecret] = useState<SecretReveal | null>(null);
 
-	const { data: keys = [], isLoading } = useQuery<ApiKeyRow[]>({
+	const { data: keys = [], isLoading, isError, refetch } = useQuery<ApiKeyRow[]>({
 		queryKey: ["api-keys"],
 		queryFn: async ({ signal }) => {
 			const r = await fetchOrFriendlyError("/api/api-keys", {
@@ -149,11 +152,7 @@ export default function ApiKeysPage() {
 		}
 	};
 
-	if (authLoading) {
-		return <div className="flex items-center justify-center min-h-screen">
-			<Loader2 className="w-6 h-6 animate-spin" />
-		</div>;
-	}
+  if (authLoading) return <PageSkeleton />;
 
 	if (!user?.isAdmin) {
 		return (
@@ -222,10 +221,10 @@ export default function ApiKeysPage() {
 					</div>
 
 					{isLoading ? (
-						<div className="p-8 text-center">
-							<Loader2 className="w-6 h-6 animate-spin mx-auto" />
-						</div>
-					) : keys.length === 0 ? (
+              <ListSkeleton rows={3} />
+            ) : isError && keys.length === 0 ? (
+              <QueryError onRetry={() => { void refetch(); }} />
+            ) : keys.length === 0 ? (
 						<div className="p-8 text-center text-muted-foreground">
 							Ключей пока нет
 						</div>
@@ -312,15 +311,9 @@ export default function ApiKeysPage() {
 				</div>
 			</div>
 
-			{shownSecret && (
-				<div
-					className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-					onClick={() => setShownSecret(null)}
-				>
-					<div
-						className="content-panel max-w-lg w-full"
-						onClick={(e) => e.stopPropagation()}
-					>
+      <Dialog open={!!shownSecret} onOpenChange={(open) => { if (!open) setShownSecret(null); }}>
+        <DialogContent className="max-w-lg">
+          {shownSecret && <div>
 						<div className="flex items-center gap-2 mb-3">
 							{shownSecret.source === "revealed" ? (
 								<Eye className="w-5 h-5 text-primary" />
@@ -329,21 +322,21 @@ export default function ApiKeysPage() {
 							) : (
 								<CheckCircle2 className="w-5 h-5 text-green-600" />
 							)}
-							<h3 className="font-semibold text-lg">
+							<DialogTitle className="font-semibold text-lg pr-7">
 								{shownSecret.source === "revealed"
 									? `Ключ «${shownSecret.name}»`
 									: shownSecret.source === "rotated"
 									? "Ключ перевыпущен"
 									: "Ключ создан"}
-							</h3>
+							</DialogTitle>
 						</div>
-						<p className="text-sm text-muted-foreground mb-4">
+						<DialogDescription className="text-sm text-muted-foreground mb-4">
 							{shownSecret.source === "revealed"
 								? "Plaintext восстановлен из шифрованной копии в БД. Скопируйте и закройте окно — окно само не закроется."
 								: shownSecret.source === "rotated"
 								? "Старый ключ отозван — все интеграции на нём сразу перестанут работать. Скопируйте новый plaintext и пропишите его в интеграциях."
 								: "Сохраните ключ в надёжном месте. Через «Показать» можно будет открыть его повторно, пока не отозвали."}
-						</p>
+						</DialogDescription>
 						<div className="bg-muted rounded p-3 font-mono text-sm break-all mb-4">
 							{shownSecret.secret}
 						</div>
@@ -354,9 +347,9 @@ export default function ApiKeysPage() {
 							</Button>
 							<Button onClick={() => setShownSecret(null)}>Готово</Button>
 						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
+          </div>}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -112,7 +114,8 @@ export default function Invitations() {
     onError: (e) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
   });
 
-  if (authLoading || !user?.isAdmin) return null;
+  if (authLoading) return <PageSkeleton />;
+  if (!user?.isAdmin) return null;
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -148,6 +151,7 @@ export default function Invitations() {
           {activeQuery.isLoading && (
             <p className="text-sm text-muted-foreground">Загрузка...</p>
           )}
+          {activeQuery.isError && <QueryError onRetry={() => { void activeQuery.refetch(); }} />}
           {activeQuery.data && activeQuery.data.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Пока нет активных приглашений.
@@ -216,7 +220,7 @@ export default function Invitations() {
           </button>
           {showHistory && (
             <div className="mt-2">
-              {allQuery.isFetching && (
+              {allQuery.isLoading && (
                 <p className="text-sm text-muted-foreground">Загрузка...</p>
               )}
               {allQuery.data
@@ -275,9 +279,10 @@ export default function Invitations() {
             </Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending}
+              loading={createMutation.isPending}
+              loadingLabel="Создание…"
             >
-              {createMutation.isPending ? "Создание..." : "Создать"}
+              Создать
             </Button>
           </DialogFooter>
         </DialogContent>

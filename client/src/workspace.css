@@ -1,0 +1,141 @@
+/* Workspace surfaces. Indigo anchors the shift; status colors carry meaning.
+   Loaded only by the SPA so marketing pages keep their own visual language. */
+:root {
+  --workspace-shadow: 0 1px 2px rgb(16 24 40 / .03), 0 8px 24px rgb(16 24 40 / .035);
+}
+.dark { --workspace-shadow: 0 1px 2px rgb(0 0 0 / .12), 0 8px 24px rgb(0 0 0 / .08); }
+
+.app-layout .app-header {
+  background: hsl(var(--primary));
+  box-shadow: none;
+  border-bottom: 1px solid rgb(255 255 255 / .12);
+}
+.app-layout .app-header::after { content: none; }
+.app-layout .app-header-content, .app-layout .app-content { max-width: 1280px; margin-inline: auto; }
+.app-layout .header-button { border: 1px solid rgb(255 255 255 / .14); background: rgb(255 255 255 / .1); border-radius: 12px; }
+.app-layout .header-button:hover { background: rgb(255 255 255 / .2); }
+.app-layout .header-title { letter-spacing: -.025em; font-weight: 650; }
+.app-layout .header-subtitle { color: rgb(255 255 255 / .82); font-weight: 400; }
+.header-desktop-actions { display: none; }
+.header-wordmark { font-size: 15px; font-weight: 700; letter-spacing: -.04em; color: white; }
+.header-create { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 11px; background: white; color: #3543b6; font-size: 13px; font-weight: 600; }
+.header-create:hover { background: #eff1ff; }
+
+/* A single search surface; the shortcut is a separate, discoverable hint. */
+.app-layout .search-top {
+  margin: 0 0 20px; padding: 0 14px; gap: 10px; min-height: 48px;
+  border: 1px solid hsl(var(--border)); border-radius: 14px;
+  background: hsl(var(--card)); backdrop-filter: none;
+  box-shadow: 0 1px 2px rgb(16 24 40 / .025);
+  transition: border-color 150ms, box-shadow 150ms;
+  top: 8px;
+}
+.app-layout .search-top:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .12); }
+.app-layout .search-top-input { padding: 0; min-width: 0; border: 0; background: transparent; box-shadow: none; height: 46px; outline: none; font-size: 15px; }
+.app-layout .search-top-input:focus-visible { outline: none; box-shadow: none; }
+.search-shortcut { display: grid; place-items: center; width: 24px; height: 26px; border: 1px solid hsl(var(--border)); border-radius: 6px; color: hsl(var(--muted-foreground)); font-family: inherit; font-size: 12px; }
+
+/* Compact counters share a progress track instead of floating as unrelated tiles. */
+.shift-summary { margin-bottom: 20px; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 20px; box-shadow: var(--workspace-shadow); overflow: hidden; }
+.shift-summary .stat-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; gap: 0; }
+.shift-summary .stat-tile { min-width: 0; padding: 20px; border: 0; border-radius: 0; background: transparent; box-shadow: none; gap: 7px; overflow: visible; }
+.shift-summary .stat-tile:nth-child(even) { border-left: 1px solid hsl(var(--border)); }
+.shift-summary .stat-tile:nth-child(n+3) { border-top: 1px solid hsl(var(--border)); }
+.shift-summary .stat-tile:hover { transform: none; box-shadow: none; }
+.shift-summary .stat-tile-icon { position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; border-radius: 10px; }
+.shift-summary .stat-tile-value { margin: 0; font-size: 38px; line-height: 1; letter-spacing: -.045em; color: hsl(var(--foreground)); padding-right: 36px; overflow-wrap: anywhere; }
+.shift-summary .stat-tile-label { color: hsl(var(--foreground)); font-size: 13px; font-weight: 500; }
+.shift-summary .stat-tile-hint { display: block; font-size: 12px; line-height: 1.3; color: hsl(var(--muted-foreground)); }
+.shift-progress { padding: 13px 20px 18px; border-top: 1px solid hsl(var(--border)); }
+.shift-progress-label { display: flex; justify-content: space-between; gap: 16px; color: hsl(var(--muted-foreground)); font-size: 12px; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.shift-progress-track { height: 5px; border-radius: 4px; background: hsl(var(--muted)); overflow: hidden; }
+.shift-progress-track > div { height: 100%; background: hsl(var(--primary)); border-radius: inherit; transform-origin: left; }
+
+.app-layout .filters-bar { gap: 10px; margin-bottom: 12px; }
+.app-layout .filters-bar [role="combobox"] { background: hsl(var(--card)); border-color: hsl(var(--border)); min-height: 44px; border-radius: 12px; box-shadow: none; }
+.app-layout .quick-chip { min-height: 36px; border-color: transparent; background: hsl(var(--muted) / .6); color: hsl(var(--muted-foreground)); }
+.app-layout .quick-chip-active { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); border-color: hsl(var(--primary) / .25); }
+.app-layout .quick-chip-reset { background: transparent; color: hsl(var(--muted-foreground)); }
+.app-layout .scope-tabs { border-radius: 14px; background: hsl(var(--muted) / .7); padding: 4px; }
+.app-layout .scope-tab { border-radius: 10px; }
+
+/* List hierarchy: section > person > task. Only the actual task is a card. */
+.app-layout .grouped-section { padding: 16px; border-radius: 20px; background: hsl(var(--card)); border-color: hsl(var(--border)); box-shadow: var(--workspace-shadow); }
+.app-layout .grouped-section--completed, .app-layout .grouped-section--claimed { background: hsl(var(--card) / .55); box-shadow: none; }
+.app-layout .grouped-section-title { font-size: 15px; font-weight: 650; letter-spacing: -.015em; color: hsl(var(--foreground)); }
+.app-layout .grouped-section-count, .app-layout .worker-section-count { background: hsl(var(--primary) / .08); color: hsl(var(--primary)); font-weight: 600; }
+.app-layout .group-mode-toggle { min-height: 34px; padding-inline: 12px; background: hsl(var(--background)); color: hsl(var(--muted-foreground)); border-color: hsl(var(--border)); transition: color 150ms, border-color 150ms, background-color 150ms; }
+.app-layout .worker-section { border: 0; border-radius: 12px; background: hsl(var(--background) / .7); box-shadow: none; }
+.app-layout .worker-section[open] { background: transparent; box-shadow: none; }
+.app-layout .worker-section-header { min-height: 52px; padding: 10px 12px; }
+.app-layout .worker-section-body { padding: 4px 0 0; }
+.group-current { display: grid; gap: 16px; }
+.group-current .group-day { border-left: 0; padding-left: 0; }
+.app-layout .group-day-header--today { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); border-color: transparent; }
+.app-layout .group-day-header--today .group-day-label { color: inherit; }
+.app-layout .group-day-header--today .group-day-count { background: hsl(var(--primary) / .12); color: inherit; }
+.app-layout .worker-avatar { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); border-radius: 9px; font-weight: 600; }
+.app-layout .worker-section-name { color: hsl(var(--foreground)); }
+.app-layout .task-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 14px; padding: 16px; box-shadow: none; transition: border-color 150ms, background-color 150ms, box-shadow 150ms; }
+.app-layout .task-card:hover { transform: none; border-color: hsl(var(--primary) / .4); box-shadow: 0 2px 8px hsl(var(--primary) / .035); }
+.app-layout .task-card:active { transform: none; }
+.app-layout .task-card.completed { background: hsl(var(--background) / .55); opacity: .8; }
+.app-layout .task-card--returned { border-color: hsl(var(--destructive) / .45); }
+.app-layout .task-title { margin-top: 2px; font-size: 15px; line-height: 1.45; font-weight: 600; letter-spacing: -.015em; }
+.task-title-button { text-align: left; color: inherit; border-radius: 4px; overflow-wrap: anywhere; }
+.app-layout .task-meta { gap: 6px; margin-top: 9px; }
+.app-layout .task-badge { padding: 3px 7px; font-size: 11px; border-radius: 6px; font-weight: 500; }
+.app-layout .task-badge:is(.category,.schedule) { background: hsl(var(--muted) / .6); color: hsl(var(--muted-foreground)); }
+.app-layout .task-checkbox { width: 28px; height: 28px; border-radius: 9px; margin-top: 1px; }
+.app-layout .task-checkbox { position: relative; }
+.app-layout .task-checkbox::before { content: ""; position: absolute; inset: -8px; }
+.app-layout .task-action-btn { width: 36px; height: 36px; border-radius: 9px; }
+.app-layout .task-card:focus-within { border-color: hsl(var(--primary) / .6); }
+.app-layout .empty-state { border: 1px dashed hsl(var(--border)); border-radius: 20px; background: hsl(var(--card) / .65); padding: 48px 24px; box-shadow: none; }
+.app-layout .empty-state-icon { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 20px; background: hsl(var(--primary) / .08); color: hsl(var(--primary)); border-radius: 20px; box-shadow: none; }
+.app-layout .empty-state-title { font-size: 20px; letter-spacing: -.025em; }
+.app-layout .empty-state-text { max-width: 340px; margin-inline: auto; line-height: 1.6; }
+.app-layout :is(.empty-state-button,.empty-state-button-secondary) { min-height: 44px; border-radius: 12px; box-shadow: none; background-image: none; }
+.app-layout .app-footer { margin-top: 32px; border-top: 0; }
+
+/* The same corner, border and type rhythm carries through forms and sheets. */
+.page-screen { background: hsl(var(--background)); }
+.page-screen .page-title { letter-spacing: -.035em; font-weight: 650; line-height: 1.15; }
+.page-screen .page-icon { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); box-shadow: none; border-radius: 14px; }
+.page-screen .content-panel { background: hsl(var(--card)); box-shadow: var(--workspace-shadow); border-color: hsl(var(--border)); border-radius: 20px; }
+.page-screen :is(input,textarea) { transition: border-color 150ms, box-shadow 150ms; }
+.task-detail-header { background: hsl(var(--primary)); }
+.task-detail-header [id] { text-align: left; }
+.task-detail-header p { line-height: 1.6; }
+.app-layout :is(button,a,summary):focus-visible, .page-screen :is(button,a):focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; }
+.app-layout .app-header button:focus-visible { outline-color: white; }
+
+@media (min-width: 1024px) {
+  .header-desktop-actions { display: flex; align-items: center; gap: 24px; }
+  .fab-button { display: none; }
+  .shift-summary .stat-hero { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .shift-summary .stat-tile + .stat-tile { border-left: 1px solid hsl(var(--border)); border-top: 0; }
+}
+@media (max-width: 767px) {
+  .app-layout .header-button { min-width: 44px; min-height: 44px; }
+  .app-layout .search-top { padding-inline: 12px; margin-bottom: 16px; }
+  .app-layout .search-top-input { font-size: 16px; }
+  .search-shortcut { display: none; }
+  .app-layout .search-top-clear { min-width: 44px; min-height: 44px; margin-right: -10px; }
+  .shift-summary .stat-tile { padding: 16px; }
+  .shift-summary .stat-tile-icon { right: 14px; top: 17px; width: 26px; height: 26px; }
+  .shift-summary .stat-tile-value { font-size: 34px; padding-right: 24px; }
+  .shift-progress { padding: 12px 16px 16px; }
+  .shift-summary .stat-tile:nth-child(3):last-child { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; padding-right: 52px; }
+  .shift-summary .stat-tile:nth-child(3):last-child .stat-tile-value { font-size: 24px; padding-right: 0; }
+  .shift-summary .stat-tile:nth-child(3):last-child .stat-tile-hint { display: none; }
+  .app-layout .quick-chip { min-height: 44px; }
+  .app-layout .grouped-section { padding: 12px; border-radius: 18px; }
+  .app-layout .group-mode-toggle { min-height: 40px; }
+  .app-layout .task-card { padding: 14px; }
+  .app-layout .task-main { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; }
+  .app-layout .task-trailing { grid-column: 2; }
+  .app-layout .task-actions { display: flex; flex-direction: row; gap: 4px; opacity: 1; }
+  .app-layout .task-action-btn { width: 44px; height: 44px; }
+  .app-layout .task-arrow { display: none; }
+}

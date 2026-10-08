@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useUpdateTask, useTask } from "@/hooks/use-tasks";
@@ -64,7 +66,7 @@ export default function EditTask() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { data: task, isLoading } = useTask(Number(id));
+  const { data: task, isLoading, isError, refetch } = useTask(Number(id));
   const updateTask = useUpdateTask();
   const { data: users = [] } = useUsers();
   const { toast } = useToast();
@@ -287,16 +289,8 @@ export default function EditTask() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm text-muted-foreground">Загрузка...</span>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton />;
+  if (isError && !task) return <div className="page-container py-8"><QueryError onRetry={() => { void refetch(); }} /></div>;
 
   if (!task) {
     return (
@@ -756,10 +750,10 @@ export default function EditTask() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateTask.isPending}
+                  loading={updateTask.isPending} loadingLabel="Сохранение…"
                   className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all"
                 >
-                  {updateTask.isPending ? "Сохранение..." : "Сохранить"}
+                  Сохранить
                 </Button>
               </div>
             </form>

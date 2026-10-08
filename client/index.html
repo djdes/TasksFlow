@@ -2,7 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#0066ff" />
     <meta name="description" content="Контроль производственных процессов" />
     <title>TasksFlow</title>
@@ -12,6 +12,33 @@
     <!-- preconnect нужен для @import Inter/Onest в client/src/index.css -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <style>
+      /* First paint does not depend on downloading React, fonts or the session. */
+      html { background: #f3f4f6; } html.dark { background: #0b1220; }
+      .boot-shell { min-height: 100dvh; color: #667085; background: #f3f4f6; font: 14px system-ui, sans-serif; }
+      .dark .boot-shell { background: #0b1220; }
+      .boot-header { height: 60px; background: #5566f6; }
+      .boot-content { max-width: 1280px; box-sizing: border-box; margin: auto; padding: 16px; }
+      .boot-block { background: #e2e5eb; border-radius: 12px; position: relative; overflow: hidden; }
+      .dark .boot-block { background: #1b2439; }
+      .boot-block::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg,transparent,#ffffff60,transparent); animation: boot-sweep 1.6s ease-in-out infinite; }
+      .dark .boot-block::after { background: linear-gradient(100deg,transparent,#ffffff10,transparent); }
+      .boot-search { height: 48px; margin-bottom: 20px; }
+      .boot-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 1px; margin-bottom: 20px; border-radius: 20px; overflow: hidden; }
+      .boot-stat { height: 176px; border-radius: 0; }
+      .boot-tabs { display: flex; gap: 12px; margin-bottom: 20px; }
+      .boot-tabs .boot-block { height: 40px; width: 136px; }
+      .boot-row { height: 116px; margin-bottom: 12px; border-radius: 16px; }
+      .boot-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      html[data-boot='form'] .boot-header, html[data-boot='form'] .boot-stats, html[data-boot='form'] .boot-tabs { display: none; }
+      html[data-boot='form'] .boot-content { max-width: 720px; padding-top: 40px; }
+      html[data-boot='form'] .boot-search { width: 55%; height: 32px; }
+      @keyframes boot-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+      @media(min-width: 768px) { .boot-content { padding-top: 24px; } }
+      @media(min-width: 1024px) { .boot-header { height: 68px; } .boot-content { padding: 24px 32px; } }
+      html[data-motion='reduced'] .boot-block::after { animation: none; display: none; }
+      @media(prefers-reduced-motion: reduce) { .boot-block::after { animation: none; display: none; } }
+    </style>
   </head>
   <body>
     <!-- Anti-flash тема: ставим .dark на <html> ДО React-mount, чтобы
@@ -24,15 +51,25 @@
          сразу — отсюда дубль для UX. -->
     <script>
       (function () {
+        document.documentElement.dataset.boot = location.pathname === '/dashboard' ? 'dashboard' : 'form';
         try {
           var stored = localStorage.getItem('theme-preference');
           var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           var isDark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
           if (isDark) document.documentElement.classList.add('dark');
+          document.documentElement.dataset.motion = localStorage.getItem('tf_motion_enabled') === 'false' || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'full';
         } catch (e) { /* localStorage недоступен — light по умолчанию */ }
       })();
     </script>
-    <div id="root"></div>
+    <div id="root"><div class="boot-shell" role="status" aria-label="Загрузка страницы" aria-busy="true">
+      <div class="boot-header" aria-hidden="true"></div>
+      <div class="boot-content" aria-hidden="true"><div class="boot-block boot-search"></div>
+        <div class="boot-stats"><div class="boot-block boot-stat"></div><div class="boot-block boot-stat"></div></div>
+        <div class="boot-tabs"><div class="boot-block"></div><div class="boot-block"></div></div>
+        <div class="boot-block boot-row"></div><div class="boot-block boot-row"></div><div class="boot-block boot-row"></div>
+      </div><span class="boot-label">Загрузка TasksFlow…</span>
+    </div></div>
+    <noscript><p style="position:fixed;inset:20px;z-index:100;background:white;padding:24px">Для работы TasksFlow включите JavaScript в браузере.</p></noscript>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Регистрация Service Worker для PWA

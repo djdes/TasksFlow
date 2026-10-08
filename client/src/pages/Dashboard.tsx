@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,10 +35,14 @@ import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
-import { useWesetupEnabled } from "@/hooks/use-wesetup";
+import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { StreakAchievement } from "@/components/StreakAchievement";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
+import { MotionToggle } from "@/components/MotionToggle";
+import { QueryError } from "@/components/QueryError";
+import { useIsMobile } from "@/hooks/use-media-query";
+import { useMotionPreference } from "@/contexts/MotionContext";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
@@ -103,8 +108,10 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user, logout, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
-  const { data: users = [] } = useUsers();
-  const { data: tasks = [], isLoading: loadingTasks } = useTasks();
+  const { data: users = [], isLoading: loadingUsers, isError: usersError, refetch: retryUsers } = useUsers();
+  const { data: tasks = [], isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
+  const isMobile = useIsMobile();
+  const { reduced } = useMotionPreference();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
@@ -129,7 +136,8 @@ export default function Dashboard() {
   const [chipBonus, setChipBonus] = useState(false);
   const [chipJournal, setChipJournal] = useState(false);
   // Фильтр «Журнальные» показываем только при настроенной интеграции WeSetup.
-  const wesetupEnabled = useWesetupEnabled();
+  const wesetupConfig = useWesetupConfiguration();
+  const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured;
   const [searchQuery, setSearchQuery] = useState("");
   // Таб «Мои задачи» / «Общие задачи смены» / «Все».
   // - personal: задачи лично сотруднику (закрепленные за ним)
@@ -138,13 +146,23 @@ export default function Dashboard() {
   // - all:      по умолчанию показываем всё; если в выборке нет
   //              shared-задач — табы скрываются.
   const [taskTab, setTaskTab] = useState<"all" | "personal" | "shared">("all");
+  const hasActiveFilters = !!searchQuery.trim() || filterByCategory !== "all" || filterByUserId !== "all" || taskTab !== "all" || chipPhoto || chipBonus || chipJournal;
+  const resetFilters = () => {
+    setSearchQuery("");
+    setFilterByCategory("all");
+    setFilterByUserId("all");
+    setTaskTab("all");
+    setChipPhoto(false);
+    setChipBonus(false);
+    setChipJournal(false);
+  };
   const [duplicateTask, setDuplicateTask] = useState<Task | null>(null);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
   // VerificationBanner — react-query кэш переиспользуется.
-  const { data: pendingVerifyTasks = [] } = useAwaitingVerification();
+  const { data: pendingVerifyTasks = [], isLoading: loadingVerification } = useAwaitingVerification();
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
   // Режим группировки списка для админа/руководителя: по дате
   // (default — старое поведение) или по сотруднику. Воркер видит
@@ -531,21 +549,17 @@ export default function Dashboard() {
   };
 
   // Loading state
-  if (authLoading || loadingTasks) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-base text-muted-foreground">
-            {authLoading ? "Загрузка..." : "Загрузка задач..."}
-          </span>
-        </div>
-      </div>
-    );
-  }
+  if (authLoading || loadingTasks || loadingUsers || wesetupConfig.isLoading || (canManageTasks && loadingVerification)) return <PageSkeleton />;
 
   if (!user) {
     return null;
+  }
+
+  if ((tasksError && tasks.length === 0) || (usersError && users.length === 0)) {
+    return <div className="page-screen"><div className="page-container py-8">
+      <h1 className="page-title mb-6">Задачи</h1>
+      <QueryError onRetry={() => { void retryTasks(); void retryUsers(); }} />
+    </div></div>;
   }
 
   return (
@@ -559,6 +573,7 @@ export default function Dashboard() {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="header-button"
                 aria-label="Меню"
+                aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -604,6 +619,10 @@ export default function Dashboard() {
                 <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
               </button>
             )}
+          <div className="header-desktop-actions">
+            <span className="header-wordmark">TasksFlow</span>
+            {canManageTasks && <button type="button" className="header-create ui-button" onClick={() => setLocation("/tasks/new")}><Plus className="w-4 h-4" />Создать задачу</button>}
+          </div>
         </div>
 
         {/* Dropdown menu — простой conditional render. Раньше был
@@ -613,8 +632,7 @@ export default function Dashboard() {
             обёртку дважды чинил, не помогало — целиком убрал. CSS
             анимирует вход (180ms fade+slide), exit мгновенный — UX
             небольшая потеря ради надёжности. */}
-        {isMenuOpen && (
-          <div className="dropdown-menu">
+          <DashboardMenu mobile={isMobile} open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <button
               type="button"
               className="dropdown-item w-full"
@@ -752,6 +770,7 @@ export default function Dashboard() {
               <span className="font-medium">Помощь</span>
             </button>
             <div className="dropdown-divider" />
+            <MotionToggle />
             {/* Звук+вибро при «Готово». Дефолт — вкл, чтобы воркер
                 сразу получил physical-confirmation. Можно выключить
                 на ночной смене / open-space если раздражает. */}
@@ -837,12 +856,12 @@ export default function Dashboard() {
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Удалить аккаунт</span>
             </button>
-          </div>
-        )}
+          </DashboardMenu>
       </header>
 
       {/* Main Content */}
       <main className="app-content">
+        {tasksError && <QueryError onRetry={() => { void retryTasks(); }} />}
         {/* Поиск задач — поднят на самый верх (по запросу владельца
             2026-05-05). Раньше прятался ниже фильтров — приходилось
             скроллить чтобы найти. Теперь сразу под header'ом. */}
@@ -853,7 +872,8 @@ export default function Dashboard() {
               ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск задач (нажми / для фокуса)"
+              placeholder="Найти задачу…"
+              aria-label="Поиск задач"
               className="search-top-input"
             />
             {searchQuery ? (
@@ -865,7 +885,7 @@ export default function Dashboard() {
               >
                 <X className="w-4 h-4" />
               </button>
-            ) : null}
+            ) : <kbd className="search-shortcut" aria-hidden="true">/</kbd>}
           </div>
         ) : null}
 
@@ -913,25 +933,13 @@ export default function Dashboard() {
           totalCount > 0 &&
           completedCount === totalCount && (
             <motion.div
-              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              initial={reduced ? false : { opacity: 0, y: 12, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+              transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1] }}
               className="all-done-banner"
               role="status"
               aria-live="polite"
             >
-              {/* Confetti — 8 эмодзи поднимаются один раз при показе
-                  баннера. CSS-only, без зависимостей. */}
-              <div className="all-done-confetti" aria-hidden="true">
-                <span>🎉</span>
-                <span>✨</span>
-                <span>⭐</span>
-                <span>🎊</span>
-                <span>💫</span>
-                <span>🎈</span>
-                <span>🌟</span>
-                <span>🥳</span>
-              </div>
               <div className="all-done-emoji">🎉</div>
               <div className="all-done-text">
                 <div className="all-done-title">Молодец!</div>
@@ -952,6 +960,7 @@ export default function Dashboard() {
               onClick={() => setTaskTab("all")}
               className={`scope-tab ${taskTab === "all" ? "scope-tab-active" : ""}`}
             >
+              {taskTab === "all" && <motion.span className="tab-indicator" layoutId="task-scope" initial={false} />}
               Все
               <span className="scope-tab-count">
                 {scopeCounts.personal + scopeCounts.shared}
@@ -962,6 +971,7 @@ export default function Dashboard() {
               onClick={() => setTaskTab("personal")}
               className={`scope-tab ${taskTab === "personal" ? "scope-tab-active" : ""}`}
             >
+              {taskTab === "personal" && <motion.span className="tab-indicator" layoutId="task-scope" initial={false} />}
               Мои задачи
               <span className="scope-tab-count">{scopeCounts.personal}</span>
             </button>
@@ -970,6 +980,7 @@ export default function Dashboard() {
               onClick={() => setTaskTab("shared")}
               className={`scope-tab ${taskTab === "shared" ? "scope-tab-active" : ""}`}
             >
+              {taskTab === "shared" && <motion.span className="tab-indicator" layoutId="task-scope" initial={false} />}
               Общие задачи смены
               <span className="scope-tab-count">{scopeCounts.shared}</span>
             </button>
@@ -1030,6 +1041,7 @@ export default function Dashboard() {
             <button
               type="button"
               className={`quick-chip ${chipPhoto ? "quick-chip-active" : ""}`}
+              aria-pressed={chipPhoto}
               onClick={() => setChipPhoto((v) => !v)}
             >
               <Camera className="w-3.5 h-3.5" />
@@ -1038,6 +1050,7 @@ export default function Dashboard() {
             <button
               type="button"
               className={`quick-chip ${chipBonus ? "quick-chip-active" : ""}`}
+              aria-pressed={chipBonus}
               onClick={() => setChipBonus((v) => !v)}
             >
               <Coins className="w-3.5 h-3.5" />
@@ -1047,6 +1060,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
+                aria-pressed={chipJournal}
                 onClick={() => setChipJournal((v) => !v)}
               >
                 <Tag className="w-3.5 h-3.5" />
@@ -1073,21 +1087,20 @@ export default function Dashboard() {
         {/* Task List */}
         {filteredTasks.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-emoji" aria-hidden="true">
-              {canManageTasks ? "📋" : "☕"}
-            </div>
             <div className="empty-state-icon">
-              <Inbox className="w-12 h-12 text-muted-foreground dark:text-[#c4b5fd]" />
+              {hasActiveFilters ? <Search className="w-8 h-8" /> : <Inbox className="w-8 h-8" />}
             </div>
             <h3 className="empty-state-title">
-              {canManageTasks ? "Нет задач" : "Сегодня задач нет"}
+              {hasActiveFilters ? "Ничего не нашлось" : canManageTasks ? "Нет задач" : "Сегодня задач нет"}
             </h3>
             <p className="empty-state-text">
-              {canManageTasks
+              {hasActiveFilters ? "Попробуйте другой запрос или сбросьте фильтры." : canManageTasks
                 ? "Создайте первую задачу для начала работы"
                 : "Отдохни или загляни позже — задачи появляются по расписанию."}
             </p>
-            {canManageTasks ? (
+            {hasActiveFilters ? (
+              <button type="button" onClick={resetFilters} className="empty-state-button ui-button"><X className="w-4 h-4" />Сбросить фильтры</button>
+            ) : canManageTasks ? (
               <button
                 onClick={() => setLocation("/tasks/new")}
                 className="empty-state-button"
@@ -1192,16 +1205,11 @@ export default function Dashboard() {
           <motion.button
             onClick={() => setLocation("/help")}
             className="help-fab"
-            initial={{ scale: 0, opacity: 0 }}
+            initial={reduced ? false : { scale: .9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 320,
-              damping: 22,
-              delay: 0.45,
-            }}
+            transition={reduced ? { duration: 0 } : { type: "spring", duration: .3, bounce: 0 }}
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.93 }}
+            whileTap={{ scale: reduced ? 1 : .96 }}
             aria-label="Помощь"
             title="Помощь — как пользоваться"
           >
@@ -1217,16 +1225,12 @@ export default function Dashboard() {
           <motion.button
             onClick={() => setLocation("/tasks/new")}
             className="fab-button"
-            initial={{ scale: 0, opacity: 0 }}
+            aria-label="Создать задачу"
+            initial={reduced ? false : { scale: .9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 320,
-              damping: 22,
-              delay: 0.35,
-            }}
+            transition={reduced ? { duration: 0 } : { type: "spring", duration: .3, bounce: 0 }}
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.93 }}
+            whileTap={{ scale: reduced ? 1 : .96 }}
           >
             <Plus className="w-7 h-7" />
           </motion.button>
@@ -1316,4 +1320,20 @@ export default function Dashboard() {
       </Dialog>
     </div>
   );
+}
+
+function DashboardMenu({ mobile, open, onOpenChange, children }: {
+  mobile: boolean; open: boolean; onOpenChange: (open: boolean) => void; children: React.ReactNode;
+}) {
+  if (!mobile) return open ? <div className="dropdown-menu">{children}</div> : null;
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="mobile-menu p-4" aria-describedby={undefined}
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        document.querySelector<HTMLButtonElement>('button[aria-label="Меню"]')?.focus();
+      }}>
+      <DialogTitle className="px-3 pr-12 pb-2 text-lg">Меню</DialogTitle>
+      <div>{children}</div>
+    </DialogContent>
+  </Dialog>;
 }

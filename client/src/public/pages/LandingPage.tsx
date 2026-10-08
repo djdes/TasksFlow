@@ -43,7 +43,7 @@ function ProductMock() {
   // Лёгкий 3D-параллакс от мыши (desktop). Reduced-motion — выключаем.
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
   const onMove = (e: React.MouseEvent) => {
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (typeof window !== "undefined" && (document.documentElement.dataset.motion === "reduced" || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;

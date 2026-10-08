@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -40,20 +42,14 @@ import type { Task } from "@shared/schema";
 export default function VerificationPage() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
-  const { data: tasks = [], isLoading } = useAwaitingVerification();
+  const { data: tasks = [], isLoading, isError, refetch } = useAwaitingVerification();
   const { data: users = [] } = useUsers();
   const verifyMut = useVerifyTask();
   const { toast } = useToast();
   const [rejectingTaskId, setRejectingTaskId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton />;
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -141,10 +137,10 @@ export default function VerificationPage() {
         </div>
 
         {isLoading ? (
-          <div className="content-panel flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : tasks.length === 0 ? (
+              <ListSkeleton rows={3} />
+            ) : isError && tasks.length === 0 ? (
+              <QueryError onRetry={() => { void refetch(); }} />
+            ) : tasks.length === 0 ? (
           <div className="content-panel">
             <div className="empty-state">
               <div className="empty-state-emoji" aria-hidden="true">

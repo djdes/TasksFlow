@@ -1,3 +1,5 @@
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { QueryError } from "@/components/QueryError";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +51,7 @@ export default function CompanySettings() {
   } | null>(null);
 
   // Получаем данные компании
-  const { data: company, isLoading: companyLoading } = useQuery({
+  const { data: company, isLoading: companyLoading, isError: companyError, refetch: retryCompany } = useQuery({
     queryKey: ["company-me"],
     queryFn: async ({ signal }) => {
       const response = await fetchOrFriendlyError("/api/companies/me", {
@@ -238,16 +240,8 @@ export default function CompanySettings() {
   };
 
   // Проверка прав
-  if (authLoading || companyLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="text-muted-foreground">Загрузка...</span>
-        </div>
-      </div>
-    );
-  }
+  if (authLoading || companyLoading) return <PageSkeleton />;
+  if (companyError && !company) return <div className="page-container py-8"><QueryError onRetry={() => { void retryCompany(); }} /></div>;
 
   if (!user || !user.isAdmin) {
     return (

@@ -1,12 +1,13 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useRef, lazy, Suspense } from "react";
-import { MotionConfig } from "framer-motion";
-import { Loader2 } from "lucide-react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { MotionProvider } from "@/contexts/MotionContext";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { QueryError } from "@/components/QueryError";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -22,7 +23,7 @@ import NotFound from "@/pages/not-found";
 // Help/Instructions — open редко. Register* — раз за всю карьеру.
 // Сокращает main-bundle для воркеров на ~30-40% (см. dist size после
 // build'а). Сетевая задержка при первом открытии <100ms на 4G —
-// неощутимо за счёт Suspense-spinner'а.
+// покрыта общим PageSkeleton до загрузки страницы.
 const Register = lazy(() => import("@/pages/Register"));
 const RegisterCompany = lazy(() => import("@/pages/RegisterCompany"));
 const RegisterUser = lazy(() => import("@/pages/RegisterUser"));
@@ -42,12 +43,10 @@ const AdminBanners = lazy(() => import("@/pages/AdminBanners"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const Account = lazy(() => import("@/pages/Account"));
 
-function RouteSuspenseFallback() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-    </div>
-  );
+function SessionReady({ children }: { children: React.ReactNode }) {
+  const { user, isLoading, isError, retry } = useAuth();
+  if (isError && !user) return <div className="page-container py-12"><QueryError onRetry={retry} message="Не удалось связаться с сервером. Повторите загрузку." /></div>;
+  return isLoading ? <PageSkeleton /> : children;
 }
 
 // Disable browser's automatic scroll restoration
@@ -82,7 +81,8 @@ function Router() {
     <>
       <ScrollToTop />
       <div key={location} className="route-shell">
-        <Suspense fallback={<RouteSuspenseFallback />}>
+        <Suspense fallback={<PageSkeleton />}>
+          <SessionReady>
           <Switch>
             <Route path="/" component={Login} />
             <Route path="/login" component={Login} />
@@ -107,6 +107,7 @@ function Router() {
             <Route path="/workers/:id/edit" component={EditWorker} />
             <Route component={NotFound} />
           </Switch>
+          </SessionReady>
         </Suspense>
       </div>
     </>
@@ -114,19 +115,10 @@ function Router() {
 }
 
 function App() {
-  // reducedMotion="user" — Framer Motion уважает OS-настройку
-  // prefers-reduced-motion: reduce. CSS-fallback в index.css:2680
-  // покрывает CSS-анимации, но Framer (StatHero, StreakAchievement,
-  // OnboardingTour, Login auth-hero, GreetingBanner и др.) — это JS,
-  // CSS rule на animation-duration на него НЕ влияет. Без MotionConfig
-  // пользователи с вестибулярными нарушениями / мигренями получают
-  // полный спектр scale/translate-эффектов даже при включённом
-  // системном reduced-motion. С "user" — финальные значения сразу
-  // без анимации.
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <MotionConfig reducedMotion="user">
+        <MotionProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <TooltipProvider>
@@ -135,7 +127,7 @@ function App() {
               </TooltipProvider>
             </AuthProvider>
           </QueryClientProvider>
-        </MotionConfig>
+        </MotionProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

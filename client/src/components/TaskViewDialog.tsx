@@ -335,7 +335,7 @@ export function TaskViewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 border-0">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-primary to-primary/90 text-white px-5 py-4">
+        <div className="task-detail-header bg-gradient-to-r from-primary to-primary/90 text-white px-5 py-4">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-white pr-8">
               {currentTask.title}

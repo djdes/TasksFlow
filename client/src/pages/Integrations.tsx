@@ -1,3 +1,4 @@
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -258,13 +259,7 @@ export default function IntegrationsPage() {
     },
   });
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton />;
   if (!user?.isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -467,7 +462,7 @@ export default function IntegrationsPage() {
             экспоненциальной лестнице (5м/15м/1ч/6ч/24ч).
           </p>
           {queueQuery.isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <ListSkeleton rows={2} />
           ) : queue?.migrationNeeded ? (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 text-sm">
               Миграция таблицы <code>webhook_deliveries</code> не прогнана. На сервере нужно один раз выполнить{" "}

@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +40,7 @@ export default function AdminUsers() {
   const [editName, setEditName] = useState("");
 
   // Получаем список пользователей (хук должен быть до early return)
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, refetch } = useQuery({
     queryKey: [api.users.list.path],
     queryFn: async ({ signal }) => {
       const response = await fetchOrFriendlyError(api.users.list.path, {
@@ -164,16 +166,7 @@ export default function AdminUsers() {
   };
 
   // Проверка загрузки авторизации
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-muted-foreground">Загрузка...</span>
-        </div>
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton />;
 
   // Проверка прав администратора
   if (!user || !user.isAdmin) {
@@ -288,9 +281,9 @@ export default function AdminUsers() {
           <div className="content-panel">
             <h2 className="text-xl font-semibold mb-6">Список пользователей</h2>
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-              </div>
+              <ListSkeleton rows={3} />
+            ) : isError && users.length === 0 ? (
+              <QueryError onRetry={() => { void refetch(); }} />
             ) : users.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Нет пользователей</p>
             ) : (

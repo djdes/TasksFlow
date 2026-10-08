@@ -16,6 +16,8 @@ type User = {
 interface AuthContextType {
   user: User;
   isLoading: boolean;
+  isError: boolean;
+  retry: () => void;
   login: (phone: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -26,16 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   // Получаем текущего пользователя
-  const { data: user = null, isLoading } = useQuery<User>({
+  const { data: user = null, isLoading, isError, refetch } = useQuery<User>({
     queryKey: ["auth", "me"],
     queryFn: async ({ signal }) => {
       const response = await fetchOrFriendlyError(api.auth.me.path, {
         credentials: "include",
         signal: withTimeout(signal, 30_000),
       });
-      if (!response.ok) {
-        return null;
-      }
+      if (response.status === 401) return null;
+      if (!response.ok) throw new Error("Не удалось проверить сессию");
       return response.json();
     },
     retry: false,
@@ -80,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
+        isError,
+        retry: () => { void refetch(); },
         login,
         logout,
       }}

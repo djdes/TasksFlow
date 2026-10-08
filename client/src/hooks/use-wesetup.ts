@@ -7,8 +7,8 @@ import { fetchOrFriendlyError } from "@/lib/queryClient";
  * Глобальный env WESETUP_* не учитывается на сервере — это осознанно,
  * чтобы публичный TasksFlow не показывал WeSetup всем подряд.
  */
-export function useWesetupEnabled(): boolean {
-  const { data } = useQuery<{ wesetupConfigured?: boolean } | null>({
+export function useWesetupConfiguration() {
+  return useQuery<{ wesetupConfigured?: boolean } | null>({
     queryKey: ["companies", "me"],
     queryFn: async () => {
       const r = await fetchOrFriendlyError("/api/companies/me", {
@@ -18,5 +18,8 @@ export function useWesetupEnabled(): boolean {
       return r.ok ? r.json() : null;
     },
   });
-  return !!data?.wesetupConfigured;
+}
+
+export function useWesetupEnabled(): boolean {
+  return !!useWesetupConfiguration().data?.wesetupConfigured;
 }

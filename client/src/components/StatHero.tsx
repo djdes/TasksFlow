@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { useMotionPreference } from "@/contexts/MotionContext";
 import {
   Award,
   Flame,
@@ -14,17 +15,10 @@ import {
 } from "@/lib/streak-hint";
 
 /**
- * Hero-блок сводки на главной. Заменяет minimal `progress-card`
- * четырьмя «живыми» плитками: что нужно сделать сегодня, сколько
- * сделано, сколько забрал коллега (для воркера) или сколько в очереди
- * (для админа), и текущий бонус-баланс.
- *
- * Анимации:
- *   - Стаггер-вход 80ms между плитками (ease-out-quint)
- *   - Числа считаются плавно от 0 к финалу (~600ms spring)
- *   - На hover плитка чуть приподнимается с ring-glow
- *   - Прогресс-кольцо вокруг иконки «Сегодня» рисуется по
- *     stroke-dashoffset с easeOut
+ * Единая сводка смены: остаток, личные выполнения, работа коллег
+ * и серия рабочих дней. Общий прогресс учитывает закрытые коллегами
+ * задачи. Числа и шкала обновляются плавно; reduced motion отключает
+ * движение. Визуальные размеры задаёт workspace.css.
  */
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
@@ -47,11 +41,13 @@ const tileVariants = {
 };
 
 function AnimatedNumber({ value }: { value: number }) {
+  const { reduced } = useMotionPreference();
   const motionValue = useMotionValue(0);
   const rounded = useTransform(motionValue, (v) => Math.round(v));
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
+    if (reduced) { motionValue.set(value); setDisplay(value); return; }
     const controls = animate(motionValue, value, {
       duration: 0.65,
       ease: EASE_OUT_QUINT,
@@ -61,9 +57,9 @@ function AnimatedNumber({ value }: { value: number }) {
       controls.stop();
       unsub();
     };
-  }, [value, motionValue, rounded]);
+  }, [value, motionValue, rounded, reduced]);
 
-  return <>{display}</>;
+  return <>{reduced ? value : display}</>;
 }
 
 type Tone = "primary" | "success" | "amber" | "slate";
@@ -122,13 +118,13 @@ function StatTile({
   pulse,
 }: TileProps) {
   const t = TONE_STYLES[tone];
+  const { reduced } = useMotionPreference();
 
   return (
     <motion.div
-      variants={tileVariants}
-      whileHover={{ y: -2 }}
-      transition={{ type: "spring", stiffness: 400, damping: 26 }}
-      className={`stat-tile bg-gradient-to-br ${t.bg}`}
+      variants={reduced ? undefined : tileVariants}
+      transition={{ type: "spring", duration: .3, bounce: 0 }}
+      className={`stat-tile stat-tile--${tone}`}
     >
       {/* Number-first раскладка: маленький цветной icon-чип сверху,
           крупное число (Onest, tabular), затем подпись и hint. Раньше
@@ -160,12 +156,12 @@ function StatTile({
               stroke="currentColor"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 15}
-              initial={{ strokeDashoffset: 2 * Math.PI * 15 }}
+              initial={reduced ? false : { strokeDashoffset: 2 * Math.PI * 15 }}
               animate={{
                 strokeDashoffset:
                   2 * Math.PI * 15 * (1 - Math.max(0, Math.min(1, progress))),
               }}
-              transition={{ duration: 1.05, ease: EASE_OUT_QUINT, delay: 0.15 }}
+              transition={{ duration: reduced ? 0 : .6, ease: EASE_OUT_QUINT }}
             />
           </svg>
         ) : null}
@@ -208,23 +204,27 @@ export function StatHero({
   streakDays,
   onBonusClick,
 }: Props) {
+  const { reduced } = useMotionPreference();
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
-  const remaining = Math.max(0, totalCount - completedCount);
+  const closedCount = Math.min(totalCount, completedCount + claimedCount);
+  const shiftProgress = totalCount > 0 ? closedCount / totalCount : 0;
+  const remaining = Math.max(0, totalCount - closedCount);
 
   return (
+    <section className="shift-summary" aria-label="Сводка задач">
     <motion.div
       className="stat-hero"
-      initial="hidden"
+      initial={reduced ? false : "hidden"}
       animate="visible"
-      variants={containerVariants}
+      variants={reduced ? undefined : containerVariants}
     >
       <StatTile
         icon={Target}
-        label="Сегодня"
+        label="Осталось сегодня"
         value={remaining}
         hint={todayHint(remaining, totalCount)}
         tone="primary"
-        progress={progress}
+        progress={shiftProgress}
       />
       <StatTile
         icon={Trophy}
@@ -236,9 +236,9 @@ export function StatHero({
       {claimedCount > 0 ? (
         <StatTile
           icon={Flame}
-          label={isAdmin ? "Забрано" : "Опередили"}
+          label="Сделали коллеги"
           value={claimedCount}
-          hint={isAdmin ? "race-for-bonus" : "коллеги быстрее"}
+          hint={isAdmin ? "выполнено коллегами" : "закрыли коллеги"}
           tone="slate"
         />
       ) : null}
@@ -257,5 +257,12 @@ export function StatHero({
       {/* Премия больше НЕ тут — вынесена в шапку (бейдж рядом с именем).
           Не дублируем плитку, чтобы не было двух мест с одним балансом. */}
     </motion.div>
+    <div className="shift-progress">
+      <div className="shift-progress-label"><span>Прогресс смены</span><span>{closedCount} из {totalCount}</span></div>
+      <div className="shift-progress-track" role="progressbar" aria-label="Выполнено задач" aria-valuemin={0} aria-valuemax={totalCount} aria-valuenow={closedCount}>
+        <motion.div initial={false} animate={{ scaleX: Math.max(0, Math.min(1, shiftProgress)) }} transition={{ duration: reduced ? 0 : .35 }} />
+      </div>
+    </div>
+    </section>
   );
 }

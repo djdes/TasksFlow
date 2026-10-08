@@ -1,3 +1,5 @@
+import { QueryError } from "@/components/QueryError";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useUpdateWorker, useWorker } from "@/hooks/use-workers";
@@ -21,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function EditWorker() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { data: worker, isLoading } = useWorker(Number(id));
+  const { data: worker, isLoading, isError, refetch } = useWorker(Number(id));
   const updateWorker = useUpdateWorker();
   const { toast } = useToast();
 
@@ -62,16 +64,8 @@ export default function EditWorker() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/10 to-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm text-muted-foreground">Загрузка...</span>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton />;
+  if (isError && !worker) return <div className="page-container py-8"><QueryError onRetry={() => { void refetch(); }} /></div>;
 
   if (!worker) {
     return (

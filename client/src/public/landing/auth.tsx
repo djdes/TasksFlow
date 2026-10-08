@@ -13,7 +13,7 @@
  * SSR-safe: при первом рендере нет обращений к window.
  */
 import { useState, type FormEvent } from "react";
-import { createPortal } from "react-dom";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 import { User, Lock, Eye, EyeOff, Loader2, CheckCircle2, X, ArrowRight } from "lucide-react";
 import { suggestEmailFix } from "./email-typo";
 import { detectIdentity } from "./identity";
@@ -290,37 +290,13 @@ export function AuthForm({
 }
 
 export function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open || typeof document === "undefined") return null;
-  return createPortal(
-    // Скролл-контейнер + центрирование через min-h-full: на iOS Safari
-    // фикс-модалка с items-center «уезжала» за пределы ужатого клавиатурой
-    // вьюпорта после сабмита (форма казалась пустой). Так контент всегда
-    // достижим скроллом и не клипается. Без autoFocus — чтобы клавиатура
-    // не дёргала раскладку на открытии.
-    <div
-      className="fixed inset-0 z-[100] overflow-y-auto bg-black/75"
-      onClick={onClose}
-    >
-      <div className="flex min-h-full items-center justify-center p-4">
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-card border border-border p-6 sm:p-7 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-2 text-muted-foreground hover:text-foreground"
-          aria-label="Закрыть"
-        >
-          <X className="w-5 h-5" />
-        </button>
-        <h2 className="text-xl font-bold text-foreground mb-1">Вход в TasksFlow</h2>
-        <p className="text-sm text-muted-foreground mb-5">Введите телефон или email — войдём или зарегистрируем.</p>
+  return <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+    <DialogContent className="max-w-md bg-card p-6 sm:p-7">
+      <div>
+        <DialogTitle className="text-xl font-bold text-foreground mb-1 pr-6">Вход в TasksFlow</DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground mb-5">Введите телефон или email — войдём или зарегистрируем.</DialogDescription>
         <AuthForm layout="stacked" />
       </div>
-      </div>
-    </div>,
-    document.body,
-  );
+    </DialogContent>
+  </Dialog>;
 }
