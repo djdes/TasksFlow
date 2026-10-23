@@ -216,7 +216,12 @@ export function GroupedTaskList(props: Props) {
     return map;
   }, [completedTasks, claimedByOthersTasks]);
 
-  function renderTaskCard(task: Task) {
+  /**
+   * showAssignee: в секциях «по сотруднику» имя уже стоит в заголовке
+   * секции, поэтому на карточке его нет. «Выполненные» группируются по
+   * дате — там исполнителя видно только на самой карточке.
+   */
+  function renderTaskCard(task: Task, showAssignee = !groupByWorker) {
     const isCompleted = Boolean(task.isCompleted);
     const hasPrice = (task as unknown as { price?: number }).price
       ? ((task as unknown as { price?: number }).price ?? 0) > 0
@@ -309,7 +314,7 @@ export function GroupedTaskList(props: Props) {
             </h3>
 
             <div className="task-meta">
-              {isAdmin && !groupByWorker && task.workerId && (
+              {isAdmin && showAssignee && task.workerId && (
                 <div className="worker-info" title={getUserName(task.workerId)}>
                   <div className="worker-avatar" data-tone={avatarTone(task.workerId) ?? undefined}>
                     {getUserInitials(task.workerId)}
@@ -844,7 +849,7 @@ export function GroupedTaskList(props: Props) {
                   Выполненных пока нет — будут появляться здесь по дням.
                 </div>
               ) : (
-                completedGroups.map((g) => renderYearGroup(g))
+                completedGroups.map((g) => renderYearGroup(g, (task) => renderTaskCard(task, true)))
               )}
             </motion.div>
           ) : null}

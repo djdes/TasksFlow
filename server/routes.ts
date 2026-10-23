@@ -1133,10 +1133,12 @@ export async function registerRoutes(
   // Обновить имя текущего пользователя (для админа - собственное имя)
   /**
    * Self-deletion: текущий user удаляет свой аккаунт.
-   * Удаление разрешено всегда, включая случай «единственный admin компании».
-   * После такого удаления компания остаётся без admin'а — это сознательное
-   * решение пользователя (например, закрытие компании). Платформенный
-   * админ при необходимости может промоутнуть оставшегося worker'а.
+   * Единственный admin компании, у которого есть сотрудники, удаляется
+   * только с явным { confirmOrphan: true }: без флага — 409 с кодом
+   * sole_admin, чтобы UI сначала предложил назначить другого admin'а.
+   * С флагом удаление проходит, как и раньше (закрытие компании —
+   * сознательное решение пользователя); платформенный админ при
+   * необходимости промоутит оставшегося worker'а.
    * Сессия после успеха уничтожается.
    */
   app.delete("/api/auth/me", requireAuth, async (req, res) => {
@@ -1152,9 +1154,18 @@ export async function registerRoutes(
         const otherAdmins = allUsers.filter(
           (u) => u.isAdmin && u.id !== userId,
         );
-        if (otherAdmins.length === 0) {
+        const otherUsers = allUsers.filter((u) => u.id !== userId).length;
+        if (otherAdmins.length === 0 && otherUsers > 0) {
+          if (req.body?.confirmOrphan !== true) {
+            return res.status(409).json({
+              code: "sole_admin",
+              otherUsers,
+              message:
+                "Вы единственный администратор компании. Сначала назначьте другого администратора — иначе сотрудники останутся без управления.",
+            });
+          }
           console.warn(
-            `[delete-own-account] Company ${user.companyId} loses its sole admin (user ${userId}). ${allUsers.length - 1} worker(s) become unmanaged.`,
+            `[delete-own-account] Company ${user.companyId} loses its sole admin (user ${userId}). ${otherUsers} worker(s) become unmanaged.`,
           );
         }
       }

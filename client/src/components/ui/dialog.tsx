@@ -10,8 +10,17 @@ import { cn } from "@/lib/utils"
 
 const MobileDialogContext = React.createContext(false)
 
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+
 function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  const mobile = useIsMobile()
+  const liveMobile = useIsMobile()
+  // Пока окно открыто, режим (шторка или диалог) не меняется. Иначе поворот
+  // телефона через 768px пересоздаёт корень, и введённое в форму пропадает.
+  const [lockedMobile, setLockedMobile] = React.useState(liveMobile)
+  useIsomorphicLayoutEffect(() => {
+    if (!props.open) setLockedMobile(liveMobile)
+  }, [props.open, liveMobile])
+  const mobile = props.open ? lockedMobile : liveMobile
   return <MobileDialogContext.Provider value={mobile}>
     {mobile ? <Drawer.Root {...props} shouldScaleBackground={false} noBodyStyles
       repositionInputs closeThreshold={0.18} autoFocus /> : <DialogPrimitive.Root {...props} />}

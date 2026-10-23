@@ -57,24 +57,24 @@ describe("formatWeekDaysShort — multiple, русский порядок", () =
     expect(formatWeekDaysShort([5, 3, 1])).toBe("Пн, Ср, Пт");
   });
 
-  it("[0,6] → 'Сб, Вс' (Вс ПОСЛЕ Сб, не первым!)", () => {
-    expect(formatWeekDaysShort([0, 6])).toBe("Сб, Вс");
+  it("[0,6] → 'По выходным' (Сб и Вс вместе — словом)", () => {
+    expect(formatWeekDaysShort([0, 6])).toBe("По выходным");
   });
 
   it("[6,0,1] → 'Пн, Сб, Вс'", () => {
     expect(formatWeekDaysShort([6, 0, 1])).toBe("Пн, Сб, Вс");
   });
 
-  it("вся неделя [0..6] → 'Пн, Вт, Ср, Чт, Пт, Сб, Вс'", () => {
-    expect(formatWeekDaysShort([0, 1, 2, 3, 4, 5, 6])).toBe(
-      "Пн, Вт, Ср, Чт, Пт, Сб, Вс",
-    );
+  it("вся неделя [0..6] → 'Каждый день'", () => {
+    expect(formatWeekDaysShort([0, 1, 2, 3, 4, 5, 6])).toBe("Каждый день");
   });
 
   it("вся неделя в обратном порядке → тот же результат", () => {
-    expect(formatWeekDaysShort([6, 5, 4, 3, 2, 1, 0])).toBe(
-      "Пн, Вт, Ср, Чт, Пт, Сб, Вс",
-    );
+    expect(formatWeekDaysShort([6, 5, 4, 3, 2, 1, 0])).toBe("Каждый день");
+  });
+
+  it("вся неделя с дубликатами → 'Каждый день'", () => {
+    expect(formatWeekDaysShort([0, 1, 1, 2, 3, 4, 5, 6, 6])).toBe("Каждый день");
   });
 });
 
@@ -85,6 +85,49 @@ describe("formatWeekDaysShort — дубликаты", () => {
 
   it("[0,0,0] → 'Вс'", () => {
     expect(formatWeekDaysShort([0, 0, 0])).toBe("Вс");
+  });
+});
+
+describe("formatWeekDaysShort — будни, выходные, диапазоны", () => {
+  it("Пн–Пт → 'По будням'", () => {
+    expect(formatWeekDaysShort([1, 2, 3, 4, 5])).toBe("По будням");
+  });
+
+  it("будни в другом порядке → 'По будням'", () => {
+    expect(formatWeekDaysShort([5, 4, 3, 2, 1])).toBe("По будням");
+  });
+
+  it("Пн–Чт → диапазон", () => {
+    expect(formatWeekDaysShort([1, 2, 3, 4])).toBe("Пн–Чт");
+  });
+
+  it("Пн–Ср и Пт → диапазон плюс день", () => {
+    expect(formatWeekDaysShort([5, 1, 3, 2])).toBe("Пн–Ср, Пт");
+  });
+
+  it("Пн–Сб → диапазон, а не «По будням»", () => {
+    expect(formatWeekDaysShort([1, 2, 3, 4, 5, 6])).toBe("Пн–Сб");
+  });
+
+  it("Вт–Вс → диапазон с воскресеньем в конце", () => {
+    expect(formatWeekDaysShort([0, 2, 3, 4, 5, 6])).toBe("Вт–Вс");
+  });
+
+  it("два дня подряд остаются списком, а не диапазоном", () => {
+    expect(formatWeekDaysShort([1, 2])).toBe("Пн, Вт");
+  });
+
+  it("неделя не заворачивается через воскресенье", () => {
+    // Сб, Вс, Пн — не «Сб–Пн»: неделя начинается с понедельника.
+    expect(formatWeekDaysShort([6, 0, 1])).toBe("Пн, Сб, Вс");
+  });
+
+  it("Пт, Сб, Вс → диапазон", () => {
+    expect(formatWeekDaysShort([5, 6, 0])).toBe("Пт–Вс");
+  });
+
+  it("невалидные значения не мешают «Каждый день»", () => {
+    expect(formatWeekDaysShort([0, 1, 2, 3, 4, 5, 6, 7, 1.5])).toBe("Каждый день");
   });
 });
 

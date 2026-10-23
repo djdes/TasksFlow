@@ -92,27 +92,25 @@ export function ChangePinCard() {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 mb-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <RectangleEllipsis className="w-5 h-5 text-primary" aria-hidden="true" />
-          <h2 className="font-semibold">PIN для входа</h2>
-        </div>
-        {step === "idle" && (
-          <Button type="button" variant="outline" size="sm" onClick={start}>
-            {hasPin ? "Сменить" : "Задать"}
-          </Button>
-        )}
+    <section className="content-panel account-section" aria-labelledby="change-pin-title">
+      <div className="section-title">
+        <RectangleEllipsis className="w-5 h-5 text-primary" aria-hidden="true" />
+        <h2 id="change-pin-title">PIN для входа</h2>
       </div>
 
       {step === "idle" ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          {hasPin
-            ? "Вход по номеру телефона защищён PIN из 4 цифр."
-            : "PIN не задан — его спросят при следующем входе по номеру."}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {hasPin
+              ? "Вход по номеру телефона защищён PIN из 4 цифр."
+              : "PIN не задан — его спросят при следующем входе по номеру."}
+          </p>
+          <Button type="button" variant="outline" onClick={start}>
+            {hasPin ? "Сменить PIN" : "Задать PIN"}
+          </Button>
+        </div>
       ) : (
-        <div className="mt-4 space-y-3 text-center">
+        <div className="space-y-3 text-center">
           <p className="text-sm font-medium" id="change-pin-label">
             {STEP_LABEL[step]}
           </p>

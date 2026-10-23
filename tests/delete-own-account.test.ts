@@ -1,14 +1,16 @@
 /**
  * Тесты DELETE /api/auth/me (delete own account).
  *
- * Поведение: удаление разрешено всегда, включая «единственный admin
- * компании». В таком случае компания остаётся без admin'а — это
- * сознательный выбор пользователя (например, закрытие компании).
- * Запись делается в console.warn для аудита; промоут worker'а до
- * admin'а — задача платформенного админа.
+ * Поведение: «единственный admin компании» с сотрудниками сначала
+ * получает 409 { code: "sole_admin" } — UI предлагает назначить другого
+ * admin'а. Если он всё равно подтверждает ({ confirmOrphan: true }),
+ * удаление проходит: компания остаётся без admin'а — сознательный выбор
+ * пользователя (например, закрытие компании). Запись делается в
+ * console.warn для аудита; промоут worker'а — задача платформенного админа.
  *
- * Раньше был жёсткий 400-блок для sole admin'а; снят на запрос
- * пользователя — кейс «удалить аккаунт главного» теперь работает.
+ * Раньше был жёсткий 400-блок без возможности подтвердить; снят на
+ * запрос пользователя — кейс «удалить аккаунт главного» работает, но
+ * теперь только после явного подтверждения.
  */
 
 import express from "express";
@@ -98,19 +100,58 @@ describe("DELETE /api/auth/me — auth", () => {
   });
 });
 
-describe("DELETE /api/auth/me — sole admin self-deletion разрешено", () => {
-  it("единственный admin → success (компания остаётся без admin'а — by design)", async () => {
+describe("DELETE /api/auth/me — sole admin self-deletion только с подтверждением", () => {
+  it("единственный admin с сотрудниками без подтверждения → 409 sole_admin, ничего не удалено", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
     storage.getUserById.mockResolvedValue(SOLE_ADMIN);
     storage.getAllUsers.mockResolvedValue([SOLE_ADMIN, WORKER]);
 
     const r = await request(app).delete("/api/auth/me");
+    expect(r.status).toBe(409);
+    expect(r.headers["content-type"]).toMatch(/application\/json/);
+    expect(r.body).toMatchObject({ code: "sole_admin", otherUsers: 1 });
+    expect(r.body.message).toMatch(/Сначала назначьте другого администратора/);
+    expect(storage.deleteUser).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("confirmOrphan не true (строка «true») → всё ещё 409", async () => {
+    const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
+    storage.getUserById.mockResolvedValue(SOLE_ADMIN);
+    storage.getAllUsers.mockResolvedValue([SOLE_ADMIN, WORKER]);
+
+    const r = await request(app).delete("/api/auth/me").send({ confirmOrphan: "true" });
+    expect(r.status).toBe(409);
+    expect(storage.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("единственный admin подтвердил → success (компания остаётся без admin'а — by design)", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
+    storage.getUserById.mockResolvedValue(SOLE_ADMIN);
+    storage.getAllUsers.mockResolvedValue([SOLE_ADMIN, WORKER]);
+
+    const r = await request(app).delete("/api/auth/me").send({ confirmOrphan: true });
     expect(r.status).toBe(200);
     expect(storage.deleteUser).toHaveBeenCalledWith(SOLE_ADMIN.id);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringMatching(/loses its sole admin/i),
     );
+    warnSpy.mockRestore();
+  });
+
+  it("единственный admin без сотрудников → success без подтверждения", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { app } = await buildApp({ sessionUserId: SOLE_ADMIN.id });
+    storage.getUserById.mockResolvedValue(SOLE_ADMIN);
+    storage.getAllUsers.mockResolvedValue([SOLE_ADMIN]);
+
+    const r = await request(app).delete("/api/auth/me");
+    expect(r.status).toBe(200);
+    expect(storage.deleteUser).toHaveBeenCalledWith(SOLE_ADMIN.id);
+    expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 

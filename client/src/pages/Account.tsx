@@ -2,18 +2,23 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest, ApiError } from "@/lib/queryClient";
+import { apiRequest, ApiError, fetchOrFriendlyError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TelegramSection } from "@/components/TelegramSection";
 import { MotionToggle } from "@/components/MotionToggle";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { ArrowLeft, Loader2, Mail, KeyRound } from "lucide-react";
+import { plural } from "@/lib/i18n";
+import { ArrowLeft, Mail, KeyRound, Palette, TriangleAlert, UserRound } from "lucide-react";
+import { ChangePinCard } from "@/components/ChangePinCard";
+
+type DeleteStep = "closed" | "confirm" | "sole_admin";
 
 /**
- * Личные настройки аккаунта: смена email и пароля (ветка email-входа).
- * Отдельно от настроек компании (/admin/settings).
+ * Личные настройки аккаунта: оформление, email, Telegram, пароль и
+ * удаление аккаунта. Отдельно от настроек компании (/admin/settings).
  */
 export default function Account() {
   const [, setLocation] = useLocation();
@@ -27,6 +32,11 @@ export default function Account() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
+
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("closed");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [orphanCount, setOrphanCount] = useState(0);
 
   const saveEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,75 +75,207 @@ export default function Account() {
     }
   };
 
+  // Единственный admin с сотрудниками получает 409 sole_admin: показываем
+  // второй шаг с выбором «назначить другого» или «всё равно удалить».
+  const deleteAccount = async (confirmOrphan: boolean) => {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const res = await fetchOrFriendlyError("/api/auth/me", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(confirmOrphan ? { confirmOrphan: true } : {}),
+        signal: AbortSignal.timeout(30_000),
+      });
+      const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+      if (res.status === 409 && body?.code === "sole_admin") {
+        setOrphanCount(typeof body.otherUsers === "number" ? body.otherUsers : 0);
+        setDeleteStep("sole_admin");
+        return;
+      }
+      if (!res.ok) {
+        setDeleteError(
+          typeof body?.message === "string" && body.message
+            ? body.message
+            : "Не удалось удалить аккаунт. Попробуйте ещё раз.",
+        );
+        return;
+      }
+      // Жёсткий переход на лендинг сбрасывает кэш запросов и контекст.
+      window.location.href = "/";
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Нет связи с сервером. Попробуйте ещё раз.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const closeDelete = (open: boolean) => {
+    if (open) return;
+    setDeleteStep("closed");
+    setDeleteError(null);
+  };
+
+  const identity = user?.phone || user?.email || "";
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="page-screen">
+      <div className="page-container page-container--narrow">
         <button
+          type="button"
           onClick={() => setLocation("/dashboard")}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="page-back group"
         >
-          <ArrowLeft className="w-4 h-4" /> В кабинет
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          В кабинет
         </button>
 
-        <h1 className="text-2xl font-bold mb-6">Аккаунт</h1>
-
-        <section className="rounded-xl border border-border bg-card p-5 mb-5 space-y-3">
-          <h2 className="font-semibold">Оформление</h2>
-          <ThemeSwitcher />
-          <MotionToggle />
-        </section>
-
-        {/* Смена email */}
-        <section className="rounded-xl border border-border bg-card p-5 mb-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Mail className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">Email</h2>
+        <div className="page-header">
+          <div className="page-title-row">
+            <div className="page-icon">
+              <UserRound className="w-6 h-6" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="page-title">Аккаунт</h1>
+              <p className="page-subtitle">
+                {user?.name ? <>{user.name}{identity ? ` · ${identity}` : ""}</> : identity || "Личные настройки"}
+              </p>
+            </div>
           </div>
-          <form onSubmit={saveEmail} className="space-y-3">
-            <Input
-              type="email"
-              placeholder="you@company.ru"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <Button type="submit" disabled={emailBusy || !email.trim()}>
-              {emailBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Сохранить email"}
-            </Button>
-          </form>
-        </section>
+        </div>
 
-        {/* Привязка Telegram-бота */}
-        <TelegramSection />
+        <div className="page-sections">
+          <section className="content-panel account-section">
+            <div className="section-title">
+              <Palette className="w-5 h-5 text-primary" />
+              <h2>Оформление</h2>
+            </div>
+            <div className="account-appearance">
+              <ThemeSwitcher />
+              <MotionToggle />
+            </div>
+          </section>
 
-        {/* Смена пароля */}
-        <section className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <KeyRound className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">Пароль</h2>
-          </div>
-          <form onSubmit={savePassword} className="space-y-3">
-            <Input
-              type="password"
-              placeholder="Текущий пароль (если уже задан)"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="Новый пароль (мин. 6 символов)"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
-            <Button type="submit" disabled={pwBusy || newPassword.length < 6}>
-              {pwBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Сменить пароль"}
+          {/* PIN — пароль входа по телефону */}
+          <ChangePinCard />
+
+          {/* Смена email */}
+          <section className="content-panel account-section">
+            <div className="section-title">
+              <Mail className="w-5 h-5 text-primary" />
+              <h2>Email</h2>
+            </div>
+            <form onSubmit={saveEmail} className="account-form">
+              <Input
+                type="email"
+                aria-label="Email"
+                placeholder="you@company.ru"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Button type="submit" disabled={!email.trim()} loading={emailBusy} loadingLabel="Сохраняем…">
+                Сохранить email
+              </Button>
+            </form>
+          </section>
+
+          {/* Привязка Telegram-бота */}
+          <TelegramSection />
+
+          {/* Смена пароля */}
+          <section className="content-panel account-section">
+            <div className="section-title">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <h2>Пароль</h2>
+            </div>
+            <form onSubmit={savePassword} className="account-form">
+              <Input
+                type="password"
+                aria-label="Текущий пароль"
+                placeholder="Текущий пароль (если уже задан)"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+              <Input
+                type="password"
+                aria-label="Новый пароль"
+                placeholder="Новый пароль (мин. 6 символов)"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <Button type="submit" disabled={newPassword.length < 6} loading={pwBusy} loadingLabel="Сохраняем…">
+                Сменить пароль
+              </Button>
+            </form>
+          </section>
+
+          <section className="content-panel account-section account-danger" aria-labelledby="account-danger-title">
+            <div className="section-title">
+              <TriangleAlert className="w-5 h-5" />
+              <h2 id="account-danger-title">Опасная зона</h2>
+            </div>
+            <p className="account-danger-text">
+              Аккаунт и вход по нему удалятся навсегда. Задачи, назначенные вам,
+              останутся в компании без исполнителя.
+            </p>
+            <Button type="button" variant="outline" className="account-danger-button" onClick={() => setDeleteStep("confirm")}>
+              Удалить аккаунт
             </Button>
-          </form>
-        </section>
+          </section>
+        </div>
       </div>
+
+      {/* Одно окно на оба шага: второй шаг меняет содержимое на месте,
+          без закрытия и повторного открытия шторки. */}
+      {deleteStep === "sole_admin" ? (
+        <ConfirmDialog
+          open
+          onOpenChange={closeDelete}
+          title="Вы единственный администратор"
+          description={
+            <>
+              <p>
+                {orphanCount > 0
+                  ? `В компании ещё ${orphanCount} ${plural(orphanCount, "человек", "человека", "человек")}. `
+                  : null}
+                Без администратора никто не сможет создавать задачи, приглашать
+                сотрудников и менять настройки компании.
+              </p>
+              <p>Сначала назначьте администратором кого-то из команды в разделе «Сотрудники».</p>
+            </>
+          }
+          cancelLabel="Назначить администратора"
+          onCancel={() => { closeDelete(false); setLocation("/admin/users"); }}
+          confirmLabel="Всё равно удалить"
+          destructive
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={() => { void deleteAccount(true); }}
+        />
+      ) : (
+        <ConfirmDialog
+          open={deleteStep === "confirm"}
+          onOpenChange={closeDelete}
+          title="Удалить аккаунт?"
+          description={
+            <>
+              <p>Это нельзя отменить: восстановить аккаунт не получится.</p>
+              <p>Задачи, назначенные вам, останутся без исполнителя.</p>
+            </>
+          }
+          confirmLabel="Удалить навсегда"
+          destructive
+          confirmWord="УДАЛИТЬ"
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={() => { void deleteAccount(false); }}
+        />
+      )}
     </div>
   );
 }
