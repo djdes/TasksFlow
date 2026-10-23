@@ -42,6 +42,7 @@ type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   wesetupBaseUrl?: string | null;
   wesetupApiKey?: string | null;
   timezone?: string;
+  notifySettings?: string;
 };
 
 /** Интерфейс хранилища данных */

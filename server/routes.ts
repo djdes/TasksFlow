@@ -21,6 +21,7 @@ import {
   updateEmailSchema,
   updatePasswordSchema,
   bannerInputSchema,
+  type Company,
 } from "@shared/schema";
 import { validateEmailForAuth, normalizeEmail, isEmailFormat } from "./email-validate";
 import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
@@ -33,6 +34,7 @@ import { resolveUploadAbs } from "./uploads-paths";
 import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec } from "./pin-auth";
 import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import { isValidTimeZone } from "@shared/day";
+import { notifySettingsSchema, parseNotifySettings } from "@shared/notify";
 import { registerHistoryRoutes } from "./history-routes";
 import {
   encryptApiKey,
@@ -236,6 +238,25 @@ function actorFromReq(req: Request): TaskActor {
 }
 
 /** Хелпер: получить companyId из req либо от API key, либо от session. */
+/**
+ * Компания для клиента: без служебного состояния сброса и напоминаний,
+ * с разобранными настройками напоминаний. Ключ WeSetup — только админу
+ * и интеграции по API-ключу.
+ */
+function toPublicCompany(company: Company, withSecrets: boolean) {
+  const { lastResetDay: _lastResetDay, notifyState: _notifyState, notifySettings, ...rest } = company;
+  // wesetupConfigured — настроила ли интеграцию сама компания (свои
+  // baseUrl+apiKey). По нему кабинет показывает журнальный режим;
+  // глобальный env WESETUP_* специально не учитываем.
+  const wesetupConfigured = !!(company.wesetupBaseUrl?.trim() && company.wesetupApiKey?.trim());
+  return {
+    ...rest,
+    wesetupApiKey: withSecrets ? rest.wesetupApiKey : null,
+    notify: parseNotifySettings(notifySettings),
+    wesetupConfigured,
+  };
+}
+
 /** Вход по email меньше 30 минут назад: PIN можно задать, не помня текущий. */
 const EMAIL_PIN_RESET_WINDOW_SEC = 30 * 60;
 function canResetPinByEmail(req: Request): boolean {
@@ -989,21 +1010,11 @@ export async function registerRoutes(
         return res.json(null);
       }
       const company = await storage.getCompanyById(companyId);
-      // wesetupConfigured — НАСТРОИЛА ЛИ ИНТЕГРАЦИЮ САМА КОМПАНИЯ (свои
-      // baseUrl+apiKey). По нему кабинет показывает журнальный режим.
-      // Глобальный env WESETUP_* СПЕЦИАЛЬНО не учитываем: иначе журнальный
-      // режим включился бы у всех. TasksFlow для публики — просто «ставить
-      // задачи»; журналы WeSetup — только для тех, кто сам подключил интеграцию.
-      const wesetupConfigured = !!(
-        company?.wesetupBaseUrl?.trim() && company?.wesetupApiKey?.trim()
-      );
       if (!company) return res.json(null);
       // Ключ интеграции WeSetup видит только админ (он его и вводит в
       // настройках). Раньше его получал любой сотрудник компании.
       const viewer = req.apiKey ? null : await storage.getUserById(req.session.userId!);
-      const { lastResetDay: _lastResetDay, ...publicCompany } = company;
-      if (viewer && !viewer.isAdmin) publicCompany.wesetupApiKey = null;
-      res.json({ ...publicCompany, wesetupConfigured });
+      res.json(toPublicCompany(company, !viewer || viewer.isAdmin));
     } catch (err: any) {
       console.error('Error fetching company:', err);
       res.status(500).json({ message: 'Ошибка' });
@@ -1065,6 +1076,8 @@ export async function registerRoutes(
           .string()
           .optional()
           .refine((value) => value === undefined || isValidTimeZone(value), "Неизвестный часовой пояс"),
+        // Напоминания в Telegram: время «ЧЧ:ММ» или null — выключено.
+        notify: notifySettingsSchema.optional(),
       });
 
       const parsed = updateCompanySchema.safeParse(req.body);
@@ -1076,13 +1089,14 @@ export async function registerRoutes(
         });
       }
 
-      const { name, email, wesetupBaseUrl, wesetupApiKey, timezone } = parsed.data;
+      const { name, email, wesetupBaseUrl, wesetupApiKey, timezone, notify } = parsed.data;
       const updateData: {
         name: string;
         email: string | null;
         wesetupBaseUrl?: string | null;
         wesetupApiKey?: string | null;
         timezone?: string;
+        notifySettings?: string;
       } = {
         name,
         email,
@@ -1090,10 +1104,11 @@ export async function registerRoutes(
       if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
       if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
       if (timezone !== undefined) updateData.timezone = timezone;
+      if (notify !== undefined) updateData.notifySettings = JSON.stringify(notify);
 
       const company = await storage.updateCompany(user.companyId, updateData);
 
-      res.json(company);
+      res.json(company ? toPublicCompany(company, true) : null);
     } catch (err: any) {
       console.error('Error updating company:', err);
       res.status(500).json({ message: 'Ошибка обновления компании' });

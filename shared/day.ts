@@ -143,3 +143,20 @@ export function utcOffsetLabel(tz: string, at: number = Math.floor(Date.now() / 
   const m = Math.abs(total) % 60;
   return `UTC${sign}${h}${m ? `:${pad(m)}` : ""}`;
 }
+
+/** Минуты от местной полуночи: 09:30 → 570. */
+export function minutesInZone(unixSec: number, tz: string): number {
+  const p = partsIn(unixSec, tz);
+  return p.hour * 60 + p.minute;
+}
+
+const MONTHS_GENITIVE = [
+  "января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+];
+
+/** «2026-10-24» → «24 октября». */
+export function dayLabelRu(day: string): string {
+  const d = utcOf(day);
+  return `${d.getUTCDate()} ${MONTHS_GENITIVE[d.getUTCMonth()]}`;
+}

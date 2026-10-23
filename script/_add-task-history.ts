@@ -13,6 +13,8 @@ import { sql } from "drizzle-orm";
  *   companies.last_reset_day — местный день последнего сброса. NULL —
  *                             сброса ещё не было: сервер запишет «сегодня»
  *                             без сброса, первый сброс — в ближайшую полночь.
+ *   companies.notify_settings — время напоминаний в Telegram (JSON), NULL —
+ *                             по умолчанию; notify_state — что уже ушло сегодня.
  *
  * Только CREATE TABLE и ADD COLUMN, существующие строки не меняются.
  * Идемпотентно: ER_TABLE_EXISTS_ERROR / ER_DUP_FIELDNAME = уже есть.
@@ -53,6 +55,8 @@ async function main() {
   const COLUMNS: Array<[string, string]> = [
     ["timezone", "VARCHAR(64) NOT NULL DEFAULT 'Europe/Moscow'"],
     ["last_reset_day", "VARCHAR(10) NULL"],
+    ["notify_settings", "TEXT NULL"],
+    ["notify_state", "TEXT NULL"],
   ];
   for (const [name, ddl] of COLUMNS) {
     try {

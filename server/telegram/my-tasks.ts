@@ -27,6 +27,7 @@ import { buildCallback, type CallbackAction } from "./callbacks";
 import { escapeHtml } from "./util";
 import { extractAttachment, MAX_FILE_BYTES } from "./attachments";
 import { loadAssignableWorkers } from "./composer";
+import { companyToday } from "../company-time";
 
 /** «Жду фото» живёт 15 минут — дальше это забытый тап по кнопке. */
 const AWAIT_TTL_SEC = 15 * 60;
@@ -35,9 +36,8 @@ const AWAIT_TTL_SEC = 15 * 60;
 export async function loadTodayTasks(user: User): Promise<Task[]> {
   if (!user.companyId) return [];
   const all = await storage.getTasks(user.companyId);
-  const now = new Date();
-  const dow = now.getDay();
-  const dom = now.getDate();
+  // «Сегодня» — по поясу компании, а не по часам сервера.
+  const { dow, dom } = await companyToday(user.companyId);
 
   return all
     .filter((t) => t.workerId === user.id)
@@ -66,7 +66,14 @@ export async function handleTasksCommand(
 async function renderTaskList(
   user: User,
 ): Promise<{ text: string; reply_markup: TgReplyMarkup }> {
-  const tasks = await loadTodayTasks(user);
+  return renderTasksView(await loadTodayTasks(user));
+}
+
+/** Список задач с кнопками-номерами; header — своя первая строка (напоминания). */
+export function renderTasksView(
+  tasks: Task[],
+  header?: string,
+): { text: string; reply_markup: TgReplyMarkup } {
   if (tasks.length === 0) {
     return {
       text: "📋 На сегодня задач нет.",
@@ -78,7 +85,7 @@ async function renderTaskList(
     };
   }
 
-  const lines = [`📋 <b>На сегодня: ${tasks.length}</b>`, ""];
+  const lines = [header ?? `📋 <b>На сегодня: ${tasks.length}</b>`, ""];
   tasks.forEach((task, i) => {
     lines.push(`${i + 1}. ${taskLine(task)}`);
   });
@@ -109,9 +116,7 @@ export async function renderWorkerTasksMenu(
   viewer: User,
 ): Promise<{ text: string; reply_markup: TgReplyMarkup }> {
   const tasks = viewer.companyId ? await storage.getTasks(viewer.companyId) : [];
-  const now = new Date();
-  const dow = now.getDay();
-  const dom = now.getDate();
+  const { dow, dom } = await companyToday(viewer.companyId);
 
   const openByWorker = new Map<number, number>();
   for (const t of tasks) {
@@ -145,9 +150,7 @@ export async function renderWorkerTasks(
   viewer: User,
 ): Promise<{ text: string; reply_markup: TgReplyMarkup }> {
   const all = viewer.companyId ? await storage.getTasks(viewer.companyId) : [];
-  const now = new Date();
-  const dow = now.getDay();
-  const dom = now.getDate();
+  const { dow, dom } = await companyToday(viewer.companyId);
 
   const tasks = all
     .filter((t) => t.workerId === workerId)
@@ -560,6 +563,24 @@ async function clearAwaitingPhoto(chatId: number): Promise<void> {
     .delete(telegramChatState)
     .where(eq(telegramChatState.chatId, chatId))
     .catch(() => null);
+}
+
+/**
+ * Отправить список задач и запомнить сообщение: фото ответом на него
+ * бот поймёт так же, как ответ на «Мои задачи».
+ */
+export async function sendTaskListMessage(
+  runtime: TelegramRuntime,
+  chatId: number,
+  view: { text: string; reply_markup: TgReplyMarkup },
+): Promise<void> {
+  const sent = await runtime.client.sendMessage({
+    chat_id: chatId,
+    parse_mode: "HTML",
+    text: view.text,
+    reply_markup: view.reply_markup,
+  });
+  await rememberTaskMessage(chatId, sent.message_id, 0, null).catch(() => null);
 }
 
 async function rememberTaskMessage(

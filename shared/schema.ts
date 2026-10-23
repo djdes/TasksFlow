@@ -20,6 +20,11 @@ export const companies = mysqlTable("companies", {
   timezone: varchar("timezone", { length: 64 }).notNull().default("Europe/Moscow"),
   // Последний местный день (YYYY-MM-DD), с которого задачи уже сброшены.
   lastResetDay: varchar("last_reset_day", { length: 10 }),
+  // Напоминания в Telegram: JSON {morning, evening, digest} со временем
+  // «ЧЧ:ММ» или null; NULL — значения по умолчанию (shared/notify.ts).
+  notifySettings: text("notify_settings"),
+  // Какие напоминания уже ушли сегодня: {morning: "YYYY-MM-DD", ...}.
+  notifyState: text("notify_state"),
 });
 
 export const users = mysqlTable("users", {
