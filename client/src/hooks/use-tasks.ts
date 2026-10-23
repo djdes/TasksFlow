@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery, useMutation, useMutationState, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertTask, Task } from "@shared/schema";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
+import { applyCompletionToList } from "@/lib/task-completion";
 
 export function useTasks() {
   return useQuery<Task[]>({
@@ -130,10 +132,13 @@ export function useDeleteTask() {
   });
 }
 
+const COMPLETE_TASK_MUTATION_KEY = ["tasks", "complete"] as const;
+
 export function useCompleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: COMPLETE_TASK_MUTATION_KEY,
     mutationFn: async ({ id, comment }: { id: number; comment?: string }) => {
       // useCompleteTask — самый горячий путь воркера: каждое нажатие
       // «Готово». 35s — server timeout 30s + 5s round-trip (на journal-
@@ -152,10 +157,26 @@ export function useCompleteTask() {
       return api.tasks.complete.responses[200].parse(await res.json());
     },
     onSuccess: (task) => {
+      // Карточка уходит в «Выполненные» сразу, до перезапроса списка —
+      // без мигания между концом запроса и приходом свежих данных.
+      queryClient.setQueryData<Task[]>([api.tasks.list.path], (list) => applyCompletionToList(list, task));
       queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.tasks.get.path, task.id] });
     },
   });
+}
+
+/**
+ * id задач, чьё выполнение прямо сейчас уходит на сервер. Список задач
+ * показывает по ним мгновенную галочку; при ошибке запрос завершается
+ * и отметка снимается сама — без таймеров и угадывания условий.
+ */
+export function usePendingTaskCompletions(): ReadonlySet<number> {
+  const ids = useMutationState({
+    filters: { mutationKey: COMPLETE_TASK_MUTATION_KEY, status: "pending" },
+    select: (mutation) => (mutation.state.variables as { id?: number } | undefined)?.id,
+  });
+  return useMemo(() => new Set(ids.filter((id): id is number => typeof id === "number")), [ids]);
 }
 
 export function useUncompleteTask() {

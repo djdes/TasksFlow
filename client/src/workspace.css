@@ -56,6 +56,8 @@
 .app-layout .header-subtitle { color: rgb(255 255 255 / .8); font-weight: 400; }
 .header-desktop-actions { display: none; }
 .header-wordmark { font-family: 'Onest', 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -.04em; color: rgb(255 255 255 / .9); }
+.header-wordmark { display: inline-flex; align-items: center; gap: 8px; }
+.header-wordmark-mark { width: 20px; height: 20px; }
 .header-create { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 12px; background: white; color: #3543b6; font-size: 13px; font-weight: 600; box-shadow: 0 8px 20px -10px rgb(17 22 70 / .6); }
 .header-create:hover { background: #eff1ff; }
 .dark .header-create { background: rgb(255 255 255 / .94); color: #2c379c; }
@@ -119,6 +121,8 @@
 .app-layout .quick-chip-reset { background: transparent; color: hsl(var(--muted-foreground)); }
 .app-layout .scope-tabs { border-radius: 14px; background: hsl(var(--muted) / .7); padding: 4px; }
 .app-layout .scope-tab { border-radius: 10px; }
+/* Активный таб лежит на сплошном indigo-индикаторе (motion.css) — текст белый в обеих темах. */
+.app-layout .scope-tab.scope-tab-active { color: white; border-color: transparent; }
 
 /* List hierarchy: section > person > task. Only the actual task is a card. */
 .app-layout .grouped-section { padding: 16px; border-radius: 20px; background: hsl(var(--card)); border-color: hsl(var(--border)); box-shadow: var(--workspace-shadow); }
@@ -189,9 +193,10 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .app-layout .task-checkbox.checked, .app-layout .task-checkbox.checked:hover {
   border-color: transparent; background: linear-gradient(145deg, hsl(152 62% 46%), hsl(160 72% 35%));
   box-shadow: 0 6px 14px -6px hsl(var(--emerald) / .7);
-  animation: tf-check-pop 340ms var(--ease-settle);
 }
-.app-layout .task-checkbox.checked svg path { stroke-dasharray: 24; animation: tf-check-draw 360ms var(--ease-settle) 70ms both; }
+/* Анимируется только свежая отметка, а не каждая выполненная карточка при монтировании. */
+.app-layout .task-checkbox--fresh { animation: tf-check-pop 340ms var(--ease-settle); }
+.app-layout .task-checkbox--fresh svg path { stroke-dasharray: 24; animation: tf-check-draw 360ms var(--ease-settle) 70ms both; }
 .app-layout .task-checkbox--fresh::after {
   content: ""; position: absolute; inset: -2px; border-radius: 11px; pointer-events: none; opacity: 0;
   animation: tf-check-ring 640ms ease-out both;

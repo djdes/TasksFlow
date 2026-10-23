@@ -46,6 +46,7 @@ import { useMotionPreference } from "@/contexts/MotionContext";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
+import { BrandMark } from "@/components/BrandMark";
 import { api } from "@shared/routes";
 import type { Task } from "@shared/schema";
 import {
@@ -620,7 +621,7 @@ export default function Dashboard() {
               </button>
             )}
           <div className="header-desktop-actions">
-            <span className="header-wordmark">TasksFlow</span>
+            <span className="header-wordmark"><BrandMark onColor className="header-wordmark-mark" />TasksFlow</span>
             {canManageTasks && <button type="button" className="header-create ui-button" onClick={() => setLocation("/tasks/new")}><Plus className="w-4 h-4" />Создать задачу</button>}
           </div>
         </div>

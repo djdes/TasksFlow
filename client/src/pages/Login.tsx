@@ -5,7 +5,8 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Camera, Check, ClipboardCheck, Coins, Smartphone } from "lucide-react";
+import { Camera, Check, Coins, Smartphone } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -139,7 +140,7 @@ export default function Login() {
       >
         <div className="login-brand-inner">
           <div className="login-logo">
-            <span className="login-logo-mark" aria-hidden="true"><ClipboardCheck strokeWidth={2.2} /></span>
+            <span className="login-logo-mark" aria-hidden="true"><BrandMark onColor /></span>
             <span className="login-logo-word">Tasks<span>Flow</span></span>
           </div>
           <h1 className="login-title">Контроль производственных процессов</h1>

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { forwardRef, useMemo, useState } from "react";
+import { AnimatePresence, motion, useIsPresent, type HTMLMotionProps, type Variants } from "framer-motion";
 import {
   BookOpen,
   Calendar,
@@ -27,6 +27,7 @@ import { parseJournalLinkUI } from "@/lib/journal-link-parse";
 import { HighlightedText } from "@/components/HighlightedText";
 import { DueBadge } from "@/components/DueBadge";
 import { useMotionPreference } from "@/contexts/MotionContext";
+import { usePendingTaskCompletions } from "@/hooks/use-tasks";
 import { avatarTone } from "@/lib/shift-summary";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
@@ -64,6 +65,20 @@ const collapseVariants: Variants = {
 };
 
 import { formatWeekDaysShort } from "@/lib/week-days";
+
+/**
+ * Карточка внутри AnimatePresence. Уходящая карточка ещё 200 мс видна
+ * поверх поднимающейся соседки — клики по ней отключены, иначе второй
+ * тап по только что закрытой задаче вернул бы её в работу.
+ */
+const PresenceCard = forwardRef<HTMLDivElement, HTMLMotionProps<"div">>(function PresenceCard(props, ref) {
+  const isPresent = useIsPresent();
+  return <motion.div ref={ref} {...props} style={isPresent ? props.style : { ...props.style, pointerEvents: "none" }} aria-hidden={isPresent ? undefined : true} />;
+});
+
+// Layout-анимация пересчитывает геометрию каждой карточки на каждом
+// рендере. На длинных днях отказываемся от неё ради отклика поиска.
+const LAYOUT_CARD_LIMIT = 30;
 
 type Props = {
   activeTasks: Task[];
@@ -185,35 +200,21 @@ export function GroupedTaskList(props: Props) {
   const [completedOpen, setCompletedOpen] = useState(false);
   const [claimedOpen, setClaimedOpen] = useState(false);
 
-  // Мгновенная галочка: сервер подтверждает выполнение через запрос,
-  // и карточка уезжает в «Выполненные» только после ответа. Пока он
-  // идёт, кружок уже отмечен (прорисовка + короткий пульс). Если задача
-  // так и осталась активной (ошибка сети), отметка снимается сама.
-  const [justChecked, setJustChecked] = useState<ReadonlySet<number>>(() => new Set());
-  const checkTimers = useRef(new Map<number, number>());
-  useEffect(() => () => checkTimers.current.forEach((t) => window.clearTimeout(t)), []);
-  const markJustChecked = (id: number) => {
-    setJustChecked((prev) => new Set(prev).add(id));
-    window.clearTimeout(checkTimers.current.get(id));
-    checkTimers.current.set(id, window.setTimeout(() => {
-      checkTimers.current.delete(id);
-      setJustChecked((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 4000));
-  };
+  // Мгновенная галочка: пока запрос «выполнено» идёт, кружок уже отмечен
+  // (прорисовка + короткий пульс). Источник — реальные pending-мутации,
+  // поэтому при ошибке отметка снимается вместе с концом запроса.
+  const pendingCompletions = usePendingTaskCompletions();
 
   // Сделано по сотруднику — для мини-прогресса в шапке его секции.
   const doneByWorker = useMemo(() => {
     const map = new Map<number, number>();
-    for (const t of completedTasks) {
+    // Закрытые коллегами тоже «сделано» — как в общей сводке смены.
+    for (const t of [...completedTasks, ...claimedByOthersTasks]) {
       if (t.workerId == null) continue;
       map.set(t.workerId, (map.get(t.workerId) ?? 0) + 1);
     }
     return map;
-  }, [completedTasks]);
+  }, [completedTasks, claimedByOthersTasks]);
 
   function renderTaskCard(task: Task) {
     const isCompleted = Boolean(task.isCompleted);
@@ -242,7 +243,7 @@ export function GroupedTaskList(props: Props) {
       task as unknown as { rejectReason?: string | null }
     ).rejectReason;
     const isReturned = verificationStatus === "rejected" && !!rejectReason;
-    const isPendingCheck = !isCompleted && justChecked.has(task.id);
+    const isPendingCheck = !isCompleted && pendingCompletions.has(task.id);
     const isChecked = isCompleted || isPendingCheck;
     const monthDay = (task as unknown as { monthDay?: number | null })
       .monthDay;
@@ -291,13 +292,10 @@ export function GroupedTaskList(props: Props) {
             onClick={(e) => {
               // Отметка уже ушла на сервер — повторный тап не шлёт дубль.
               if (isPendingCheck) { e.stopPropagation(); return; }
-              // Те же условия, что и в Dashboard.toggleTaskComplete: фото,
-              // чек-лист и журнал открывают форму, а не закрывают задачу.
-              if (!isCompleted && !isJournal && !requiresPhoto && checklistTotal === 0) markJustChecked(task.id);
               onToggleComplete(task.id, e);
             }}
             className={`task-checkbox ${isChecked ? "checked" : ""} ${isPendingCheck ? "task-checkbox--fresh" : ""}`}
-            aria-label={`${isCompleted ? "Вернуть в работу" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
+            aria-label={`${isPendingCheck ? "Отмечаем выполнение" : isCompleted ? "Вернуть в работу" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
             aria-busy={isPendingCheck || undefined}
           >
             {isChecked && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
@@ -529,15 +527,15 @@ export function GroupedTaskList(props: Props) {
         >
           <AnimatePresence initial={false} mode="popLayout">
             {day.tasks.map((task, index) => (
-              <motion.div
+              <PresenceCard
                 key={task.id}
                 custom={index}
-                layout={reduced ? false : "position"}
+                layout={reduced || day.tasks.length > LAYOUT_CARD_LIMIT ? false : "position"}
                 variants={reduced ? undefined : cardVariants}
                 exit={reduced ? undefined : { opacity: 0, scale: 0.97, transition: { duration: 0.2, ease: EASE_OUT_QUINT as unknown as number[] } }}
               >
                 {cardRenderer(task)}
-              </motion.div>
+              </PresenceCard>
             ))}
           </AnimatePresence>
         </motion.div>

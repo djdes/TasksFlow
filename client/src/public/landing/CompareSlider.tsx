@@ -37,10 +37,12 @@ export function CompareSlider() {
     if (!inView || hinted.current || touched.current || prefersReducedMotion()) return;
     hinted.current = true;
     let raf = 0;
+    let finished = false;
     const start = performance.now();
     const tick = (now: number) => {
       if (touched.current) return;
       const p = Math.min(1, (now - start) / 2000);
+      finished = p >= 1;
       const k = HINT.findIndex(([at]) => at >= p);
       const [a0, v0] = HINT[Math.max(0, k - 1)];
       const [a1, v1] = HINT[k];
@@ -50,7 +52,11 @@ export function CompareSlider() {
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // Подсказку прервали прокруткой — возвращаем ползунок в центр.
+      if (!finished && !touched.current) setPos(50);
+    };
   }, [inView]);
 
   return (

@@ -260,11 +260,10 @@ export function StatHero({
   const shiftProgress = totalCount > 0 ? closedCount / totalCount : 0;
   const remaining = Math.max(0, totalCount - closedCount);
   const percent = shiftPercent(closedCount, totalCount);
-  // Дата фиксируется на маунт: сводка живёт в пределах одной смены.
-  const [dateLabel] = useState(() => {
-    const label = shiftDateLabel(new Date());
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  });
+  // Считается на каждом рендере: открытый на ночь кабинет после полуночи
+  // показывает новую дату вместе с перезапросом задач.
+  const rawDate = shiftDateLabel(new Date());
+  const dateLabel = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
 
   return (
     <section className="shift-summary" aria-label="Сводка задач">
