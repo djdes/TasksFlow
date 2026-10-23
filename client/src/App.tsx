@@ -48,6 +48,7 @@ const AdminBanners = lazy(() => import("@/pages/AdminBanners"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const Account = lazy(() => import("@/pages/Account"));
 const Reports = lazy(() => import("@/pages/Reports"));
+const RootCompanies = lazy(() => import("@/pages/RootCompanies"));
 
 /** Пока человек в кабинете — живые обновления задач (SSE). */
 function LiveUpdates() {
@@ -148,6 +149,7 @@ function Router() {
             <Route path="/admin/verification" component={VerificationPage} />
             <Route path="/admin/invitations" component={Invitations} />
             <Route path="/admin/banners" component={AdminBanners} />
+            <Route path="/admin/companies" component={RootCompanies} />
             <Route path="/join/:token" component={JoinByInvite} />
             <Route path="/tasks/new" component={CreateTask} />
             <Route path="/tasks/:id/edit" component={EditTask} />

@@ -23,6 +23,7 @@ import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { QueryError } from "@/components/QueryError";
 import { PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { DayBars } from "@/components/reports/DayBars";
+import { useLocations } from "@/hooks/use-locations";
 
 /**
  * «История и отчёты». Журнал дня — кто что сделал, с фото; сводка — по
@@ -76,15 +77,17 @@ export default function Reports() {
   const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(search).get("tab") === "summary" ? "summary" : "day"));
   const [day, setDay] = useState<string | null>(null);
   const [workerId, setWorkerId] = useState<number | null>(null);
+  const [locationId, setLocationId] = useState<number | null>(null);
   const [period, setPeriod] = useState<Period>("7");
   const [viewer, setViewer] = useState<{ photos: ViewerPhoto[]; index: number } | null>(null);
 
   const canPickPeople = !!user && (user.isAdmin || Array.isArray(safeManaged((user as { managedWorkerIds?: unknown }).managedWorkerIds)));
   const { data: users = [] } = useUsers();
-  const history = useHistoryDay(day, workerId);
+  const { data: locations = [] } = useLocations(canPickPeople);
+  const history = useHistoryDay(day, workerId, locationId);
   const today = history.data?.today ?? null;
   const range = today ? periodRange(period, today) : null;
-  const summary = useReportSummary(tab === "summary" ? range : null, workerId);
+  const summary = useReportSummary(tab === "summary" ? range : null, workerId, locationId);
 
   const names = useMemo(() => new Map(users.map((u) => [u.id, u.name || u.phone || `#${u.id}`])), [users]);
   const shownDay = history.data?.day ?? day;
@@ -129,6 +132,23 @@ export default function Reports() {
               </button>
             ))}
           </div>
+          {canPickPeople && locations.length > 0 && (
+            <label className="reports-person">
+              <span className="sr-only">Точка</span>
+              <select
+                value={locationId ?? ""}
+                onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : null)}
+                className="reports-select"
+              >
+                <option value="">Все точки</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {canPickPeople && (
             <label className="reports-person">
               <span className="sr-only">Сотрудник</span>
@@ -227,6 +247,7 @@ export default function Reports() {
             today={today}
             summary={summary}
             workerId={workerId}
+            locationId={locationId}
             onPerson={canPickPeople ? (id) => setWorkerId(id) : undefined}
           />
         )}
@@ -344,6 +365,7 @@ function SummaryTab({
   today,
   summary,
   workerId,
+  locationId,
   onPerson,
 }: {
   period: Period;
@@ -352,6 +374,7 @@ function SummaryTab({
   today: string | null;
   summary: ReturnType<typeof useReportSummary>;
   workerId: number | null;
+  locationId: number | null;
   onPerson?: (id: number) => void;
 }) {
   const data = summary.data;
@@ -371,7 +394,7 @@ function SummaryTab({
           ))}
         </div>
         {range && (
-          <a className="reports-csv" href={csvUrl(range, workerId)} download>
+          <a className="reports-csv" href={csvUrl(range, workerId, locationId)} download>
             <Download className="w-4 h-4" aria-hidden="true" />
             Excel (CSV)
           </a>

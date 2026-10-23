@@ -9,9 +9,9 @@ import { getPublicTasksflowBaseUrl } from "./public-urls";
 /**
  * История выполнения и отчёты.
  *
- *   GET /api/history?day=YYYY-MM-DD&workerId=      — журнал дня
- *   GET /api/reports/summary?from=&to=&workerId=   — сводка по людям и дням
- *   GET /api/reports/export.csv?from=&to=&workerId= — то же построчно для Excel
+ *   GET /api/history?day=YYYY-MM-DD&workerId=&locationId=      — журнал дня
+ *   GET /api/reports/summary?from=&to=&workerId=&locationId=   — сводка по людям и дням
+ *   GET /api/reports/export.csv?from=&to=&workerId=&locationId= — то же построчно для Excel
  *
  * Видимость как у задач: админ и API-ключ — вся компания, руководитель —
  * свои сотрудники и он сам, сотрудник — только он сам.
@@ -58,6 +58,19 @@ function pickWorkers(scope: Scope, raw: unknown): number[] | null {
   return [id];
 }
 
+/** Сотрудники точки в пределах уже выбранных (точка — свойство сотрудника). */
+async function narrowByLocation(scope: Scope, workerIds: number[] | null, raw: unknown): Promise<number[] | null> {
+  if (raw === undefined || raw === "") return workerIds;
+  const locationId = Number(raw);
+  if (!Number.isInteger(locationId) || locationId <= 0) throw new HttpError(400, "Неверная точка", "locationId");
+  const inLocation = (await storage.getAllUsers(scope.companyId)).filter((u) => u.locationId === locationId).map((u) => u.id);
+  return workerIds ? workerIds.filter((id) => inLocation.includes(id)) : inLocation;
+}
+
+async function pickScope(scope: Scope, query: Request["query"]): Promise<number[] | null> {
+  return narrowByLocation(scope, pickWorkers(scope, query.workerId), query.locationId);
+}
+
 function readRange(scope: Scope, query: Request["query"]): { from: string; to: string } {
   const to = query.to === undefined ? scope.today : String(query.to);
   const from = query.from === undefined ? shiftDay(to, -6) : String(query.from);
@@ -102,7 +115,7 @@ export function registerHistoryRoutes(app: Express, deps: Deps): void {
       const scope = await resolveScope(req, deps);
       const day = req.query.day === undefined ? scope.today : String(req.query.day);
       if (!isDay(day) || day > scope.today) throw new HttpError(400, "Неверная дата", "day");
-      const items = await collect(scope, day, day, pickWorkers(scope, req.query.workerId));
+      const items = await collect(scope, day, day, await pickScope(scope, req.query));
       res.json({ day, today: scope.today, timezone: scope.tz, items });
     }),
   );
@@ -113,7 +126,7 @@ export function registerHistoryRoutes(app: Express, deps: Deps): void {
     handle(async (req, res) => {
       const scope = await resolveScope(req, deps);
       const { from, to } = readRange(scope, req.query);
-      const items = await collect(scope, from, to, pickWorkers(scope, req.query.workerId));
+      const items = await collect(scope, from, to, await pickScope(scope, req.query));
       const users = await storage.getAllUsers(scope.companyId);
       res.json({ from, to, today: scope.today, timezone: scope.tz, ...summarize(items, users) });
     }),
@@ -125,7 +138,7 @@ export function registerHistoryRoutes(app: Express, deps: Deps): void {
     handle(async (req, res) => {
       const scope = await resolveScope(req, deps);
       const { from, to } = readRange(scope, req.query);
-      const items = await collect(scope, from, to, pickWorkers(scope, req.query.workerId));
+      const items = await collect(scope, from, to, await pickScope(scope, req.query));
       const users = await storage.getAllUsers(scope.companyId);
       const base = getPublicTasksflowBaseUrl(req).replace(/\/+$/, "");
       const csv = buildCsv(items, users, (path) => (/^https?:\/\//.test(path) ? path : `${base}${path.startsWith("/") ? "" : "/"}${path}`));

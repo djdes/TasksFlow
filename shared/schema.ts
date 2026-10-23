@@ -27,7 +27,27 @@ export const companies = mysqlTable("companies", {
   notifyState: text("notify_state"),
   // Фото-отчёты: JSON {stamp, cameraOnly}; NULL — по умолчанию (shared/photo-settings.ts).
   photoSettings: text("photo_settings"),
+  // Тариф (shared/plans.ts): NULL — «Старт». plan_until — до какого
+  // момента действует платный тариф; NULL — бессрочно.
+  plan: varchar("plan", { length: 20 }),
+  planUntil: int("plan_until"),
 });
+
+/**
+ * Точки компании (кафе, магазины, объекты сети). Сотрудник привязан к
+ * точке через users.location_id — по ней фильтруются задачи и отчёты.
+ * Удаление — архивом (archived_at), чтобы не рвать историю.
+ */
+export const locations = mysqlTable("locations", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  address: varchar("address", { length: 255 }),
+  createdAt: int("created_at").notNull().default(0),
+  archivedAt: int("archived_at"),
+});
+
+export type Location = typeof locations.$inferSelect;
 
 export const users = mysqlTable("users", {
   id: int("id").primaryKey().autoincrement(),
@@ -101,6 +121,8 @@ export const users = mysqlTable("users", {
   // Unix sec, когда человек сам дал согласие на обработку ПД при
   // регистрации. NULL — аккаунт создал руководитель или интеграция.
   pdConsentAt: int("pd_consent_at"),
+  // Точка, где работает сотрудник (locations.id); NULL — без точки.
+  locationId: int("location_id"),
 });
 
 export const workers = mysqlTable("workers", {
@@ -653,7 +675,7 @@ export const auditLog = mysqlTable("audit_log", {
  * выполненная по расписанию — строкой missed. Файлы фото не удаляются
  * (кроме PHOTO_RETENTION_DAYS, если он задан).
  *
- * Уникальность (task_id, day) и индексы создаёт script/_add-task-history.ts.
+ * Уникальность (task_id, day) и индексы создаёт script/_add-company-features.ts.
  */
 export const taskHistory = mysqlTable("task_history", {
   id: int("id").primaryKey().autoincrement(),

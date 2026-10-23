@@ -25,6 +25,9 @@ import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { PhoneInput } from "@/components/PhoneInput";
 import { AdminPinField } from "@/components/AdminPinField";
 import { PinShareNote, UserPinPanel } from "@/components/UserPinPanel";
+import { LocationsPanel, UserLocationSelect } from "@/components/LocationsPanel";
+import { useLocations } from "@/hooks/use-locations";
+import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { generatePin, newPinSchema } from "@shared/pin";
 
 // PIN задаёт руководитель: сотрудник войдёт по номеру и этому PIN.
@@ -44,6 +47,8 @@ export default function AdminUsers() {
   const [editName, setEditName] = useState("");
   const [pinUserId, setPinUserId] = useState<number | null>(null);
   const [created, setCreated] = useState<{ phone: string; pin: string } | null>(null);
+  const { data: locations = [] } = useLocations(!!user?.isAdmin);
+  const planInfo = (useWesetupConfiguration().data as { planInfo?: { name: string; maxUsers: number | null; enforced: boolean } } | null)?.planInfo;
 
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading, isError, refetch } = useQuery({
@@ -237,6 +242,14 @@ export default function AdminUsers() {
               <UserPlus className="w-5 h-5 text-primary" />
               Добавить пользователя
             </h2>
+            {planInfo?.enforced && planInfo.maxUsers !== null && (
+              <p className={`mb-5 rounded-xl px-3 py-2 text-sm ${users.length >= planInfo.maxUsers ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "bg-muted text-muted-foreground"}`}>
+                Тариф «{planInfo.name}»: {users.length} из {planInfo.maxUsers} человек.
+                {users.length >= planInfo.maxUsers && (
+                  <> Чтобы добавить ещё, <a className="font-medium underline" href="mailto:support@tasksflow.ru?subject=Сменить тариф TasksFlow">напишите нам</a>.</>
+                )}
+              </p>
+            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
@@ -375,6 +388,11 @@ export default function AdminUsers() {
                           {u.name && (
                             <p className="text-sm text-muted-foreground">{u.name}</p>
                           )}
+                          {locations.length > 0 && (
+                            <div className="mt-1.5">
+                              <UserLocationSelect userId={u.id} value={u.locationId ?? null} locations={locations} />
+                            </div>
+                          )}
                           {!u.isAdmin && (u.pinLocked || u.hasPin === false) && (
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
                               {u.pinLocked ? (
@@ -471,6 +489,9 @@ export default function AdminUsers() {
               </div>
             )}
           </div>
+
+          {/* Точки сети: привязка сотрудников, фильтры задач и отчётов */}
+          <LocationsPanel />
         </div>
       </div>
     </div>

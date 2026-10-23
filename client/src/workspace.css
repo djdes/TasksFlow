@@ -927,3 +927,20 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .schedule-time:disabled { opacity: .45; }
 .dark .schedule-time { color-scheme: dark; }
 .schedule-check:focus-visible, .schedule-time:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+
+/* Точки: список в «Сотрудниках» и выбор точки в строке сотрудника */
+.locations-list { display: grid; margin: 0 0 12px; padding: 0; list-style: none; border: 1px solid hsl(var(--border)); border-radius: 14px; overflow: hidden; }
+.locations-list li { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 4px 6px 4px 14px; }
+.locations-list li + li { border-top: 1px solid hsl(var(--border)); }
+.location-select { height: 30px; max-width: 100%; padding: 0 28px 0 10px; border: 1px solid hsl(var(--border)); border-radius: 9px; background: hsl(var(--card)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 5.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E") no-repeat right 9px center; color: hsl(var(--foreground)); font-size: 12.5px; appearance: none; }
+.location-select:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
+
+/* Root: компании и тарифы */
+.root-companies { display: grid; }
+.root-company { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 0; }
+.root-company + .root-company { border-top: 1px solid hsl(var(--border)); }
+.root-company-main { flex: 1; min-width: 220px; }
+.root-company-name { font-weight: 650; }
+.root-company-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.root-company-plan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.root-company-plan .reports-select { width: 140px; }

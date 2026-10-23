@@ -21,24 +21,24 @@ async function getJson<T>(url: string, signal: AbortSignal | undefined): Promise
 }
 
 /** Журнал дня; day не задан — сегодня по поясу компании. */
-export function useHistoryDay(day: string | null, workerId: number | null) {
+export function useHistoryDay(day: string | null, workerId: number | null, locationId: number | null = null) {
   return useQuery({
-    queryKey: [HISTORY_KEY, day, workerId],
-    queryFn: ({ signal }) => getJson<HistoryDayResponse>(`/api/history${query({ day, workerId })}`, signal),
+    queryKey: [HISTORY_KEY, day, workerId, locationId],
+    queryFn: ({ signal }) => getJson<HistoryDayResponse>(`/api/history${query({ day, workerId, locationId })}`, signal),
     // Перезапрос держит прежний кадр, без мигания скелетоном.
     placeholderData: keepPreviousData,
   });
 }
 
-export function useReportSummary(range: { from: string; to: string } | null, workerId: number | null) {
+export function useReportSummary(range: { from: string; to: string } | null, workerId: number | null, locationId: number | null = null) {
   return useQuery({
-    queryKey: [SUMMARY_KEY, range?.from ?? null, range?.to ?? null, workerId],
+    queryKey: [SUMMARY_KEY, range?.from ?? null, range?.to ?? null, workerId, locationId],
     queryFn: ({ signal }) =>
-      getJson<ReportSummaryResponse>(`/api/reports/summary${query({ from: range?.from, to: range?.to, workerId })}`, signal),
+      getJson<ReportSummaryResponse>(`/api/reports/summary${query({ from: range?.from, to: range?.to, workerId, locationId })}`, signal),
     placeholderData: keepPreviousData,
   });
 }
 
-export function csvUrl(range: { from: string; to: string }, workerId: number | null): string {
-  return `/api/reports/export.csv${query({ from: range.from, to: range.to, workerId })}`;
+export function csvUrl(range: { from: string; to: string }, workerId: number | null, locationId: number | null = null): string {
+  return `/api/reports/export.csv${query({ from: range.from, to: range.to, workerId, locationId })}`;
 }

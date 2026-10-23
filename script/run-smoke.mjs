@@ -26,6 +26,8 @@ const SESSIONS = [
   ['script/smoke-reports.js'],
   // Фото: сжатие, «только камера», очередь без сети.
   ['script/smoke-photo.js'],
+  // Точки, тарифы, root «Компании».
+  ['script/smoke-company.js'],
 ];
 
 process.chdir(root);

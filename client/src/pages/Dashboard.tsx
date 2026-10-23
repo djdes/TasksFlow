@@ -1,4 +1,5 @@
 import { PageSkeleton } from "@/components/PageSkeleton";
+import { useLocations } from "@/hooks/use-locations";
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -80,6 +81,7 @@ import {
   QrCode,
   UserCog,
   BarChart3,
+  MapPin,
   Gift,
   CalendarCheck,
   MessageCircle,
@@ -122,6 +124,7 @@ export default function Dashboard() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: users = [], isLoading: loadingUsers, isError: usersError, refetch: retryUsers } = useUsers();
+  const { data: locations = [] } = useLocations(!!user?.isAdmin);
   const { data: tasks = [], dataUpdatedAt: tasksUpdatedAt, isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
   const isMobile = useIsMobile();
   const { reduced } = useMotionPreference();
@@ -142,6 +145,8 @@ export default function Dashboard() {
   // + добавляем визуальный split вместо плоского списка.
   const [filterByUserId, setFilterByUserId] = useState<string>("all");
   const [filterByCategory, setFilterByCategory] = useState<string>("all");
+  // Точка — свойство сотрудника: фильтр оставляет задачи людей этой точки.
+  const [filterByLocationId, setFilterByLocationId] = useState<string>("all");
   // Quick-chip фильтры: каждый — boolean toggle. Несколько можно
   // включить одновременно (логика AND). Хранить нечего — стейт
   // живёт пока открыт dashboard.
@@ -159,7 +164,7 @@ export default function Dashboard() {
   // - all:      по умолчанию показываем всё; если в выборке нет
   //              shared-задач — табы скрываются.
   const [taskTab, setTaskTab] = useState<"all" | "personal" | "shared">("all");
-  const hasActiveFilters = !!searchQuery.trim() || filterByCategory !== "all" || filterByUserId !== "all" || taskTab !== "all" || chipPhoto || chipBonus || chipJournal;
+  const hasActiveFilters = !!searchQuery.trim() || filterByCategory !== "all" || filterByUserId !== "all" || filterByLocationId !== "all" || taskTab !== "all" || chipPhoto || chipBonus || chipJournal;
   const resetFilters = () => {
     setSearchQuery("");
     setFilterByCategory("all");
@@ -341,6 +346,11 @@ export default function Dashboard() {
   const baseFilteredTasks = (
     user?.isAdmin
       ? tasks
+          .filter(task => {
+            if (filterByLocationId === "all") return true;
+            const worker = users.find((u) => u.id === task.workerId) as { locationId?: number | null } | undefined;
+            return String(worker?.locationId ?? "") === filterByLocationId;
+          })
           .filter(task => {
             if (filterByUserId === "all") return true;
             if (filterByUserId === "unassigned") return !task.workerId;
@@ -574,12 +584,14 @@ export default function Dashboard() {
   const activeFilterCount =
     (filterByCategory !== "all" ? 1 : 0) +
     (filterByUserId !== "all" ? 1 : 0) +
+    (filterByLocationId !== "all" ? 1 : 0) +
     (chipPhoto ? 1 : 0) +
     (chipBonus ? 1 : 0) +
     (chipJournal ? 1 : 0);
   const resetFilterControls = () => {
     setFilterByCategory("all");
     setFilterByUserId("all");
+    setFilterByLocationId("all");
     setChipPhoto(false);
     setChipBonus(false);
     setChipJournal(false);
@@ -619,6 +631,23 @@ export default function Dashboard() {
         {users.map((u) => (
           <SelectItem key={u.id} value={u.id.toString()}>
             {u.name || u.phone}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : null;
+
+  const locationSelect = user?.isAdmin && locations.length > 0 ? (
+    <Select value={filterByLocationId} onValueChange={setFilterByLocationId}>
+      <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]" aria-label="Точка">
+        <MapPin className="w-4 h-4 mr-1.5 text-muted-foreground" />
+        <SelectValue placeholder="Точка" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Все точки</SelectItem>
+        {locations.map((loc) => (
+          <SelectItem key={loc.id} value={String(loc.id)}>
+            {loc.name}
           </SelectItem>
         ))}
       </SelectContent>
@@ -887,6 +916,19 @@ export default function Dashboard() {
                 <span className="font-medium">Root: промо-баннеры</span>
               </button>
             )}
+            {(user as any).isRoot && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setLocation("/admin/companies");
+                }}
+              >
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                <span className="font-medium">Root: компании и тарифы</span>
+              </button>
+            )}
             {/* Помощь — доступна ВСЕМ. Особенно нужна сотрудникам в
                 возрасте: понятные пошаговые инструкции и FAQ. */}
             <button
@@ -1113,6 +1155,7 @@ export default function Dashboard() {
               {showFilterSelects && (
                 <div className="filters-bar">
                   {categorySelect}
+                  {locationSelect}
                   {userSelect}
                 </div>
               )}
@@ -1376,6 +1419,7 @@ export default function Dashboard() {
             <DialogTitle className="text-lg font-semibold pr-8">Фильтры</DialogTitle>
             <div className="filters-sheet-body">
               {categorySelect ? <div className="filters-sheet-field"><span>Категория</span>{categorySelect}</div> : null}
+              {locationSelect ? <div className="filters-sheet-field"><span>Точка</span>{locationSelect}</div> : null}
               {userSelect ? <div className="filters-sheet-field"><span>Исполнитель</span>{userSelect}</div> : null}
               {showChips ? (
                 <div className="filters-sheet-field">

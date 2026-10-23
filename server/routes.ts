@@ -38,6 +38,8 @@ import { notifySettingsSchema, parseNotifySettings } from "@shared/notify";
 import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings";
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
+import { registerCompanyRoutes } from "./company-routes";
+import { companyPlan, planLimitsEnforced, seatProblem } from "./plan-limits";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -256,6 +258,7 @@ function toPublicCompany(company: Company, withSecrets: boolean) {
     wesetupApiKey: withSecrets ? rest.wesetupApiKey : null,
     notify: parseNotifySettings(notifySettings),
     photo: parsePhotoSettings(photoSettings),
+    planInfo: { ...companyPlan(company), until: company.planUntil ?? null, enforced: planLimitsEnforced() },
     wesetupConfigured,
   };
 }
@@ -992,6 +995,9 @@ export async function registerRoutes(
           field: "adminPhone",
         });
       }
+
+      const noSeat = await seatProblem(admin.companyId);
+      if (noSeat) return res.status(402).json({ message: noSeat, code: "plan_limit" });
 
       // Создаём пользователя в компании админа
       const user = await storage.createUser({
@@ -2603,6 +2609,9 @@ export async function registerRoutes(
         });
       }
 
+      const noSeat = await seatProblem(companyId);
+      if (noSeat) return res.status(402).json({ message: noSeat, code: "plan_limit" });
+
       const user = await storage.createUser({
         phone: normalizedPhone,
         name: input.name,
@@ -2862,6 +2871,9 @@ export async function registerRoutes(
           field: "phone",
         });
       }
+
+      const noSeat = await seatProblem(inv.companyId);
+      if (noSeat) return res.status(402).json({ message: noSeat, code: "plan_limit" });
 
       const user = await storage.createUser({
         phone: normalizedPhone,
@@ -4468,6 +4480,9 @@ export async function registerRoutes(
 
   // История выполнения и отчёты (server/history-routes.ts).
   registerHistoryRoutes(app, { requireAuthOrApiKey, getCompanyIdFromReq });
+
+  // Точки, привязка к точке, root «Компании» (server/company-routes.ts).
+  registerCompanyRoutes(app, { requireAuthOrApiKey, requireAuth, requireAdmin, requireRoot, getCompanyIdFromReq });
 
   // Живые обновления кабинета (server/live-events.ts).
   app.get("/api/events", requireAuth, async (req, res) => {

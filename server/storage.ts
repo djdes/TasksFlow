@@ -73,6 +73,7 @@ export interface IStorage {
   setUserConsent(id: number, at: number): Promise<void>;
   getUserById(id: number): Promise<User | undefined>;
   getAllUsers(companyId?: number): Promise<User[]>;
+  countCompanyUsers(companyId: number): Promise<number>;
   updateUser(id: number, user: UpdateUser): Promise<User | undefined>;
   setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined>;
   setUserPosition(id: number, position: string | null): Promise<User | undefined>;
@@ -437,6 +438,15 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(and(eq(users.tgLinkCode, code), gte(users.tgLinkCodeExpiresAt, now)));
     return user || undefined;
+  }
+
+  /** Сколько людей в компании — для лимита тарифа. */
+  async countCompanyUsers(companyId: number): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(users)
+      .where(eq(users.companyId, companyId));
+    return Number(row?.n ?? 0);
   }
 
   async getAllUsers(companyId?: number): Promise<User[]> {

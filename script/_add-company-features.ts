@@ -3,7 +3,8 @@ import { db } from "../server/db";
 import { sql } from "drizzle-orm";
 
 /**
- * История выполнения и часовой пояс компании.
+ * Новые возможности компании (одна миграция на выкладку 10.2026):
+ * история выполнения, часовой пояс, напоминания, фото-отчёты, тарифы, точки.
  *
  *   task_history            — снимок задачи за день: done / claimed / missed,
  *                             фото, чек-лист, проверка. Раньше ночной сброс
@@ -17,6 +18,8 @@ import { sql } from "drizzle-orm";
  *                             по умолчанию; notify_state — что уже ушло сегодня.
  *   companies.photo_settings — время на фото и «только камера» (JSON), NULL —
  *                             по умолчанию.
+ *   companies.plan / plan_until — тариф (shared/plans.ts), NULL — «Старт».
+ *   locations, users.location_id — точки сети и привязка сотрудника к точке.
  *
  * Только CREATE TABLE и ADD COLUMN, существующие строки не меняются.
  * Идемпотентно: ER_TABLE_EXISTS_ERROR / ER_DUP_FIELDNAME = уже есть.
@@ -60,6 +63,8 @@ async function main() {
     ["notify_settings", "TEXT NULL"],
     ["notify_state", "TEXT NULL"],
     ["photo_settings", "TEXT NULL"],
+    ["plan", "VARCHAR(20) NULL"],
+    ["plan_until", "INT NULL"],
   ];
   for (const [name, ddl] of COLUMNS) {
     try {
@@ -69,6 +74,31 @@ async function main() {
       if (err?.code === "ER_DUP_FIELDNAME") console.log(`[migrate] companies.${name} already exists, skipping`);
       else throw err;
     }
+  }
+  try {
+    await db.execute(sql.raw(`
+      CREATE TABLE locations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id INT NOT NULL,
+        name VARCHAR(120) NOT NULL,
+        address VARCHAR(255) NULL,
+        created_at INT NOT NULL DEFAULT 0,
+        archived_at INT NULL,
+        KEY idx_locations_company (company_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `));
+    console.log("[migrate] created table locations");
+  } catch (err: any) {
+    if (err?.code === "ER_TABLE_EXISTS_ERROR") console.log("[migrate] locations already exists, skipping");
+    else throw err;
+  }
+
+  try {
+    await db.execute(sql.raw("ALTER TABLE `users` ADD COLUMN `location_id` INT NULL"));
+    console.log("[migrate] added users.location_id");
+  } catch (err: any) {
+    if (err?.code === "ER_DUP_FIELDNAME") console.log("[migrate] users.location_id already exists, skipping");
+    else throw err;
   }
   process.exit(0);
 }
