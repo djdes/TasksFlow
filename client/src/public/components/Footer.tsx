@@ -1,4 +1,5 @@
 import { CLUSTERS } from "../clusters";
+import { Logo } from "./Logo";
 
 export function Footer() {
   const year = 2026;
@@ -6,9 +7,7 @@ export function Footer() {
     <footer className="border-t border-border bg-muted/30">
       <div className="max-w-6xl mx-auto px-4 py-12 grid gap-8 md:grid-cols-4">
         <div>
-          <div className="text-xl font-extrabold text-foreground mb-2">
-            Tasks<span className="text-primary">Flow</span>
-          </div>
+          <Logo className="mb-3" />
           <p className="text-sm text-muted-foreground">
             Контроль задач для выездных и линейных команд: чек-листы, фотоотчёты, KPI.
           </p>

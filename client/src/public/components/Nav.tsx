@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { AuthModal } from "../landing/auth";
 import { ThemeToggle } from "../landing/ThemeToggle";
 import { TopBanner } from "./TopBanner";
+import { Logo } from "./Logo";
 
 /**
  * Шапка публичной части. На лендинге ссылки ведут к якорям секций,
@@ -16,6 +17,14 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   // вместо «Войти». SSR рендерит дефолт (не залогинен) — без mismatch,
   // т.к. смена происходит в эффекте после маунта.
   const [loggedIn, setLoggedIn] = useState(false);
+  // После первого скролла шапка сжимается в плавающую «пилюлю».
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   useEffect(() => {
     let alive = true;
     fetch("/api/auth/me", { credentials: "include" })
@@ -39,13 +48,14 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   return (
     <>
     <TopBanner />
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
-          Tasks<span className="text-primary">Flow</span>
+    <header className={`site-nav ${scrolled || menuOpen ? "is-scrolled" : ""}`}>
+      <span className="scroll-progress" aria-hidden="true" />
+      <div className="site-nav-inner">
+        <a href="/" aria-label="TasksFlow — на главную">
+          <Logo />
         </a>
 
-        <nav className="hidden md:flex items-center gap-7">
+        <nav className="hidden md:flex items-center gap-7" aria-label="Разделы">
           {links.map((l) => (
             <a key={l.href} href={l.href} className="nav-underline text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {l.label}
@@ -56,39 +66,36 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
         <div className="flex items-center gap-2">
           <ThemeToggle className="hidden sm:inline-flex" />
           {loggedIn ? (
-            <a
-              href="/dashboard"
-              className="shine press rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
-            >
+            <a href="/dashboard" className="nav-cta press">
               Открыть кабинет
             </a>
           ) : (
-            <button
-              onClick={() => setAuthOpen(true)}
-              className="shine press rounded-full bg-primary text-primary-foreground text-sm font-semibold px-5 py-2 shadow-lg shadow-primary/25 hover:brightness-105 transition"
-            >
+            <button onClick={() => setAuthOpen(true)} className="nav-cta press">
               Войти
             </button>
           )}
-          <button className="md:hidden p-2 text-foreground" onClick={() => setMenuOpen((o) => !o)} aria-label="Меню">
+          <button className="md:hidden p-2 rounded-lg text-foreground hover:bg-muted" onClick={() => setMenuOpen((o) => !o)} aria-label="Меню" aria-expanded={menuOpen}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-border bg-background px-4 py-3 space-y-1">
+        <div className="site-nav-menu md:hidden">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMenuOpen(false)}>
+            <a key={l.href} href={l.href} className="block py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMenuOpen(false)}>
               {l.label}
             </a>
           ))}
-          <button
-            onClick={() => { setMenuOpen(false); setAuthOpen(true); }}
-            className="block w-full text-left py-2 text-sm font-semibold text-primary"
-          >
-            Войти или зарегистрироваться
-          </button>
+          <div className="flex items-center justify-between pt-1">
+            <button
+              onClick={() => { setMenuOpen(false); setAuthOpen(true); }}
+              className="py-2.5 text-sm font-semibold text-primary"
+            >
+              Войти или зарегистрироваться
+            </button>
+            <ThemeToggle className="sm:hidden" />
+          </div>
         </div>
       )}
 
