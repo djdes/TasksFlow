@@ -176,8 +176,10 @@ jobs:
             "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
-          scp -q "$APK" "prod:$DL/.tasksflow.apk.part"
-          scp -q "$RUNNER_TEMP/android.json" "prod:$DL/.android.json.part"
+          # Новый scp ходит через SFTP; на хостинге без него — старый протокол (-O).
+          put() { scp -q "$1" "prod:$2" || scp -O -q "$1" "prod:$2"; }
+          put "$APK" "$DL/.tasksflow.apk.part"
+          put "$RUNNER_TEMP/android.json" "$DL/.android.json.part"
           ssh prod "cd '$DL' && mv .tasksflow.apk.part tasksflow.apk && mv .android.json.part android.json && ls -l"
 
       - name: Check the site
