@@ -33,8 +33,13 @@ const allowlist = [
   "zod-validation-error",
 ];
 
+// Куда собирать. По умолчанию dist; деплой собирает в соседнюю папку
+// (BUILD_OUT_DIR=dist.next) и подменяет dist только после успешной сборки,
+// чтобы работающий процесс не оставался без статики на время сборки.
+const outDir = path.resolve(process.env.BUILD_OUT_DIR || "dist");
+
 async function buildAll() {
-  await rm("dist", { recursive: true, force: true });
+  await rm(outDir, { recursive: true, force: true });
 
   const clientRoot = path.resolve("client");
 
@@ -44,6 +49,8 @@ async function buildAll() {
   console.log("building client (SPA + public)...");
   await viteBuild({
     build: {
+      outDir: path.join(outDir, "public"),
+      emptyOutDir: true,
       rollupOptions: {
         input: {
           main: path.join(clientRoot, "index.html"),
@@ -58,7 +65,7 @@ async function buildAll() {
   await viteBuild({
     build: {
       ssr: path.resolve("client/src/public/entry-server.tsx"),
-      outDir: path.resolve("dist/server"),
+      outDir: path.join(outDir, "server"),
       emptyOutDir: false,
       rollupOptions: {
         output: { entryFileNames: "entry-server.js", format: "esm" },
@@ -79,7 +86,7 @@ async function buildAll() {
     platform: "node",
     bundle: true,
     format: "cjs",
-    outfile: "dist/index.cjs",
+    outfile: path.join(outDir, "index.cjs"),
     define: {
       "process.env.NODE_ENV": '"production"',
     },
