@@ -390,13 +390,11 @@ export async function registerRoutes(
     res.json({ ok: true });
   });
 
-  // Rate-limit login и публичные регистрационные endpoint'ы. TasksFlow
-  // авторизуется только по телефону (без пароля!) — без лимитера
-  // атакующий мог переберать +7XXXXXXXXXX за секунду и получать
-  // session-cookie любого worker'а, чей телефон совпал.
-  // 20 attempts / минуту с одного IP — достаточно для legit-юзера
-  // (двойной тап / опечатка), но 28800/день делает перебор Russian
-  // phone space (~10⁹) непрактичным.
+  // Rate-limit login и публичные регистрационные endpoint'ы. Вход по
+  // телефону защищён PIN с блокировкой аккаунта (server/pin-auth.ts),
+  // а этот лимит не даёт быстро перебирать номера.
+  // 20 запросов / минуту с одного IP. Вход идёт в два запроса (номер,
+  // затем PIN); более строгий лимит /api/auth/login — в server/index.ts.
   const authLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 20,
