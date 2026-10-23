@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { reportError } from "@/lib/error-reporting";
 
 interface Props {
   children: ReactNode;
@@ -42,6 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // воспроизвести баг по тонкому стеку из консоли.
     this.setState({ errorInfo });
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    reportError(error, "react", errorInfo.componentStack ?? undefined);
   }
 
   handleRetry = () => {
