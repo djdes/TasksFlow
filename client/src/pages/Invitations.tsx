@@ -1,5 +1,6 @@
 import { QueryError } from "@/components/QueryError";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { formatTimestamp } from "@/lib/format-timestamp";
-import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp, UserPlus, ShieldCheck } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -42,6 +43,7 @@ export default function Invitations() {
   const [position, setPosition] = useState("");
   const [role, setRole] = useState<Role>("employee");
   const [showHistory, setShowHistory] = useState(false);
+  const [inviteToRevoke, setInviteToRevoke] = useState<Invitation | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isAdmin)) setLocation("/dashboard");
@@ -109,6 +111,7 @@ export default function Invitations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      setInviteToRevoke(null);
       toast({ title: "Приглашение отозвано" });
     },
     onError: (e) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
@@ -127,120 +130,144 @@ export default function Invitations() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => setLocation("/dashboard")} aria-label="Назад">
-          <ArrowLeft className="w-6 h-6" />
+    <div className="page-screen">
+      <div className="page-container page-container--narrow">
+        <button
+          type="button"
+          onClick={() => setLocation("/dashboard")}
+          className="page-back group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Назад
         </button>
-        <h1 className="text-xl font-bold">Приглашения</h1>
-      </header>
 
-      <main className="p-4 max-w-2xl mx-auto space-y-6">
-        <p className="text-sm text-muted-foreground">
-          Сгенерируйте QR-код или ссылку и отправьте сотруднику. Он сам введёт
-          имя и телефон, после чего попадёт в кабинет вашей компании.
-        </p>
-
-        <Button onClick={() => setShowCreate(true)} className="w-full h-14 text-base">
-          <QrCode className="w-5 h-5 mr-2" />
-          Сгенерировать QR
-        </Button>
-
-        <section className="space-y-2">
-          <h2 className="font-semibold">Активные приглашения</h2>
-          {activeQuery.isLoading && (
-            <p className="text-sm text-muted-foreground">Загрузка...</p>
-          )}
-          {activeQuery.isError && <QueryError onRetry={() => { void activeQuery.refetch(); }} />}
-          {activeQuery.data && activeQuery.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Пока нет активных приглашений.
-            </p>
-          )}
-          {activeQuery.data?.map((inv) => (
-            <div
-              key={inv.id}
-              className="p-3 border border-border rounded-xl flex items-start gap-3"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm">
-                  {inv.position || "Без должности"} ·{" "}
-                  {inv.isAdmin ? "Админ/менеджер" : "Сотрудник"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Создано: {formatTimestamp(inv.createdAt)}
-                </div>
-              </div>
-              <div className="flex gap-1 shrink-0">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    const url = `${window.location.origin}/join/${inv.token}`;
-                    setShowQrFor({ url, token: inv.token });
-                  }}
-                  aria-label="Показать QR"
-                >
-                  <QrCode className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    copyToClipboard(`${window.location.origin}/join/${inv.token}`)
-                  }
-                  aria-label="Скопировать ссылку"
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (confirm("Отозвать приглашение?"))
-                      revokeMutation.mutate(inv.id);
-                  }}
-                  aria-label="Отозвать"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+        <div className="page-header">
+          <div className="page-title-row">
+            <div className="page-icon">
+              <QrCode className="w-6 h-6" />
             </div>
-          ))}
-        </section>
+            <div className="min-w-0">
+              <h1 className="page-title">Приглашения</h1>
+              <p className="page-subtitle">
+                Отправьте сотруднику QR-код или ссылку: он сам введёт имя и
+                телефон и попадёт в кабинет вашей компании.
+              </p>
+            </div>
+          </div>
+        </div>
 
-        <section>
-          <button
-            type="button"
-            onClick={() => setShowHistory((v) => !v)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition"
-          >
-            {showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            {showHistory ? "Скрыть историю" : "Показать историю"}
-          </button>
-          {showHistory && (
-            <div className="mt-2">
-              {allQuery.isLoading && (
-                <p className="text-sm text-muted-foreground">Загрузка...</p>
-              )}
-              {allQuery.data
-                ?.filter((i) => i.usedAt || i.revokedAt)
-                .map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="p-2 text-sm text-muted-foreground border-b border-border last:border-0"
-                  >
-                    {inv.usedAt ? "✓ Принято" : "✗ Отозвано"} ·{" "}
-                    {inv.position || "без должности"} ·{" "}
-                    {new Date(
-                      (inv.usedAt || inv.revokedAt || 0) * 1000,
-                    ).toLocaleString("ru-RU")}
+        <div className="page-sections">
+          <Button onClick={() => setShowCreate(true)} className="page-cta w-full">
+            <QrCode className="w-5 h-5" />
+            Сгенерировать QR
+          </Button>
+
+          <section className="content-panel" aria-labelledby="invites-active-title">
+            <div className="section-title">
+              <UserPlus className="w-5 h-5 text-primary" />
+              <h2 id="invites-active-title">Активные приглашения</h2>
+            </div>
+            {activeQuery.isLoading ? (
+              <ListSkeleton rows={2} />
+            ) : activeQuery.isError ? (
+              <QueryError onRetry={() => { void activeQuery.refetch(); }} message="Не удалось загрузить приглашения." />
+            ) : activeQuery.data && activeQuery.data.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Пока нет активных приглашений — создайте первое кнопкой выше.
+              </p>
+            ) : (
+              <div className="invite-list">
+                {activeQuery.data?.map((inv) => (
+                  <div key={inv.id} className="invite-row">
+                    <span className="invite-row-icon" aria-hidden="true">
+                      {inv.isAdmin ? <ShieldCheck /> : <UserPlus />}
+                    </span>
+                    <div className="invite-row-text">
+                      <div className="invite-row-title">
+                        {inv.position || "Без должности"} · {inv.isAdmin ? "Админ/менеджер" : "Сотрудник"}
+                      </div>
+                      <div className="invite-row-meta">Создано: {formatTimestamp(inv.createdAt)}</div>
+                    </div>
+                    <div className="invite-row-actions">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          const url = `${window.location.origin}/join/${inv.token}`;
+                          setShowQrFor({ url, token: inv.token });
+                        }}
+                        aria-label="Показать QR"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          copyToClipboard(`${window.location.origin}/join/${inv.token}`)
+                        }
+                        aria-label="Скопировать ссылку"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setInviteToRevoke(inv)}
+                        aria-label="Отозвать"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-            </div>
-          )}
-        </section>
-      </main>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="invite-history-toggle"
+              aria-expanded={showHistory}
+            >
+              {showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showHistory ? "Скрыть историю" : "Показать историю"}
+            </button>
+            {showHistory && (
+              <div className="invite-history">
+                {allQuery.isLoading ? <ListSkeleton rows={2} /> : null}
+                {allQuery.isError ? (
+                  <QueryError onRetry={() => { void allQuery.refetch(); }} message="Не удалось загрузить историю." />
+                ) : null}
+                {allQuery.data
+                  ?.filter((i) => i.usedAt || i.revokedAt)
+                  .map((inv) => (
+                    <div key={inv.id}>
+                      {inv.usedAt ? "✓ Принято" : "✗ Отозвано"} ·{" "}
+                      {inv.position || "без должности"} ·{" "}
+                      {new Date(
+                        (inv.usedAt || inv.revokedAt || 0) * 1000,
+                      ).toLocaleString("ru-RU")}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={inviteToRevoke !== null}
+        onOpenChange={(open) => { if (!open) setInviteToRevoke(null); }}
+        title="Отозвать приглашение?"
+        description="Ссылка и QR-код перестанут работать: по ним больше нельзя будет зарегистрироваться."
+        confirmLabel="Отозвать"
+        destructive
+        busy={revokeMutation.isPending}
+        onConfirm={() => { if (inviteToRevoke) revokeMutation.mutate(inviteToRevoke.id); }}
+      />
 
       {/* Модалка создания */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
