@@ -1,5 +1,7 @@
 node_modules
 dist
+# Пишет деплой: короткий SHA сборки для /api/health.
+.build-sha
 .DS_Store
 server/public
 vite.config.ts.*

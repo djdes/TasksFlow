@@ -20,6 +20,8 @@ const SCRIPT_TIMEOUT_MS = 4 * 60 * 1000;
 const SESSIONS = [
   ['script/smoke-motion.js', 'script/smoke-workspace.js'],
   ['script/smoke-motion.js', 'script/smoke-motion-details.js', 'script/smoke-motion-extra.js'],
+  // PIN-вход: свои контексты и фикстуры API, отдельная сессия.
+  ['script/smoke-pin.js'],
 ];
 
 process.chdir(root);
