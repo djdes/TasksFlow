@@ -6,11 +6,14 @@
  * Публичные страницы — это полноценные переходы по <a href> (не SPA-
  * роутер): для контентного сайта это проще и идеально для SEO.
  */
+import { LEGAL_SLUGS } from "./legal";
+
 export type RouteKey =
   | "landing"
   | "blog-index"
   | "blog-article"
   | "blog-category"
+  | "legal"
   | "not-found";
 
 export interface MatchedRoute {
@@ -22,6 +25,9 @@ export function matchRoute(pathname: string): MatchedRoute {
   const p = (pathname || "/").replace(/\/+$/, "") || "/";
   if (p === "/") return { key: "landing", params: {} };
   if (p === "/blog") return { key: "blog-index", params: {} };
+
+  // /privacy, /consent, /terms — документы из content/legal.
+  if (LEGAL_SLUGS.has(p.slice(1))) return { key: "legal", params: { doc: p.slice(1) } };
 
   const cat = p.match(/^\/blog\/category\/([^/]+)$/);
   if (cat) return { key: "blog-category", params: { cluster: decodeURIComponent(cat[1]) } };

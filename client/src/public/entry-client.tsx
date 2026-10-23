@@ -1,6 +1,7 @@
 import { hydrateRoot } from "react-dom/client";
 import { PublicApp } from "./App";
 import { matchRoute } from "./router";
+import { normalizeSite } from "./site";
 import "../public-base.css";
 import "./public-motion.css";
 import "./public.css";
@@ -9,10 +10,11 @@ import "./public.css";
 (window as any).__revealActive = true;
 
 const data = (window as any).__SSR_DATA__ ?? null;
+const site = normalizeSite((window as any).__SSR_SITE__);
 const route = matchRoute(window.location.pathname);
 const el = document.getElementById("public-root");
 if (el) {
-  hydrateRoot(el, <PublicApp route={route} data={data} />);
+  hydrateRoot(el, <PublicApp route={route} data={data} site={site} />);
 }
 
 // Scroll-reveal: показываем элементы [data-reveal] при попадании в зону

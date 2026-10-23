@@ -1,6 +1,8 @@
 import { Check, CheckCircle2, ArrowRight, Sparkles, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Nav } from "../components/Nav";
+import { useSite } from "../site";
+import { goToStart } from "../landing/start";
 import { Footer } from "../components/Footer";
 import { ArticleCard } from "../components/ArticleCard";
 import { ContentBanner } from "../components/ContentBanner";
@@ -25,11 +27,14 @@ const AFTER = [
   "Видно каждого в реальном времени",
 ];
 
+// action: "start" — к форме входа в hero, "mail" — письмо в поддержку.
 const PRICING = [
-  { name: "Старт", price: "0 ₽", note: "навсегда", features: ["До 5 сотрудников", "Задачи и чек-листы", "Фото-отчёты"], cta: "Начать бесплатно", highlight: false },
-  { name: "Команда", price: "990 ₽", note: "в месяц · примерно", features: ["До 30 сотрудников", "Повторяющиеся задачи", "Премии и проверка", "Приглашение по QR"], cta: "Попробовать", highlight: true },
-  { name: "Бизнес", price: "по запросу", note: "для сети точек", features: ["Без лимита сотрудников", "Интеграции и API", "Помощь с запуском"], cta: "Обсудить", highlight: false },
-];
+  { name: "Старт", price: "0 ₽", note: "навсегда", features: ["До 5 сотрудников", "Задачи и чек-листы", "Фото-отчёты"], cta: "Начать бесплатно", action: "start", highlight: false },
+  { name: "Команда", price: "990 ₽", note: "в месяц · примерно", features: ["До 30 сотрудников", "Повторяющиеся задачи", "Премии и проверка", "Приглашение по QR"], cta: "Попробовать", action: "start", highlight: true },
+  { name: "Бизнес", price: "по запросу", note: "для сети точек", features: ["Без лимита сотрудников", "Интеграции и API", "Помощь с запуском"], cta: "Обсудить", action: "mail", highlight: false },
+] as const;
+
+const BUSINESS_SUBJECT = "TasksFlow Бизнес: подключение сети точек";
 
 const FAQ = [
   { q: "Нужно ли что-то устанавливать?", a: "Нет. TasksFlow открывается в браузере и на телефоне. Регистрация — за секунду: введите телефон или email." },
@@ -51,6 +56,15 @@ function SectionHead({ eyebrow, title, lead, align = "center" }: { eyebrow: stri
 
 export function LandingPage({ data }: { data: LandingData | null }) {
   const featured = data?.featuredPosts ?? [];
+  const { contactEmail } = useSite();
+  const faq = [
+    ...FAQ,
+    { q: "Как с вами связаться?", a: `Напишите на ${contactEmail} — поможем с запуском и ответим на вопросы.` },
+  ];
+  // Пришли по ссылке «Попробовать бесплатно» с другой страницы (/#start).
+  useEffect(() => {
+    if (window.location.hash === "#start") goToStart();
+  }, []);
   return (
     <div className="landing min-h-screen bg-background text-foreground overflow-x-hidden">
       <Nav onLanding />
@@ -63,8 +77,8 @@ export function LandingPage({ data }: { data: LandingData | null }) {
           <span className="hero-grid" />
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 pt-10 sm:pt-16 pb-6 sm:pb-16 grid lg:grid-cols-[1.06fr_.94fr] gap-14 lg:gap-10 items-center">
-          <div className="text-center lg:text-left">
+        <div className="max-w-6xl mx-auto px-4 pt-10 sm:pt-16 pb-6 sm:pb-16 grid lg:grid-cols-[minmax(0,1fr)_24rem] gap-14 lg:gap-12 items-center">
+          <div className="hero-copy text-center lg:text-left">
             <div data-reveal className="hero-chip">
               <span className="hero-chip-dot" aria-hidden="true" /> Бесплатно навсегда для команды до 5 человек
             </div>
@@ -77,7 +91,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               TasksFlow — простой контроль работы сотрудников «в полях»: задачи,
               чек-листы, фото-отчёты и премии. Запуск за день, без обучения.
             </p>
-            <div data-reveal style={{ transitionDelay: "180ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
+            <div id="start" data-cookie-avoid data-reveal style={{ transitionDelay: "180ms" }} className="mt-8 max-w-lg mx-auto lg:mx-0">
               <AuthForm layout="row" submitLabel="Начать прямо сейчас" submitArrow submitClassName="hero-cta" />
               <ul className="hero-trust">
                 {["Карта не нужна", "Запуск за минуту", "Без обучения"].map((t) => (
@@ -156,9 +170,18 @@ export function LandingPage({ data }: { data: LandingData | null }) {
                   <li key={f}><CheckCircle2 className="w-5 h-5 shrink-0" /><span>{f}</span></li>
                 ))}
               </ul>
-              <a href="/" className={`plan-cta press ${p.highlight ? "is-primary" : ""}`}>
-                {p.cta}
-              </a>
+              {p.action === "mail" ? (
+                <a
+                  href={`mailto:${contactEmail}?subject=${encodeURIComponent(BUSINESS_SUBJECT)}`}
+                  className={`plan-cta press ${p.highlight ? "is-primary" : ""}`}
+                >
+                  {p.cta}
+                </a>
+              ) : (
+                <a href="#start" onClick={goToStart} className={`plan-cta press ${p.highlight ? "is-primary" : ""}`}>
+                  {p.cta}
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -189,7 +212,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       <section className="max-w-3xl mx-auto px-4 py-20 sm:py-24">
         <SectionHead eyebrow="Вопросы" title="Частые вопросы" />
         <div className="faq">
-          {FAQ.map((f, i) => (
+          {faq.map((f, i) => (
             <details key={f.q} data-reveal style={{ transitionDelay: `${i * 50}ms` }} className="faq-item">
               <summary>
                 {f.q}
@@ -215,7 +238,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
                 {PRICING[0].features.map((f) => <li key={f}><Check className="w-4 h-4" strokeWidth={3} />{f}</li>)}
               </ul>
             </div>
-            <div className="cta-form">
+            <div className="cta-form" data-cookie-avoid>
               <AuthForm layout="stacked" />
             </div>
           </div>
