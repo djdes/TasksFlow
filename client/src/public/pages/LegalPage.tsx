@@ -23,7 +23,7 @@ export function LegalPage({ data }: { data: LegalData | null }) {
     <div className="legal min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-10">
-        <div className="legal-grid">
+        <div className="read-grid">
           <article className="min-w-0">
             <nav aria-label="Документы" className="legal-tabs">
               {LEGAL_DOCS.map((d) => (

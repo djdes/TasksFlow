@@ -4,7 +4,6 @@ import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ArticleCard } from "../components/ArticleCard";
 import { CoverImage } from "../components/CoverImage";
 import { Pagination } from "../components/Pagination";
-import { Particles } from "../components/Particles";
 import { CLUSTER_BY_KEY, clusterTitle } from "../clusters";
 import type { BlogIndexData } from "../types";
 
@@ -27,88 +26,62 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
     : [{ name: "Главная", href: "/" }, { name: "Блог" }];
 
   return (
-    <div className="relative isolate min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
 
-      {/* Декоративный фон в шапке блога */}
-      <div className="absolute inset-x-0 top-0 h-[460px] -z-10 overflow-hidden" aria-hidden="true">
-        <div className="aurora">
-          <div className="orb orb-a" style={{ width: 420, height: 420, left: -120, top: -140, background: "radial-gradient(circle, hsl(var(--primary)/0.5), transparent 70%)" }} />
-          <div className="orb orb-b" style={{ width: 360, height: 360, right: -100, top: -80, background: "radial-gradient(circle, rgba(139,92,246,0.45), transparent 70%)" }} />
-        </div>
-        <Particles />
-        <div className="absolute inset-0 bg-grid" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-8">
         <Breadcrumbs items={crumbs} />
 
-        <header data-reveal className="mt-6 mb-8">
-          <h1 className="text-3xl sm:text-4xl font-extrabold">
-            {active ? clusterTitle(active) : <>Блог <span className="text-gradient">TasksFlow</span></>}
+        <header className="blog-head">
+          <span className="lp-eyebrow">Блог</span>
+          <h1 className="blog-title">
+            {active ? clusterTitle(active) : <>Блог <span className="text-primary">TasksFlow</span></>}
           </h1>
-          <p className="mt-3 text-muted-foreground max-w-2xl">
+          <p className="lp-lead">
             Практические статьи о постановке и контроле задач, мотивации персонала,
             фотоотчётах и автоматизации выездных команд.
           </p>
         </header>
 
-        {/* Фильтр по кластерам */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <a
-            href="/blog"
-            className={`rounded-full px-4 py-1.5 text-sm font-medium border transition ${
-              !active ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
-            }`}
-          >
+        <nav aria-label="Разделы блога" className="blog-chips">
+          <a href="/blog" className="blog-chip" aria-current={!active ? "page" : undefined}>
             Все
           </a>
           {clusters.map((c) => (
             <a
               key={c.key}
               href={`/blog/category/${c.key}`}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium border transition ${
-                active === c.key ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
-              }`}
+              className="blog-chip"
+              aria-current={active === c.key ? "page" : undefined}
             >
-              {c.short} <span className="opacity-60">{c.count}</span>
+              {c.short} <span>{c.count}</span>
             </a>
           ))}
-        </div>
+        </nav>
 
-        {/* Featured */}
         {featured && !active && (
-          <a
-            href={`/blog/${featured.slug}`}
-            data-reveal
-            className="group grid md:grid-cols-2 gap-6 rounded-3xl border border-border bg-card overflow-hidden mb-10 hover-lift"
-          >
-            <div className="aspect-[16/10] md:aspect-auto md:h-full w-full overflow-hidden">
-              <CoverImage slug={featured.slug} cluster={featured.cluster} className="w-full h-full transition-transform duration-500 group-hover:scale-[1.04]" eager />
+          <a href={`/blog/${featured.slug}`} data-reveal className="post-featured">
+            <div className="post-cover">
+              <CoverImage slug={featured.slug} cluster={featured.cluster} eager />
             </div>
-            <div className="p-7 flex flex-col justify-center">
-              <div className="text-xs font-medium text-primary mb-2">
-                {CLUSTER_BY_KEY[featured.cluster]?.short ?? "Статьи"} · {featured.readingMins} мин
+            <div className="post-body">
+              <div className="post-meta">
+                <b>{CLUSTER_BY_KEY[featured.cluster]?.short ?? "Статьи"}</b> · {featured.readingMins} мин
               </div>
-              <h2 className="text-2xl font-bold leading-snug group-hover:text-primary transition">{featured.title}</h2>
-              <p className="mt-3 text-muted-foreground">{featured.description}</p>
-              <span className="mt-4 text-sm font-medium text-primary">Читать →</span>
+              <h2>{featured.title}</h2>
+              <p className="post-desc">{featured.description}</p>
+              <span className="post-more">Читать →</span>
             </div>
           </a>
         )}
 
-        {/* Счётчик + страница */}
         {total > 0 && (
-          <div className="flex items-center justify-between mb-4 text-sm text-muted-foreground">
-            <span>
-              {active ? `${total} ст.` : `${total} статей`} в разделе
-            </span>
+          <div className="blog-count">
+            <span>{active ? `${total} ст.` : `${total} статей`} в разделе</span>
             {totalPages > 1 && <span>Страница {page} из {totalPages}</span>}
           </div>
         )}
 
-        {/* Сетка */}
         {posts.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {posts.map((p, i) => <ArticleCard key={p.slug} post={p} delay={(i % 3) * 70} />)}
@@ -118,7 +91,7 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
         )}
 
         <Pagination page={page} totalPages={totalPages} basePath={basePath} />
-      </div>
+      </main>
       <Footer />
     </div>
   );

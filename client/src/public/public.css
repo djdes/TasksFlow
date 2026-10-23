@@ -27,29 +27,7 @@
   }
 }
 
-/* ---------- Аврора / орбы ---------- */
-.aurora {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -10;
-}
-/* База: орб всегда абсолютный (нужен ближайший positioned-предок).
-   Используется и внутри .aurora, и отдельными бликами в карточках/CTA. */
-.orb {
-  position: absolute;
-  border-radius: 9999px;
-}
-.aurora .orb {
-  filter: blur(72px);
-  opacity: 0.5;
-}
-.dark .aurora .orb {
-  opacity: 0.32;
-  filter: blur(86px);
-}
-
+/* ---------- Плавание орбов hero ---------- */
 @keyframes orbFloatA {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50%      { transform: translate3d(0, -28px, 0) scale(1.07); }
@@ -57,51 +35,6 @@
 @keyframes orbFloatB {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50%      { transform: translate3d(22px, 20px, 0) scale(1.1); }
-}
-@keyframes orbFloatC {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%      { transform: translate3d(-20px, 16px, 0) scale(1.05); }
-}
-.orb-a { animation: orbFloatA 15s ease-in-out infinite; }
-.orb-b { animation: orbFloatB 19s ease-in-out infinite; }
-.orb-c { animation: orbFloatC 23s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .orb-a, .orb-b, .orb-c { animation: none; }
-}
-
-/* ---------- Сетка и точки (паттерны фона) ---------- */
-.bg-grid {
-  background-image:
-    linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
-  background-size: 46px 46px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 78%);
-          mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 78%);
-}
-.bg-dots {
-  background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-/* ---------- Градиентный текст ---------- */
-.text-gradient {
-  background: linear-gradient(95deg, hsl(var(--primary)) 0%, #8b5cf6 50%, #6366f1 100%);
-  -webkit-background-clip: text;
-          background-clip: text;
-  color: transparent;
-}
-
-/* ---------- Карточки: всплытие + мягкая рамка-свечение ---------- */
-.hover-lift {
-  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px -18px hsl(var(--primary) / 0.45);
-  border-color: hsl(var(--primary) / 0.4);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hover-lift:hover { transform: none; }
 }
 
 /* ---------- Shine на кнопках/CTA ---------- */
@@ -134,57 +67,6 @@
 #public-root h3 {
   font-family: var(--tf-display);
   letter-spacing: -0.022em;
-}
-
-/* ---------- Плавающие частицы фона ---------- */
-.particles {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -5;
-}
-.particle {
-  position: absolute;
-  border-radius: 9999px;
-  background: hsl(var(--primary) / 0.6);
-  box-shadow: 0 0 18px hsl(var(--primary) / 0.55);
-  opacity: 0.6;
-  animation-name: drift;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
-.dark .particle { opacity: 0.85; }
-.particle.p-violet { background: rgba(139, 92, 246, 0.65); box-shadow: 0 0 18px rgba(139, 92, 246, 0.5); }
-.particle.p-cyan { background: rgba(34, 211, 238, 0.6); box-shadow: 0 0 18px rgba(34, 211, 238, 0.5); }
-.particle.p-ring {
-  background: transparent;
-  border: 2px solid hsl(var(--primary) / 0.45);
-  box-shadow: none;
-}
-
-@keyframes drift {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  25% { transform: translate3d(8px, -16px, 0); }
-  50% { transform: translate3d(-6px, -8px, 0); }
-  75% { transform: translate3d(5px, -20px, 0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .particle { animation: none !important; }
-}
-
-/* ---------- Анимированный градиентный текст (мягкое мерцание) ---------- */
-.text-gradient {
-  background-size: 220% auto;
-  animation: gradientShift 7s ease infinite;
-}
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .text-gradient { animation: none; }
 }
 
 /* ---------- Плавный скролл к якорям (только публичная часть) ----------
@@ -1183,9 +1065,9 @@ html[data-motion="reduced"] .marquee { -webkit-mask-image: none; mask-image: non
 .tf-prose hr { margin: 2em 0; border: 0; border-top: 1px solid hsl(var(--border)); }
 
 /* ---------- Юридические документы ---------- */
-.legal-grid { display: grid; gap: 48px; }
+.read-grid { display: grid; gap: 48px; }
 @media (min-width: 1024px) {
-  .legal-grid { grid-template-columns: minmax(0, 46rem) 15rem; justify-content: center; gap: 64px; }
+  .read-grid { grid-template-columns: minmax(0, 46rem) 15rem; justify-content: center; gap: 64px; }
 }
 .legal-tabs { display: inline-flex; max-width: 100%; gap: 4px; margin-bottom: 28px; padding: 4px; overflow-x: auto; border-radius: 14px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
 .legal-tab { flex-shrink: 0; padding: 7px 14px; border-radius: 10px; color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 600; transition: background-color 0.2s, color 0.2s; }
@@ -1259,3 +1141,62 @@ html[data-motion="reduced"] .cookie-bar[data-tucked="true"] { transition: none; 
 @media (prefers-reduced-motion: reduce) {
   .cookie-bar, .cookie-bar[data-tucked="true"] { transition: none; }
 }
+
+/* ---------- Блог: шапка, разделы, карточки ---------- */
+.blog-head { margin: 22px 0 26px; }
+.blog-head .lp-lead { max-width: 40rem; }
+#public-root .blog-title { font-family: var(--tf-display); font-size: clamp(2rem, 1.4rem + 2vw, 2.9rem); font-weight: 800; line-height: 1.08; letter-spacing: -0.035em; text-wrap: balance; }
+.blog-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.blog-chip { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 600; transition: color 0.2s, border-color 0.2s, background-color 0.2s; }
+.blog-chip:hover { color: hsl(var(--foreground)); border-color: hsl(var(--primary) / 0.35); }
+.blog-chip[aria-current="page"] { border-color: transparent; background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); }
+.blog-chip span { font-size: 12px; opacity: 0.6; }
+.blog-chip:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.blog-count { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; color: hsl(var(--muted-foreground)); font-size: 13.5px; }
+
+.post-card { display: flex; flex-direction: column; height: 100%; overflow: hidden; border-radius: 22px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+.post-card, .post-featured { transition: border-color 0.25s, box-shadow 0.25s; }
+.reveal-ready [data-reveal].post-card, .reveal-ready [data-reveal].post-featured {
+  transition: opacity 0.7s var(--tf-ease), transform 0.8s var(--tf-ease), border-color 0.25s, box-shadow 0.25s;
+}
+.post-card:hover { border-color: hsl(var(--primary) / 0.35); box-shadow: 0 24px 48px -30px hsl(var(--primary) / 0.55); }
+.post-card:focus-visible, .post-featured:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; }
+/* Обложки — SVG 1200×630 (server/og-cover.ts): родная пропорция, без обрезки текста. */
+.post-cover { overflow: hidden; aspect-ratio: 40 / 21; }
+.post-cover > div { width: 100%; height: 100%; transition: transform 0.5s var(--tf-ease); }
+.post-card:hover .post-cover > div, .post-featured:hover .post-cover > div { transform: scale(1.03); }
+html[data-motion="reduced"] .post-card:hover .post-cover > div,
+html[data-motion="reduced"] .post-featured:hover .post-cover > div { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .post-card:hover .post-cover > div, .post-featured:hover .post-cover > div { transform: none; }
+}
+.post-body { display: flex; flex: 1; flex-direction: column; gap: 8px; padding: 18px 20px 20px; }
+.post-meta { color: hsl(var(--muted-foreground)); font-size: 12.5px; font-weight: 600; }
+.post-meta b { color: hsl(var(--primary)); font-weight: 700; }
+#public-root .post-title { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: hsl(var(--foreground)); font-family: var(--tf-display); font-size: 1.0625rem; font-weight: 700; line-height: 1.35; letter-spacing: -0.015em; }
+.post-desc { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.55; }
+.post-featured { display: grid; overflow: hidden; margin-bottom: 36px; border-radius: 26px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+.post-featured:hover { border-color: hsl(var(--primary) / 0.35); box-shadow: 0 30px 60px -36px hsl(var(--primary) / 0.6); }
+.post-featured .post-body { justify-content: center; gap: 10px; padding: 24px; }
+#public-root .post-featured h2 { color: hsl(var(--foreground)); font-family: var(--tf-display); font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.75rem); font-weight: 800; line-height: 1.2; letter-spacing: -0.025em; }
+.post-more { margin-top: 4px; color: hsl(var(--primary)); font-size: 14px; font-weight: 700; }
+@media (min-width: 768px) {
+  .post-featured { grid-template-columns: 1.1fr 1fr; }
+  .post-featured .post-cover { aspect-ratio: auto; min-height: 100%; }
+  .post-featured .post-body { padding: 28px 32px; }
+}
+
+/* ---------- Статья ---------- */
+.article-head { margin: 18px 0 28px; }
+.article-eyebrow { color: hsl(var(--muted-foreground)); font-size: 13.5px; font-weight: 600; }
+.article-eyebrow a { color: hsl(var(--primary)); }
+.article-eyebrow a:hover { text-decoration: underline; text-underline-offset: 3px; }
+#public-root .article-title { margin-top: 10px; font-family: var(--tf-display); font-size: clamp(1.9rem, 1.35rem + 2vw, 2.75rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
+.article-lead { margin-top: 14px; color: hsl(var(--muted-foreground)); font-size: 1.1875rem; line-height: 1.6; }
+.article-faq { margin-top: 48px; }
+.article-related { margin-top: 64px; }
+#public-root .article-faq h2, #public-root .article-related h2 { margin-bottom: 18px; font-family: var(--tf-display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; }
+.article-cta { margin-top: 48px; padding: 24px; border-radius: 26px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--tf-shadow-lg); }
+#public-root .article-cta h2 { font-family: var(--tf-display); font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em; }
+.article-cta p { margin: 6px 0 18px; color: hsl(var(--muted-foreground)); }
+@media (min-width: 640px) { .article-cta { padding: 28px; } }
