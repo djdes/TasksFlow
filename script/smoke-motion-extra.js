@@ -25,7 +25,14 @@ async (page) => {
     await testPage.goto(base+'/dashboard', { waitUntil: 'commit' });
     await testPage.locator('.boot-shell').waitFor();
     check(await testPage.locator('.boot-stat').count() === 2, 'Cold boot reserves the wrong stats layout');
-    await testPage.screenshot({ path: 'output/playwright/mobile-cold-start.png' });
+    // Пока JS заблокирован, document.fonts.ready не резолвится, а page.screenshot
+    // ждёт шрифты без конца. CDP снимает кадр сразу, без этого ожидания.
+    const cdpShot = await testPage.context().newCDPSession(testPage);
+    const { data: coldPng } = await cdpShot.send('Page.captureScreenshot', { format: 'png' });
+    await cdpShot.detach();
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir('output/playwright', { recursive: true });
+    await writeFile('output/playwright/mobile-cold-start.png', Buffer.from(coldPng, 'base64'));
     release();
     await testPage.getByRole('heading', { name: 'Задачи', exact: true }).waitFor();
     const dialog = testPage.getByRole('dialog');

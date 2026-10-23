@@ -4,6 +4,9 @@ import { matchRoute } from "./router";
 import "../index.css";
 import "./public.css";
 import "../motion.css";
+import { installErrorReporting } from "../lib/error-reporting";
+
+installErrorReporting();
 
 // Сообщаем inline-скрипту, что ревил активен (он не снимет reveal-ready).
 (window as any).__revealActive = true;

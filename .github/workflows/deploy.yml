@@ -22,7 +22,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    # Красный main не уезжает в прод: те же проверки, что и в CI, до SSH.
+    # UI smoke гоняет ci.yml на PR и рабочих ветках — здесь он затянул бы деплой.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -88,7 +115,8 @@ jobs:
             # fetch + reset --hard origin/main: гарантированно ровно
             # то, что в репо. Если что-то отброшено — видно в логе.
             git fetch origin main
-            DIRTY="$(git status --short)"
+            # .build-sha пишет сам деплой (см. ниже) — это не ручная правка.
+            DIRTY="$(git status --short -- . ':(exclude).build-sha')"
             if [ -n "$DIRTY" ]; then
               echo "WARNING: discarding local changes before reset:"
               echo "$DIRTY"
@@ -175,18 +203,98 @@ jobs:
             # остаётся на старом коде.
             npm run add-pin-cols
 
-            echo ">>> build"
-            npm run build
-
-            echo ">>> reload app"
-            if pm2 describe tasksflow > /dev/null 2>&1; then
-              pm2 reload tasksflow --update-env || pm2 restart tasksflow --update-env
-            else
-              pm2 start dist/index.cjs --name tasksflow --cwd "$DEPLOY_PATH"
-              pm2 save
+            echo ">>> build (в dist.next, рабочий dist не трогаем)"
+            # Раньше npm run build первым делом удалял dist: на время сборки
+            # работающий процесс оставался без статики и шаблона SSR, а упавшая
+            # сборка плюс любой рестарт (watchdog, ребут) давали простой. Теперь
+            # сборка идёт в соседнюю папку, dist подменяется переименованием
+            # только после успеха, а прежняя сборка остаётся для отката.
+            NEXT_DIR="$DEPLOY_PATH/dist.next"
+            PREV_DIR="$HOME/.tasksflow-deploy/dist.prev"
+            rm -rf "$NEXT_DIR"
+            if ! BUILD_OUT_DIR="$NEXT_DIR" npm run build; then
+              rm -rf "$NEXT_DIR"
+              echo "FATAL: сборка упала — прод остаётся на прежней сборке"
+              exit 1
             fi
 
+            # /api/health отдаёт содержимое .build-sha — по нему проверяем,
+            # что после reload отвечает именно новая сборка.
+            NEW_SHA="$(git rev-parse --short=12 HEAD)"
+            OLD_SHA="$(cat .build-sha 2>/dev/null || true)"
+            mkdir -p "$(dirname "$PREV_DIR")"
+            rm -rf "$PREV_DIR"
+            if [ -d dist ]; then mv dist "$PREV_DIR"; fi
+            mv "$NEXT_DIR" dist
+            echo "$NEW_SHA" > .build-sha
+
+            reload_app() {
+              if pm2 describe tasksflow > /dev/null 2>&1; then
+                pm2 reload tasksflow --update-env || pm2 restart tasksflow --update-env
+              else
+                pm2 start dist/index.cjs --name tasksflow --cwd "$DEPLOY_PATH"
+                pm2 save
+              fi
+            }
+
+            # Порт как у самого приложения: env процесса PM2 → .env → 5000.
+            app_port() {
+              local port=""
+              # pm2 иногда печатает предупреждение перед JSON — режем до первого «[».
+              port="$(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",(d)=>{s+=d}).on("end",()=>{try{const i=s.indexOf("[");const p=JSON.parse(i>=0?s.slice(i):s).find((x)=>x.name==="tasksflow");const e=(p&&p.pm2_env)||{};process.stdout.write(String((e.env&&e.env.PORT)||e.PORT||""))}catch(_){}})' 2>/dev/null || true)"
+              if [ -z "$port" ] && [ -f .env ]; then
+                port="$(grep -E '^PORT=' .env | tail -n 1 | cut -d= -f2- | tr -d "\"' \r" || true)"
+              fi
+              echo "${port:-5000}"
+            }
+
+            # Живой = /api/health отвечает и отдаёт buildSha ожидаемой сборки.
+            # 503 при недоступной БД — тоже живой процесс: откат кода БД не
+            # починит, поэтому только предупреждаем. Ждём до ~90 с: сервер
+            # начинает слушать порт только после старта Telegram-бота, а getMe
+            # с РФ-хостинга бывает долгим — ложный откат хуже медленной проверки.
+            wait_healthy() {
+              local expected="$1" port body code
+              port="$(app_port)"
+              body="$(mktemp)"
+              for _ in $(seq 1 45); do
+                code="$(curl -sS -o "$body" -w '%{http_code}' --max-time 3 "http://127.0.0.1:${port}/api/health" 2>/dev/null || true)"
+                if grep -q "\"buildSha\":\"${expected}\"" "$body" 2>/dev/null; then
+                  rm -f "$body"
+                  [ "$code" = "200" ] || echo "WARNING: /api/health ответил ${code} (БД?), но процесс уже на сборке ${expected}"
+                  return 0
+                fi
+                sleep 2
+              done
+              rm -f "$body"
+              return 1
+            }
+
+            echo ">>> reload app"
+            reload_app
             pm2 status
+
+            echo ">>> health-check (порт $(app_port))"
+            if wait_healthy "$NEW_SHA"; then
+              echo ">>> прод на сборке $NEW_SHA"
+            else
+              echo "ERROR: сборка $NEW_SHA не ответила на /api/health за ~90 с — откат"
+              if [ -d "$PREV_DIR" ]; then
+                rm -rf dist
+                mv "$PREV_DIR" dist
+                if [ -n "$OLD_SHA" ]; then echo "$OLD_SHA" > .build-sha; else rm -f .build-sha; fi
+                reload_app
+                if [ -n "$OLD_SHA" ] && wait_healthy "$OLD_SHA"; then
+                  echo ">>> откат выполнен: прод на прежней сборке $OLD_SHA"
+                else
+                  echo ">>> откат выполнен, но прежняя сборка не подтвердила здоровье — смотрите pm2 logs"
+                fi
+              else
+                echo "Предыдущей сборки нет — откатывать нечего, смотрите pm2 logs"
+              fi
+              pm2 status
+              exit 1
+            fi
 
             echo ">>> ensure autostart cron"
             # У PM2 на этом сервере нет systemd-юнита: `pm2 startup` требует
@@ -199,7 +307,9 @@ jobs:
             WD="$DEPLOY_PATH/script/pm2-watchdog.sh"
             chmod +x "$WD"
             {
-              crontab -l 2>/dev/null | grep -v 'pm2-watchdog.sh'
+              # || true: при pipefail пустой crontab (или только строки
+              # watchdog) давал grep -v код 1 и валил весь деплой.
+              crontab -l 2>/dev/null | grep -v 'pm2-watchdog.sh' || true
               echo "@reboot sleep 20 && /bin/sh $WD"
               echo "*/5 * * * * /bin/sh $WD"
             } | crontab -

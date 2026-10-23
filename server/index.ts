@@ -12,6 +12,7 @@ import { logger, httpLogger } from "./logger";
 import { db } from "./db";
 import { processPendingDeliveries } from "./webhook-queue";
 import { runSchemaSelfCheck } from "./schema-self-check";
+import { registerClientErrorRoutes } from "./client-errors";
 
 const app = express();
 const httpServer = createServer(app);
@@ -73,6 +74,10 @@ app.use((_req, res, next) => {
   }
   next();
 });
+
+// Отчёты об ошибках браузера — до сессий и общего JSON-парсера: свой лимит
+// тела и rate-limit, сессия не нужна (см. server/client-errors.ts).
+registerClientErrorRoutes(app);
 
 // Настройка сессий.
 //
