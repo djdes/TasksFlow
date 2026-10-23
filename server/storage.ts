@@ -41,6 +41,7 @@ type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
   wesetupBaseUrl?: string | null;
   wesetupApiKey?: string | null;
+  timezone?: string;
 };
 
 /** Интерфейс хранилища данных */
@@ -124,6 +125,7 @@ export interface IStorage {
 
   // Tasks
   getTasks(companyId?: number): Promise<Task[]>;
+  getRecurringTasks(companyId: number | null): Promise<Task[]>;
   getTask(id: number): Promise<Task | undefined>;
   createTask(task: InsertTask & { companyId?: number }): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
@@ -784,6 +786,20 @@ export class DatabaseStorage implements IStorage {
 
     // Парсим weekDays, photoUrls, checklist и examplePhotoUrls из JSON
     return result.map((task) => DatabaseStorage.parseTaskRow(task));
+  }
+
+  /** Повторяющиеся задачи компании для ночного сброса; null — задачи без компании. */
+  async getRecurringTasks(companyId: number | null): Promise<Task[]> {
+    const rows = await db
+      .select(DatabaseStorage.TASK_SELECT)
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.isRecurring, true),
+          companyId === null ? isNull(tasks.companyId) : eq(tasks.companyId, companyId),
+        ),
+      );
+    return rows.map((task) => DatabaseStorage.parseTaskRow(task));
   }
 
   async getTask(id: number): Promise<Task | undefined> {

@@ -32,6 +32,8 @@ import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./a
 import { resolveUploadAbs } from "./uploads-paths";
 import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec } from "./pin-auth";
 import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
+import { isValidTimeZone } from "@shared/day";
+import { registerHistoryRoutes } from "./history-routes";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -995,7 +997,13 @@ export async function registerRoutes(
       const wesetupConfigured = !!(
         company?.wesetupBaseUrl?.trim() && company?.wesetupApiKey?.trim()
       );
-      res.json(company ? { ...company, wesetupConfigured } : null);
+      if (!company) return res.json(null);
+      // Ключ интеграции WeSetup видит только админ (он его и вводит в
+      // настройках). Раньше его получал любой сотрудник компании.
+      const viewer = req.apiKey ? null : await storage.getUserById(req.session.userId!);
+      const { lastResetDay: _lastResetDay, ...publicCompany } = company;
+      if (viewer && !viewer.isAdmin) publicCompany.wesetupApiKey = null;
+      res.json({ ...publicCompany, wesetupConfigured });
     } catch (err: any) {
       console.error('Error fetching company:', err);
       res.status(500).json({ message: 'Ошибка' });
@@ -1052,6 +1060,11 @@ export async function registerRoutes(
           .transform((value) =>
             value === undefined ? undefined : value ? value : null
           ),
+        // Пояс компании: по нему полночный сброс задач и дни в отчётах.
+        timezone: z
+          .string()
+          .optional()
+          .refine((value) => value === undefined || isValidTimeZone(value), "Неизвестный часовой пояс"),
       });
 
       const parsed = updateCompanySchema.safeParse(req.body);
@@ -1063,18 +1076,20 @@ export async function registerRoutes(
         });
       }
 
-      const { name, email, wesetupBaseUrl, wesetupApiKey } = parsed.data;
+      const { name, email, wesetupBaseUrl, wesetupApiKey, timezone } = parsed.data;
       const updateData: {
         name: string;
         email: string | null;
         wesetupBaseUrl?: string | null;
         wesetupApiKey?: string | null;
+        timezone?: string;
       } = {
         name,
         email,
       };
       if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
       if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
+      if (timezone !== undefined) updateData.timezone = timezone;
 
       const company = await storage.updateCompany(user.companyId, updateData);
 
@@ -4404,6 +4419,9 @@ export async function registerRoutes(
       }
     },
   );
+
+  // История выполнения и отчёты (server/history-routes.ts).
+  registerHistoryRoutes(app, { requireAuthOrApiKey, getCompanyIdFromReq });
 
   return httpServer;
 }

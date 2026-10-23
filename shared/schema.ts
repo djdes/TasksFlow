@@ -15,6 +15,11 @@ export const companies = mysqlTable("companies", {
   // single-tenant setup).
   wesetupBaseUrl: varchar("wesetup_base_url", { length: 255 }),
   wesetupApiKey: varchar("wesetup_api_key", { length: 255 }),
+  // IANA-пояс: по нему в местную полночь сбрасываются повторяющиеся задачи
+  // и считаются дни в истории и отчётах (см. shared/day.ts).
+  timezone: varchar("timezone", { length: 64 }).notNull().default("Europe/Moscow"),
+  // Последний местный день (YYYY-MM-DD), с которого задачи уже сброшены.
+  lastResetDay: varchar("last_reset_day", { length: 10 }),
 });
 
 export const users = mysqlTable("users", {
@@ -633,6 +638,43 @@ export const auditLog = mysqlTable("audit_log", {
   // Unix sec момента события.
   createdAt: int("created_at").notNull().default(0),
 });
+
+/**
+ * История повторяющихся задач — по строке на задачу и день. Раньше ночной
+ * сброс стирал фото и сам факт выполнения. Теперь перед сбросом выполненная
+ * задача переносится сюда снимком (фото, чек-лист, проверка), а не
+ * выполненная по расписанию — строкой missed. Файлы фото не удаляются
+ * (кроме PHOTO_RETENTION_DAYS, если он задан).
+ *
+ * Уникальность (task_id, day) и индексы создаёт script/_add-task-history.ts.
+ */
+export const taskHistory = mysqlTable("task_history", {
+  id: int("id").primaryKey().autoincrement(),
+  taskId: int("task_id").notNull(),
+  companyId: int("company_id"),
+  workerId: int("worker_id"),
+  // Местный день компании, YYYY-MM-DD.
+  day: varchar("day", { length: 10 }).notNull(),
+  // done — сделал сам; claimed — сделал коллега (журнальная задача);
+  // missed — была в расписании, но не выполнена.
+  status: varchar("status", { length: 16 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  // Премия, начисленная за этот день (0 для claimed/missed).
+  price: int("price").notNull().default(0),
+  completedAt: int("completed_at"),
+  photoUrls: text("photo_urls"), // JSON string[]
+  checklist: text("checklist"), // JSON ChecklistItem[] — снимок с фото пунктов
+  claimedByWorkerId: int("claimed_by_worker_id"),
+  verificationStatus: varchar("verification_status", { length: 20 }),
+  verifiedByUserId: int("verified_by_user_id"),
+  verifiedAt: int("verified_at"),
+  createdAt: int("created_at").notNull().default(0),
+});
+
+export type TaskHistoryRow = typeof taskHistory.$inferSelect;
+export type InsertTaskHistory = typeof taskHistory.$inferInsert;
+export type TaskHistoryStatus = "done" | "claimed" | "missed";
 
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;

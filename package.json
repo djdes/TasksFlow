@@ -40,7 +40,8 @@
     "create-telegram-tables": "tsx script/_create-telegram-tables.ts",
     "add-tg-link-code-cols": "tsx script/_add-tg-link-code-cols.ts",
     "add-draft-autocreate-col": "tsx script/_add-draft-autocreate-col.ts",
-    "add-pin-cols": "tsx script/_add-pin-cols.ts"
+    "add-pin-cols": "tsx script/_add-pin-cols.ts",
+    "add-task-history": "tsx script/_add-task-history.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

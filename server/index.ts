@@ -575,6 +575,11 @@ process.on("unhandledRejection", (reason, promise) => {
     },
   );
 
+  // Ежедневный сброс повторяющихся задач в местную полночь компании,
+  // вчерашний день — в историю (server/services/daily-reset.ts).
+  const { startDailyResetScheduler } = await import("./daily-reset-scheduler");
+  startDailyResetScheduler();
+
   // Webhook delivery worker — каждые 30 секунд тянет до 50 pending
   // доставок чьё nextRetryAt уже наступило. Backoff и max attempts
   // живут в server/webhook-queue.ts.

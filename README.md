@@ -98,7 +98,7 @@ npm run check        # TypeScript проверка
 
 npm run setup-db     # Создание таблиц
 npm run create-admin # Создание админа
-npm run reset-tasks  # Сброс выполненных задач (для cron)
+npm run reset-tasks  # Ручной сброс задач (сервер и так сбрасывает в полночь компании)
 ```
 
 ## Production (PM2)
@@ -110,7 +110,8 @@ npm run build
 # Запуск через PM2
 pm2 start npm --name "tasksflow" -- start
 
-# Cron для сброса задач (каждый день в 00:00)
+# Сервер сам сбрасывает задачи в местную полночь компании (история сохраняется).
+# Cron — подстраховка для старых задач без компании:
 0 0 * * * cd /path/to/project && npm run reset-tasks
 ```
 
