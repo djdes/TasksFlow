@@ -14,6 +14,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/appName"
+        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
         android:supportsRtl="true"
         android:theme="@style/Theme.TasksFlow.Launcher">
 
@@ -91,6 +92,25 @@
                 <data
                     android:host="@string/hostName"
                     android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            «Данные сайта» в настройках приложения (очистить, разрешения) —
+            открывает их в Chrome. LauncherActivity включает этот компонент
+            при запуске: без объявления android-browser-helper 2.7 падает.
+        -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:enabled="true"
+            android:excludeFromRecents="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+                android:value="@string/launchUrl" />
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
