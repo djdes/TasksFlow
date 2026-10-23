@@ -22,6 +22,8 @@ const SESSIONS = [
   ['script/smoke-motion.js', 'script/smoke-motion-details.js', 'script/smoke-motion-extra.js'],
   // PIN-вход: свои контексты и фикстуры API, отдельная сессия.
   ['script/smoke-pin.js'],
+  // История и отчёты, расписание дня.
+  ['script/smoke-reports.js'],
 ];
 
 process.chdir(root);

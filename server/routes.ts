@@ -1046,12 +1046,13 @@ export async function registerRoutes(
 
       const updateCompanySchema = z.object({
         name: z.string().trim().min(1, "Название компании обязательно"),
+        // Не передан — не трогаем (раньше частичное сохранение стирало email).
         email: z
           .string()
           .trim()
           .optional()
           .nullable()
-          .transform((value) => (value ? value : null))
+          .transform((value) => (value === undefined ? undefined : value ? value : null))
           .refine(
             // Email: либо null/undefined, либо валидный формат.
             // Раньше принимали любой мусор → ломались уведомления о
@@ -1107,15 +1108,13 @@ export async function registerRoutes(
       const { name, email, wesetupBaseUrl, wesetupApiKey, timezone, notify } = parsed.data;
       const updateData: {
         name: string;
-        email: string | null;
+        email?: string | null;
         wesetupBaseUrl?: string | null;
         wesetupApiKey?: string | null;
         timezone?: string;
         notifySettings?: string;
-      } = {
-        name,
-        email,
-      };
+      } = { name };
+      if (email !== undefined) updateData.email = email;
       if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
       if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
       if (timezone !== undefined) updateData.timezone = timezone;

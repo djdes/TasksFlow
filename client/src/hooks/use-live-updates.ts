@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
+import { HISTORY_KEY, SUMMARY_KEY } from "@/lib/reports-api";
 
 /**
  * Живые обновления: сервер шлёт «tasks», когда кто-то в компании закрыл,
@@ -23,6 +24,8 @@ export function useLiveUpdates(enabled: boolean): void {
         void queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
         void queryClient.invalidateQueries({ queryKey: ["awaiting-verification"] });
         void queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+        void queryClient.invalidateQueries({ queryKey: [HISTORY_KEY] });
+        void queryClient.invalidateQueries({ queryKey: [SUMMARY_KEY] });
       }, REFRESH_DELAY_MS);
     };
     source.addEventListener("tasks", refresh);

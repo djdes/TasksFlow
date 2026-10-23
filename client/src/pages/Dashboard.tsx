@@ -79,6 +79,7 @@ import {
   Palette,
   QrCode,
   UserCog,
+  BarChart3,
   Gift,
   CalendarCheck,
   MessageCircle,
@@ -815,6 +816,20 @@ export default function Dashboard() {
             >
               <UserCog className="w-5 h-5 text-primary" />
               <span className="font-medium">Мой аккаунт</span>
+            </button>
+            {/* История — всем: сотрудник видит свои дни и премии, руководитель
+                и админ — журнал смены с фото и сводку по людям. */}
+            <button
+              type="button"
+              className="dropdown-item w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setLocation("/reports");
+              }}
+              data-testid="menu-reports"
+            >
+              <BarChart3 className="w-5 h-5 text-primary" />
+              <span className="font-medium">{user.isAdmin ? "История и отчёты" : "История"}</span>
             </button>
             {/* «Сотрудники» и «Настройки компании» — только админ.
                 Руководителю эти страницы не нужны: списком своих
