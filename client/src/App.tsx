@@ -1,7 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -45,7 +45,11 @@ const Account = lazy(() => import("@/pages/Account"));
 
 function SessionReady({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isError, retry } = useAuth();
-  if (isError && !user) return <div className="page-container py-12"><QueryError onRetry={retry} message="Не удалось связаться с сервером. Повторите загрузку." /></div>;
+  // Ошибка на весь экран — только если сессию ещё ни разу не получили.
+  // Сбой фонового перезапроса (возврат во вкладку, деплой с 502) не
+  // должен размонтировать открытую форму вместе с введённым телефоном.
+  const sessionLoadedOnce = (useQueryClient().getQueryState(["auth", "me"])?.dataUpdatedAt ?? 0) > 0;
+  if (isError && !user && !sessionLoadedOnce) return <div className="page-container py-12"><QueryError onRetry={retry} message="Не удалось связаться с сервером. Повторите загрузку." /></div>;
   return isLoading ? <PageSkeleton /> : children;
 }
 
