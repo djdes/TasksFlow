@@ -131,6 +131,7 @@ pm2 start npm --name "tasksflow" -- start
 - [CLAUDE.md](./CLAUDE.md) - Подробная документация для разработчиков
 - [API.md](./API.md) - Примеры API запросов
 - [DEPLOY.md](./DEPLOY.md) - Инструкция по деплою
+- [docs/mobile.md](./docs/mobile.md) - Приложения для Android и iPhone, push-уведомления, публикация в магазинах
 
 ## Tech Stack
 
