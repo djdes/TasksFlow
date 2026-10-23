@@ -3,7 +3,7 @@ import { dayInZone, daysBetween, isDay, shiftDay, zoneOrDefault } from "@shared/
 import { DatabaseStorage, storage } from "./storage";
 import { listHistory } from "./task-history-store";
 import type { HistoryItem } from "@shared/history";
-import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems } from "./history-report";
+import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems } from "@shared/history-report";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 
 /**

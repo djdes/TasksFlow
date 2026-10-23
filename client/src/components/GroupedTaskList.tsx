@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { Task } from "@shared/schema";
 import {
+  activeTaskDate,
   groupTasksByDate,
   type DayGroup,
   type YearGroup,
@@ -158,7 +159,7 @@ export function GroupedTaskList(props: Props) {
   const shortName = getUserShortName ?? getUserName;
 
   const activeGroups = useMemo(
-    () => groupTasksByDate(activeTasks, "createdAt"),
+    () => groupTasksByDate(activeTasks, "createdAt", undefined, activeTaskDate()),
     [activeTasks]
   );
   const completedGroups = useMemo(
@@ -631,7 +632,7 @@ export function GroupedTaskList(props: Props) {
       key: String(key),
       workerId: key === "unassigned" ? null : (key as number),
       tasks: list,
-      groups: groupTasksByDate(list, "createdAt"),
+      groups: groupTasksByDate(list, "createdAt", undefined, activeTaskDate()),
     }));
     sections.sort((a, b) => {
       // unassigned всегда сверху — это «надо назначить»
@@ -670,18 +671,18 @@ export function GroupedTaskList(props: Props) {
   function renderActiveTasks(tasksSubset: Task[]) {
     if (tasksSubset.length === 0) return null;
     if (!isVerifyTask) {
-      const groups = groupTasksByDate(tasksSubset, "createdAt");
+      const groups = groupTasksByDate(tasksSubset, "createdAt", undefined, activeTaskDate());
       return <>{groups.map((g) => renderYearGroup(g))}</>;
     }
     const todoTasks = tasksSubset.filter((t) => !isVerifyTask(t));
     const verifyTasks = tasksSubset.filter((t) => isVerifyTask(t));
     // Если в подмножестве только один тип — split не нужен.
     if (todoTasks.length === 0 || verifyTasks.length === 0) {
-      const groups = groupTasksByDate(tasksSubset, "createdAt");
+      const groups = groupTasksByDate(tasksSubset, "createdAt", undefined, activeTaskDate());
       return <>{groups.map((g) => renderYearGroup(g))}</>;
     }
-    const todoGroups = groupTasksByDate(todoTasks, "createdAt");
-    const verifyGroups = groupTasksByDate(verifyTasks, "createdAt");
+    const todoGroups = groupTasksByDate(todoTasks, "createdAt", undefined, activeTaskDate());
+    const verifyGroups = groupTasksByDate(verifyTasks, "createdAt", undefined, activeTaskDate());
     return (
       <div className="space-y-4">
         <div>

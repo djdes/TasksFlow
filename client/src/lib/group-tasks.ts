@@ -93,7 +93,9 @@ function formatDayLabel(d: Date, now: Date): string {
 export function groupTasksByDate(
   tasks: Task[],
   timestampField: "createdAt" | "completedAt",
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** Своя дата группировки задачи (unix sec); по умолчанию — timestampField. */
+  timestampFor?: (task: Task) => number | null | undefined,
 ): YearGroup[] {
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth();
@@ -108,7 +110,7 @@ export function groupTasksByDate(
   const yearMonthDayIndex = new Map<string, Map<string, string[]>>();
 
   for (const task of tasks) {
-    const primary = task[timestampField] as number | null | undefined;
+    const primary = timestampFor ? timestampFor(task) : (task[timestampField] as number | null | undefined);
     const fallback = task.createdAt;
     const ts =
       typeof primary === "number" && primary > 0
@@ -232,3 +234,13 @@ export function groupTasksByDate(
   return years;
 }
 
+
+/**
+ * Дата группировки активной задачи: повторяющаяся — это работа на сегодня
+ * (иначе ежедневная задача, созданная в сентябре, вечно висела бы под
+ * «Сентябрь → 12 сентября»), разовая — по дате создания.
+ */
+export function activeTaskDate(now: Date = new Date()): (task: Task) => number | null | undefined {
+  const nowSec = Math.floor(now.getTime() / 1000);
+  return (task) => (task.isRecurring ? nowSec : task.createdAt);
+}

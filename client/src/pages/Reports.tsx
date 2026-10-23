@@ -24,6 +24,7 @@ import { QueryError } from "@/components/QueryError";
 import { PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { DayBars } from "@/components/reports/DayBars";
 import { useLocations } from "@/hooks/use-locations";
+import { isDemo } from "@/demo/demo-mode";
 
 /**
  * «История и отчёты». Журнал дня — кто что сделал, с фото; сводка — по
@@ -394,7 +395,25 @@ function SummaryTab({
           ))}
         </div>
         {range && (
-          <a className="reports-csv" href={csvUrl(range, workerId, locationId)} download>
+          <a
+            className="reports-csv"
+            href={csvUrl(range, workerId, locationId)}
+            download
+            onClick={(e) => {
+              // В демо API живёт в браузере: ссылка ушла бы на сервер.
+              if (!isDemo()) return;
+              e.preventDefault();
+              void fetch(e.currentTarget.href)
+                .then((r) => r.blob())
+                .then((blob) => {
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `tasksflow-demo-${range.from}_${range.to}.csv`;
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                });
+            }}
+          >
             <Download className="w-4 h-4" aria-hidden="true" />
             Excel (CSV)
           </a>

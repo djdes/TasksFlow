@@ -28,6 +28,8 @@ const SESSIONS = [
   ['script/smoke-photo.js'],
   // Точки, тарифы, root «Компании».
   ['script/smoke-company.js'],
+  // Демо-кабинет без сервера.
+  ['script/smoke-demo.js'],
 ];
 
 process.chdir(root);

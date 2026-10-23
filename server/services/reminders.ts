@@ -22,7 +22,7 @@ import {
   type NotifySlot,
 } from "@shared/notify";
 import type { HistoryItem } from "@shared/history";
-import { todayItems } from "../history-report";
+import { todayItems } from "@shared/history-report";
 import { DatabaseStorage } from "../storage";
 
 const LATE_WINDOW_MIN = 180;

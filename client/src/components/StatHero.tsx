@@ -268,7 +268,7 @@ export function StatHero({
   return (
     <section className="shift-summary" aria-label="Сводка задач">
     <div className="shift-summary-top">
-      <span className="shift-eyebrow"><CalendarDays className="w-4 h-4" aria-hidden="true" />{dateLabel}</span>
+      <span className="shift-eyebrow"><CalendarDays className="w-4 h-4" aria-hidden="true" /><span className="shift-eyebrow-text">{dateLabel}</span></span>
       <span className={`shift-percent ${percent >= 100 ? "shift-percent--done" : ""}`}>
         {percent >= 100 ? "Смена закрыта" : `${percent}% выполнено`}
       </span>

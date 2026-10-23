@@ -4,10 +4,10 @@
  * Прошлые дни читаются из task_history (её пишет ночной сброс), сегодняшний
  * — из живых задач: день ещё идёт, поэтому вместо «пропущено» там «ждёт».
  */
-import type { ChecklistItem, Task, TaskHistoryRow, User } from "@shared/schema";
-import type { DaySummary, HistoryItem, HistoryStatus, PersonSummary } from "@shared/history";
-import { dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "@shared/day";
-import { isTaskVisibleOn } from "@shared/task-visibility";
+import type { ChecklistItem, Task, TaskHistoryRow, User } from "./schema";
+import type { DaySummary, HistoryItem, HistoryStatus, PersonSummary } from "./history";
+import { dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "./day";
+import { isTaskVisibleOn } from "./task-visibility";
 
 function parseArray<T>(json: string | null): T[] {
   if (!json) return [];

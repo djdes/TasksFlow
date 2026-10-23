@@ -1,9 +1,24 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { installErrorReporting } from "./lib/error-reporting";
+import { enterDemo, isDemo } from "./demo/demo-mode";
 import "./index.css";
 import "./motion.css";
 import "./workspace.css";
 
-installErrorReporting();
-createRoot(document.getElementById("root")!).render(<App />);
+async function start() {
+  // /demo — кабинет без регистрации: API отвечает из памяти браузера.
+  if (window.location.pathname === "/demo") {
+    enterDemo();
+    window.history.replaceState(null, "", "/dashboard");
+  }
+  if (isDemo()) {
+    const { installDemoApi } = await import("./demo/demo-api");
+    installDemoApi();
+  } else {
+    installErrorReporting();
+  }
+  createRoot(document.getElementById("root")!).render(<App />);
+}
+
+void start();

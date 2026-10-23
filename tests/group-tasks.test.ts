@@ -214,3 +214,19 @@ describe("groupTasksByDate — totalTasks counts", () => {
     expect(sumMonths).toBe(3);
   });
 });
+
+describe("активные повторяющиеся задачи — работа на сегодня", () => {
+  it("ежедневная задача из сентября попадает в «Сегодня», разовая — в день создания", async () => {
+    const { activeTaskDate } = await import("../client/src/lib/group-tasks");
+    const now = new Date(2026, 9, 24, 12, 0);
+    const september = Math.floor(new Date(2026, 8, 12, 9, 0).getTime() / 1000);
+    const daily = { ...makeTask(1, september), isRecurring: true };
+    const oneOff = { ...makeTask(2, september), isRecurring: false };
+    const years = groupTasksByDate([daily, oneOff] as any, "createdAt", now, activeTaskDate(now));
+    const days = years.flatMap((y) => y.months.flatMap((m) => m.days));
+    const today = days.find((d) => d.isToday)!;
+    expect(today.dayLabel).toBe("Сегодня");
+    expect(today.tasks.map((t) => t.id)).toEqual([1]);
+    expect(days.find((d) => !d.isToday)!.tasks.map((t) => t.id)).toEqual([2]);
+  });
+});

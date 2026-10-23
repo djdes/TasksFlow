@@ -98,6 +98,10 @@ export function LandingPage({ data }: { data: LandingData | null }) {
                   <li key={t}><Check className="w-4 h-4" strokeWidth={3} />{t}</li>
                 ))}
               </ul>
+              {/* Демо-кабинет: живой кабинет без регистрации, данные в браузере. */}
+              <a href="/demo" className="hero-demo-link">
+                Или откройте демо-кабинет — без регистрации <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </a>
             </div>
           </div>
           <div data-reveal style={{ transitionDelay: "140ms" }} className="lg:pl-4">

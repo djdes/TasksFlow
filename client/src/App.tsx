@@ -11,6 +11,7 @@ import { QueryError } from "@/components/QueryError";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useLiveUpdates } from "@/hooks/use-live-updates";
+import { isDemo } from "@/demo/demo-mode";
 import { useToast } from "@/hooks/use-toast";
 import { flushUploads, useQueuedUploads } from "@/lib/upload-queue";
 import { sendQueued } from "@/lib/photo-upload";
@@ -49,11 +50,12 @@ const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const Account = lazy(() => import("@/pages/Account"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const RootCompanies = lazy(() => import("@/pages/RootCompanies"));
+const DemoBar = lazy(() => import("@/demo/DemoBar").then((m) => ({ default: m.DemoBar })));
 
-/** Пока человек в кабинете — живые обновления задач (SSE). */
+/** Пока человек в кабинете — живые обновления задач (SSE). В демо сервера нет. */
 function LiveUpdates() {
   const { user } = useAuth();
-  useLiveUpdates(!!user);
+  useLiveUpdates(!!user && !isDemo());
   return null;
 }
 
@@ -173,6 +175,11 @@ function App() {
             <AuthProvider>
               <TooltipProvider>
                 <Toaster />
+                {isDemo() && (
+                  <Suspense fallback={null}>
+                    <DemoBar />
+                  </Suspense>
+                )}
                 <LiveUpdates />
                 <UploadQueueRunner />
                 <Router />

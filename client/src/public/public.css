@@ -1200,3 +1200,11 @@ html[data-motion="reduced"] .post-featured:hover .post-cover > div { transform: 
 #public-root .article-cta h2 { font-family: var(--tf-display); font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em; }
 .article-cta p { margin: 6px 0 18px; color: hsl(var(--muted-foreground)); }
 @media (min-width: 640px) { .article-cta { padding: 28px; } }
+
+/* Ссылка на демо-кабинет под формой в hero */
+.hero-demo-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 14.5px; font-weight: 600; color: hsl(var(--primary)); text-underline-offset: 4px; }
+.hero-demo-link:hover { text-decoration: underline; }
+.hero-demo-link svg { transition: translate 150ms ease; }
+.hero-demo-link:hover svg { translate: 3px 0; }
+.hero-demo-link:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .hero-demo-link svg { transition: none; } }
