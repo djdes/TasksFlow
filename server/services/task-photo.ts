@@ -11,6 +11,7 @@
 
 import type { Task } from "@shared/schema";
 import { storage } from "../storage";
+import { publishToCompany } from "../live-events";
 import {
   actorUserId,
   TaskServiceError,
@@ -86,6 +87,7 @@ export async function attachTaskPhoto({
     throw new TaskServiceError(500, "Ошибка обновления задачи");
   }
 
+  publishToCompany(updatedTask.companyId, { type: "tasks", taskId });
   return {
     photoUrl,
     photoUrls: updatedTask.photoUrls || [],
@@ -132,5 +134,6 @@ export async function attachChecklistItemPhoto({
     throw new TaskServiceError(500, "Ошибка обновления задачи");
   }
 
+  publishToCompany(updatedTask.companyId, { type: "tasks", taskId });
   return { photoUrl, task: updatedTask };
 }

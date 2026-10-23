@@ -15,6 +15,7 @@
 
 import type { Task } from "@shared/schema";
 import { storage } from "../storage";
+import { publishToCompany } from "../live-events";
 import { sendTaskCompletedEmail } from "../mail";
 import { parseJournalLink } from "@shared/journal-link";
 import {
@@ -145,6 +146,7 @@ export async function completeTaskForActor({
     // нажмёт «Принять» в WeSetup (см. POST /verifier endpoint там),
     // — до approve журнальный entry в WeSetup НЕ помечается
     // выполненным.
+    publishToCompany(task.companyId, { type: "tasks", taskId });
     return { outcome: "submitted", task: updatedTask ?? task };
   }
 
@@ -241,5 +243,6 @@ export async function completeTaskForActor({
     },
   });
 
+  publishToCompany(task.companyId, { type: "tasks", taskId });
   return { outcome: "completed", task: updatedTask };
 }

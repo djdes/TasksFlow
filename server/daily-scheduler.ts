@@ -1,5 +1,6 @@
 import { dayInZone, DEFAULT_TIMEZONE } from "@shared/day";
 import { logger } from "./logger";
+import { publishToCompany } from "./live-events";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { runDueResets } from "./services/daily-reset";
 import { runReminders } from "./services/reminders";
@@ -25,7 +26,10 @@ export async function dailyTick(now: number = Math.floor(Date.now() / 1000)): Pr
     const done = await runDueResets(resetStore, now, {
       onError: (companyId, err) => logger.error({ err, companyId }, "[reset] сброс компании не прошёл, повторим"),
     });
-    for (const summary of done) logger.info(summary, "[reset] задачи сброшены, вчерашний день в истории");
+    for (const summary of done) {
+      logger.info(summary, "[reset] задачи сброшены, вчерашний день в истории");
+      publishToCompany(summary.companyId, { type: "tasks" });
+    }
 
     const { getTelegramRuntime } = await import("./telegram");
     const runtime = getTelegramRuntime();

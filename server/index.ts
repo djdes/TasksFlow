@@ -12,6 +12,7 @@ import { logger, httpLogger } from "./logger";
 import { db } from "./db";
 import { processPendingDeliveries } from "./webhook-queue";
 import { runSchemaSelfCheck } from "./schema-self-check";
+import { closeAllLiveStreams } from "./live-events";
 import { registerClientErrorRoutes } from "./client-errors";
 
 const app = express();
@@ -231,6 +232,9 @@ function gracefulShutdown(signal: string) {
   isShuttingDown = true;
 
   logger.info({ signal }, "Received shutdown signal, starting graceful shutdown...");
+
+  // Открытые SSE-потоки кабинета держали бы close() до таймаута.
+  closeAllLiveStreams();
 
   // Перестаем принимать новые соединения
   httpServer.close((err) => {

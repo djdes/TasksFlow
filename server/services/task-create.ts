@@ -8,6 +8,7 @@
 
 import type { InsertTask, Task } from "@shared/schema";
 import { storage } from "../storage";
+import { publishToCompany } from "../live-events";
 import {
   canAssignToWorker,
   resolveActorCompanyId,
@@ -86,5 +87,6 @@ export async function createTaskForActor({
     },
   });
 
+  publishToCompany(task.companyId, { type: "tasks", taskId: task.id });
   return task;
 }

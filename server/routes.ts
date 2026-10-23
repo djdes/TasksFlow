@@ -36,6 +36,7 @@ import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import { isValidTimeZone } from "@shared/day";
 import { notifySettingsSchema, parseNotifySettings } from "@shared/notify";
 import { registerHistoryRoutes } from "./history-routes";
+import { openLiveStream, publishToCompany } from "./live-events";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -320,6 +321,20 @@ export async function registerRoutes(
   app.use((_req, res, next) => {
     const orig = res.json.bind(res);
     res.json = (body: any) => orig(stripSensitive(body));
+    next();
+  });
+
+  // Любое успешное изменение задач и сотрудников по HTTP (кабинет, API-ключ,
+  // WeSetup) — сигнал открытым кабинетам компании обновиться. Бот и ночной
+  // сброс шлют такой же сигнал из сервисов.
+  app.use(["/api/tasks", "/api/wesetup", "/api/users"], (req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+    res.on("finish", () => {
+      if (res.statusCode >= 400) return;
+      getCompanyIdFromReq(req)
+        .then((companyId) => publishToCompany(companyId, { type: "tasks" }))
+        .catch(() => {});
+    });
     next();
   });
 
@@ -4437,6 +4452,13 @@ export async function registerRoutes(
 
   // История выполнения и отчёты (server/history-routes.ts).
   registerHistoryRoutes(app, { requireAuthOrApiKey, getCompanyIdFromReq });
+
+  // Живые обновления кабинета (server/live-events.ts).
+  app.get("/api/events", requireAuth, async (req, res) => {
+    const companyId = await getCompanyIdFromReq(req).catch(() => null);
+    if (!companyId) return res.status(404).json({ message: "Компания не найдена" });
+    openLiveStream(req, res, companyId, req.session.userId!);
+  });
 
   return httpServer;
 }
