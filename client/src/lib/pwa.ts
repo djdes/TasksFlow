@@ -149,6 +149,8 @@ export async function promptInstall(): Promise<"accepted" | "dismissed" | "unava
 
 /** Короткий отклик на действие: в iOS-приложении — системный, на Android — вибрация. */
 export function haptic(style: "success" | "error" | "light" = "light") {
+  // «Меньше эффектов» (настройка движения или системная) — без вибрации тоже.
+  if (typeof document !== "undefined" && document.documentElement.dataset.motion === "reduced") return;
   const bridge = nativeBridge();
   if (bridge) {
     bridge.call("haptic", { style }).catch(() => {});

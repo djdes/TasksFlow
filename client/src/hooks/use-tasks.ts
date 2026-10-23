@@ -5,6 +5,7 @@ import type { InsertTask, Task } from "@shared/schema";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
 import { applyCompletionToList } from "@/lib/task-completion";
+import { haptic } from "@/lib/pwa";
 
 export function useTasks() {
   return useQuery<Task[]>({
@@ -157,6 +158,8 @@ export function useCompleteTask() {
       return api.tasks.complete.responses[200].parse(await res.json());
     },
     onSuccess: (task) => {
+      // Короткий отклик телефона: системный в iOS-приложении, вибрация на Android.
+      haptic("success");
       // Карточка уходит в «Выполненные» сразу, до перезапроса списка —
       // без мигания между концом запроса и приходом свежих данных.
       queryClient.setQueryData<Task[]>([api.tasks.list.path], (list) => applyCompletionToList(list, task));
