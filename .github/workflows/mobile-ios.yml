@@ -16,6 +16,9 @@ on:
     paths:
       - "mobile/ios/**"
       - ".github/workflows/mobile-ios.yml"
+  # Отправить в TestFlight без изменений в коде (например, сразу после того,
+  # как добавили секреты): Actions → iOS → Run workflow на main.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -88,7 +91,7 @@ jobs:
           ls -l "$GITHUB_WORKSPACE/output/TasksFlow-unsigned.ipa"
 
       - name: TestFlight
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
         run: |
           set -euo pipefail
           KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"

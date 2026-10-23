@@ -19,6 +19,9 @@ on:
     paths:
       - "mobile/android/**"
       - ".github/workflows/mobile-android.yml"
+  # Пересобрать без изменений в коде: Actions → Android → Run workflow
+  # (на main — новая версия APK на сайте и AAB для Google Play).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -32,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      RELEASE: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     defaults:
       run:
         working-directory: mobile/android

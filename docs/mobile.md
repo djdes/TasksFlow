@@ -60,7 +60,8 @@ mobile/store/                     тексты, иконки и скриншот
 
 ### Как собирается
 
-`mobile-android.yml` на каждый push, который меняет `mobile/android/**`:
+`mobile-android.yml` на каждый push, который меняет `mobile/android/**`, или
+вручную (Actions → Android → Run workflow):
 
 - **рабочие ветки и PR** — debug-APK и запуск в эмуляторе (Android 14):
   ставим, открываем, проверяем, что Chrome открыл tasksflow.ru и приложение
@@ -141,8 +142,9 @@ XcodeGen генерирует проект, сборка для симулято
    `/.well-known/apple-app-site-association` (ссылки tasksflow.ru открываются
    в приложении), и ключ APNs для push (раздел выше).
 
-Дальше каждый push в main с изменениями `mobile/ios/**` подписывает сборку
-и отправляет её в TestFlight. Выпуск в App Store — в App Store Connect:
+Сразу после этого запустите Actions → iOS → Run workflow (ветка main): сборка
+подпишется и уйдёт в TestFlight. Дальше так же — каждый push в main с
+изменениями `mobile/ios/**`. Выпуск в App Store — в App Store Connect:
 скриншоты, тексты и ответы для ревью — `mobile/store/README.md`. Для сотрудни-
 ков одной компании подойдёт и **Unlisted App** (не видна в поиске, ставится
 по ссылке).
