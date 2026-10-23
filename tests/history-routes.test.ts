@@ -116,6 +116,17 @@ describe("GET /api/history", () => {
     expect(r.body.items[0].time).toBe("09:00");
   });
 
+  it("разовая задача, выполненная в прошлый день, есть в журнале этого дня", async () => {
+    const app = await buildApp();
+    sessionStore.userId = admin.id;
+    storage.getTasks.mockResolvedValue([
+      task({ id: 7, isRecurring: false, isCompleted: true, completedAt: utc(2026, 10, 23, 12, 15), title: "Разовая: покрасить скамейку", price: 200 }),
+      task({ id: 8, isRecurring: false, isCompleted: true, completedAt: utc(2026, 10, 20, 12) }),
+    ]);
+    const r = await request(app).get("/api/history?day=2026-10-23");
+    expect(r.body.items.map((i: any) => [i.taskId, i.status, i.time, i.price])).toEqual([[7, "done", "15:15", 200]]);
+  });
+
   it("сотрудник видит только себя, чужой workerId — 403", async () => {
     const app = await buildApp();
     sessionStore.userId = anna.id;

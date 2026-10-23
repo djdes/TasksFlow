@@ -3,7 +3,7 @@ import { dayInZone, daysBetween, isDay, shiftDay, zoneOrDefault } from "@shared/
 import { DatabaseStorage, storage } from "./storage";
 import { listHistory } from "./task-history-store";
 import type { HistoryItem } from "@shared/history";
-import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems } from "@shared/history-report";
+import { buildCsv, fromHistoryRow, oneOffItems, sortItems, summarize, todayItems } from "@shared/history-report";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 
 /**
@@ -84,13 +84,16 @@ function readRange(scope: Scope, query: Request["query"]): { from: string; to: s
 
 async function collect(scope: Scope, from: string, to: string, workerIds: number[] | null): Promise<HistoryItem[]> {
   const items: HistoryItem[] = [];
+  const tasks = await storage.getTasks(scope.companyId);
   if (from < scope.today) {
     const lastPast = to < scope.today ? to : shiftDay(scope.today, -1);
     const rows = await listHistory({ companyId: scope.companyId, from, to: lastPast, workerIds });
     for (const row of rows) items.push(fromHistoryRow(row, scope.tz));
+    // Разовые задачи сброс не архивирует — они в tasks по дате выполнения.
+    items.push(...oneOffItems(tasks, scope.tz, from, lastPast, workerIds));
   }
   if (to >= scope.today) {
-    items.push(...todayItems(await storage.getTasks(scope.companyId), scope.tz, scope.today, workerIds));
+    items.push(...todayItems(tasks, scope.tz, scope.today, workerIds));
   }
   return sortItems(items);
 }

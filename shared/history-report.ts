@@ -6,7 +6,7 @@
  */
 import type { ChecklistItem, Task, TaskHistoryRow, User } from "./schema";
 import type { DaySummary, HistoryItem, HistoryStatus, PersonSummary } from "./history";
-import { dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "./day";
+import { dayInZone, dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "./day";
 import { isTaskVisibleOn } from "./task-visibility";
 
 function parseArray<T>(json: string | null): T[] {
@@ -75,6 +75,47 @@ export function todayItems(tasks: readonly Task[], tz: string, today: string, wo
       photoUrls: status === "done" || status === "claimed" || status === "submitted" ? photos : [],
       checklist: t.checklist?.length ? t.checklist : null,
       price: status === "done" ? t.price ?? 0 : 0,
+      claimedByWorkerId: t.claimedByWorkerId ?? null,
+      verificationStatus: t.verificationStatus ?? null,
+    });
+  }
+  return items;
+}
+
+/**
+ * Разовые задачи, выполненные в прошлые дни. Ночной сброс их не трогает —
+ * они остаются в tasks выполненными, — поэтому в журнал прошлых дней
+ * берём их оттуда по дате выполнения.
+ */
+export function oneOffItems(
+  tasks: readonly Task[],
+  tz: string,
+  from: string,
+  to: string,
+  workerIds: number[] | null,
+): HistoryItem[] {
+  const allowed = workerIds ? new Set(workerIds) : null;
+  const items: HistoryItem[] = [];
+  for (const t of tasks) {
+    if (t.isRecurring || !t.isCompleted || !t.completedAt || t.workerId == null) continue;
+    if (allowed && !allowed.has(t.workerId)) continue;
+    const day = dayInZone(t.completedAt, tz);
+    if (day < from || day > to) continue;
+    const claimed = t.claimedByWorkerId != null;
+    const photos = t.photoUrls?.length ? t.photoUrls : t.photoUrl ? [t.photoUrl] : [];
+    items.push({
+      key: `${t.id}:${day}`,
+      taskId: t.id,
+      workerId: t.workerId,
+      day,
+      title: t.title,
+      category: t.category ?? null,
+      status: claimed ? "claimed" : "done",
+      completedAt: t.completedAt,
+      time: timeInZone(t.completedAt, tz),
+      photoUrls: photos,
+      checklist: t.checklist?.length ? t.checklist : null,
+      price: claimed ? 0 : t.price ?? 0,
       claimedByWorkerId: t.claimedByWorkerId ?? null,
       verificationStatus: t.verificationStatus ?? null,
     });

@@ -31,8 +31,9 @@ import {
 } from "@/lib/feedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
-import { TaskFormFiller } from "@/components/TaskFormFiller";
-import { DuplicateTaskDialog } from "@/components/DuplicateTaskDialog";
+// Журнальная форма WeSetup и «Дублировать» нужны редко — отдельными чанками.
+const TaskFormFiller = lazy(() => import("@/components/TaskFormFiller").then((m) => ({ default: m.TaskFormFiller })));
+const DuplicateTaskDialog = lazy(() => import("@/components/DuplicateTaskDialog").then((m) => ({ default: m.DuplicateTaskDialog })));
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
@@ -1363,6 +1364,7 @@ export default function Dashboard() {
         />
       )}
       {journalTaskId !== null ? (
+        <Suspense fallback={null}>
         <TaskFormFiller
           taskId={journalTaskId}
           open={journalTaskId !== null}
@@ -1376,14 +1378,18 @@ export default function Dashboard() {
             queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
           }}
         />
+        </Suspense>
       ) : null}
 
-      {user?.isAdmin && (
-        <DuplicateTaskDialog
-          task={duplicateTask}
-          open={isDuplicateDialogOpen}
-          onOpenChange={setIsDuplicateDialogOpen}
-        />
+      {/* Монтируем при первом «Дублировать» и оставляем — для анимации закрытия. */}
+      {user?.isAdmin && duplicateTask && (
+        <Suspense fallback={null}>
+          <DuplicateTaskDialog
+            task={duplicateTask}
+            open={isDuplicateDialogOpen}
+            onOpenChange={setIsDuplicateDialogOpen}
+          />
+        </Suspense>
       )}
 
       <ConfirmDialog
