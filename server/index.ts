@@ -7,6 +7,7 @@ import path from "path";
 import { existsSync, mkdirSync } from "fs";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { registerAppLinks } from "./app-links";
 import { createServer } from "http";
 import { logger, httpLogger } from "./logger";
 import { db } from "./db";
@@ -146,6 +147,9 @@ if (!existsSync(uploadsDir)) {
 
 // Статические файлы для загрузок
 app.use("/uploads", express.static(uploadsDir));
+
+// assetlinks / apple-app-site-association и APK с сайта — до SPA-fallback.
+registerAppLinks(app);
 
 // Health check endpoint (до логирования запросов)
 //
