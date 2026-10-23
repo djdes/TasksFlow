@@ -1,9 +1,9 @@
 import { hydrateRoot } from "react-dom/client";
 import { PublicApp } from "./App";
 import { matchRoute } from "./router";
-import "../index.css";
+import "../public-base.css";
+import "./public-motion.css";
 import "./public.css";
-import "../motion.css";
 
 // Сообщаем inline-скрипту, что ревил активен (он не снимет reveal-ready).
 (window as any).__revealActive = true;

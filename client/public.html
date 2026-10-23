@@ -37,15 +37,6 @@
       })();
     </script>
     <!--app-head-->
-    <style>
-      /* SPA-кабинет фиксирует body (position:fixed; overflow:hidden) и
-         скроллит контейнер #root — это ломало скролл колесом на публичных
-         страницах, которые рендерятся в #public-root. Возвращаем обычный
-         скролл документа. position:static — ключевое (без него body вне
-         потока и страница не прокручивается). !important перебивает index.css. */
-      html, body { height: auto !important; overflow: visible !important; position: static !important; }
-      #public-root { min-height: 100vh; }
-    </style>
   </head>
   <body>
     <div id="public-root"><!--app-html--></div>

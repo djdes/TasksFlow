@@ -1,0 +1,34 @@
+/* База публичного бандла (лендинг, блог, юр.страницы). Кабинетный
+   index.css сюда не подключается: у публичной части свой Tailwind с
+   узким content (tailwind.public.config.ts) и свой минимальный base. */
+@import "./tokens.css";
+
+@config "../../tailwind.public.config.ts";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    @apply bg-background text-foreground antialiased;
+    /* Body-шрифт нужен и порталам (окно входа рендерится вне #public-root). */
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Onest", "Manrope", ui-sans-serif, system-ui, sans-serif;
+    @apply font-semibold tracking-tight text-foreground;
+  }
+}
+
+#public-root {
+  min-height: 100vh;
+}

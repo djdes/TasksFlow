@@ -1,0 +1,90 @@
+/* Дизайн-токены TasksFlow — общие для кабинета (index.css) и публичной
+   части (public-base.css). Цвета — HSL-каналы для Tailwind:
+   hsl(var(--primary) / <alpha>). Шрифты задаёт каждая точка входа сама. */
+:root {
+  --background: 220 14% 96%;
+  --foreground: 222 47% 11%;
+
+  /* Primary indigo — П-11 спека интеграции с Wesetup
+     (docs/superpowers/specs/2026-05-09-wesetup-tasksflow-integration-design.md).
+     Источник: .claude/skills/design-system Wesetup'а — #5566f6 indigo
+     (rgb 85,102,246). HSL ≈ 233° 90% 65% для соответствия. */
+  --primary: 233 90% 65%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
+
+  --muted: 220 14% 92%;
+  --muted-foreground: 220 9% 46%;
+
+  --accent: 233 90% 65%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Green for success */
+  --success: 152 69% 41%;
+  --success-foreground: 0 0% 100%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 233 90% 65%;
+
+  --radius: 0.75rem;
+
+  /* Specific colors */
+  --ozon-blue: 220 100% 50%;
+  --ozon-blue-light: 220 100% 96%;
+  --ozon-pink: 338 100% 63%;
+  --ozon-green: 152 69% 41%;
+  --ozon-orange: 25 95% 53%;
+  --ozon-gray: 220 9% 46%;
+}
+
+.dark {
+  --background: 222 47% 8%;
+  --foreground: 0 0% 98%;
+
+  /* П-11 спека: индиго #5566f6 (slightly brighter в dark для контраста). */
+  --primary: 233 90% 70%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 222 47% 14%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 222 47% 16%;
+  --muted-foreground: 220 9% 60%;
+
+  --accent: 233 90% 70%;
+  --accent-foreground: 0 0% 100%;
+
+  --card: 222 47% 11%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 0 0% 98%;
+
+  --border: 222 47% 20%;
+  --input: 222 47% 20%;
+
+  /* Палитра тёмных override'ов кабинета (index.css, правила `.dark …`).
+     Готовые цвета, а не HSL-каналы: значения те же, что раньше были
+     захардкожены, — вынесены, чтобы тёмную тему правили в одном месте. */
+  --dk-text: #e9ecf6;
+  --dk-text-muted: #a8aecf;
+  --dk-text-soft: #8b91b3;
+  --dk-text-faint: #6b7395;
+  --dk-surface: #161c33;
+  --dk-surface-hover: #1c2340;
+  --dk-indigo: #6f7eff;
+  --dk-indigo-soft: #a8b3ff;
+  --dk-violet: #c4b5fd;
+}
