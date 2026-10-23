@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ClipboardCheck, Sparkles, Star } from "lucide-react";
+import { Camera, Check, ClipboardCheck, Coins, Smartphone } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,6 +23,35 @@ import { ApiError } from "@/lib/queryClient";
 import { PhoneInput } from "@/components/PhoneInput";
 
 const formSchema = loginSchema;
+
+const BENEFITS = [
+  { icon: Smartphone, text: "Задачи на смену — в телефоне" },
+  { icon: Camera, text: "Фото-отчёт вместо «сделал, честно»" },
+  { icon: Coins, text: "Премия за выполненное" },
+];
+
+const LIVE_ROWS = ["Открыть смену", "Протереть витрину", "Проверить ценники"];
+
+/** Маленькая карточка смены: третья задача отмечается один раз при входе. */
+function LiveShiftCard() {
+  return (
+    <div className="login-live" aria-hidden="true">
+      <div className="login-live-head">
+        <span>Магазин на Ленина</span>
+        <b>3 из 3</b>
+      </div>
+      <div className="login-live-track"><span /></div>
+      {LIVE_ROWS.map((row, i) => (
+        <div key={row} className={`login-live-row ${i === 2 ? "login-live-row--late" : ""}`}>
+          <span className="login-live-check"><Check strokeWidth={3} /></span>
+          {row}
+          {i === 1 ? <span className="login-live-photo"><Camera />фото</span> : null}
+        </div>
+      ))}
+      <div className="login-live-bonus"><Coins />+300 ₽ премия</div>
+    </div>
+  );
+}
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -99,83 +128,54 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-screen">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-32 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-        <Star className="absolute top-20 right-8 w-4 h-4 text-yellow-300/60 animate-pulse" />
-        <Star className="absolute top-32 left-12 w-3 h-3 text-white/40 animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <Star className="absolute top-48 right-16 w-2 h-2 text-yellow-200/50 animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
-
-      {/* Header */}
-      <motion.div
-        className="auth-hero text-center"
-        initial={reduced ? false : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1] }}
+    <div className="login-screen">
+      {/* Панель бренда: на desktop — левая половина с обещанием продукта
+          и «живой» карточкой смены, на mobile — компактная цветная шапка. */}
+      <motion.aside
+        className="login-brand"
+        initial={reduced ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: reduced ? 0 : .4, ease: [0.2, 0.8, 0.2, 1] }}
       >
-        {/* Premium Icon — одна большая ClipboardCheck, чисто
-            масштабируемая. Раньше внутри стеклянного контейнера была
-            композиция из 3 строк CheckCircle (32px каждая, gap-3 — суммарно
-            ~120px), которая на mobile-shrink-е контейнера до 80px
-            обрезалась и выглядела как «полумесяц со звёздочками». Теперь
-            один центральный glyph занимает 50% от ширины контейнера и
-            одинаково хорошо смотрится на 80px / 112px / 128px. */}
-        <motion.div
-          className="auth-hero-icon relative mx-auto mb-6"
-          initial={reduced ? false : { scale: 0.85, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={reduced ? { duration: 0 } : { type: "spring", duration: .3, bounce: 0 }}
-        >
-          {/* Outer glow */}
-          <div className="absolute -inset-3 rounded-[28px] bg-white/15 blur-2xl" />
-          {/* Inner glow */}
-          <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/30 to-white/10 blur-xl" />
-          {/* Glass container */}
-          <div className="relative w-full h-full rounded-[28px] bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-md border border-white/40 shadow-2xl flex items-center justify-center overflow-hidden">
-            {/* Shine sweep */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
-            {/* Один центральный glyph — размер задан в CSS через 50% контейнера */}
-            <ClipboardCheck
-              className="auth-hero-icon-glyph relative text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
-              strokeWidth={1.8}
-            />
-            {/* Декоративные акценты — позиционируются от размера контейнера */}
-            <Sparkles className="auth-hero-icon-sparkle-tr absolute text-yellow-300 drop-shadow-lg animate-pulse" />
-            <Star className="auth-hero-icon-sparkle-bl absolute text-yellow-200/80 drop-shadow-lg" />
+        <div className="login-brand-inner">
+          <div className="login-logo">
+            <span className="login-logo-mark" aria-hidden="true"><ClipboardCheck strokeWidth={2.2} /></span>
+            <span className="login-logo-word">Tasks<span>Flow</span></span>
           </div>
-        </motion.div>
-        <motion.h1
-          className="auth-title font-black drop-shadow-sm"
-          initial={reduced ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1], delay: reduced ? 0 : .08 }}
-        >
-          Контроль производственных процессов
-        </motion.h1>
-      </motion.div>
+          <h1 className="login-title">Контроль производственных процессов</h1>
+          <ul className="login-benefits">
+            {BENEFITS.map(({ icon: Icon, text }) => (
+              <li key={text}><span aria-hidden="true"><Icon /></span>{text}</li>
+            ))}
+          </ul>
+          <LiveShiftCard />
+        </div>
+      </motion.aside>
 
       {/* Form Card */}
+      <main className="login-panel">
       <motion.div
-        className="auth-card"
-        initial={reduced ? false : { opacity: 0, y: 22 }}
+        className="login-card"
+        initial={reduced ? false : { opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reduced ? 0 : .3, ease: [0.23, 1, 0.32, 1], delay: reduced ? 0 : .1 }}
+        transition={{ duration: reduced ? 0 : .35, ease: [0.2, 0.8, 0.2, 1], delay: reduced ? 0 : .08 }}
       >
+        <div className="login-card-head">
+          <h2>Вход в кабинет</h2>
+          <p>По номеру телефона, без пароля</p>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-md mx-auto">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="login-form">
             <FormField
               control={form.control}
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-lg font-bold text-foreground mb-3 block">
+                  <FormLabel className="text-base font-semibold text-foreground mb-2 block">
                     Телефон
                   </FormLabel>
                   <FormControl>
-                    <PhoneInput value={field.value} onChange={field.onChange} />
+                    <PhoneInput value={field.value} onChange={field.onChange} className="login-phone h-14 rounded-2xl border-2 border-border bg-card px-5 text-xl font-semibold tracking-wide md:text-xl" />
                   </FormControl>
                   <FormMessage className="text-sm mt-2" />
                 </FormItem>
@@ -184,7 +184,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="ozon-btn ozon-btn-primary w-full text-xl font-bold h-16 rounded-2xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-200 active:scale-[0.98]"
+              className="login-submit w-full text-lg font-semibold h-14 rounded-2xl"
               loading={isLoading}
               loadingLabel="Вход…"
             >
@@ -194,24 +194,24 @@ export default function Login() {
             {/* Подсказка для тех, кто впервые. Бабушки часто пугаются
                 «надо ли регистрироваться?» — здесь явно сказано: если
                 руководитель уже добавил, просто введи телефон. */}
-            <p className="text-sm text-center text-muted-foreground leading-relaxed pt-3 max-w-sm mx-auto">
+            <p className="login-hint">
               Если руководитель уже добавил вас — введите телефон и нажмите «Войти».
               Если впервые — кнопка «Зарегистрироваться» внизу.
             </p>
 
             {/* Кнопки регистрации и инструкции */}
-            <div className="text-center pt-4 flex flex-col gap-3">
+            <div className="login-links">
               <button
                 type="button"
                 onClick={() => setLocation("/register")}
-                className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                className="login-link"
               >
                 Зарегистрироваться
               </button>
               <button
                 type="button"
                 onClick={() => setLocation("/instructions")}
-                className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                className="login-link"
               >
                 Инструкция
               </button>
@@ -219,6 +219,7 @@ export default function Login() {
           </form>
         </Form>
       </motion.div>
+      </main>
     </div>
   );
 }

@@ -15,9 +15,13 @@
     <style>
       /* First paint does not depend on downloading React, fonts or the session. */
       html { background: #f3f4f6; } html.dark { background: #0b1220; }
-      .boot-shell { min-height: 100dvh; color: #667085; background: #f3f4f6; font: 14px system-ui, sans-serif; }
-      .dark .boot-shell { background: #0b1220; }
-      .boot-header { height: 60px; background: #5566f6; }
+      /* Тот же indigo band, что и в кабинете (workspace.css): шапка прозрачная, сводка перекрывает край. */
+      .boot-shell { min-height: 100dvh; color: #667085; background: linear-gradient(155deg,#4b5bef,#5566f6 46%,#6a5cf7) top / 100% 232px no-repeat, #f3f4f6; font: 14px system-ui, sans-serif; }
+      .dark .boot-shell { background: linear-gradient(155deg,#1c2459,#1a2050 50%,#251f52) top / 100% 232px no-repeat, #0b1220; }
+      .boot-header { height: 60px; }
+      .boot-search { background: #ffffffe6; }
+      .dark .boot-search { background: #111a2ee6; }
+      .boot-stats { box-shadow: 0 24px 48px -26px #252e8c6b; }
       .boot-content { max-width: 1280px; box-sizing: border-box; margin: auto; padding: 16px; }
       .boot-block { background: #e2e5eb; border-radius: 12px; position: relative; overflow: hidden; }
       .dark .boot-block { background: #1b2439; }
@@ -31,11 +35,14 @@
       .boot-row { height: 116px; margin-bottom: 12px; border-radius: 16px; }
       .boot-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
       html[data-boot='form'] .boot-header, html[data-boot='form'] .boot-stats, html[data-boot='form'] .boot-tabs { display: none; }
+      html[data-boot='form'] .boot-shell { background: #f3f4f6; } html.dark[data-boot='form'] .boot-shell { background: #0b1220; }
+      html[data-boot='form'] .boot-search { background: #e2e5eb; } html.dark[data-boot='form'] .boot-search { background: #1b2439; }
       html[data-boot='form'] .boot-content { max-width: 720px; padding-top: 40px; }
       html[data-boot='form'] .boot-search { width: 55%; height: 32px; }
       @keyframes boot-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
       @media(min-width: 768px) { .boot-content { padding-top: 24px; } }
-      @media(min-width: 1024px) { .boot-header { height: 68px; } .boot-content { padding: 24px 32px; } }
+      @media(min-width: 768px) { html:not([data-boot='form']) .boot-shell { background-size: 100% 250px, auto; } }
+      @media(min-width: 1024px) { .boot-header { height: 68px; } .boot-content { padding: 24px 32px; } html:not([data-boot='form']) .boot-shell { background-size: 100% 272px, auto; } }
       html[data-motion='reduced'] .boot-block::after { animation: none; display: none; }
       @media(prefers-reduced-motion: reduce) { .boot-block::after { animation: none; display: none; } }
     </style>

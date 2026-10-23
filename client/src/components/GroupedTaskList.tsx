@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
   BookOpen,
@@ -27,6 +27,7 @@ import { parseJournalLinkUI } from "@/lib/journal-link-parse";
 import { HighlightedText } from "@/components/HighlightedText";
 import { DueBadge } from "@/components/DueBadge";
 import { useMotionPreference } from "@/contexts/MotionContext";
+import { avatarTone } from "@/lib/shift-summary";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -184,6 +185,36 @@ export function GroupedTaskList(props: Props) {
   const [completedOpen, setCompletedOpen] = useState(false);
   const [claimedOpen, setClaimedOpen] = useState(false);
 
+  // Мгновенная галочка: сервер подтверждает выполнение через запрос,
+  // и карточка уезжает в «Выполненные» только после ответа. Пока он
+  // идёт, кружок уже отмечен (прорисовка + короткий пульс). Если задача
+  // так и осталась активной (ошибка сети), отметка снимается сама.
+  const [justChecked, setJustChecked] = useState<ReadonlySet<number>>(() => new Set());
+  const checkTimers = useRef(new Map<number, number>());
+  useEffect(() => () => checkTimers.current.forEach((t) => window.clearTimeout(t)), []);
+  const markJustChecked = (id: number) => {
+    setJustChecked((prev) => new Set(prev).add(id));
+    window.clearTimeout(checkTimers.current.get(id));
+    checkTimers.current.set(id, window.setTimeout(() => {
+      checkTimers.current.delete(id);
+      setJustChecked((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 4000));
+  };
+
+  // Сделано по сотруднику — для мини-прогресса в шапке его секции.
+  const doneByWorker = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const t of completedTasks) {
+      if (t.workerId == null) continue;
+      map.set(t.workerId, (map.get(t.workerId) ?? 0) + 1);
+    }
+    return map;
+  }, [completedTasks]);
+
   function renderTaskCard(task: Task) {
     const isCompleted = Boolean(task.isCompleted);
     const hasPrice = (task as unknown as { price?: number }).price
@@ -211,6 +242,8 @@ export function GroupedTaskList(props: Props) {
       task as unknown as { rejectReason?: string | null }
     ).rejectReason;
     const isReturned = verificationStatus === "rejected" && !!rejectReason;
+    const isPendingCheck = !isCompleted && justChecked.has(task.id);
+    const isChecked = isCompleted || isPendingCheck;
     const monthDay = (task as unknown as { monthDay?: number | null })
       .monthDay;
     // Для журнальных «единичных» задач (single-fillMode) — отдельный
@@ -255,11 +288,19 @@ export function GroupedTaskList(props: Props) {
         )}
         <div className="task-main flex items-start gap-3">
           <button
-            onClick={(e) => onToggleComplete(task.id, e)}
-            className={`task-checkbox ${isCompleted ? "checked" : ""}`}
+            onClick={(e) => {
+              // Отметка уже ушла на сервер — повторный тап не шлёт дубль.
+              if (isPendingCheck) { e.stopPropagation(); return; }
+              // Те же условия, что и в Dashboard.toggleTaskComplete: фото,
+              // чек-лист и журнал открывают форму, а не закрывают задачу.
+              if (!isCompleted && !isJournal && !requiresPhoto && checklistTotal === 0) markJustChecked(task.id);
+              onToggleComplete(task.id, e);
+            }}
+            className={`task-checkbox ${isChecked ? "checked" : ""} ${isPendingCheck ? "task-checkbox--fresh" : ""}`}
             aria-label={`${isCompleted ? "Вернуть в работу" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
+            aria-busy={isPendingCheck || undefined}
           >
-            {isCompleted && <Check className="w-4 h-4 text-white" />}
+            {isChecked && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
           </button>
 
           <div className="task-content">
@@ -272,7 +313,7 @@ export function GroupedTaskList(props: Props) {
             <div className="task-meta">
               {isAdmin && !groupByWorker && task.workerId && (
                 <div className="worker-info" title={getUserName(task.workerId)}>
-                  <div className="worker-avatar">
+                  <div className="worker-avatar" data-tone={avatarTone(task.workerId) ?? undefined}>
                     {getUserInitials(task.workerId)}
                   </div>
                   {/* Полное ФИО + должность для admin/manager:
@@ -486,11 +527,19 @@ export function GroupedTaskList(props: Props) {
           initial={reduced ? false : "hidden"}
           animate="visible"
         >
-          {day.tasks.map((task, index) => (
-            <motion.div key={task.id} custom={index} variants={reduced ? undefined : cardVariants}>
-              {cardRenderer(task)}
-            </motion.div>
-          ))}
+          <AnimatePresence initial={false} mode="popLayout">
+            {day.tasks.map((task, index) => (
+              <motion.div
+                key={task.id}
+                custom={index}
+                layout={reduced ? false : "position"}
+                variants={reduced ? undefined : cardVariants}
+                exit={reduced ? undefined : { opacity: 0, scale: 0.97, transition: { duration: 0.2, ease: EASE_OUT_QUINT as unknown as number[] } }}
+              >
+                {cardRenderer(task)}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </motion.div>
       </div>
     );
@@ -673,6 +722,8 @@ export function GroupedTaskList(props: Props) {
           const position = isUnassigned
             ? null
             : getUserPosition?.(section.workerId) ?? null;
+          const done = isUnassigned ? 0 : doneByWorker.get(section.workerId as number) ?? 0;
+          const total = done + section.tasks.length;
           return (
             // Default-collapsed: при много-сотрудниковой бригаде
             // развёрнутые секции занимают экраны, до нужного
@@ -691,6 +742,7 @@ export function GroupedTaskList(props: Props) {
                   className={`worker-avatar ${
                     isUnassigned ? "worker-avatar--unassigned" : ""
                   }`}
+                  data-tone={avatarTone(section.workerId) ?? undefined}
                   aria-hidden="true"
                 >
                   {initials}
@@ -704,6 +756,14 @@ export function GroupedTaskList(props: Props) {
                     </span>
                   ) : null}
                 </span>
+                {!isUnassigned ? (
+                  <span className="worker-progress" title={`Сделано ${done} из ${total}`}>
+                    <span className="worker-progress-track" aria-hidden="true">
+                      <span style={{ transform: `scaleX(${total > 0 ? done / total : 0})` }} />
+                    </span>
+                    <span className="worker-progress-text">{done}/{total}</span>
+                  </span>
+                ) : null}
                 <span className="worker-section-count">
                   {section.tasks.length}
                 </span>

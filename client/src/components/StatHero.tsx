@@ -3,6 +3,7 @@ import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useMotionPreference } from "@/contexts/MotionContext";
 import {
   Award,
+  CalendarDays,
   Flame,
   Target,
   Trophy,
@@ -13,12 +14,17 @@ import {
   streakHint,
   todayHint,
 } from "@/lib/streak-hint";
+import { shiftDateLabel, shiftPercent } from "@/lib/shift-summary";
 
 /**
  * Единая сводка смены: остаток, личные выполнения, работа коллег
  * и серия рабочих дней. Общий прогресс учитывает закрытые коллегами
  * задачи. Числа и шкала обновляются плавно; reduced motion отключает
  * движение. Визуальные размеры задаёт workspace.css.
+ *
+ * Прогресс смены — кольцо на desktop и полоса на mobile. Оба несут
+ * role="progressbar", но CSS показывает только один, поэтому в дереве
+ * доступности всегда ровно один индикатор.
  */
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
@@ -180,6 +186,50 @@ function StatTile({
   );
 }
 
+const RING_R = 52;
+const RING_C = 2 * Math.PI * RING_R;
+
+/** Кольцо смены: градиентная дуга, процент в центре, «N из M» под ним. */
+function ShiftRing({ closed, total, percent }: { closed: number; total: number; percent: number }) {
+  const { reduced } = useMotionPreference();
+  const ratio = total > 0 ? Math.min(1, closed / total) : 0;
+  return (
+    <div
+      className={`shift-ring ${ratio >= 1 ? "shift-ring--done" : ""}`}
+      role="progressbar"
+      aria-label="Выполнено задач"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={closed}
+    >
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs>
+          <linearGradient id="shift-ring-gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop className="shift-ring-stop-from" offset="0%" />
+            <stop className="shift-ring-stop-to" offset="100%" />
+          </linearGradient>
+        </defs>
+        <circle className="shift-ring-track" cx="60" cy="60" r={RING_R} />
+        <motion.circle
+          className="shift-ring-value"
+          cx="60"
+          cy="60"
+          r={RING_R}
+          stroke="url(#shift-ring-gradient)"
+          strokeDasharray={RING_C}
+          initial={reduced ? false : { strokeDashoffset: RING_C }}
+          animate={{ strokeDashoffset: RING_C * (1 - ratio) }}
+          transition={{ duration: reduced ? 0 : 0.9, ease: EASE_OUT_QUINT }}
+        />
+      </svg>
+      <div className="shift-ring-center" aria-hidden="true">
+        <span className="shift-ring-percent"><AnimatedNumber value={percent} /><small>%</small></span>
+        <span className="shift-ring-caption">{closed} из {total}</span>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   isAdmin: boolean;
   totalCount: number;
@@ -209,9 +259,23 @@ export function StatHero({
   const closedCount = Math.min(totalCount, completedCount + claimedCount);
   const shiftProgress = totalCount > 0 ? closedCount / totalCount : 0;
   const remaining = Math.max(0, totalCount - closedCount);
+  const percent = shiftPercent(closedCount, totalCount);
+  // Дата фиксируется на маунт: сводка живёт в пределах одной смены.
+  const [dateLabel] = useState(() => {
+    const label = shiftDateLabel(new Date());
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
 
   return (
     <section className="shift-summary" aria-label="Сводка задач">
+    <div className="shift-summary-top">
+      <span className="shift-eyebrow"><CalendarDays className="w-4 h-4" aria-hidden="true" />{dateLabel}</span>
+      <span className={`shift-percent ${percent >= 100 ? "shift-percent--done" : ""}`}>
+        {percent >= 100 ? "Смена закрыта" : `${percent}% выполнено`}
+      </span>
+    </div>
+    <div className="shift-summary-body">
+    <ShiftRing closed={closedCount} total={totalCount} percent={percent} />
     <motion.div
       className="stat-hero"
       initial={reduced ? false : "hidden"}
@@ -257,10 +321,11 @@ export function StatHero({
       {/* Премия больше НЕ тут — вынесена в шапку (бейдж рядом с именем).
           Не дублируем плитку, чтобы не было двух мест с одним балансом. */}
     </motion.div>
+    </div>
     <div className="shift-progress">
       <div className="shift-progress-label"><span>Прогресс смены</span><span>{closedCount} из {totalCount}</span></div>
       <div className="shift-progress-track" role="progressbar" aria-label="Выполнено задач" aria-valuemin={0} aria-valuemax={totalCount} aria-valuenow={closedCount}>
-        <motion.div initial={false} animate={{ scaleX: Math.max(0, Math.min(1, shiftProgress)) }} transition={{ duration: reduced ? 0 : .35 }} />
+        <motion.div initial={reduced ? false : { scaleX: 0 }} animate={{ scaleX: Math.max(0, Math.min(1, shiftProgress)) }} transition={{ duration: reduced ? 0 : .7, ease: EASE_OUT_QUINT }} />
       </div>
     </div>
     </section>
