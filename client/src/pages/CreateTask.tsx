@@ -28,7 +28,9 @@ import {
   Sparkles,
   Check,
   CalendarClock,
+  LayoutTemplate,
 } from "lucide-react";
+import { TaskTemplatesDialog } from "@/components/TaskTemplatesDialog";
 import { parseDueDateInput } from "@shared/task-visibility";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -125,6 +127,7 @@ export default function CreateTask() {
   const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured;
 
   const [mode, setMode] = useState<"free" | "journal">("free");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   // Страховка: если интеграция не настроена, не даём залипнуть в журнальном режиме.
   useEffect(() => {
@@ -677,7 +680,19 @@ export default function CreateTask() {
             <h1 className="page-title">Новая задача</h1>
           </div>
           <p className="page-subtitle sm:ml-[60px]">Создайте новую задачу и назначьте исполнителя</p>
+          <div className="page-header-actions sm:ml-[60px]">
+            <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+              <LayoutTemplate aria-hidden="true" />
+              Из шаблона
+            </Button>
+            <span>Готовые задачи на смену для вашей отрасли</span>
+          </div>
         </div>
+        <TaskTemplatesDialog
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          onCreated={() => setLocation("/")}
+        />
 
         <div className="content-panel">
           {/* Mode toggle: Free vs Journal — только если настроена интеграция WeSetup */}
