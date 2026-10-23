@@ -1,5 +1,6 @@
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { ScheduleSettings } from "@/components/ScheduleSettings";
+import { PhotoSettingsPanel } from "@/components/PhotoSettingsPanel";
 import { QueryError } from "@/components/QueryError";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
@@ -515,6 +516,9 @@ export default function CompanySettings() {
 
           {/* Часовой пояс и напоминания в Telegram */}
           {company && <ScheduleSettings company={company} />}
+
+          {/* Фото-отчёты: время на фото, «только камера» */}
+          {company && <PhotoSettingsPanel company={company} />}
 
           {/* Настройки администратора */}
           <div className="content-panel">

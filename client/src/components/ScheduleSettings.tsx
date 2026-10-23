@@ -40,7 +40,10 @@ export function ScheduleSettings({ company }: { company: CompanyLike }) {
   const save = useMutation({
     mutationFn: () => apiRequest("PUT", "/api/companies/me", { name: company.name, timezone, notify }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["company-me"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["company-me"] }),
+        queryClient.invalidateQueries({ queryKey: ["companies", "me"] }),
+      ]);
       toast({ title: "Расписание сохранено" });
     },
     onError: (err: Error) => toast({ title: "Не сохранилось", description: err.message, variant: "destructive" }),

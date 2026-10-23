@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
+import { uploadTaskPhoto, type UploadOutcome } from "@/lib/photo-upload";
+import { useQueuedUploads } from "@/lib/upload-queue";
+import { useCompanyPhotoSettings } from "@/hooks/use-wesetup";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare, CalendarClock, AlertTriangle } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare, CalendarClock, AlertTriangle, CloudOff } from "lucide-react";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
@@ -36,6 +39,8 @@ export function TaskViewDialog({
   onTaskUpdate,
 }: TaskViewDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const photoSettings = useCompanyPhotoSettings();
+  const queuedUploads = useQueuedUploads();
   const [preview, setPreview] = useState<string | null>(null);
   const [currentTask, setCurrentTask] = useState<Task | null>(task);
   const [isPhotoFullscreen, setIsPhotoFullscreen] = useState(false);
@@ -57,6 +62,7 @@ export function TaskViewDialog({
   };
 
   const photoUrls = getPhotoUrls(currentTask);
+  const queuedHere = currentTask ? queuedUploads.filter((u) => u.taskId === currentTask.id).length : 0;
   const canAddMorePhotos = photoUrls.length < 10;
 
   // Чек-лист (подзадачи). Пункт считается выполненным, когда есть фото.
@@ -89,37 +95,23 @@ export function TaskViewDialog({
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!currentTask) throw new Error("Задача не выбрана");
-      const formData = new FormData();
-      formData.append("photo", file);
-      formData.append("taskId", String(currentTask.id));
-
-      // 120s timeout: photo до 10MB, медленный 3G ≈ 100KB/s, реально
-      // 60-90s на upload. fetchOrFriendlyError локализует AbortError
-      // и TypeError в русские «Сервер не отвечает» / «Нет связи».
-      const response = await fetchOrFriendlyError(`/api/tasks/${currentTask.id}/photo`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
+      // Сжатие до 1600 px, время на фото и очередь без сети — photo-upload.ts.
+      return uploadTaskPhoto<{ photoUrl: string; photoUrls: string[] }>({
+        taskId: currentTask.id,
+        file,
+        stamp: photoSettings.stamp,
+        place: photoSettings.place,
       });
-
-      if (!response.ok) {
-        let message = "Ошибка загрузки фото";
-        try {
-          const error = await response.json();
-          message = error.message || message;
-        } catch {
-          const text = await response.text().catch(() => "");
-          if (text) {
-            message = text;
-          }
-        }
-        throw new Error(message);
-      }
-
-      return response.json();
     },
-    onSuccess: async (data: { photoUrl: string; photoUrls: string[] }) => {
+    onSuccess: async (outcome: UploadOutcome<{ photoUrl: string; photoUrls: string[] }>) => {
+      if (outcome.queued) {
+        toast({ title: "Нет связи", description: "Фото сохранено и отправится само, когда появится интернет" });
+        setSelectedFile(null);
+        setPreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      const data = outcome.data;
       if (currentTask) {
         const updatedTask = {
           ...currentTask,
@@ -215,20 +207,20 @@ export function TaskViewDialog({
   const uploadChecklistPhotoMutation = useMutation({
     mutationFn: async ({ file, itemId }: { file: File; itemId: string }) => {
       if (!currentTask) throw new Error("Задача не выбрана");
-      const formData = new FormData();
-      formData.append("photo", file);
-      const response = await fetchOrFriendlyError(
-        `/api/tasks/${currentTask.id}/checklist/${encodeURIComponent(itemId)}/photo`,
-        { method: "POST", credentials: "include", body: formData, signal: AbortSignal.timeout(120_000) },
-      );
-      if (!response.ok) {
-        let message = "Ошибка загрузки фото";
-        try { const e = await response.json(); message = e.message || message; } catch { /* ignore */ }
-        throw new Error(message);
-      }
-      return response.json() as Promise<{ photoUrl: string; task: Task }>;
+      return uploadTaskPhoto<{ photoUrl: string; task: Task }>({
+        taskId: currentTask.id,
+        itemId,
+        file,
+        stamp: photoSettings.stamp,
+        place: photoSettings.place,
+      });
     },
-    onSuccess: async (data) => {
+    onSuccess: async (outcome) => {
+      if (outcome.queued) {
+        toast({ title: "Нет связи", description: "Фото пункта отправится само, когда появится интернет" });
+        return;
+      }
+      const data = outcome.data;
       if (data.task) { setCurrentTask(data.task); onTaskUpdate?.(data.task); }
       await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
     },
@@ -413,6 +405,13 @@ export function TaskViewDialog({
                 )}
               </div>
 
+              {queuedHere > 0 && (
+                <p className="mb-3 flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200" role="status">
+                  <CloudOff className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  {queuedHere === 1 ? "1 фото ждёт сети — отправится само" : `${queuedHere} фото ждут сети — отправятся сами`}
+                </p>
+              )}
+
               {/* Uploaded photos grid */}
               {photoUrls.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-3">
@@ -456,6 +455,7 @@ export function TaskViewDialog({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    capture={photoSettings.cameraOnly ? "environment" : undefined}
                     onChange={handleFileSelect}
                     className="hidden"
                     id="photo-upload"
@@ -487,7 +487,7 @@ export function TaskViewDialog({
                             {photoUrls.length > 0 ? 'Добавить ещё' : 'Добавить фото'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {photoUrls.length > 0 ? `осталось ${10 - photoUrls.length}` : 'камера или галерея'}
+                            {photoUrls.length > 0 ? `осталось ${10 - photoUrls.length}` : photoSettings.cameraOnly ? 'откроется камера' : 'камера или галерея'}
                           </p>
                         </div>
                       </div>
@@ -601,6 +601,7 @@ export function TaskViewDialog({
                 ref={checklistFileInputRef}
                 type="file"
                 accept="image/*"
+                capture={photoSettings.cameraOnly ? "environment" : undefined}
                 onChange={handleChecklistFileSelect}
                 className="hidden"
               />

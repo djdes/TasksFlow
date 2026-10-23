@@ -35,6 +35,7 @@ import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec 
 import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import { isValidTimeZone } from "@shared/day";
 import { notifySettingsSchema, parseNotifySettings } from "@shared/notify";
+import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings";
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
 import {
@@ -245,7 +246,7 @@ function actorFromReq(req: Request): TaskActor {
  * и интеграции по API-ключу.
  */
 function toPublicCompany(company: Company, withSecrets: boolean) {
-  const { lastResetDay: _lastResetDay, notifyState: _notifyState, notifySettings, ...rest } = company;
+  const { lastResetDay: _lastResetDay, notifyState: _notifyState, notifySettings, photoSettings, ...rest } = company;
   // wesetupConfigured — настроила ли интеграцию сама компания (свои
   // baseUrl+apiKey). По нему кабинет показывает журнальный режим;
   // глобальный env WESETUP_* специально не учитываем.
@@ -254,6 +255,7 @@ function toPublicCompany(company: Company, withSecrets: boolean) {
     ...rest,
     wesetupApiKey: withSecrets ? rest.wesetupApiKey : null,
     notify: parseNotifySettings(notifySettings),
+    photo: parsePhotoSettings(photoSettings),
     wesetupConfigured,
   };
 }
@@ -1094,6 +1096,8 @@ export async function registerRoutes(
           .refine((value) => value === undefined || isValidTimeZone(value), "Неизвестный часовой пояс"),
         // Напоминания в Telegram: время «ЧЧ:ММ» или null — выключено.
         notify: notifySettingsSchema.optional(),
+        // Фото-отчёты: время на фото и «только камера».
+        photo: photoSettingsSchema.optional(),
       });
 
       const parsed = updateCompanySchema.safeParse(req.body);
@@ -1105,7 +1109,7 @@ export async function registerRoutes(
         });
       }
 
-      const { name, email, wesetupBaseUrl, wesetupApiKey, timezone, notify } = parsed.data;
+      const { name, email, wesetupBaseUrl, wesetupApiKey, timezone, notify, photo } = parsed.data;
       const updateData: {
         name: string;
         email?: string | null;
@@ -1113,12 +1117,14 @@ export async function registerRoutes(
         wesetupApiKey?: string | null;
         timezone?: string;
         notifySettings?: string;
+        photoSettings?: string;
       } = { name };
       if (email !== undefined) updateData.email = email;
       if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
       if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
       if (timezone !== undefined) updateData.timezone = timezone;
       if (notify !== undefined) updateData.notifySettings = JSON.stringify(notify);
+      if (photo !== undefined) updateData.photoSettings = JSON.stringify(photo);
 
       const company = await storage.updateCompany(user.companyId, updateData);
 

@@ -24,6 +24,8 @@ const SESSIONS = [
   ['script/smoke-pin.js'],
   // История и отчёты, расписание дня.
   ['script/smoke-reports.js'],
+  // Фото: сжатие, «только камера», очередь без сети.
+  ['script/smoke-photo.js'],
 ];
 
 process.chdir(root);

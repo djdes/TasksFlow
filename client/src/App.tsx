@@ -11,6 +11,10 @@ import { QueryError } from "@/components/QueryError";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useLiveUpdates } from "@/hooks/use-live-updates";
+import { useToast } from "@/hooks/use-toast";
+import { flushUploads, useQueuedUploads } from "@/lib/upload-queue";
+import { sendQueued } from "@/lib/photo-upload";
+import { api } from "@shared/routes";
 
 // Eager-loaded: Login + Dashboard + 404 — самые частые точки входа.
 // 90% сессий — это воркер открыл /dashboard и работает там.
@@ -49,6 +53,36 @@ const Reports = lazy(() => import("@/pages/Reports"));
 function LiveUpdates() {
   const { user } = useAuth();
   useLiveUpdates(!!user);
+  return null;
+}
+
+/** Фото, отложенные без сети, уходят сами: сеть появилась, вход, раз в 30 с. */
+function UploadQueueRunner() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const waiting = useQueuedUploads().length > 0;
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const run = async () => {
+      const r = await flushUploads(sendQueued);
+      if (!alive || (r.sent === 0 && r.dropped === 0)) return;
+      void qc.invalidateQueries({ queryKey: [api.tasks.list.path] });
+      if (r.sent > 0) toast({ title: r.sent === 1 ? "Фото отправлено" : `Отправлено фото: ${r.sent}` });
+      if (r.dropped > 0) {
+        toast({ title: "Часть фото не принята", description: "Задачу изменили или удалили, пока не было сети", variant: "destructive" });
+      }
+    };
+    void run();
+    window.addEventListener("online", run);
+    const timer = waiting ? window.setInterval(run, 30_000) : undefined;
+    return () => {
+      alive = false;
+      window.removeEventListener("online", run);
+      window.clearInterval(timer);
+    };
+  }, [user, waiting, qc, toast]);
   return null;
 }
 
@@ -138,6 +172,7 @@ function App() {
               <TooltipProvider>
                 <Toaster />
                 <LiveUpdates />
+                <UploadQueueRunner />
                 <Router />
               </TooltipProvider>
             </AuthProvider>

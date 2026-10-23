@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { preparePhoto, stampText } from "@/lib/photo-prep";
+import { useCompanyPhotoSettings } from "@/hooks/use-wesetup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +52,9 @@ type RuntimeTaskFormSchema = Omit<TaskFormSchema, "fields"> & {
  */
 export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Props) {
   const { toast } = useToast();
+  const photoSettings = useCompanyPhotoSettings();
+  // Подпись времени на фото — по настройке компании (photo-prep.ts).
+  const photoStamp = () => (photoSettings.stamp ? stampText(new Date(), photoSettings.place) : null);
   const [loading, setLoading] = useState(false);
   const [schema, setSchema] = useState<RuntimeTaskFormSchema | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -221,7 +226,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     setPhotoUploading(true);
     try {
       const formData = new FormData();
-      formData.append("photo", file);
+      formData.append("photo", await preparePhoto(file, { stamp: photoStamp() }));
       const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/photo`, {
         method: "POST",
         credentials: "include",
@@ -257,7 +262,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
     setPhotoUploading(true);
     try {
       const formData = new FormData();
-      formData.append("photo", file);
+      formData.append("photo", await preparePhoto(file, { stamp: photoStamp() }));
       const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/photo`, {
         method: "POST",
         credentials: "include",
@@ -535,6 +540,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                     <input
                       type="file"
                       accept="image/*"
+                      capture={photoSettings.cameraOnly ? "environment" : undefined}
                       className="hidden"
                       disabled={photoUploading || photoUrls.length >= 10}
                       onChange={(e) => {

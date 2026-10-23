@@ -25,6 +25,8 @@ export const companies = mysqlTable("companies", {
   notifySettings: text("notify_settings"),
   // Какие напоминания уже ушли сегодня: {morning: "YYYY-MM-DD", ...}.
   notifyState: text("notify_state"),
+  // Фото-отчёты: JSON {stamp, cameraOnly}; NULL — по умолчанию (shared/photo-settings.ts).
+  photoSettings: text("photo_settings"),
 });
 
 export const users = mysqlTable("users", {

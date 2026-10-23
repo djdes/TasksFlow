@@ -218,6 +218,28 @@ describe("/api/companies/me", () => {
     expect(own.body.wesetupApiKey).toBe("ws_secret");
   });
 
+  it("настройки фото: по умолчанию в ответе, админ сохраняет", async () => {
+    const app = await buildApp();
+    sessionStore.userId = anna.id;
+    const r = await request(app).get("/api/companies/me");
+    expect(r.body.photo).toEqual({ stamp: true, cameraOnly: false });
+    expect(r.body.photoSettings).toBeUndefined();
+    sessionStore.userId = admin.id;
+    storage.updateCompany.mockResolvedValue({ ...company, photoSettings: '{"stamp":false,"cameraOnly":true}' });
+    const saved = await request(app).put("/api/companies/me").send({ name: "Кафе", photo: { stamp: false, cameraOnly: true } });
+    expect(saved.status).toBe(200);
+    expect(storage.updateCompany).toHaveBeenCalledWith(1, { name: "Кафе", photoSettings: '{"stamp":false,"cameraOnly":true}' });
+    expect(saved.body.photo).toEqual({ stamp: false, cameraOnly: true });
+  });
+
+  it("частичное сохранение без email не стирает email", async () => {
+    const app = await buildApp();
+    sessionStore.userId = admin.id;
+    storage.updateCompany.mockResolvedValue(company);
+    await request(app).put("/api/companies/me").send({ name: "Кафе", timezone: "Europe/Moscow" });
+    expect(storage.updateCompany).toHaveBeenCalledWith(1, { name: "Кафе", timezone: "Europe/Moscow" });
+  });
+
   it("админ меняет часовой пояс, неизвестный — 400", async () => {
     const app = await buildApp();
     sessionStore.userId = admin.id;
