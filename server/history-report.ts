@@ -5,28 +5,9 @@
  * — из живых задач: день ещё идёт, поэтому вместо «пропущено» там «ждёт».
  */
 import type { ChecklistItem, Task, TaskHistoryRow, User } from "@shared/schema";
+import type { DaySummary, HistoryItem, HistoryStatus, PersonSummary } from "@shared/history";
 import { dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "@shared/day";
 import { isTaskVisibleOn } from "@shared/task-visibility";
-
-export type HistoryStatus = "done" | "claimed" | "missed" | "submitted" | "pending";
-
-export type HistoryItem = {
-  key: string;
-  taskId: number;
-  workerId: number | null;
-  day: string;
-  title: string;
-  category: string | null;
-  status: HistoryStatus;
-  completedAt: number | null;
-  /** «ЧЧ:ММ» по поясу компании. */
-  time: string | null;
-  photoUrls: string[];
-  checklist: ChecklistItem[] | null;
-  price: number;
-  claimedByWorkerId: number | null;
-  verificationStatus: string | null;
-};
 
 function parseArray<T>(json: string | null): T[] {
   if (!json) return [];
@@ -112,21 +93,6 @@ export function sortItems(items: HistoryItem[]): HistoryItem[] {
       a.title.localeCompare(b.title, "ru"),
   );
 }
-
-export type PersonSummary = {
-  workerId: number;
-  name: string;
-  done: number;
-  claimed: number;
-  missed: number;
-  pending: number;
-  bonus: number;
-  photos: number;
-  /** Доля сделанного из того, что было в расписании; null — нечего считать. */
-  rate: number | null;
-};
-
-export type DaySummary = { day: string; done: number; missed: number };
 
 export function summarize(items: readonly HistoryItem[], users: readonly Pick<User, "id" | "name" | "phone">[]) {
   const names = new Map(users.map((u) => [u.id, u.name || u.phone || `Сотрудник ${u.id}`]));

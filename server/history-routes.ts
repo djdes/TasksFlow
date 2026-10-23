@@ -2,7 +2,8 @@ import type { Express, Request, RequestHandler } from "express";
 import { dayInZone, daysBetween, isDay, shiftDay, zoneOrDefault } from "@shared/day";
 import { DatabaseStorage, storage } from "./storage";
 import { listHistory } from "./task-history-store";
-import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems, type HistoryItem } from "./history-report";
+import type { HistoryItem } from "@shared/history";
+import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems } from "./history-report";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 
 /**

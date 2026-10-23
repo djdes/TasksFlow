@@ -21,7 +21,8 @@ import {
   type NotifySettings,
   type NotifySlot,
 } from "@shared/notify";
-import { todayItems, type HistoryItem } from "../history-report";
+import type { HistoryItem } from "@shared/history";
+import { todayItems } from "../history-report";
 import { DatabaseStorage } from "../storage";
 
 const LATE_WINDOW_MIN = 180;
