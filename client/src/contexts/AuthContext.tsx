@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { forgetThisDevice } from "@/lib/push";
 
 type User = {
   id: number;
@@ -83,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (phone: string, pin?: string) => loginMutation.mutateAsync({ phone, pin });
 
   const logout = async () => {
+    // Пока сессия жива — отвязать push этого устройства (общий планшет).
+    await forgetThisDevice();
     await logoutMutation.mutateAsync();
   };
 

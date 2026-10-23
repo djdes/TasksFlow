@@ -30,6 +30,8 @@ const SESSIONS = [
   ['script/smoke-company.js'],
   // Демо-кабинет без сервера.
   ['script/smoke-demo.js'],
+  // Приложение: манифест, /app, офлайн-страница, push на устройстве.
+  ['script/smoke-pwa.js'],
 ];
 
 process.chdir(root);
@@ -79,7 +81,9 @@ try {
   browser = await chromium.launch({ executablePath });
   for (const [index, scripts] of SESSIONS.entries()) {
     console.log(`— сессия ${index + 1}: ${scripts.map((s) => path.basename(s)).join(' → ')}`);
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    // Service worker перехватывал бы навигации и ассеты мимо page.route —
+    // его проверяет smoke-pwa.js в своём контексте.
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
     const page = await context.newPage();
     await page.goto(`${base}/dashboard`);
     for (const file of scripts) {

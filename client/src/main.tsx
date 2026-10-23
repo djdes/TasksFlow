@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { installErrorReporting } from "./lib/error-reporting";
 import { enterDemo, isDemo } from "./demo/demo-mode";
+import { registerServiceWorker } from "./lib/pwa";
 import "./index.css";
 import "./motion.css";
 import "./workspace.css";
@@ -19,6 +20,7 @@ async function start() {
     installErrorReporting();
   }
   createRoot(document.getElementById("root")!).render(<App />);
+  registerServiceWorker();
 }
 
 void start();

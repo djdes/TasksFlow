@@ -10,6 +10,7 @@ import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { matchTaskBySearch } from "@/lib/task-search";
+import { signedOutPath } from "@/lib/pwa";
 import { plural } from "@/lib/i18n";
 import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
 import { extractCategories } from "@/lib/extract-categories";
@@ -36,6 +37,7 @@ const TaskFormFiller = lazy(() => import("@/components/TaskFormFiller").then((m)
 const DuplicateTaskDialog = lazy(() => import("@/components/DuplicateTaskDialog").then((m) => ({ default: m.DuplicateTaskDialog })));
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
+import { AppNudge } from "@/components/AppNudge";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { StreakAchievement } from "@/components/StreakAchievement";
@@ -248,7 +250,8 @@ export default function Dashboard() {
     if (!authLoading && !user) {
       // Жёсткий переход: "/" обслуживает SSR-лендинг (Express), а не
       // SPA-роут "/". Через setLocation остался бы старый экран входа.
-      window.location.href = "/";
+      // В приложении и установленном PWA — сразу на вход, лендинг там ни к чему.
+      window.location.href = signedOutPath();
     }
   }, [user, authLoading]);
 
@@ -982,8 +985,8 @@ export default function Dashboard() {
               onClick={async () => {
                 setIsMenuOpen(false);
                 await logout();
-                // Жёсткий переход на SSR-лендинг (а не SPA-роут "/").
-                window.location.href = "/";
+                // Жёсткий переход на SSR-лендинг (а не SPA-роут "/"), из приложения — на вход.
+                window.location.href = signedOutPath();
               }}
             >
               <LogOut className="w-5 h-5" />
@@ -1085,6 +1088,9 @@ export default function Dashboard() {
               </div>
             </motion.div>
           )}
+
+        {/* Приложение на телефон / уведомления — одна подсказка, не в первый день. */}
+        <AppNudge />
 
         {/* Scope tabs — show only when there are shared tasks (event-log
             journals like acceptance, complaints). Personal-only orgs

@@ -3,19 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#0066ff" />
-    <meta name="description" content="Контроль производственных процессов" />
+    <!-- Цвет полосы шапки; inline-скрипт ниже и ThemeContext ставят тёмный. -->
+    <meta name="theme-color" content="#4b5bef" />
+    <meta name="description" content="Задачи смены, чек-листы и фотоотчёты для команды" />
     <title>TasksFlow</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
+    <!-- Установка на экран «Домой» в iOS: без адресной строки, контент под
+         статус-баром (шапка отступает на env(safe-area-inset-top)). -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TasksFlow" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <style>
       /* First paint does not depend on downloading React, fonts or the session. */
       html { background: #f3f4f6; } html.dark { background: #0b1220; }
       /* Тот же indigo band, что и в кабинете (workspace.css): шапка прозрачная, сводка перекрывает край. */
-      .boot-shell { min-height: 100dvh; color: #667085; background: linear-gradient(155deg,#4b5bef,#5566f6 46%,#6a5cf7) top / 100% 232px no-repeat, #f3f4f6; font: 14px system-ui, sans-serif; }
-      .dark .boot-shell { background: linear-gradient(155deg,#1c2459,#1a2050 50%,#251f52) top / 100% 232px no-repeat, #0b1220; }
-      .boot-header { height: 60px; }
+      .boot-shell { min-height: 100dvh; color: #667085; background: linear-gradient(155deg,#4b5bef,#5566f6 46%,#6a5cf7) top / 100% calc(232px + env(safe-area-inset-top, 0px)) no-repeat, #f3f4f6; font: 14px system-ui, sans-serif; }
+      .dark .boot-shell { background: linear-gradient(155deg,#1c2459,#1a2050 50%,#251f52) top / 100% calc(232px + env(safe-area-inset-top, 0px)) no-repeat, #0b1220; }
+      .boot-header { height: calc(60px + env(safe-area-inset-top, 0px)); }
       .boot-search { background: #ffffffe6; }
       .dark .boot-search { background: #111a2ee6; }
       .boot-stats { box-shadow: 0 24px 48px -26px #252e8c6b; }
@@ -38,8 +46,8 @@
       html[data-boot='form'] .boot-search { width: 55%; height: 32px; }
       @keyframes boot-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
       @media(min-width: 768px) { .boot-content { padding-top: 24px; } }
-      @media(min-width: 768px) { html:not([data-boot='form']) .boot-shell { background-size: 100% 250px, auto; } }
-      @media(min-width: 1024px) { .boot-header { height: 68px; } .boot-content { padding: 24px 32px; } html:not([data-boot='form']) .boot-shell { background-size: 100% 272px, auto; } }
+      @media(min-width: 768px) { html:not([data-boot='form']) .boot-shell { background-size: 100% calc(250px + env(safe-area-inset-top, 0px)), auto; } }
+      @media(min-width: 1024px) { .boot-header { height: 68px; } .boot-content { padding: 24px 32px; } html:not([data-boot='form']) .boot-shell { background-size: 100% calc(272px + env(safe-area-inset-top, 0px)), auto; } }
       html[data-motion='reduced'] .boot-block::after { animation: none; display: none; }
       @media(prefers-reduced-motion: reduce) { .boot-block::after { animation: none; display: none; } }
     </style>
@@ -60,7 +68,10 @@
           var stored = localStorage.getItem('theme-preference');
           var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           var isDark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
-          if (isDark) document.documentElement.classList.add('dark');
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1c2459');
+          }
           document.documentElement.dataset.motion = localStorage.getItem('tf_motion_enabled') === 'false' || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'full';
         } catch (e) { /* localStorage недоступен — light по умолчанию */ }
       })();
@@ -75,15 +86,5 @@
     </div></div>
     <noscript><p style="position:fixed;inset:20px;z-index:100;background:white;padding:24px">Для работы TasksFlow включите JavaScript в браузере.</p></noscript>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Регистрация Service Worker для PWA
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.log('SW registration failed:', err));
-        });
-      }
-    </script>
   </body>
 </html>

@@ -209,6 +209,10 @@ export default function Login() {
             >
               Инструкция
             </button>
+            {/* Полная навигация: демо включается при старте приложения (main.tsx). */}
+            <a href="/demo" className="login-link">
+              Демо
+            </a>
           </div>
         </form>
       </Form>

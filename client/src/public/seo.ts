@@ -239,6 +239,20 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
       });
     }
 
+    case "app":
+      return renderHead({
+        title: "Приложение TasksFlow для Android и iPhone",
+        description:
+          "Задачи смены, чек-листы и фотоотчёты в телефоне: уведомления о новых задачах, камера, работа при плохой связи. Как установить на Android и iPhone.",
+        canonical: `${origin}/app`,
+        jsonLdBlocks: [
+          breadcrumbLd([
+            { name: "Главная", url: `${origin}/` },
+            { name: "Приложение", url: `${origin}/app` },
+          ]),
+        ],
+      });
+
     default:
       return renderHead({
         title: "Страница не найдена — TasksFlow",

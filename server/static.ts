@@ -41,6 +41,10 @@ export function serveStatic(app: Express) {
       } else if (filePath.endsWith('.html')) {
         // HTML файлы - не кэшировать
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (normalized.endsWith('/sw.js') || normalized.endsWith('/manifest.json')) {
+        // Service worker и манифест — всегда сверяем с сервером, иначе
+        // правка доезжала бы до установленных приложений через год.
+        res.setHeader('Cache-Control', 'no-cache');
       }
     }
   }));

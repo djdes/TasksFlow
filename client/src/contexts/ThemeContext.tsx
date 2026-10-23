@@ -18,6 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { BRAND_BAND_DARK, BRAND_BAND_LIGHT } from "@shared/brand";
 
 export type ThemePreference = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -90,6 +91,9 @@ function applyHtmlClass(theme: ResolvedTheme) {
   const root = document.documentElement;
   if (theme === "dark") root.classList.add("dark");
   else root.classList.remove("dark");
+  // Статус-бар браузера и приложений (Android, iOS-оболочка) — цвета полосы шапки.
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (meta) meta.content = theme === "dark" ? BRAND_BAND_DARK[0] : BRAND_BAND_LIGHT[0];
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

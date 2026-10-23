@@ -13,6 +13,7 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { plural } from "@/lib/i18n";
 import { ArrowLeft, Mail, KeyRound, Palette, TriangleAlert, UserRound } from "lucide-react";
 import { ChangePinCard } from "@/components/ChangePinCard";
+import { AppDeviceCard } from "@/components/AppDeviceCard";
 
 type DeleteStep = "closed" | "confirm" | "sole_admin";
 
@@ -159,6 +160,9 @@ export default function Account() {
 
           {/* PIN — пароль входа по телефону */}
           <ChangePinCard />
+
+          {/* Установка на это устройство и push на нём */}
+          <AppDeviceCard />
 
           {/* Смена email */}
           <section className="content-panel account-section">

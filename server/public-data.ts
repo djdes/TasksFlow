@@ -18,8 +18,11 @@ import {
 import { renderMarkdown } from "./markdown";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { DEFAULT_CONTACT_EMAIL, LEGAL_SLUGS, OPERATOR_PLACEHOLDERS } from "../client/src/public/legal";
+import QRCode from "qrcode";
+import { appInfo } from "./app-links";
 import type {
   AnalyticsIds,
+  AppPageData,
   LegalData,
   LegalDoc,
   LegalOperator,
@@ -197,7 +200,17 @@ export async function loadRouteData(
       return { post: getPost(params.slug) };
     case "legal":
       return loadLegalData(params.doc ?? "");
+    case "app":
+      return loadAppPageData(params.origin ?? "");
     default:
       return null;
   }
 }
+
+/** /app: что опубликовано (server/app-links.ts) и QR на эту страницу. */
+export async function loadAppPageData(origin: string): Promise<AppPageData> {
+  const url = `${origin.replace(/\/+$/, "")}/app`;
+  const qrSvg = await QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#111827", light: "#ffffff" } });
+  return { info: appInfo(), qrSvg, url };
+}
+

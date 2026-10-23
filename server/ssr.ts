@@ -57,7 +57,7 @@ export async function renderPublicPage(
   // Пагинация блога — через ?page=N. Прокидываем в loadRouteData вместе
   // с параметрами роута (cluster/slug/doc). render() данные уже получает
   // готовыми, так что номер страницы ему не нужен.
-  const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam });
+  const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam, origin });
   const site = siteConfig();
   const { appHtml, head } = ssr.render(pathname, data, origin, site);
   // Заменители-функции: в HTML статей могут встретиться «$&», «$'» и т. п.
@@ -97,6 +97,8 @@ function registerRoutes(app: Express, handler: (req: Request, res: Response, nex
   app.get("/privacy", handler);
   app.get("/consent", handler);
   app.get("/terms", handler);
+  // Приложение для телефона: как поставить на Android и iPhone.
+  app.get("/app", handler);
 }
 
 /** DEV: SSR через работающий Vite dev-сервер. Регистрация синхронная. */

@@ -97,3 +97,12 @@ export interface SiteConfig {
 }
 
 export type PageData = LandingData | BlogIndexData | ArticleData | LegalData | null;
+
+/** Страница /app: откуда ставить приложения и QR-код этой же страницы. */
+export interface AppPageData {
+  info: import("@shared/app-info").AppInfo;
+  /** SVG QR-кода на абсолютный адрес /app — для открытия с компьютера на телефоне. */
+  qrSvg: string;
+  url: string;
+}
+

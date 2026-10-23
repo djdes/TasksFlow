@@ -6,8 +6,10 @@ import "../public-base.css";
 import "./public-motion.css";
 import "./public.css";
 import { installErrorReporting } from "../lib/error-reporting";
+import { registerServiceWorker } from "../lib/pwa";
 
 installErrorReporting();
+registerServiceWorker();
 
 // Сообщаем inline-скрипту, что ревил активен (он не снимет reveal-ready).
 (window as any).__revealActive = true;

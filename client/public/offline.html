@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4b5bef" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1c2459" media="(prefers-color-scheme: dark)" />
+  <title>Нет соединения — TasksFlow</title>
+  <!-- Показывает service worker, когда сеть пропала. Всё встроено: без сети
+       ничего догрузить нельзя. -->
+  <style>
+    :root { color-scheme: light dark; --bg: #f3f4f6; --card: #fff; --text: #111827; --muted: #667085; --band: linear-gradient(155deg,#4b5bef,#5566f6 46%,#6a5cf7); --primary: #5568f6; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0b1220; --card: #111a2e; --text: #e5e7eb; --muted: #98a2b3; --band: linear-gradient(155deg,#1c2459,#1a2050 50%,#251f52); --primary: #6e7ef7; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; background: var(--band) top / 100% 232px no-repeat, var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+    header { padding: max(20px, env(safe-area-inset-top)) 20px 0; display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; letter-spacing: -.02em; font-size: 18px; }
+    main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 56px 16px calc(24px + env(safe-area-inset-bottom)); }
+    .card { width: 100%; max-width: 420px; background: var(--card); border-radius: 20px; padding: 28px 24px 24px; box-shadow: 0 24px 48px -26px #252e8c6b; text-align: center; }
+    .icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+    h1 { font-size: 21px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -.01em; }
+    p { margin: 0 0 20px; color: var(--muted); }
+    button { appearance: none; border: 0; border-radius: 12px; background: var(--primary); color: #fff; font: inherit; font-weight: 600; padding: 12px 22px; min-width: 160px; cursor: pointer; }
+    button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 2px; }
+    .hint { margin: 16px 0 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="rgb(255 255 255 / .16)"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8H12M20 8h2.5A1.5 1.5 0 0 1 24 9.5V12M24 20v2.5a1.5 1.5 0 0 1-1.5 1.5H20M12 24H9.5A1.5 1.5 0 0 1 8 22.5V20" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/><path d="m11.5 16.5 3 3 6-7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    TasksFlow
+  </header>
+  <main>
+    <div class="card" role="status">
+      <div class="icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2.01-1.52"/><path d="M2 8.82a15 15 0 0 1 4.18-2.65"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><path d="m2 2 20 20"/></svg>
+      </div>
+      <h1>Нет соединения</h1>
+      <p>TasksFlow откроется сам, когда связь вернётся. Фото, снятые без сети, уйдут из очереди автоматически.</p>
+      <button type="button" id="retry">Повторить</button>
+      <p class="hint" id="state" aria-live="polite"></p>
+    </div>
+  </main>
+  <script>
+    (function () {
+      var state = document.getElementById("state");
+      function retry() {
+        state.textContent = "Проверяем связь…";
+        location.reload();
+      }
+      document.getElementById("retry").addEventListener("click", retry);
+      window.addEventListener("online", retry);
+    })();
+  </script>
+</body>
+</html>

@@ -1,119 +1,176 @@
 /**
- * Service Worker для PWA
- * Обеспечивает оффлайн работу и кеширование
+ * Service worker TasksFlow: офлайн-страница, кэш хешированных ассетов и
+ * push-уведомления. Регистрируется из client/src/lib/pwa.ts.
+ *
+ * Что НЕ кэшируем и почему:
+ *  - HTML-страницы: старый index.html ссылается на /assets/index-*.js,
+ *    которых после деплоя уже нет → «Failed to load module script».
+ *  - /api/*: в CacheStorage оседали ответы с данными пользователя, и на
+ *    общем планшете после смены пользователя офлайн показывал чужое.
  */
+const VERSION = "v4";
+const STATIC_CACHE = `tasksflow-static-${VERSION}`;
+// Хешированные файлы неизменны — переживают смену версии SW, но не больше MAX_ASSETS.
+const ASSET_CACHE = "tasksflow-assets";
+const MAX_ASSETS = 160;
+const OFFLINE_URL = "/offline.html";
+const PRECACHE = [OFFLINE_URL, "/manifest.json", "/favicon.svg", "/icons/icon-192.png", "/icons/badge-96.png"];
 
-// v3: не кэшируем /api/* в CacheStorage — раньше каждый успешный ответ
-// складывался в кэш с session cookie. После logout и login другого юзера
-// на том же устройстве offline-fallback показывал данные предыдущего
-// юзера. Multi-tenant + общее устройство (планшет в магазине) = утечка.
-const CACHE_NAME = "tasksflow-v3";
-// Не кешируем "/" и "/dashboard" — это HTML-страницы, ссылающиеся на хешированные
-// /assets/index-*.js. Если закэшировать старый index.html, после нового деплоя
-// старый bundle уже не существует на сервере и nginx-fallback отдаёт HTML с
-// MIME text/html вместо application/javascript → "Failed to load module script".
-// Кешируем только manifest и иконки.
-const STATIC_ASSETS = [
-  "/manifest.json",
-];
-
-// Install event - кешируем статические ресурсы
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("[SW] Caching static assets");
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches
+      .open(STATIC_CACHE)
+      .then((cache) => cache.addAll(PRECACHE.map((url) => new Request(url, { cache: "reload" }))))
+      .then(() => self.skipWaiting()),
   );
-  // Активируем сразу, не дожидаясь закрытия старых вкладок
-  self.skipWaiting();
 });
 
-// Activate event - чистим старые кеши
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log("[SW] Deleting old cache:", name);
-            return caches.delete(name);
-          })
-      );
-    })
+    (async () => {
+      const keep = new Set([STATIC_CACHE, ASSET_CACHE]);
+      for (const name of await caches.keys()) {
+        if (!keep.has(name)) await caches.delete(name);
+      }
+      if (self.registration.navigationPreload) await self.registration.navigationPreload.enable();
+      await self.clients.claim();
+    })(),
   );
-  // Берем контроль над всеми страницами сразу
-  self.clients.claim();
 });
 
-// Fetch event:
-//   - HTML / навигация       → Network First (никогда не показываем старый index.html
-//                              со ссылкой на исчезнувший /assets/index-*.js)
-//   - /api/*                  → Network First (всегда свежие данные)
-//   - /assets/* (immutable)   → Cache First   (хешированные имена, экономим трафик)
-//   - всё остальное           → Network only
+async function trimAssets() {
+  const cache = await caches.open(ASSET_CACHE);
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - MAX_ASSETS; i++) await cache.delete(keys[i]);
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  const url = new URL(request.url);
-
   if (request.method !== "GET") return;
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  const isNavigate =
-    request.mode === "navigate" ||
-    (request.headers.get("accept") || "").includes("text/html");
-
-  if (isNavigate) {
+  // Страницы — всегда из сети; без сети — офлайн-страница.
+  if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/manifest.json"))
+      (async () => {
+        try {
+          const preloaded = await event.preloadResponse;
+          if (preloaded) return preloaded;
+          return await fetch(request);
+        } catch {
+          return (await caches.match(OFFLINE_URL)) || Response.error();
+        }
+      })(),
     );
     return;
   }
 
-  // /api/* — только сеть, без CacheStorage. Если offline — пусть TanStack
-  // Query сам обработает retry/error UX. Раньше делали Network First с
-  // cache.put в fallback, но это утечка приватных данных между юзерами
-  // одного устройства (см. комментарий к CACHE_NAME).
-  if (url.pathname.startsWith("/api/")) {
-    return;
-  }
+  if (url.pathname.startsWith("/api/")) return;
 
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
-      caches.match(request).then((cached) => {
+      (async () => {
+        const cached = await caches.match(request);
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-      })
+        const response = await fetch(request);
+        if (response.ok && response.type === "basic") {
+          const copy = response.clone();
+          event.waitUntil(
+            caches
+              .open(ASSET_CACHE)
+              .then((cache) => cache.put(request, copy))
+              .then(trimAssets),
+          );
+        }
+        return response;
+      })(),
     );
-    return;
   }
-
-  // По умолчанию — просто проксируем сеть.
 });
 
-// Push notifications (для будущего использования)
+// ---------- Push ----------
+
 self.addEventListener("push", (event) => {
-  const data = event.data?.json() ?? {};
-  const title = data.title || "Task Delegate";
-  const options = {
-    body: data.body || "У вас новое уведомление",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    data: data.url || "/dashboard",
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "TasksFlow";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-96.png",
+      lang: "ru",
+      // Одинаковый tag заменяет прошлое уведомление, а не копит стопку.
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      timestamp: typeof data.ts === "number" ? data.ts : Date.now(),
+      data: { url: data.url || "/dashboard" },
+    }),
+  );
 });
 
-// Клик по уведомлению
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data));
+  let target = new URL("/dashboard", self.location.origin);
+  try {
+    const candidate = new URL(event.notification.data?.url || "/dashboard", self.location.origin);
+    if (candidate.origin === self.location.origin) target = candidate;
+  } catch {
+    // битый url — открываем кабинет
+  }
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const own = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (own) {
+        await own.focus();
+        if (own.url !== target.href) {
+          // navigate() работает только для вкладок под этим SW — иначе просим страницу.
+          try {
+            await own.navigate(target.href);
+          } catch {
+            own.postMessage({ type: "tf:navigate", url: target.pathname + target.search });
+          }
+        }
+        return;
+      }
+      await self.clients.openWindow(target.href);
+    })(),
+  );
+});
+
+function base64UrlToBytes(value) {
+  const padded = (value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(padded);
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+// Браузер сменил подписку сам (истекла) — переподписываемся без участия человека.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const config = await fetch("/api/push/config", { credentials: "include" }).then((r) => (r.ok ? r.json() : null));
+      const key = config && config.web && config.web.publicKey;
+      if (!key) return;
+      const subscription = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlToBytes(key),
+      });
+      await fetch("/api/push/subscriptions", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "web",
+          subscription: subscription.toJSON(),
+          replaces: event.oldSubscription ? event.oldSubscription.endpoint : null,
+        }),
+      });
+    })().catch(() => {}),
+  );
 });

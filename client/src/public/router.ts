@@ -14,6 +14,7 @@ export type RouteKey =
   | "blog-article"
   | "blog-category"
   | "legal"
+  | "app"
   | "not-found";
 
 export interface MatchedRoute {
@@ -25,6 +26,8 @@ export function matchRoute(pathname: string): MatchedRoute {
   const p = (pathname || "/").replace(/\/+$/, "") || "/";
   if (p === "/") return { key: "landing", params: {} };
   if (p === "/blog") return { key: "blog-index", params: {} };
+  // Как поставить приложение на Android и iPhone.
+  if (p === "/app") return { key: "app", params: {} };
 
   // /privacy, /consent, /terms — документы из content/legal.
   if (LEGAL_SLUGS.has(p.slice(1))) return { key: "legal", params: { doc: p.slice(1) } };

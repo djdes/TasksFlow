@@ -46,6 +46,7 @@ export function Footer() {
           <li><a href="/#features" className={linkCls}>Возможности</a></li>
           <li><a href="/#how" className={linkCls}>Как работает</a></li>
           <li><a href="/#pricing" className={linkCls}>Тарифы</a></li>
+          <li><a href="/app" className={linkCls}>Приложение для телефона</a></li>
           <li><a href="/login" className={linkCls}>Вход для сотрудников</a></li>
         </Column>
         <Column title="Блог">

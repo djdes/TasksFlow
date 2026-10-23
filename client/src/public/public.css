@@ -1208,3 +1208,42 @@ html[data-motion="reduced"] .post-featured:hover .post-cover > div { transform: 
 .hero-demo-link:hover svg { translate: 3px 0; }
 .hero-demo-link:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { .hero-demo-link svg { transition: none; } }
+
+/* ===== /app — приложение для телефона ===== */
+.app-page-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.app-page-hero > svg { flex: none; }
+@media (max-width: 639px) { .app-page-hero { flex-direction: column; align-items: flex-start; gap: 12px; } }
+.app-page-title { font-family: 'Onest', 'Inter', system-ui, sans-serif; font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.1; font-weight: 800; letter-spacing: -.03em; }
+.app-page-lead { margin-top: 8px; max-width: 46rem; color: hsl(var(--muted-foreground)); font-size: 1.0625rem; }
+.app-page-grid { display: grid; gap: 16px; }
+@media (min-width: 768px) { .app-page-grid { grid-template-columns: 1fr 1fr; } .app-qr { grid-column: 1 / -1; } }
+.app-platform { border: 1px solid hsl(var(--border)); border-radius: 20px; background: hsl(var(--card)); padding: 20px; }
+.app-platform-title { display: flex; align-items: center; gap: 8px; font-size: 1.125rem; font-weight: 700; letter-spacing: -.015em; margin-bottom: 14px; }
+.app-platform-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.app-primary-btn, .app-store-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; transition-property: background-color, border-color, color; transition-duration: .15s;
+}
+.app-primary-btn { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.app-primary-btn:hover { background: hsl(var(--primary) / .9); }
+.app-store-btn { border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); }
+.app-store-btn:hover { background: hsl(var(--muted)); }
+.app-primary-btn:focus-visible, .app-store-btn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.app-steps { counter-reset: step; display: grid; gap: 10px; }
+.app-steps li { counter-increment: step; position: relative; padding-left: 34px; font-size: 15px; line-height: 1.45; }
+.app-steps li::before {
+  content: counter(step); position: absolute; left: 0; top: -1px; width: 24px; height: 24px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; background: hsl(var(--primary) / .12); color: hsl(var(--primary));
+}
+.app-note { margin-top: 14px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.app-qr { display: none; }
+@media (min-width: 768px) { .app-qr { display: block; } }
+.app-qr-row { display: flex; align-items: center; gap: 20px; }
+.app-qr-row .app-note { margin-top: 0; max-width: 22rem; }
+.app-qr-code { flex: none; padding: 10px; border-radius: 14px; background: #fff; border: 1px solid hsl(var(--border)); }
+.app-qr-code svg { display: block; width: 136px; height: 136px; }
+.app-features { display: grid; gap: 14px; margin-top: 28px; }
+@media (min-width: 640px) { .app-features { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .app-features { grid-template-columns: repeat(4, 1fr); } }
+.app-features li { display: flex; gap: 12px; align-items: flex-start; }
+.app-features li > svg { flex: none; margin-top: 2px; }

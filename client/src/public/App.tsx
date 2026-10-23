@@ -2,6 +2,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { BlogIndex } from "./pages/BlogIndex";
 import { BlogArticle } from "./pages/BlogArticle";
 import { LegalPage } from "./pages/LegalPage";
+import { AppPage } from "./pages/AppPage";
 import { NotFoundPage } from "./pages/NotFound";
 import { CookieNotice } from "./components/CookieNotice";
 import { DEFAULT_SITE, SiteProvider } from "./site";
@@ -19,6 +20,8 @@ function Page({ route, data }: { route: MatchedRoute; data: any }) {
       return <BlogArticle data={data} />;
     case "legal":
       return <LegalPage data={data} />;
+    case "app":
+      return <AppPage data={data} />;
     default:
       return <NotFoundPage />;
   }

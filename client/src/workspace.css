@@ -29,7 +29,7 @@
    реально есть на экране (поиск, сводка, скелетон). */
 .app-layout { position: relative; isolation: isolate; }
 .app-layout::before, .app-layout::after {
-  content: ""; position: absolute; inset: 0 0 auto; height: var(--band-h); z-index: -1;
+  content: ""; position: absolute; inset: 0 0 auto; height: calc(var(--band-h) + env(safe-area-inset-top, 0px)); z-index: -1;
   border-radius: 0 0 28px 28px; pointer-events: none;
 }
 .app-layout::before { background: var(--band-surface); }
@@ -60,6 +60,14 @@
   background: transparent;
   box-shadow: none;
   border-bottom: 0;
+  /* Приложение на экране «Домой» в iOS рисует страницу под статус-баром:
+     шапка опускается на высоту выреза, полоса растёт вместе с ней.
+     В браузере и в приложениях-оболочках отступ нулевой. */
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(60px + env(safe-area-inset-top, 0px));
+}
+@media (min-width: 1024px) {
+  .app-layout .app-header { height: calc(68px + env(safe-area-inset-top, 0px)); }
 }
 .app-layout .app-header::after, .app-layout .app-header::before { content: none; }
 .app-layout .app-header-content, .app-layout .app-content { max-width: 1280px; margin-inline: auto; }
@@ -303,7 +311,9 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 @media (hover: hover) { .fab-button:hover svg { rotate: 90deg; } }
 
 /* Скелетон кабинета повторяет band: шапка прозрачная, поиск и сводка — светлые поверхности. */
-.app-layout .skeleton-app-header { background: transparent; max-width: 1280px; margin-inline: auto; }
+.app-layout .skeleton-app-header { background: transparent; max-width: 1280px; margin-inline: auto;
+  padding-top: env(safe-area-inset-top, 0px); height: calc(60px + env(safe-area-inset-top, 0px)); }
+@media (min-width: 1024px) { .app-layout .skeleton-app-header { height: calc(68px + env(safe-area-inset-top, 0px)); } }
 .app-layout .skeleton-content > .skeleton:first-child { background: rgb(255 255 255 / .9); }
 .app-layout .skeleton-content > .skeleton:nth-child(2) { background: hsl(var(--card)); box-shadow: var(--lift-shadow); }
 .dark .app-layout .skeleton-content > .skeleton:first-child { background: hsl(var(--card) / .9); }
@@ -751,6 +761,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .login-hint { margin: 0; color: hsl(var(--muted-foreground)); font-size: 13.5px; line-height: 1.55; text-align: center; text-wrap: pretty; }
 .login-links { display: flex; flex-wrap: wrap; gap: 10px; }
 .login-link {
+  display: inline-flex; align-items: center; justify-content: center;
   flex: 1 1 auto; min-height: 44px; padding-inline: 14px; border-radius: 12px; border: 1px solid hsl(var(--border));
   background: hsl(var(--background) / .6); color: hsl(var(--foreground)); font-size: 14px; font-weight: 600;
   transition: border-color 150ms var(--ease-settle), color 150ms var(--ease-settle), background-color 150ms var(--ease-settle);
@@ -977,3 +988,26 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
   .demo-bar-cta .demo-bar-short { display: none; }
   .demo-bar-cta .demo-bar-tiny { display: inline; }
 }
+
+/* ===== Приложение и уведомления (Account) ===== */
+.app-device-rows { display: grid; gap: 4px; }
+.app-device-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 10px 0; }
+.app-device-row + .app-device-row { border-top: 1px solid hsl(var(--border)); }
+.app-device-label { font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); }
+.app-device-text { margin-top: 2px; font-size: 14px; color: hsl(var(--muted-foreground)); }
+.app-device-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ===== Подсказка на главной: приложение / уведомления ===== */
+/* Непрозрачная карточка: без задач на главной она лежит прямо на indigo-полосе. */
+.app-nudge {
+  position: relative; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 8px 12px 14px;
+  border-radius: 16px; border: 1px solid hsl(var(--border)); background: hsl(var(--card));
+  box-shadow: 0 12px 28px -20px rgb(20 26 90 / .55);
+}
+.app-nudge-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: hsl(var(--primary)); color: white; }
+.app-nudge-title { font-size: 14px; font-weight: 650; color: hsl(var(--foreground)); letter-spacing: -.01em; }
+.app-nudge-text { font-size: 13px; color: hsl(var(--muted-foreground)); }
+.app-nudge-close { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin-left: -4px; border-radius: 10px; color: hsl(var(--muted-foreground)); }
+.app-nudge-close:hover { background: hsl(var(--primary) / .1); color: hsl(var(--foreground)); }
+.app-nudge-close:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
