@@ -2,6 +2,7 @@
    index.css сюда не подключается: у публичной части свой Tailwind с
    узким content (tailwind.public.config.ts) и свой минимальный base. */
 @import "./tokens.css";
+@import "./fonts-public.css";
 
 @config "../../tailwind.public.config.ts";
 
