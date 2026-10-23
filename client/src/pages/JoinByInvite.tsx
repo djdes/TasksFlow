@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/PhoneInput";
 import { AuthShell } from "@/components/AuthShell";
 import { PinFlow, type PinSubmitError } from "@/components/PinFlow";
-import { LegalConsent } from "@/components/LegalConsent";
+import { LegalConsent, TermsNote } from "@/components/LegalConsent";
 import { postAuthJson, toPinSubmitError } from "@/lib/auth-api";
 
 type Preview =
@@ -132,6 +132,7 @@ export default function JoinByInvite() {
         <Button type="submit" className="login-submit w-full h-12 rounded-xl text-base font-semibold" disabled={!name.trim() || phone.length < 12}>
           Далее — придумать PIN
         </Button>
+        <TermsNote />
       </form>
     </AuthShell>
   );

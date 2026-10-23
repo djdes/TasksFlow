@@ -18,7 +18,7 @@ import { User, Lock, Eye, EyeOff, Loader2, CheckCircle2, X, ArrowRight } from "l
 import { suggestEmailFix } from "./email-typo";
 import { detectIdentity } from "./identity";
 import { PinFlow, type PinSubmitError } from "../../components/PinFlow";
-import { LegalConsent } from "../../components/LegalConsent";
+import { LegalConsent, TermsNote } from "../../components/LegalConsent";
 
 // input → (телефон) pin | setup → кабинет; (email) consent? → sent | кабинет
 type Step = "input" | "sent" | "pin" | "setup" | "consent";
@@ -271,6 +271,7 @@ export function AuthForm({
         >
           {busy ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Создать аккаунт"}
         </button>
+        <TermsNote action="Создавая аккаунт" />
         <button
           type="button"
           onClick={() => { setStep("input"); setError(""); }}

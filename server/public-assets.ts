@@ -38,6 +38,12 @@ export function setupPublicAssets(app: Express): void {
     const urls: { loc: string; priority: string; changefreq: string; lastmod?: string }[] = [
       { loc: `${origin}/`, priority: "1.0", changefreq: "weekly" },
       { loc: `${origin}/blog`, priority: "0.8", changefreq: "daily" },
+      // Юридические документы: поисковики и проверяющие должны их находить.
+      ...["privacy", "consent", "terms"].map((slug) => ({
+        loc: `${origin}/${slug}`,
+        priority: "0.3",
+        changefreq: "yearly",
+      })),
       ...CLUSTERS.map((c) => ({
         loc: `${origin}/blog/category/${c.key}`,
         priority: "0.6",

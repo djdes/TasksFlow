@@ -6,14 +6,8 @@
     <meta name="theme-color" content="#5566f6" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Manrope: дружелюбный, очень читаемый, с хорошей кириллицей —
-         для публичной части (кабинет остаётся на своих шрифтах). -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Шрифты (Manrope, Onest) — свои, из бандла (client/src/fonts-public.css):
+         без Google Fonts, IP посетителей никуда не передаётся. -->
     <!-- Anti-flash тема ДО рендера (тот же ключ, что в кабинете). -->
     <script>
       (function () {
@@ -37,15 +31,6 @@
       })();
     </script>
     <!--app-head-->
-    <style>
-      /* SPA-кабинет фиксирует body (position:fixed; overflow:hidden) и
-         скроллит контейнер #root — это ломало скролл колесом на публичных
-         страницах, которые рендерятся в #public-root. Возвращаем обычный
-         скролл документа. position:static — ключевое (без него body вне
-         потока и страница не прокручивается). !important перебивает index.css. */
-      html, body { height: auto !important; overflow: visible !important; position: static !important; }
-      #public-root { min-height: 100vh; }
-    </style>
   </head>
   <body>
     <div id="public-root"><!--app-html--></div>

@@ -6,7 +6,7 @@
  */
 import type { MatchedRoute } from "./router";
 import { clusterTitle } from "./clusters";
-import type { BlogIndexData, ArticleData, PostFull } from "./types";
+import type { BlogIndexData, ArticleData, LegalData, PostFull } from "./types";
 
 export const SITE_NAME = "TasksFlow";
 const DEFAULT_DESCRIPTION =
@@ -213,6 +213,29 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         ogImage: `${origin}/og/${post.slug}.svg`,
         type: "article",
         jsonLdBlocks: blocks,
+      });
+    }
+
+    case "legal": {
+      const doc = (data as LegalData | null)?.doc;
+      if (!doc) {
+        return renderHead({
+          title: "Документ не найден — TasksFlow",
+          description: "Запрошенный документ не найден.",
+          canonical: `${origin}/`,
+        });
+      }
+      const url = `${origin}/${doc.slug}`;
+      return renderHead({
+        title: `${doc.title} — TasksFlow`,
+        description: doc.description,
+        canonical: url,
+        jsonLdBlocks: [
+          breadcrumbLd([
+            { name: "Главная", url: `${origin}/` },
+            { name: doc.title, url },
+          ]),
+        ],
       });
     }
 

@@ -1,8 +1,8 @@
 /**
- * SSR публичных страниц (лендинг + блог) в Express.
+ * SSR публичных страниц (лендинг, блог, юридические документы) в Express.
  *
- * Кабинет остаётся клиентским SPA. Публичные роуты (/, /blog, ...) сервер
- * рендерит в готовый HTML с мета-тегами и JSON-LD — для SEO и быстрого
+ * Кабинет остаётся клиентским SPA. Публичные роуты (/, /blog, /privacy, ...)
+ * сервер рендерит в готовый HTML с мета-тегами и JSON-LD — для SEO и быстрого
  * первого экрана; клиент затем гидрирует интерактив (форма входа, тема).
  *
  * Dev:  модуль рендера грузится через vite.ssrLoadModule, шаблон —
@@ -10,6 +10,10 @@
  * Prod: импортируется собранный dist/server/entry-server.js, шаблон —
  *       dist/public/public.html (Vite уже вставил туда хешированные
  *       <script>/<link>).
+ *
+ * Аналитику сервер в <head> не вшивает: id счётчиков уходят в
+ * window.__SSR_SITE__, а скрипты подключает клиент после согласия
+ * посетителя (client/src/public/analytics.ts).
  *
  * Пути резолвятся от process.cwd() (= корень проекта и в dev, и в prod),
  * как и uploadsDir в routes.ts — без import.meta/__dirname, чтобы работать
@@ -19,15 +23,16 @@ import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
 import type { Express, Request, Response, NextFunction } from "express";
-import { loadRouteData } from "./public-data";
+import { loadRouteData, siteConfig } from "./public-data";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 
-interface SsrModule {
+export interface SsrModule {
   matchRoute: (pathname: string) => { key: string; params: Record<string, string> };
   render: (
     pathname: string,
     data: unknown,
     origin: string,
+    site?: unknown,
   ) => { appHtml: string; head: string; routeKey: string };
 }
 
@@ -35,24 +40,32 @@ function safeJson(data: unknown): string {
   return JSON.stringify(data ?? null).replace(/</g, "\\u003c");
 }
 
-function analyticsSnippet(): string {
-  const ym = process.env.YM_ID?.trim();
-  const ga = process.env.GA_ID?.trim();
-  let out = "";
-  if (ym) {
-    out +=
-      `<script type="text/javascript">(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};` +
-      `m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})` +
-      `(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(${JSON.stringify(ym)},"init",` +
-      `{clickmap:true,trackLinks:true,accurateTrackBounce:true});</script>` +
-      `<noscript><div><img src="https://mc.yandex.ru/watch/${ym}" style="position:absolute;left:-9999px" alt="" /></div></noscript>`;
-  }
-  if (ga) {
-    out +=
-      `<script async src="https://www.googletagmanager.com/gtag/js?id=${ga}"></script>` +
-      `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config",${JSON.stringify(ga)});</script>`;
-  }
-  return out;
+/** Данные для гидрации: данные страницы и общие настройки сайта. */
+export function buildDataScript(data: unknown, site: unknown = siteConfig()): string {
+  return `<script>window.__SSR_DATA__=${safeJson(data)};window.__SSR_SITE__=${safeJson(site)}</script>`;
+}
+
+/** Готовый HTML публичной страницы. Отдельно от Express — его же зовут превью и тесты. */
+export async function renderPublicPage(
+  ssr: SsrModule,
+  template: string,
+  pathname: string,
+  pageParam: string,
+  origin: string,
+): Promise<{ status: number; html: string }> {
+  const matched = ssr.matchRoute(pathname);
+  // Пагинация блога — через ?page=N. Прокидываем в loadRouteData вместе
+  // с параметрами роута (cluster/slug/doc). render() данные уже получает
+  // готовыми, так что номер страницы ему не нужен.
+  const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam });
+  const site = siteConfig();
+  const { appHtml, head } = ssr.render(pathname, data, origin, site);
+  // Заменители-функции: в HTML статей могут встретиться «$&», «$'» и т. п.
+  const html = template
+    .replace("<!--app-head-->", () => head)
+    .replace("<!--app-html-->", () => appHtml)
+    .replace("<!--app-data-->", () => buildDataScript(data, site));
+  return { status: matched.key === "not-found" ? 404 : 200, html };
 }
 
 async function renderAndSend(
@@ -61,22 +74,16 @@ async function renderAndSend(
   ssr: SsrModule,
   template: string,
 ): Promise<void> {
-  const pathname = req.path;
-  const matched = ssr.matchRoute(pathname);
-  const origin = getPublicTasksflowBaseUrl(req);
-  // Пагинация блога — через ?page=N. Прокидываем в loadRouteData вместе
-  // с параметрами роута (cluster/slug). render() данные уже получает
-  // готовыми, так что номер страницы ему не нужен.
   const pageParam = typeof req.query.page === "string" ? req.query.page : "1";
-  const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam });
-  const { appHtml, head } = ssr.render(pathname, data, origin);
-  const dataScript = `<script>window.__SSR_DATA__=${safeJson(data)}</script>` + analyticsSnippet();
-  const html = template
-    .replace("<!--app-head-->", head)
-    .replace("<!--app-html-->", appHtml)
-    .replace("<!--app-data-->", dataScript);
+  const { status, html } = await renderPublicPage(
+    ssr,
+    template,
+    req.path,
+    pageParam,
+    getPublicTasksflowBaseUrl(req),
+  );
   res
-    .status(matched.key === "not-found" ? 404 : 200)
+    .status(status)
     .set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" })
     .end(html);
 }
@@ -86,6 +93,10 @@ function registerRoutes(app: Express, handler: (req: Request, res: Response, nex
   app.get("/blog", handler);
   app.get("/blog/category/:cluster", handler);
   app.get("/blog/:slug", handler);
+  // Юридические документы (content/legal/*.md).
+  app.get("/privacy", handler);
+  app.get("/consent", handler);
+  app.get("/terms", handler);
 }
 
 /** DEV: SSR через работающий Vite dev-сервер. Регистрация синхронная. */

@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-import { AuthModal } from "../landing/auth";
 import { ThemeToggle } from "../landing/ThemeToggle";
 import { TopBanner } from "./TopBanner";
 import { Logo } from "./Logo";
+
+// Окно входа грузится по требованию: SSR его не рендерит, а модуль
+// подтягивается при наведении/фокусе на «Войти» или при первом клике.
+const AuthModal = lazy(() => import("../landing/auth-modal"));
+const preloadAuthModal = () => {
+  void import("../landing/auth-modal");
+};
 
 /**
  * Шапка публичной части. На лендинге ссылки ведут к якорям секций,
@@ -12,6 +18,13 @@ import { Logo } from "./Logo";
  */
 export function Nav({ onLanding = false }: { onLanding?: boolean }) {
   const [authOpen, setAuthOpen] = useState(false);
+  // Однажды открытое окно остаётся смонтированным, чтобы закрытие
+  // доиграло анимацию, а не обрывалось размонтированием.
+  const [authMounted, setAuthMounted] = useState(false);
+  const openAuth = () => {
+    setAuthMounted(true);
+    setAuthOpen(true);
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   // После гидрации проверяем сессию: залогиненный видит «Открыть кабинет»
   // вместо «Войти». SSR рендерит дефолт (не залогинен) — без mismatch,
@@ -70,7 +83,7 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
               Открыть кабинет
             </a>
           ) : (
-            <button onClick={() => setAuthOpen(true)} className="nav-cta press">
+            <button onClick={openAuth} onPointerEnter={preloadAuthModal} onFocus={preloadAuthModal} className="nav-cta press">
               Войти
             </button>
           )}
@@ -89,7 +102,8 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
           ))}
           <div className="flex items-center justify-between pt-1">
             <button
-              onClick={() => { setMenuOpen(false); setAuthOpen(true); }}
+              onClick={() => { setMenuOpen(false); openAuth(); }}
+              onPointerEnter={preloadAuthModal}
               className="py-2.5 text-sm font-semibold text-primary"
             >
               Войти или зарегистрироваться
@@ -99,7 +113,11 @@ export function Nav({ onLanding = false }: { onLanding?: boolean }) {
         </div>
       )}
 
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      {authMounted && (
+        <Suspense fallback={null}>
+          <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+        </Suspense>
+      )}
     </header>
     </>
   );

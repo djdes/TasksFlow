@@ -57,7 +57,7 @@ export function Pagination({
           <span
             key={it}
             aria-current="page"
-            className={`${baseBtn} bg-primary text-primary-foreground shadow-lg shadow-primary/25`}
+            className={`${baseBtn} bg-primary text-primary-foreground`}
           >
             {it}
           </span>

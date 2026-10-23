@@ -18,7 +18,7 @@ import { loginSchema } from "@shared/schema";
 import { PhoneInput } from "@/components/PhoneInput";
 import { AuthShell } from "@/components/AuthShell";
 import { PinFlow, type PinSubmitError } from "@/components/PinFlow";
-import { LegalConsent } from "@/components/LegalConsent";
+import { LegalConsent, TermsNote } from "@/components/LegalConsent";
 import { postAuthJson, toPinSubmitError } from "@/lib/auth-api";
 
 const formSchema = z.object({
@@ -135,6 +135,7 @@ export default function RegisterUser() {
           <Button type="submit" className="login-submit w-full text-base font-semibold h-12 rounded-xl">
             Далее — придумать PIN
           </Button>
+          <TermsNote />
 
           <Link href="/register" className="login-link inline-flex items-center justify-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Назад
