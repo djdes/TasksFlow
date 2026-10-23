@@ -16,3 +16,16 @@ logs/
 .playwright-mcp/
 .playwright-cli/
 output/playwright/
+# Мобильные приложения: сборки, локальные SDK-пути, сгенерированный Xcode-проект.
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/ios/TasksFlow.xcodeproj/
+mobile/ios/build/
+# Ключи подписи живут на сервере (~/.tasksflow-deploy/android), не в git.
+*.jks
+*.keystore
+*.p8
+# APK, который CI выкладывает на сервер (раздаётся как /downloads/*).
+/downloads/

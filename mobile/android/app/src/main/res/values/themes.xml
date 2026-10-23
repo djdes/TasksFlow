@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Прозрачная активность-запускалка: дальше экран рисует Chrome. -->
+    <style name="Theme.TasksFlow.Launcher" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push через APNs. Для сборки в App Store Xcode сам ставит production. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Ссылки tasksflow.ru открываются в приложении (apple-app-site-association на сайте). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:tasksflow.ru</string>
+		<string>webcredentials:tasksflow.ru</string>
+	</array>
+</dict>
+</plist>

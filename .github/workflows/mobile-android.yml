@@ -1,0 +1,239 @@
+name: Android
+
+# Приложение для Android (mobile/android, Trusted Web Activity).
+#   Рабочие ветки и PR: debug-сборка и запуск в эмуляторе со снимком экрана.
+#   main: подписанные APK и AAB; APK выкладывается на сайт
+#   (tasksflow.ru/downloads/tasksflow.apk), AAB для Google Play — в артефактах.
+#
+# Ключ подписи не лежит ни в git, ни в секретах GitHub: он хранится на
+# сервере в ~/.tasksflow-deploy/android (рядом с прошлой сборкой деплоя),
+# CI берёт его по тем же SSH-секретам, что и деплой, а при первом запуске
+# создаёт сам. Потерять ключ = обновить приложение у людей можно будет
+# только переустановкой, поэтому копию стоит сохранить (docs/mobile.md).
+on:
+  push:
+    paths:
+      - "mobile/android/**"
+      - ".github/workflows/mobile-android.yml"
+  pull_request:
+    paths:
+      - "mobile/android/**"
+      - ".github/workflows/mobile-android.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    defaults:
+      run:
+        working-directory: mobile/android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Version
+        run: |
+          echo "ANDROID_VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_NAME=1.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: SSH to production
+        if: env.RELEASE == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+          ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          cat > ~/.ssh/config <<EOF
+          Host prod
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port ${SSH_PORT:-22}
+            IdentityFile ~/.ssh/prod_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+          EOF
+          ssh prod true
+
+      - name: Signing key
+        if: env.RELEASE == 'true'
+        run: |
+          set -euo pipefail
+          KEY_DIR='.tasksflow-deploy/android'
+          JKS="$RUNNER_TEMP/upload.jks"
+          ENVF="$RUNNER_TEMP/keystore.env"
+          if ssh prod "test -s $KEY_DIR/upload.jks && test -s $KEY_DIR/keystore.env"; then
+            ssh prod "cat $KEY_DIR/upload.jks" > "$JKS"
+            ssh prod "cat $KEY_DIR/keystore.env" > "$ENVF"
+            echo "Ключ подписи взят с сервера"
+          else
+            PASS="$(openssl rand -hex 24)"
+            echo "::add-mask::$PASS"
+            keytool -genkeypair -keystore "$JKS" -storetype PKCS12 -alias upload \
+              -keyalg RSA -keysize 4096 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=TasksFlow, O=TasksFlow, C=RU" > /dev/null
+            printf 'ANDROID_KEYSTORE_PASSWORD=%s\nANDROID_KEY_ALIAS=upload\n' "$PASS" > "$ENVF"
+            ssh prod "umask 077 && mkdir -p $KEY_DIR && cat > $KEY_DIR/upload.jks.part && mv -n $KEY_DIR/upload.jks.part $KEY_DIR/upload.jks" < "$JKS"
+            ssh prod "umask 077 && cat > $KEY_DIR/keystore.env.part && mv -n $KEY_DIR/keystore.env.part $KEY_DIR/keystore.env" < "$ENVF"
+            # Если параллельный запуск успел раньше — берём его ключ.
+            ssh prod "cat $KEY_DIR/upload.jks" > "$JKS"
+            ssh prod "cat $KEY_DIR/keystore.env" > "$ENVF"
+            echo "Создан новый ключ подписи, сохранён на сервере в ~/$KEY_DIR"
+          fi
+          PASS="$(sed -n 's/^ANDROID_KEYSTORE_PASSWORD=//p' "$ENVF")"
+          ALIAS="$(sed -n 's/^ANDROID_KEY_ALIAS=//p' "$ENVF")"
+          echo "::add-mask::$PASS"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$JKS"
+            echo "ANDROID_KEYSTORE_PASSWORD=$PASS"
+            echo "ANDROID_KEY_ALIAS=${ALIAS:-upload}"
+          } >> "$GITHUB_ENV"
+          CERT="$(keytool -list -v -keystore "$JKS" -storepass "$PASS" -alias "${ALIAS:-upload}" | sed -n 's/^[[:space:]]*SHA256: //p' | head -1)"
+          echo "ANDROID_CERT_SHA256=$CERT" >> "$GITHUB_ENV"
+          echo "Сертификат SHA-256: $CERT"
+
+      - name: Build
+        run: |
+          if [ "$RELEASE" = "true" ]; then
+            ./gradlew --no-daemon assembleRelease bundleRelease
+          else
+            ./gradlew --no-daemon assembleDebug
+          fi
+
+      - name: Inspect APK
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          if [ "$RELEASE" = "true" ]; then APK=app/build/outputs/apk/release/app-release.apk; else APK=app/build/outputs/apk/debug/app-debug.apk; fi
+          echo "APK=$PWD/$APK" >> "$GITHUB_ENV"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label):"
+          "$BT/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          ls -l "$APK"
+
+      - name: Upload debug APK
+        if: env.RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tasksflow-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Upload release APK and AAB
+        if: env.RELEASE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tasksflow-android-${{ env.ANDROID_VERSION_NAME }}
+          path: |
+            mobile/android/app/build/outputs/apk/release/app-release.apk
+            mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Publish APK to the site
+        if: env.RELEASE == 'true'
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          # Та же логика пути, что в deploy.yml.
+          DL="$(ssh prod "p='${DEPLOY_PATH}'; if [ -z \"\$p\" ] || [ ! -f \"\$p/package.json\" ]; then p=/var/www/tasksflow/data/www/tasksflow.ru; fi; mkdir -p \"\$p/downloads\" && echo \"\$p/downloads\"")"
+          SIZE="$(stat -c %s "$APK")"
+          SHA="$(sha256sum "$APK" | cut -d' ' -f1)"
+          cat > "$RUNNER_TEMP/android.json" <<EOF
+          {
+            "packageName": "ru.tasksflow.app",
+            "versionName": "$ANDROID_VERSION_NAME",
+            "versionCode": $ANDROID_VERSION_CODE,
+            "size": $SIZE,
+            "sha256": "$SHA",
+            "certSha256": "$ANDROID_CERT_SHA256",
+            "commit": "$GITHUB_SHA",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          scp -q "$APK" "prod:$DL/.tasksflow.apk.part"
+          scp -q "$RUNNER_TEMP/android.json" "prod:$DL/.android.json.part"
+          ssh prod "cd '$DL' && mv .tasksflow.apk.part tasksflow.apk && mv .android.json.part android.json && ls -l"
+
+      - name: Check the site
+        if: env.RELEASE == 'true'
+        run: |
+          set -euo pipefail
+          # Деплой сайта идёт параллельно (deploy.yml) — ждём до 5 минут,
+          # пока новая сборка начнёт отдавать /downloads и assetlinks.
+          for i in $(seq 1 30); do
+            if curl -fsS https://tasksflow.ru/.well-known/assetlinks.json -o "$RUNNER_TEMP/assetlinks.json" \
+              && grep -q "$ANDROID_CERT_SHA256" "$RUNNER_TEMP/assetlinks.json"; then
+              break
+            fi
+            sleep 10
+          done
+          cat "$RUNNER_TEMP/assetlinks.json" || true
+          echo
+          grep -q "$ANDROID_CERT_SHA256" "$RUNNER_TEMP/assetlinks.json" \
+            || { echo "::error::assetlinks.json на сайте без сертификата приложения — Chrome покажет адресную строку"; exit 1; }
+          curl -fsS https://tasksflow.ru/downloads/android.json
+          echo
+          curl -fsSI https://tasksflow.ru/downloads/tasksflow.apk | grep -iE "^(HTTP|content-type|content-length)"
+
+  emulator:
+    needs: build
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tasksflow-android-debug
+          path: apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run in emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis_playstore
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash mobile/android/ci-smoke.sh apk/app-debug.apk output/android
+
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-emulator
+          path: output/android/
+          if-no-files-found: ignore
+          retention-days: 14

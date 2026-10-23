@@ -1,0 +1,46 @@
+# TasksFlow для iPhone и iPad. Проект Xcode генерируется из этого файла:
+#   brew install xcodegen && cd mobile/ios && xcodegen generate
+# Сам .xcodeproj в репозиторий не кладём — он собирается в CI (mobile-ios.yml).
+name: TasksFlow
+options:
+  bundleIdPrefix: ru.tasksflow
+  developmentLanguage: ru
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # Хост кабинета: можно собрать сборку для стенда, не трогая код.
+    TF_HOST: tasksflow.ru
+targets:
+  TasksFlow:
+    type: application
+    platform: iOS
+    sources:
+      - path: TasksFlow
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ru.tasksflow.app
+        PRODUCT_NAME: TasksFlow
+        INFOPLIST_FILE: TasksFlow/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: TasksFlow/TasksFlow.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        ENABLE_PREVIEWS: NO
+schemes:
+  TasksFlow:
+    build:
+      targets:
+        TasksFlow: all
+    run:
+      config: Debug
+    archive:
+      config: Release

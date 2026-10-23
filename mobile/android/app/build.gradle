@@ -1,0 +1,106 @@
+plugins {
+    id 'com.android.application'
+}
+
+/*
+ * TasksFlow для Android — Trusted Web Activity: кабинет tasksflow.ru в
+ * полноэкранном Chrome без адресной строки. Веб-обновления приходят сразу,
+ * APK пересобирается только при смене этого проекта.
+ *
+ * Сайт подтверждает приложение через /.well-known/assetlinks.json
+ * (server/app-links.ts): там должен быть SHA-256 сертификата подписи.
+ */
+def twa = [
+    applicationId: 'ru.tasksflow.app',
+    hostName: 'tasksflow.ru',
+    launchUrl: '/dashboard',
+    name: 'TasksFlow',
+    launcherName: 'TasksFlow',
+    // Цвета — из shared/brand.ts: полоса шапки и фон страницы.
+    themeColor: '#4B5BEF',
+    themeColorDark: '#1C2459',
+    navigationColor: '#F3F4F6',
+    navigationColorDark: '#0B1220',
+    navigationDividerColor: '#00000000',
+    navigationDividerColorDark: '#00000000',
+    backgroundColor: '#5568F6',
+    splashScreenFadeOutDuration: 250,
+    // Без Chrome (или другого браузера с TWA) — Custom Tab любого браузера:
+    // в нём работают камера и выбор файла для фотоотчётов, в WebView — нет.
+    fallbackType: 'customtabs',
+]
+
+// Номер сборки задаёт CI (растёт с каждым запуском), локально — 1.
+def envVersionCode = (System.getenv('ANDROID_VERSION_CODE') ?: '1') as Integer
+def envVersionName = System.getenv('ANDROID_VERSION_NAME') ?: '1.0.0'
+// Ключ подписи — только из окружения, в репозитории его нет.
+def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+
+android {
+    namespace 'ru.tasksflow.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId twa.applicationId
+        minSdk 21
+        targetSdk 36
+        versionCode envVersionCode
+        versionName envVersionName
+
+        def origin = 'https://' + twa.hostName
+        resValue 'string', 'appName', twa.name
+        resValue 'string', 'launcherName', twa.launcherName
+        resValue 'string', 'launchUrl', origin + twa.launchUrl
+        resValue 'string', 'hostName', twa.hostName
+        resValue 'string', 'webManifestUrl', origin + '/manifest.json'
+        resValue 'string', 'shortcutTasksUrl', origin + '/dashboard'
+        resValue 'string', 'shortcutReportsUrl', origin + '/reports'
+        resValue 'string', 'providerAuthority', twa.applicationId + '.fileprovider'
+        resValue 'string', 'fallbackType', twa.fallbackType
+        resValue 'string', 'launchHandlerClientMode', 'navigate-existing'
+        resValue 'string', 'generatorApp', 'tasksflow'
+        resValue 'color', 'colorPrimary', twa.themeColor
+        resValue 'color', 'colorPrimaryDark', twa.themeColorDark
+        resValue 'color', 'navigationColor', twa.navigationColor
+        resValue 'color', 'navigationColorDark', twa.navigationColorDark
+        resValue 'color', 'navigationDividerColor', twa.navigationDividerColor
+        resValue 'color', 'navigationDividerColorDark', twa.navigationDividerColorDark
+        resValue 'color', 'backgroundColor', twa.backgroundColor
+        resValue 'integer', 'splashScreenFadeOutDuration', twa.splashScreenFadeOutDuration.toString()
+        resValue 'bool', 'enableNotification', 'true'
+    }
+
+    signingConfigs {
+        if (keystorePath) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'upload'
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD') ?: System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            if (keystorePath) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4'
+}

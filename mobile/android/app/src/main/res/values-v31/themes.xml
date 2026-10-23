@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Android 12+ сам показывает заставку при запуске. Делаем её такой же,
+        как заставка TWA (белый знак на indigo), чтобы не было двух разных.
+    -->
+    <style name="Theme.TasksFlow.Launcher" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/backgroundColor</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

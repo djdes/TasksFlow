@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Долгое нажатие на иконку: сразу к задачам или к истории. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="tasks"
+        android:shortcutLongLabel="@string/shortcut_tasks"
+        android:shortcutShortLabel="@string/shortcut_tasks_short">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:data="@string/shortcutTasksUrl"
+            android:targetClass="ru.tasksflow.app.LauncherActivity"
+            android:targetPackage="ru.tasksflow.app" />
+        <categories android:name="android.intent.category.LAUNCHER" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="reports"
+        android:shortcutLongLabel="@string/shortcut_reports"
+        android:shortcutShortLabel="@string/shortcut_reports_short">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:data="@string/shortcutReportsUrl"
+            android:targetClass="ru.tasksflow.app.LauncherActivity"
+            android:targetPackage="ru.tasksflow.app" />
+        <categories android:name="android.intent.category.LAUNCHER" />
+    </shortcut>
+</shortcuts>

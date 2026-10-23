@@ -1,0 +1,128 @@
+name: iOS
+
+# Приложение для iPhone и iPad (mobile/ios, Swift + WKWebView).
+#   Всегда: сборка, запуск в iOS Simulator со снимком экрана и проверкой,
+#   что кабинет загрузился; неподписанный .ipa в артефактах (ставится через
+#   AltStore/Sideloadly со своим Apple ID).
+#   main + секреты App Store Connect: подписанная сборка уходит в TestFlight.
+#   Секреты: APPLE_TEAM_ID, APP_STORE_CONNECT_KEY_ID,
+#   APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8 (содержимое .p8).
+on:
+  push:
+    paths:
+      - "mobile/ios/**"
+      - ".github/workflows/mobile-ios.yml"
+  pull_request:
+    paths:
+      - "mobile/ios/**"
+      - ".github/workflows/mobile-ios.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile/ios
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode
+        run: |
+          # Самый новый стабильный Xcode на образе: App Store принимает
+          # сборки только со свежим SDK.
+          XCODE="$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi -e beta -e rc | sort -V | tail -1 || true)"
+          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
+          xcodebuild -version
+
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build for Simulator
+        run: |
+          xcb() {
+            # Полный лог — в файл; при ошибке показываем только ошибки компиляции.
+            local log="$RUNNER_TEMP/xcodebuild-$1.log"; shift
+            if ! xcodebuild "$@" > "$log" 2>&1; then
+              grep -E "(error|fatal error):" -A3 "$log" | head -n 120 || true
+              tail -n 30 "$log"
+              return 1
+            fi
+            tail -n 3 "$log"
+          }
+          declare -f xcb > "$RUNNER_TEMP/xcb.sh"
+          xcb simulator -project TasksFlow.xcodeproj -scheme TasksFlow -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+
+      - name: Run in Simulator
+        run: bash ci-smoke.sh build/Build/Products/Debug-iphonesimulator/TasksFlow.app "$GITHUB_WORKSPACE/output/ios"
+
+      - name: Unsigned device build
+        run: |
+          source "$RUNNER_TEMP/xcb.sh"
+          xcb device -project TasksFlow.xcodeproj -scheme TasksFlow -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R build/Build/Products/Release-iphoneos/TasksFlow.app "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/output/TasksFlow-unsigned.ipa" Payload)
+          ls -l "$GITHUB_WORKSPACE/output/TasksFlow-unsigned.ipa"
+
+      - name: TestFlight
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          source "$RUNNER_TEMP/xcb.sh"
+          xcb archive -project TasksFlow.xcodeproj -scheme TasksFlow -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/TasksFlow.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            "${AUTH[@]}" archive
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          xcb export -exportArchive -archivePath "$RUNNER_TEMP/TasksFlow.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            "${AUTH[@]}"
+          rm -f "$KEY"
+          echo "Сборка $GITHUB_RUN_NUMBER отправлена в App Store Connect → TestFlight"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tasksflow-ios
+          path: output/
+          if-no-files-found: ignore
+          retention-days: 30

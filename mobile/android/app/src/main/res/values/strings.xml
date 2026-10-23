@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_tasks">Задачи на сегодня</string>
+    <string name="shortcut_tasks_short">Задачи</string>
+    <string name="shortcut_reports">История и отчёты</string>
+    <string name="shortcut_reports_short">История</string>
+
+    <!--
+        Приложение доверяет сайту (обратная связь — assetlinks.json на сайте).
+        Без обеих половин Chrome показывает адресную строку.
+    -->
+    <string name="assetStatements" translatable="false">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {\"namespace\": \"web\", \"site\": \"https://tasksflow.ru\"}
+        }]
+    </string>
+</resources>

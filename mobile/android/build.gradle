@@ -1,0 +1,5 @@
+// AGP и версия Gradle (gradle/wrapper) — как в шаблоне Bubblewrap 1.27:
+// эту связку Google проверяет для Trusted Web Activity.
+plugins {
+    id 'com.android.application' version '8.9.1' apply false
+}
