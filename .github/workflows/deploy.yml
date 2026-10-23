@@ -170,6 +170,10 @@ jobs:
             npm run create-telegram-tables || echo "telegram tables migration failed (non-fatal)"
             npm run add-tg-link-code-cols || echo "tg-link-code cols migration failed (non-fatal)"
             npm run add-draft-autocreate-col || echo "draft auto-create col migration failed (non-fatal)"
+            # Колонки PIN обязательны: без них код не прочитает users и вход
+            # сломается. Падение здесь останавливает деплой до сборки — прод
+            # остаётся на старом коде.
+            npm run add-pin-cols
 
             echo ">>> build"
             npm run build

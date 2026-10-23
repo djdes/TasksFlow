@@ -30,6 +30,8 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
 import { resolveUploadAbs } from "./uploads-paths";
+import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec } from "./pin-auth";
+import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import {
   encryptApiKey,
   decryptApiKey,
@@ -124,6 +126,8 @@ const upload = multer({
 declare module "express-session" {
   interface SessionData {
     userId?: number;
+    /** Когда вошли по email (пароль или ссылка из письма). */
+    emailAuthAt?: number;
   }
 }
 
@@ -230,6 +234,13 @@ function actorFromReq(req: Request): TaskActor {
 }
 
 /** Хелпер: получить companyId из req либо от API key, либо от session. */
+/** Вход по email меньше 30 минут назад: PIN можно задать, не помня текущий. */
+const EMAIL_PIN_RESET_WINDOW_SEC = 30 * 60;
+function canResetPinByEmail(req: Request): boolean {
+  const at = req.session?.emailAuthAt;
+  return typeof at === "number" && nowSec() - at < EMAIL_PIN_RESET_WINDOW_SEC;
+}
+
 async function getCompanyIdFromReq(req: Request): Promise<number | null> {
   if (req.apiKey) return req.apiKey.companyId;
   if (req.session?.userId) {
@@ -248,12 +259,25 @@ const SENSITIVE_USER_KEYS = new Set([
   "passwordHash",
   "magicToken",
   "magicTokenExpiresAt",
+  // Код привязки Telegram: с ним можно привязать свой Telegram к чужому
+  // аккаунту. PIN и счётчики его проверки — тем более не для клиента.
+  "tgLinkCode",
+  "tgLinkCodeExpiresAt",
+  "pinHash",
+  "pinFailedAttempts",
+  "pinLockedUntil",
 ]);
 
 function stripSensitive(value: any): any {
   if (Array.isArray(value)) return value.map(stripSensitive);
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
+    // Строка пользователя: вместо хэша отдаём только факт «PIN задан» и
+    // «вход заблокирован» — руководителю это нужно в списке сотрудников.
+    if ("pinHash" in value) {
+      out.hasPin = Boolean(value.pinHash);
+      out.pinLocked = lockRemaining(value) > 0;
+    }
     for (const [k, v] of Object.entries(value)) {
       if (SENSITIVE_USER_KEYS.has(k)) continue;
       out[k] = stripSensitive(v);
@@ -369,6 +393,11 @@ export async function registerRoutes(
   app.use("/api/users/register", authLimiter);
 
   // Auth
+  // Вход по телефону — в два шага: номер, затем PIN. Без PIN ответ
+  // говорит, какой шаг дальше: { step: "pin" } — ввести PIN,
+  // { step: "setup" } — PIN ещё не задан, человек придумывает его сам
+  // (первый вход после появления PIN или аккаунт создала интеграция).
+  // Раньше одного номера хватало, чтобы войти в любой аккаунт.
   app.post(api.auth.login.path, async (req, res) => {
     try {
       const input = api.auth.login.input.parse(req.body);
@@ -384,7 +413,43 @@ export async function registerRoutes(
         });
       }
 
+      if (!user.pinHash) {
+        if (!input.pin) return res.json({ step: "setup" });
+        const parsed = newPinSchema.safeParse(input.pin);
+        if (!parsed.success) {
+          return res.status(400).json({ message: parsed.error.errors[0].message, field: "pin" });
+        }
+        const claimed = await storage.setUserPinIfEmpty(user.id, hashPin(parsed.data));
+        if (!claimed) {
+          // Пока человек придумывал PIN, его уже задали (руководитель или
+          // параллельный вход) — пусть введёт заданный.
+          return res.status(409).json({ step: "pin", field: "pin", message: "PIN уже задан. Введите его, чтобы войти." });
+        }
+        void notifyPinEvent(user, "PIN для входа в TasksFlow задан. Если это были не вы, сообщите руководителю.");
+        req.session.userId = user.id;
+        req.session.emailAuthAt = undefined;
+        return res.json((await storage.getUserById(user.id)) ?? user);
+      }
+
+      if (!input.pin) {
+        // Блокировку показываем сразу, до ввода PIN, — попытку не тратим.
+        const locked = lockRemaining(user);
+        if (locked > 0) {
+          const blocked = lockedResult(locked, false);
+          res.setHeader("Retry-After", String(locked));
+          return res.status(blocked.status).json(blocked.body);
+        }
+        return res.json({ step: "pin" });
+      }
+
+      const check = await checkPin(user, input.pin);
+      if (!check.ok) {
+        if (check.body.retryAfterSec) res.setHeader("Retry-After", String(check.body.retryAfterSec));
+        return res.status(check.status).json(check.body);
+      }
+
       req.session.userId = user.id;
+      req.session.emailAuthAt = undefined;
       res.json(user);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -406,7 +471,7 @@ export async function registerRoutes(
       
       const user = await storage.getUserById(req.session.userId);
       // user уже содержит isRoot (колонка) — UI показывает root-раздел по нему.
-      res.json(user || null);
+      res.json(user ? { ...user, pinResetByEmail: canResetPinByEmail(req) } : null);
     } catch (err: any) {
       console.error('Error fetching user:', err);
       res.status(500).json({ message: 'Ошибка' });
@@ -430,6 +495,7 @@ export async function registerRoutes(
   app.post("/api/auth/start", async (req, res) => {
     try {
       const { email } = startSchema.parse(req.body);
+      const consent = (req.body as { consent?: unknown } | null)?.consent === true;
       const base = getPublicTasksflowBaseUrl(req);
 
       // Существующий аккаунт → вход. MX/типо-проверку НЕ делаем: домен уже
@@ -462,9 +528,15 @@ export async function registerRoutes(
       }
       const normalized = check.normalized;
 
+      // Новый аккаунт создаём только с согласием на обработку ПД (152-ФЗ):
+      // без него форма показывает компактный шаг с галочкой и шлёт ещё раз.
+      if (!consent) return res.json({ step: "consent", exists: false });
+
       // Новый email → авторегистрация + мгновенный автологин (на почту идти не надо)
       const { user, password, magicToken } = await autoRegisterByEmail(normalized);
+      await storage.setUserConsent(user.id, nowSec());
       req.session.userId = user.id;
+      req.session.emailAuthAt = nowSec();
       await sendMail({
         to: normalized,
         kind: "welcome",
@@ -493,6 +565,7 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Неверный email или пароль", field: "password" });
       }
       req.session.userId = user.id;
+      req.session.emailAuthAt = nowSec();
       res.json(user);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -551,6 +624,7 @@ export async function registerRoutes(
       }
       await storage.clearMagicToken(user.id);
       req.session.userId = user.id;
+      req.session.emailAuthAt = nowSec();
       res.redirect("/dashboard");
     } catch (err: any) {
       console.error("Error in /api/auth/magic:", err);
@@ -812,12 +886,14 @@ export async function registerRoutes(
         email: input.email,
       });
 
-      // Создаём администратора компании
+      // Создаём администратора компании: PIN он придумал сам при регистрации.
       const user = await storage.createUser({
         phone: normalizedPhone,
         name: input.adminName || undefined,
         isAdmin: true,
         companyId: company.id,
+        pinHash: hashPin(input.pin),
+        pdConsentAt: nowSec(),
       });
 
       // Автоматически авторизуем пользователя
@@ -843,6 +919,8 @@ export async function registerRoutes(
         phone: loginSchema.shape.phone,
         name: z.string().min(1, "Введите имя"),
         adminPhone: loginSchema.shape.phone,
+        pin: newPinSchema,
+        consent: consentSchema,
       });
 
       const input = registerUserSchema.parse(req.body);
@@ -881,6 +959,8 @@ export async function registerRoutes(
         name: input.name,
         isAdmin: false,
         companyId: admin.companyId,
+        pinHash: hashPin(input.pin),
+        pdConsentAt: nowSec(),
       });
 
       // Автоматически авторизуем пользователя
@@ -2468,6 +2548,9 @@ export async function registerRoutes(
         isAdmin: requestedAdmin,
         companyId,
         position: input.position ?? null,
+        // PIN задаёт руководитель при создании. Интеграции (WeSetup) PIN не
+        // шлют — такой сотрудник придумает его при первом входе.
+        ...(input.pin ? { pinHash: hashPin(input.pin) } : {}),
       });
 
       res.status(201).json(user);
@@ -2480,6 +2563,87 @@ export async function registerRoutes(
       }
       console.error('Error creating user:', err);
       res.status(500).json({ message: 'Ошибка создания пользователя' });
+    }
+  });
+
+  // ===================== PIN =====================
+
+  // PIN администратора меняет только он сам: иначе второй админ или
+  // интеграция по API-ключу могли бы забрать его аккаунт.
+  const ADMIN_PIN_OWN_ONLY = "PIN администратора меняется только в его аккаунте";
+
+  /** Сотрудник своей компании или null — для смены PIN руководителем. */
+  async function findCompanyUser(req: Request, userId: number) {
+    if (!Number.isInteger(userId) || userId <= 0) return null;
+    const target = await storage.getUserById(userId);
+    if (!target) return null;
+    const companyId = await getCompanyIdFromReq(req);
+    if (companyId !== null && target.companyId !== companyId) return null;
+    return target;
+  }
+
+  // Руководитель задаёт новый PIN — это же снимает блокировку.
+  app.post("/api/users/:id/pin", requireAdminOrApiKey, async (req, res) => {
+    try {
+      const { pin } = z.object({ pin: newPinSchema }).parse(req.body);
+      const target = await findCompanyUser(req, Number(req.params.id));
+      if (!target) return res.status(404).json({ message: "Пользователь не найден" });
+      if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
+      const updated = await storage.setUserPin(target.id, hashPin(pin));
+      void notifyPinEvent(target, "Руководитель задал вам новый PIN для входа в TasksFlow.");
+      res.json(updated ?? target);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: "pin" });
+      }
+      console.error("Error setting user PIN:", err);
+      res.status(500).json({ message: "Не удалось задать PIN" });
+    }
+  });
+
+  // Сброс PIN: сотрудник придумает новый при следующем входе.
+  app.delete("/api/users/:id/pin", requireAdminOrApiKey, async (req, res) => {
+    try {
+      const target = await findCompanyUser(req, Number(req.params.id));
+      if (!target) return res.status(404).json({ message: "Пользователь не найден" });
+      if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
+      const updated = await storage.setUserPin(target.id, null);
+      res.json(updated ?? target);
+    } catch (err: any) {
+      console.error("Error clearing user PIN:", err);
+      res.status(500).json({ message: "Не удалось сбросить PIN" });
+    }
+  });
+
+  // Смена своего PIN из «Моего аккаунта». Если PIN уже есть — нужен текущий.
+  app.post("/api/auth/pin", requireAuth, async (req, res) => {
+    try {
+      const input = z
+        .object({ currentPin: pinSchema.optional(), newPin: newPinSchema })
+        .parse(req.body);
+      const me = await storage.getUserById(req.session.userId!);
+      if (!me) return res.status(401).json({ message: "Не авторизован" });
+      // Недавний вход по email заменяет текущий PIN: так восстанавливают
+      // забытый PIN без руководителя.
+      if (me.pinHash && !canResetPinByEmail(req)) {
+        if (!input.currentPin) {
+          return res.status(400).json({ message: "Введите текущий PIN", field: "currentPin" });
+        }
+        const check = await checkPin(me, input.currentPin);
+        if (!check.ok) {
+          if (check.body.retryAfterSec) res.setHeader("Retry-After", String(check.body.retryAfterSec));
+          return res.status(check.status).json({ ...check.body, field: "currentPin" });
+        }
+      }
+      const updated = await storage.setUserPin(me.id, hashPin(input.newPin));
+      void notifyPinEvent(me, "PIN для входа в TasksFlow изменён. Если это были не вы, сообщите руководителю.");
+      res.json(updated ?? me);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join(".") || "newPin" });
+      }
+      console.error("Error changing own PIN:", err);
+      res.status(500).json({ message: "Не удалось сменить PIN" });
     }
   });
 
@@ -2644,6 +2808,8 @@ export async function registerRoutes(
         isAdmin: inv.isAdmin,
         companyId: inv.companyId,
         position: inv.position,
+        pinHash: hashPin(input.pin),
+        pdConsentAt: nowSec(),
       });
 
       const ok = await storage.markInvitationUsed(inv.id, user.id);

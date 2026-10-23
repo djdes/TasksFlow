@@ -17,8 +17,20 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../com
 import { User, Lock, Eye, EyeOff, Loader2, CheckCircle2, X, ArrowRight } from "lucide-react";
 import { suggestEmailFix } from "./email-typo";
 import { detectIdentity } from "./identity";
+import { PinFlow, type PinSubmitError } from "../../components/PinFlow";
+import { LegalConsent } from "../../components/LegalConsent";
 
-type Step = "input" | "sent";
+// input → (телефон) pin | setup → кабинет; (email) consent? → sent | кабинет
+type Step = "input" | "sent" | "pin" | "setup" | "consent";
+
+function pinErrorFrom(data: any, fallback = "Не удалось войти"): PinSubmitError {
+  return {
+    message: (data && typeof data.message === "string" && data.message) || fallback,
+    attemptsLeft: typeof data?.attemptsLeft === "number" ? data.attemptsLeft : undefined,
+    retryAfterSec: typeof data?.retryAfterSec === "number" ? data.retryAfterSec : undefined,
+    step: data?.step === "pin" ? "pin" : undefined,
+  };
+}
 
 async function postJson(path: string, body: unknown) {
   // Жёсткий таймаут через AbortController (поддержан везде, в т.ч. старый
@@ -68,12 +80,23 @@ export function AuthForm({
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [phone, setPhone] = useState(""); // телефон для шага PIN
+  const [pinError, setPinError] = useState<PinSubmitError | null>(null);
+  const [pendingEmail, setPendingEmail] = useState(""); // новый email ждёт согласия
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
-  async function startEmail(email: string) {
+  async function startEmail(email: string, withConsent = false) {
     setBusy(true);
     setError("");
     try {
-      const { ok, data } = await postJson("/api/auth/start", { email });
+      const { ok, data } = await postJson("/api/auth/start", withConsent ? { email, consent: true } : { email });
+      // Новый аккаунт создаётся только с согласием на обработку ПД.
+      if (ok && data.step === "consent") {
+        setPendingEmail(email);
+        setStep("consent");
+        return;
+      }
       if (!ok) {
         if (data.suggestion) setSuggestion(data.suggestion);
         setError(data.message || "Не удалось войти");
@@ -97,11 +120,24 @@ export function AuthForm({
     setError("");
     try {
       const { ok, status, data } = await postJson("/api/auth/login", { phone });
+      if (ok && (data.step === "pin" || data.step === "setup")) {
+        setPhone(phone);
+        setPinError(null);
+        setStep(data.step);
+        return;
+      }
       if (ok) {
         window.location.href = "/dashboard";
         return;
       }
-      if (status === 401) {
+      if (status === 429) {
+        // Вход заблокирован после неверных PIN — показываем на шаге PIN.
+        setPhone(phone);
+        setPinError(pinErrorFrom(data));
+        setStep("pin");
+        return;
+      }
+      if (status === 401 && data.field !== "pin") {
         // нет аккаунта по телефону → регистрация (как обычный вход TasksFlow)
         window.location.href = `/register?phone=${encodeURIComponent(phone)}`;
         return;
@@ -170,6 +206,81 @@ export function AuthForm({
   const btnCls =
     "shine press rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 " +
     "hover:shadow-xl hover:shadow-primary/40 hover:brightness-105 disabled:opacity-60 transition";
+
+  async function submitPin(pin: string): Promise<PinSubmitError | null> {
+    try {
+      const { ok, data } = await postJson("/api/auth/login", { phone, pin });
+      if (ok && !data.step) {
+        window.location.href = "/dashboard";
+        return null;
+      }
+      return pinErrorFrom(data);
+    } catch {
+      return { message: "Нет связи с сервером. Проверьте интернет." };
+    }
+  }
+
+  if (step === "pin" || step === "setup") {
+    return (
+      <div className="w-full text-left">
+        <PinFlow
+          compact
+          mode={step === "pin" ? "enter" : "create"}
+          phone={phone}
+          initialError={pinError}
+          onSubmit={submitPin}
+          onModeChange={() => setStep("pin")}
+          onBack={() => {
+            setStep("input");
+            setPinError(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (step === "consent") {
+    return (
+      <div className="w-full space-y-4 text-left">
+        <div>
+          <div className="text-lg font-bold text-foreground">Создаём аккаунт</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Для <strong className="text-foreground">{pendingEmail}</strong> — пароль придёт на почту.
+          </p>
+        </div>
+        <LegalConsent
+          checked={consent}
+          onChange={(value) => {
+            setConsent(value);
+            if (value) setConsentError(null);
+          }}
+          error={consentError}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (!consent) {
+              setConsentError("Отметьте согласие, чтобы создать аккаунт");
+              return;
+            }
+            void startEmail(pendingEmail, true);
+          }}
+          className={btnCls + " w-full py-3"}
+        >
+          {busy ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Создать аккаунт"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStep("input"); setError(""); }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Назад
+        </button>
+      </div>
+    );
+  }
 
   if (step === "sent") {
     return (

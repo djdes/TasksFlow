@@ -146,7 +146,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
 
     expect(res.status).toBe(201);
     expect(res.body.user.id).toBe(77);
@@ -176,7 +176,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(storage.createUser).toHaveBeenCalledWith(
       expect.objectContaining({ isAdmin: true, position: null }),
     );
@@ -187,7 +187,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/nope/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(res.status).toBe(400);
     expect(res.body.reason).toBe("not_found");
   });
@@ -197,7 +197,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(res.body.reason).toBe("revoked");
   });
 
@@ -207,7 +207,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(res.status).toBe(400);
     expect(res.body.field).toBe("phone");
     expect(storage.markInvitationUsed).not.toHaveBeenCalled();
@@ -226,7 +226,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
 
     expect(res.status).toBe(400);
     expect(res.body.reason).toBe("used");
@@ -243,7 +243,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+7 999 000-11-22", name: "Иван" });
+      .send({ phone: "+7 999 000-11-22", name: "Иван", pin: "4826", consent: true });
 
     expect(storage.getUserByPhone).toHaveBeenCalledWith("+79990001122");
     expect(storage.createUser).toHaveBeenCalledWith(
@@ -261,7 +261,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(res.status).toBe(400);
     expect(res.body.reason).toBe("used");
     expect(storage.createUser).not.toHaveBeenCalled();
@@ -280,7 +280,7 @@ describe("POST /api/invitations/by-token/:token/accept", () => {
     const { app } = await buildApp();
     const res = await request(app)
       .post("/api/invitations/by-token/good-token/accept")
-      .send({ phone: "+79990001122", name: "Иван" });
+      .send({ phone: "+79990001122", name: "Иван", pin: "4826", consent: true });
     expect(res.status).toBe(201);
     expect(res.body.company).toEqual({ id: 42, name: "" });
   });

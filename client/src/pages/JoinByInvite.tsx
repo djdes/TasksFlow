@@ -1,13 +1,15 @@
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
-import { useLocation, useParams } from "wouter";
+import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/PhoneInput";
-import { useToast } from "@/hooks/use-toast";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
+import { AuthShell } from "@/components/AuthShell";
+import { PinFlow, type PinSubmitError } from "@/components/PinFlow";
+import { LegalConsent } from "@/components/LegalConsent";
+import { postAuthJson, toPinSubmitError } from "@/lib/auth-api";
 
 type Preview =
   | { valid: true; companyName: string; position: string | null }
@@ -19,21 +21,19 @@ const REASON_TEXT: Record<"not_found" | "used" | "revoked", string> = {
   revoked: "Администратор отозвал это приглашение.",
 };
 
+const fieldClass = "h-12 rounded-xl border-2 border-border bg-card px-4 text-base";
+
 export default function JoinByInvite() {
   const params = useParams<{ token: string }>();
   const token = params?.token ?? "";
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
 
   const [preview, setPreview] = useState<Preview | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+7");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<{
-    message: string;
-    field?: string;
-    reason?: string;
-  } | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [detailsDone, setDetailsDone] = useState(false);
+  const [fieldError, setFieldError] = useState<{ field?: string; message: string } | null>(null);
 
   useEffect(() => {
     fetch(`/api/invitations/by-token/${encodeURIComponent(token)}`, {
@@ -48,98 +48,91 @@ export default function JoinByInvite() {
 
   if (!preview.valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-center">
-        <div className="max-w-sm space-y-3">
-          <h1 className="text-2xl font-bold">Ссылка недействительна</h1>
-          <p className="text-muted-foreground">{REASON_TEXT[preview.reason]}</p>
-        </div>
-      </div>
+      <AuthShell title="Ссылка недействительна" subtitle={REASON_TEXT[preview.reason]}>
+        <a href="/login" className="login-link mt-4 inline-flex justify-center">Перейти ко входу</a>
+      </AuthShell>
     );
   }
 
-  const onSubmit = async (e: FormEvent) => {
+  const onDetails = (e: FormEvent) => {
     e.preventDefault();
-    setSubmitError(null);
-    setSubmitting(true);
-    try {
-      const r = await fetchOrFriendlyError(
-        `/api/invitations/by-token/${encodeURIComponent(token)}/accept`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ phone, name }),
-          signal: AbortSignal.timeout(30_000),
-        },
-      );
-      const body = await r.json();
-      if (!r.ok) {
-        setSubmitError(body);
-        if (body.reason && ["not_found", "used", "revoked"].includes(body.reason)) {
-          setPreview({ valid: false, reason: body.reason });
-        }
-        return;
-      }
-      toast({ title: `Добро пожаловать в ${body.company.name}` });
-      window.location.href = "/dashboard";
-    } catch (err) {
-      setSubmitError({
-        message: err instanceof Error ? err.message : "Ошибка регистрации",
-      });
-    } finally {
-      setSubmitting(false);
+    setFieldError(null);
+    if (!consent) {
+      setConsentError("Отметьте согласие, чтобы продолжить");
+      return;
     }
+    setDetailsDone(true);
   };
 
+  const submitPin = async (pin: string): Promise<PinSubmitError | null> => {
+    const { ok, data } = await postAuthJson(`/api/invitations/by-token/${encodeURIComponent(token)}/accept`, {
+      phone,
+      name,
+      pin,
+      consent: true,
+    });
+    if (ok) {
+      window.location.href = "/dashboard";
+      return null;
+    }
+    const reason = data.reason;
+    if (reason === "not_found" || reason === "used" || reason === "revoked") {
+      setPreview({ valid: false, reason });
+      return null;
+    }
+    // Ошибка в имени или телефоне — возвращаем к форме с подсказкой у поля.
+    if (data.field === "phone" || data.field === "name") {
+      setFieldError({ field: String(data.field), message: String(data.message ?? "Проверьте поле") });
+      setDetailsDone(false);
+      return null;
+    }
+    return toPinSubmitError(data);
+  };
+
+  const subtitle = (
+    <>
+      Компания «{preview.companyName}»{preview.position ? ` · ${preview.position}` : ""}
+    </>
+  );
+
+  if (detailsDone) {
+    return (
+      <AuthShell title="Регистрация по приглашению" subtitle={subtitle}>
+        <div className="login-form">
+          <PinFlow mode="create" phone={phone} onSubmit={submitPin} onBack={() => setDetailsDone(false)} />
+        </div>
+      </AuthShell>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
-        <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold">Регистрация в компании</h1>
-          <div className="text-2xl font-extrabold">{preview.companyName}</div>
-          {preview.position && (
-            <div className="text-sm text-muted-foreground">
-              Должность: {preview.position}
-            </div>
-          )}
+    <AuthShell title="Регистрация по приглашению" subtitle={subtitle}>
+      <form onSubmit={onDetails} className="login-form !gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="join-name" className="text-sm font-semibold">Ваше имя</Label>
+          <Input id="join-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={1} maxLength={255} autoComplete="name" className={fieldClass} />
+          {fieldError?.field === "name" && <p className="text-sm text-destructive">{fieldError.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label>Ваше имя</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            minLength={1}
-            maxLength={255}
-          />
-          {submitError?.field === "name" && (
-            <p className="text-sm text-destructive">{submitError.message}</p>
-          )}
+          <Label className="text-sm font-semibold">Телефон</Label>
+          <PhoneInput value={phone} onChange={setPhone} className={`${fieldClass} text-lg font-medium tracking-wider`} />
+          {fieldError?.field === "phone" && <p className="text-sm text-destructive">{fieldError.message}</p>}
         </div>
 
-        <div className="space-y-2">
-          <Label>Телефон</Label>
-          <PhoneInput value={phone} onChange={setPhone} />
-          {submitError?.field === "phone" && (
-            <p className="text-sm text-destructive">{submitError.message}</p>
-          )}
-        </div>
+        <LegalConsent
+          checked={consent}
+          onChange={(value) => {
+            setConsent(value);
+            if (value) setConsentError(null);
+          }}
+          error={consentError}
+        />
 
-        {submitError && !submitError.field && (
-          <p className="text-sm text-destructive text-center">
-            {submitError.message}
-          </p>
-        )}
-
-        <Button
-          type="submit"
-          className="w-full h-14"
-          disabled={submitting || !name.trim() || phone.length < 12}
-        >
-          {submitting ? "Регистрация..." : "Зарегистрироваться"}
+        <Button type="submit" className="login-submit w-full h-12 rounded-xl text-base font-semibold" disabled={!name.trim() || phone.length < 12}>
+          Далее — придумать PIN
         </Button>
       </form>
-    </div>
+    </AuthShell>
   );
 }

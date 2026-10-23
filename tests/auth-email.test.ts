@@ -28,6 +28,7 @@ const storage = {
   findUserByMagicToken: vi.fn(),
   updateUserPassword: vi.fn(),
   updateUserEmail: vi.fn(),
+  setUserConsent: vi.fn(),
 };
 
 const sendMail = vi.fn().mockResolvedValue(undefined);
@@ -109,16 +110,30 @@ beforeEach(() => {
 });
 
 describe("POST /api/auth/start", () => {
-  it("новый email → 201 exists:false, сессия, welcome-письмо, создана компания+юзер", async () => {
+  it("новый email без согласия → шаг consent, аккаунт НЕ создаётся", async () => {
     const { app } = await buildApp();
     storage.getUserByEmail.mockResolvedValue(undefined);
 
     const r = await request(app).post("/api/auth/start").send({ email: "ivan@firma.ru" });
 
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ step: "consent", exists: false });
+    expect(storage.createCompany).not.toHaveBeenCalled();
+    expect(storage.createEmailUser).not.toHaveBeenCalled();
+    expect(sessionStore.userId).toBeUndefined();
+  });
+
+  it("новый email с согласием → 201 exists:false, сессия, welcome-письмо, создана компания+юзер", async () => {
+    const { app } = await buildApp();
+    storage.getUserByEmail.mockResolvedValue(undefined);
+
+    const r = await request(app).post("/api/auth/start").send({ email: "ivan@firma.ru", consent: true });
+
     expect(r.status).toBe(201);
     expect(r.body.exists).toBe(false);
     expect(storage.createCompany).toHaveBeenCalled();
     expect(storage.createEmailUser).toHaveBeenCalled();
+    expect(storage.setUserConsent).toHaveBeenCalledWith(500, expect.any(Number));
     expect(sessionStore.userId).toBe(500); // мгновенный автологин
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "welcome", to: "ivan@firma.ru" }),

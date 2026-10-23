@@ -52,7 +52,22 @@ export interface IStorage {
 
   // Users
   getUserByPhone(phone: string): Promise<User | undefined>;
-  createUser(user: InsertUser & { companyId?: number }): Promise<User>;
+  createUser(user: InsertUser & { companyId?: number; pinHash?: string | null; pdConsentAt?: number | null }): Promise<User>;
+  // ===== PIN =====
+  /** Задаёт PIN и снимает блокировку (руководитель или сам пользователь). */
+  setUserPin(id: number, pinHash: string | null): Promise<User | undefined>;
+  /** Первый вход: задаёт PIN, только если его ещё нет. false — кто-то успел раньше. */
+  setUserPinIfEmpty(id: number, pinHash: string): Promise<boolean>;
+  /**
+   * Атомарно резервирует попытку ввода PIN до проверки. null — вход сейчас
+   * заблокирован. Иначе — счётчик попыток после резерва и блокировка, если
+   * эта попытка исчерпала окно.
+   */
+  reservePinAttempt(id: number, now: number): Promise<{ attempts: number; lockedUntil: number | null } | null>;
+  /** Верный PIN: обнуляет счётчик и снимает блокировку. */
+  resetPinFailures(id: number): Promise<void>;
+  /** Человек сам дал согласие на обработку ПД. */
+  setUserConsent(id: number, at: number): Promise<void>;
   getUserById(id: number): Promise<User | undefined>;
   getAllUsers(companyId?: number): Promise<User[]>;
   updateUser(id: number, user: UpdateUser): Promise<User | undefined>;
@@ -251,7 +266,7 @@ export class DatabaseStorage implements IStorage {
    * @param insertUser - Данные пользователя (phone обязателен, companyId опционален)
    * @returns Созданный пользователь с id
    */
-  async createUser(insertUser: InsertUser & { companyId?: number }): Promise<User> {
+  async createUser(insertUser: InsertUser & { companyId?: number; pinHash?: string | null; pdConsentAt?: number | null }): Promise<User> {
     // Нормализуем номер телефона
     const normalizedPhone = normalizePhone(insertUser.phone);
     const [result] = await db.insert(users).values({
@@ -461,6 +476,68 @@ export class DatabaseStorage implements IStorage {
     await db.update(users).set({ name }).where(eq(users.id, id));
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async setUserPin(id: number, pinHash: string | null): Promise<User | undefined> {
+    await db
+      .update(users)
+      .set({
+        pinHash,
+        pinFailedAttempts: 0,
+        pinLockedUntil: null,
+        pinUpdatedAt: pinHash ? Math.floor(Date.now() / 1000) : null,
+      })
+      .where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async setUserPinIfEmpty(id: number, pinHash: string): Promise<boolean> {
+    // Условный UPDATE: два параллельных «первых входа» не перезапишут друг
+    // друга — PIN получит только тот, кто успел первым.
+    const [result] = await db
+      .update(users)
+      .set({ pinHash, pinFailedAttempts: 0, pinLockedUntil: null, pinUpdatedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(users.id, id), isNull(users.pinHash)));
+    return ((result as { affectedRows?: number }).affectedRows ?? 0) === 1;
+  }
+
+  async reservePinAttempt(
+    id: number,
+    now: number,
+  ): Promise<{ attempts: number; lockedUntil: number | null } | null> {
+    // Попытка считается ДО проверки PIN и одним UPDATE: параллельные запросы
+    // сериализуются блокировкой строки, и за окно проходит не больше 5
+    // попыток, сколько бы их ни прислали разом. pin_locked_until стоит в SET
+    // первым и видит старое значение счётчика (MySQL вычисляет SET слева
+    // направо). Пороги: 5 попыток → 15 мин, 10 → 1 ч, 15 и дальше → 24 ч.
+    const [result] = await db.execute(sql`
+      UPDATE users
+      SET pin_locked_until = CASE
+            WHEN MOD(pin_failed_attempts + 1, 5) = 0 THEN ${now} + CASE
+              WHEN pin_failed_attempts + 1 >= 15 THEN 86400
+              WHEN pin_failed_attempts + 1 >= 10 THEN 3600
+              ELSE 900
+            END
+            ELSE NULL
+          END,
+          pin_failed_attempts = pin_failed_attempts + 1
+      WHERE id = ${id} AND (pin_locked_until IS NULL OR pin_locked_until <= ${now})
+    `);
+    if (((result as { affectedRows?: number }).affectedRows ?? 0) !== 1) return null;
+    const [row] = await db
+      .select({ attempts: users.pinFailedAttempts, lockedUntil: users.pinLockedUntil })
+      .from(users)
+      .where(eq(users.id, id));
+    return row ? { attempts: row.attempts, lockedUntil: row.lockedUntil ?? null } : null;
+  }
+
+  async resetPinFailures(id: number): Promise<void> {
+    await db.update(users).set({ pinFailedAttempts: 0, pinLockedUntil: null }).where(eq(users.id, id));
+  }
+
+  async setUserConsent(id: number, at: number): Promise<void> {
+    await db.update(users).set({ pdConsentAt: at }).where(eq(users.id, id));
   }
 
   async setUserAdmin(id: number, isAdmin: boolean): Promise<User | undefined> {

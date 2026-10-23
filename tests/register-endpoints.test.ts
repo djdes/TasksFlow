@@ -88,6 +88,8 @@ describe("POST /api/companies/register — happy path", () => {
     storage.getUserByPhone.mockResolvedValue(undefined);
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       companyName: "ООО Ромашка",
       adminName: "Иван",
@@ -110,6 +112,8 @@ describe("POST /api/companies/register — happy path", () => {
     storage.getUserByPhone.mockResolvedValue(undefined);
 
     await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+7 999 123-45-67",
       companyName: "Test",
       adminName: "A",
@@ -128,6 +132,8 @@ describe("POST /api/companies/register — конфликты и validation", ()
     storage.getUserByPhone.mockResolvedValue(ADMIN);
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       companyName: "X",
       adminName: "Y",
@@ -143,6 +149,8 @@ describe("POST /api/companies/register — конфликты и validation", ()
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "8005553535",
       companyName: "X",
       adminName: "Y",
@@ -157,6 +165,8 @@ describe("POST /api/companies/register — конфликты и validation", ()
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       companyName: "",
       adminName: "Y",
@@ -170,6 +180,8 @@ describe("POST /api/companies/register — конфликты и validation", ()
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       companyName: "X".repeat(256),
       adminName: "Y",
@@ -183,6 +195,8 @@ describe("POST /api/companies/register — конфликты и validation", ()
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/companies/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       companyName: "X",
       adminName: "Y",
@@ -202,6 +216,8 @@ describe("POST /api/users/register — happy path", () => {
     storage.getUserByPhone.mockResolvedValueOnce(ADMIN);
 
     const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79990000777",
       name: "Worker",
       adminPhone: "+79991234567",
@@ -243,6 +259,8 @@ describe("POST /api/users/register — anti-enumeration (security)", () => {
       storage.getUserByPhone.mockResolvedValueOnce(sample.admin);
 
       const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
         phone: "+79990000777",
         name: "W",
         adminPhone: "+79990000999",
@@ -265,6 +283,8 @@ describe("POST /api/users/register — anti-enumeration (security)", () => {
       storage.getUserByPhone.mockResolvedValueOnce(undefined);
       storage.getUserByPhone.mockResolvedValueOnce(sample.admin);
       const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
         phone: "+79990000777",
         name: "W",
         adminPhone: "+79990000999",
@@ -282,6 +302,8 @@ describe("POST /api/users/register — validation", () => {
     storage.getUserByPhone.mockResolvedValueOnce(ADMIN);
 
     const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79991234567",
       name: "W",
       adminPhone: "+79990000999",
@@ -296,6 +318,8 @@ describe("POST /api/users/register — validation", () => {
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79990000777",
       name: "",
       adminPhone: "+79991234567",
@@ -309,6 +333,8 @@ describe("POST /api/users/register — validation", () => {
     const { app } = await buildApp();
 
     const r = await request(app).post("/api/users/register").send({
+      pin: "4826",
+      consent: true,
       phone: "+79990000777",
       name: "W",
       adminPhone: "not-a-phone",

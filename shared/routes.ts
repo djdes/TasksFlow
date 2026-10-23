@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { consentSchema, newPinSchema } from './pin';
 import { insertWorkerSchema, insertTaskSchema, insertUserSchema, updateUserSchema, loginSchema, workers, tasks, users, invitations, type Invitation } from './schema';
 
 export const errorSchemas = {
@@ -52,6 +53,8 @@ export const api = {
         .pick({ phone: true, name: true, isAdmin: true, position: true })
         .extend({
           role: z.enum(["admin", "manager", "employee", "worker"]).optional(),
+          // PIN для входа; без него сотрудник придумает PIN при первом входе.
+          pin: newPinSchema.optional(),
         }),
       responses: {
         201: z.custom<typeof users.$inferSelect>(),
@@ -121,6 +124,8 @@ export const api = {
       input: z.object({
         phone: z.string().min(1),
         name: z.string().trim().min(1),
+        pin: newPinSchema,
+        consent: consentSchema,
       }),
       responses: {
         201: z.object({

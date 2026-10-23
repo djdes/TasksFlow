@@ -2,8 +2,8 @@
  * Тесты POST /api/auth/login + /logout.
  *
  * Critical path: login — единственная точка входа в систему.
- * Phone-only auth, без пароля. Bug в normalize'е телефона = воркер
- * не сможет войти со своего номера.
+ * Вход в два шага: телефон, затем PIN (подробно — tests/pin-auth.test.ts).
+ * Bug в normalize'е телефона = воркер не сможет войти со своего номера.
  *
  * Эти endpoints не тестировались вообще.
  */
@@ -69,8 +69,8 @@ beforeEach(() => {
   sessionDestroyed = false;
 });
 
-describe("POST /api/auth/login — happy path", () => {
-  it("валидный phone существующего user → 200, session.userId=user.id", async () => {
+describe("POST /api/auth/login — один телефон больше не открывает сессию", () => {
+  it("phone существующего user без PIN → 200 {step:'pin'|'setup'}, сессии нет", async () => {
     const { app } = await buildApp();
     storage.getUserByPhone.mockResolvedValue(USER);
 
@@ -79,8 +79,8 @@ describe("POST /api/auth/login — happy path", () => {
       .send({ phone: "+79991234567" });
 
     expect(r.status).toBe(200);
-    expect(r.body.id).toBe(USER.id);
-    expect(sessionStore.userId).toBe(USER.id);
+    expect(["pin", "setup"]).toContain(r.body.step);
+    expect(sessionStore.userId).toBeUndefined();
   });
 });
 

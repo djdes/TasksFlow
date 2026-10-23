@@ -111,6 +111,41 @@ describe("POST /api/users with API key", () => {
     15000
   );
 
+  it("stores a PIN hash when the integration sends a PIN, rejects weak PINs", async () => {
+    const apiKey = "tfk_test_create_user_pin";
+    const { app } = await buildApp();
+    storage.getApiKeyByHash.mockResolvedValue({
+      id: 7,
+      name: "WeSetup",
+      keyHash: hashApiKey(apiKey),
+      keyPrefix: apiKey.slice(0, 12),
+      companyId: 42,
+      createdByUserId: 1,
+      createdAt: 1,
+      lastUsedAt: 0,
+      revokedAt: 0,
+    } satisfies ApiKey);
+    storage.updateApiKeyLastUsed.mockResolvedValue(undefined);
+    storage.getUserByPhone.mockResolvedValue(undefined);
+    storage.createUser.mockResolvedValue({ id: 81, phone: "+79990001130", companyId: 42 });
+
+    const weak = await request(app)
+      .post("/api/users")
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ phone: "+79990001130", name: "Пётр", pin: "1234" });
+    expect(weak.status).toBe(400);
+    expect(storage.createUser).not.toHaveBeenCalled();
+
+    const ok = await request(app)
+      .post("/api/users")
+      .set("Authorization", `Bearer ${apiKey}`)
+      .send({ phone: "+79990001130", name: "Пётр", pin: "5830" });
+    expect(ok.status).toBe(201);
+    expect(storage.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: "+79990001130", pinHash: expect.stringMatching(/^scrypt\$/) }),
+    );
+  });
+
   it("creates a manager as an admin user when requested by integration", async () => {
     const apiKey = "tfk_test_create_manager_key";
     const { app } = await buildApp();

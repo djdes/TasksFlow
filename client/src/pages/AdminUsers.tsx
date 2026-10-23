@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,8 +23,12 @@ import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { PhoneInput } from "@/components/PhoneInput";
+import { AdminPinField } from "@/components/AdminPinField";
+import { PinShareNote, UserPinPanel } from "@/components/UserPinPanel";
+import { generatePin, newPinSchema } from "@shared/pin";
 
-const formSchema = insertUserSchema.pick({ phone: true, name: true });
+// PIN задаёт руководитель: сотрудник войдёт по номеру и этому PIN.
+const formSchema = insertUserSchema.pick({ phone: true, name: true }).extend({ pin: newPinSchema });
 const editFormSchema = updateUserSchema;
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,6 +42,8 @@ export default function AdminUsers() {
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [editName, setEditName] = useState("");
+  const [pinUserId, setPinUserId] = useState<number | null>(null);
+  const [created, setCreated] = useState<{ phone: string; pin: string } | null>(null);
 
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading, isError, refetch } = useQuery({
@@ -71,9 +77,10 @@ export default function AdminUsers() {
       }
       return response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (_user, data) => {
       await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
-      form.reset({ phone: "+7", name: "" });
+      setCreated({ phone: data.phone, pin: data.pin });
+      form.reset({ phone: "+7", name: "", pin: generatePin() });
       toast({ title: "Пользователь создан" });
     },
     onError: (error: Error) => {
@@ -158,6 +165,7 @@ export default function AdminUsers() {
     defaultValues: {
       phone: "+7",
       name: "",
+      pin: generatePin(),
     },
   });
 
@@ -182,6 +190,7 @@ export default function AdminUsers() {
   }
 
   const startEditing = (u: any) => {
+    setPinUserId(null);
     setEditingUserId(u.id);
     setEditPhone(u.phone);
     setEditName(u.name || "");
@@ -266,6 +275,27 @@ export default function AdminUsers() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="pin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PIN для входа</FormLabel>
+                      <FormControl>
+                        <AdminPinField value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Сотрудник войдёт по номеру и этому PIN, потом сможет сменить его сам.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {created && (
+                  <PinShareNote phone={created.phone} pin={created.pin} onDone={() => setCreated(null)} />
+                )}
+
                 <Button
                   type="submit"
                   disabled={createUserMutation.isPending}
@@ -293,7 +323,12 @@ export default function AdminUsers() {
                     key={u.id}
                     className="p-4 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    {editingUserId === u.id ? (
+                    {pinUserId === u.id ? (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">{u.name || u.phone}</p>
+                        <UserPinPanel user={u} onClose={() => setPinUserId(null)} />
+                      </div>
+                    ) : editingUserId === u.id ? (
                       <div className="space-y-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Телефон</label>
@@ -340,6 +375,22 @@ export default function AdminUsers() {
                           {u.name && (
                             <p className="text-sm text-muted-foreground">{u.name}</p>
                           )}
+                          {!u.isAdmin && (u.pinLocked || u.hasPin === false) && (
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {u.pinLocked ? (
+                                <span className="rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+                                  Вход заблокирован
+                                </span>
+                              ) : (
+                                <span
+                                  className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
+                                  title="Сотрудник придумает PIN при первом входе. Надёжнее задать его самому."
+                                >
+                                  Без PIN
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {!u.isAdmin && u.bonusBalance > 0 && (
                             <div className="flex items-center gap-1.5 mt-2">
                               <Coins className="w-3.5 h-3.5 text-green-600" />
@@ -354,8 +405,24 @@ export default function AdminUsers() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => {
+                                cancelEditing();
+                                setPinUserId(u.id);
+                              }}
+                              className="text-xs"
+                              aria-label={`PIN: ${u.name || u.phone}`}
+                              title="PIN для входа"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {!u.isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => startEditing(u)}
                               className="text-xs"
+                              aria-label={`Изменить: ${u.name || u.phone}`}
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>

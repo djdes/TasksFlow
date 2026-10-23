@@ -1,6 +1,7 @@
 import { mysqlTable, varchar, int, boolean, text, bigint } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { consentSchema, newPinSchema, pinSchema } from "./pin";
 
 // Таблица компаний
 export const companies = mysqlTable("companies", {
@@ -77,6 +78,17 @@ export const users = mysqlTable("users", {
   // доступности telegram.org в браузере и рабочего попапа.
   tgLinkCode: varchar("tg_link_code", { length: 32 }),
   tgLinkCodeExpiresAt: int("tg_link_code_expires_at"),
+  // ===== Вход по PIN (4 цифры) =====
+  // scrypt-хэш PIN. NULL = PIN ещё не задан: человек придумает его при
+  // первом входе по телефону (или его задаст руководитель).
+  pinHash: varchar("pin_hash", { length: 255 }),
+  // Неверные попытки подряд и блокировка (unix sec) — см. server/pin-auth.ts.
+  pinFailedAttempts: int("pin_failed_attempts").notNull().default(0),
+  pinLockedUntil: int("pin_locked_until"),
+  pinUpdatedAt: int("pin_updated_at"),
+  // Unix sec, когда человек сам дал согласие на обработку ПД при
+  // регистрации. NULL — аккаунт создал руководитель или интеграция.
+  pdConsentAt: int("pd_consent_at"),
 });
 
 export const workers = mysqlTable("workers", {
@@ -290,6 +302,9 @@ export const loginSchema = z.object({
     },
     "Неверный формат номера телефона (формат: +7XXXXXXXXX или +7XXXXXXXXXX)"
   ),
+  // Без PIN сервер отвечает, какой шаг нужен дальше: ввести PIN или
+  // придумать его (первый вход). С PIN — проверяет и открывает сессию.
+  pin: pinSchema.optional(),
 });
 
 // ===== Email-авторизация (лендинг) =====
@@ -411,6 +426,8 @@ export const registerCompanySchema = z.object({
     .string()
     .max(255, "Имя не должно превышать 255 символов")
     .optional(),
+  pin: newPinSchema,
+  consent: consentSchema,
 });
 
 export const insertCompanySchema = z.object({

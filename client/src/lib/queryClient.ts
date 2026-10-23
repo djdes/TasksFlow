@@ -4,6 +4,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    /** JSON-тело ответа, если сервер его прислал (field, attemptsLeft и т.п.). */
+    public readonly body?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -14,13 +16,15 @@ async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     let message = text;
+    let body: Record<string, unknown> | undefined;
     try {
       const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object") body = parsed;
       message = parsed?.message ?? text;
     } catch {
       // тело не JSON (например HTML от прокси) — оставляем raw text
     }
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, body);
   }
 }
 

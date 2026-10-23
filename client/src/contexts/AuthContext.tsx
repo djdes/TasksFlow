@@ -11,14 +11,22 @@ type User = {
   isAdmin: boolean;
   createdAt: number;
   email?: string | null;
+  /** Производные поля сервера: PIN задан, вход заблокирован после ошибок. */
+  hasPin?: boolean;
+  pinLocked?: boolean;
+  /** Недавний вход по email: PIN можно сменить без текущего. */
+  pinResetByEmail?: boolean;
 } | null;
+
+/** Ответ входа: следующий шаг (ввести или придумать PIN) либо готовая сессия. */
+export type LoginResult = { step: "pin" | "setup" } | { step: "done" };
 
 interface AuthContextType {
   user: User;
   isLoading: boolean;
   isError: boolean;
   retry: () => void;
-  login: (phone: string) => Promise<void>;
+  login: (phone: string, pin?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
 }
 
@@ -44,11 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Мутация для логина
   const loginMutation = useMutation({
-    mutationFn: async ({ phone }: { phone: string }) => {
-      const response = await apiRequest("POST", api.auth.login.path, { phone });
-      return response.json();
+    mutationFn: async ({ phone, pin }: { phone: string; pin?: string }): Promise<LoginResult> => {
+      const response = await apiRequest("POST", api.auth.login.path, pin ? { phone, pin } : { phone });
+      const body = await response.json();
+      if (body?.step === "pin" || body?.step === "setup") return { step: body.step };
+      return { step: "done" };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Промежуточный шаг (ввести или придумать PIN) — сессии ещё нет.
+      if (result.step !== "done") return;
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       // Обновляем задачи после авторизации
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -68,9 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const login = async (phone: string) => {
-    await loginMutation.mutateAsync({ phone });
-  };
+  const login = (phone: string, pin?: string) => loginMutation.mutateAsync({ phone, pin });
 
   const logout = async () => {
     await logoutMutation.mutateAsync();
