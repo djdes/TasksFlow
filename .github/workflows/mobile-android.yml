@@ -132,7 +132,8 @@ jobs:
           if [ "$RELEASE" = "true" ]; then APK=app/build/outputs/apk/release/app-release.apk; else APK=app/build/outputs/apk/debug/app-debug.apk; fi
           echo "APK=$PWD/$APK" >> "$GITHUB_ENV"
           "$BT/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label):"
-          "$BT/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/apksigner.txt"
+          grep -E "certificate (DN|SHA-256 digest)" "$RUNNER_TEMP/apksigner.txt" | head -n 2 || cat "$RUNNER_TEMP/apksigner.txt"
           ls -l "$APK"
 
       - name: Upload debug APK
