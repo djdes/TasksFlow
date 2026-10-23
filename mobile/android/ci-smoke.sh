@@ -13,10 +13,24 @@ adb install -r "$APK"
 adb shell pm list packages | grep -qx "package:$PKG"
 adb shell dumpsys package "$PKG" | grep -E "versionCode|versionName|targetSdk" | head -3
 
+# На свежем эмуляторе Chrome сначала показывает «Добро пожаловать» —
+# у людей он уже настроен. Отладочный образ читает флаги из этого файла.
+if adb shell pm list packages | grep -q "package:com.android.chrome"; then
+  adb shell 'echo "chrome --disable-fre --no-default-browser-check --no-first-run" > /data/local/tmp/chrome-command-line'
+  adb shell am force-stop com.android.chrome
+  echo "Chrome: $(adb shell dumpsys package com.android.chrome | grep -m1 versionName)"
+else
+  echo "Chrome в образе нет — приложение откроет Custom Tab другого браузера"
+fi
+
 adb logcat -c
 adb shell am start -W -n "$PKG/.LauncherActivity"
-# Первый запуск Chrome и загрузка кабинета.
-sleep 30
+# Ждём, пока Chrome откроет кабинет (до 60 с).
+for _ in $(seq 1 30); do
+  sleep 2
+  adb shell dumpsys activity activities | grep -q "tasksflow.ru" && break
+done
+sleep 8
 
 adb exec-out screencap -p > "$OUT/launch.png"
 adb shell dumpsys activity activities > "$OUT/activities.txt"

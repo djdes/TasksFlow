@@ -224,7 +224,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis_playstore
+          # google_apis — отладочный образ с Chrome: можно выключить экран
+          # первого запуска Chrome (в образе с Play Store флаги не читаются).
+          target: google_apis
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
