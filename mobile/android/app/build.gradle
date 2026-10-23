@@ -42,7 +42,8 @@ android {
 
     defaultConfig {
         applicationId twa.applicationId
-        minSdk 21
+        // Android 7+: ниже не поддерживает android-browser-helper 2.7.
+        minSdk 24
         targetSdk 36
         versionCode envVersionCode
         versionName envVersionName
