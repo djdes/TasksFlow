@@ -1,5 +1,5 @@
 import { PageSkeleton } from "@/components/PageSkeleton";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -8,8 +8,8 @@ import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/h
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { matchTaskBySearch } from "@/lib/task-search";
+import { plural } from "@/lib/i18n";
 import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
 import { extractCategories } from "@/lib/extract-categories";
 import {
@@ -41,11 +41,13 @@ import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
 import { MotionToggle } from "@/components/MotionToggle";
 import { QueryError } from "@/components/QueryError";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useMotionPreference } from "@/contexts/MotionContext";
 import { StatHero } from "@/components/StatHero";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { api } from "@shared/routes";
 import type { Task } from "@shared/schema";
@@ -80,6 +82,9 @@ import {
   Gift,
   CalendarCheck,
   MessageCircle,
+  Bell,
+  SlidersHorizontal,
+  LayoutTemplate,
 } from "lucide-react";
 import {
   Select,
@@ -94,6 +99,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Шаблоны нужны только новой компании с пустым списком: грузим отдельным
+// чанком при первом открытии, а не в main-бандле каждого сотрудника.
+const TaskTemplatesDialog = lazy(() =>
+  import("@/components/TaskTemplatesDialog").then((m) => ({ default: m.TaskTemplatesDialog })),
+);
 
 const WEEK_DAY_SHORT_NAMES: { [key: number]: string } = {
   0: "Вс",
@@ -110,7 +121,7 @@ export default function Dashboard() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: users = [], isLoading: loadingUsers, isError: usersError, refetch: retryUsers } = useUsers();
-  const { data: tasks = [], isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
+  const { data: tasks = [], dataUpdatedAt: tasksUpdatedAt, isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
   const isMobile = useIsMobile();
   const { reduced } = useMotionPreference();
 
@@ -163,8 +174,14 @@ export default function Dashboard() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
   // VerificationBanner — react-query кэш переиспользуется.
-  const { data: pendingVerifyTasks = [], isLoading: loadingVerification } = useAwaitingVerification();
+  const { data: pendingVerifyTasks = [] } = useAwaitingVerification();
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
+  // На телефоне фильтры живут в шторке, на экране — только кнопка.
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  // После первого открытия окно остаётся смонтированным — для анимации закрытия.
+  const [templatesMounted, setTemplatesMounted] = useState(false);
   // Режим группировки списка для админа/руководителя: по дате
   // (default — старое поведение) или по сотруднику. Воркер видит
   // только свои задачи, ему этот тогл не нужен. У управленца дефолт
@@ -549,14 +566,112 @@ export default function Dashboard() {
     queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
   };
 
-  // Loading state
-  if (authLoading || loadingTasks || loadingUsers || wesetupConfig.isLoading || (canManageTasks && loadingVerification)) return <PageSkeleton />;
+  // ── Фильтры: одни и те же контролы для строки (desktop) и шторки (mobile).
+  const showFilterSelects = Boolean(user?.isAdmin) || categories.length > 0;
+  const showChips = tasks.length >= 4;
+  const showFilterControls = showFilterSelects || showChips;
+  const activeFilterCount =
+    (filterByCategory !== "all" ? 1 : 0) +
+    (filterByUserId !== "all" ? 1 : 0) +
+    (chipPhoto ? 1 : 0) +
+    (chipBonus ? 1 : 0) +
+    (chipJournal ? 1 : 0);
+  const resetFilterControls = () => {
+    setFilterByCategory("all");
+    setFilterByUserId("all");
+    setChipPhoto(false);
+    setChipBonus(false);
+    setChipJournal(false);
+  };
+
+  const categorySelect = categories.length > 0 ? (
+    <Select value={filterByCategory} onValueChange={setFilterByCategory}>
+      <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]">
+        <Tag className="w-4 h-4 mr-1.5 text-muted-foreground" />
+        <SelectValue placeholder="Категория" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Все категории</SelectItem>
+        <SelectItem value="uncategorized">Без категории</SelectItem>
+        {categories.map((cat) => (
+          <SelectItem key={cat} value={cat}>
+            {cat}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : null;
+
+  const userSelect = user?.isAdmin ? (
+    <Select value={filterByUserId} onValueChange={setFilterByUserId}>
+      <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[150px]">
+        <User className="w-4 h-4 mr-1.5 text-muted-foreground" />
+        <SelectValue placeholder="Исполнитель" />
+      </SelectTrigger>
+      <SelectContent>
+        {/* «Только мои» — default для admin: видит свои задачи
+            (как worker). Чтобы посмотреть что у других — переключает
+            на «Все сотрудники» или конкретного человека. */}
+        <SelectItem value="__self__">Только мои</SelectItem>
+        <SelectItem value="all">Все сотрудники</SelectItem>
+        <SelectItem value="unassigned">Не назначенные</SelectItem>
+        {users.map((u) => (
+          <SelectItem key={u.id} value={u.id.toString()}>
+            {u.name || u.phone}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : null;
+
+  const chipButtons = (
+    <>
+      <button
+        type="button"
+        className={`quick-chip ${chipPhoto ? "quick-chip-active" : ""}`}
+        aria-pressed={chipPhoto}
+        onClick={() => setChipPhoto((v) => !v)}
+      >
+        <Camera className="w-3.5 h-3.5" />
+        <span>С фото</span>
+      </button>
+      <button
+        type="button"
+        className={`quick-chip ${chipBonus ? "quick-chip-active" : ""}`}
+        aria-pressed={chipBonus}
+        onClick={() => setChipBonus((v) => !v)}
+      >
+        <Coins className="w-3.5 h-3.5" />
+        <span>С премией</span>
+      </button>
+      {wesetupEnabled && (
+        <button
+          type="button"
+          className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
+          aria-pressed={chipJournal}
+          onClick={() => setChipJournal((v) => !v)}
+        >
+          <Tag className="w-3.5 h-3.5" />
+          <span>Журнальные</span>
+        </button>
+      )}
+    </>
+  );
+
+  // Loading state. Ждём только задачи и сотрудников (без них нет имён и
+  // группировки). Настройка WeSetup и очередь проверки догружаются сами:
+  // на большой компании очередь отвечает секундами, и задачи из-за неё
+  // не должны висеть под скелетоном.
+  if (authLoading || loadingTasks || loadingUsers) return <PageSkeleton />;
 
   if (!user) {
     return null;
   }
 
-  if ((tasksError && tasks.length === 0) || (usersError && users.length === 0)) {
+  // Полноэкранная ошибка — только если задачи не загрузились ни разу.
+  // Сбой фонового перезапроса при уже показанном списке (даже пустом)
+  // показывает плашку с повтором поверх данных, а не стирает экран.
+  if (tasksError && !tasksUpdatedAt) {
     return <div className="page-screen"><div className="page-container py-8">
       <h1 className="page-title mb-6">Задачи</h1>
       <QueryError onRetry={() => { void retryTasks(); void retryUsers(); }} />
@@ -777,6 +892,9 @@ export default function Dashboard() {
                 на ночной смене / open-space если раздражает. */}
             <button
               type="button"
+              role="switch"
+              aria-checked={feedbackOn}
+              aria-label="Звук и вибрация"
               className="dropdown-item w-full"
               onClick={(e) => {
                 e.stopPropagation();
@@ -785,21 +903,11 @@ export default function Dashboard() {
                 setFeedbackOn(next);
               }}
             >
-              <span className="w-5 h-5 text-primary">
-                {feedbackOn ? "🔔" : "🔕"}
-              </span>
+              <Bell className="w-5 h-5 text-primary" />
               <span className="font-medium flex-1 text-left">
                 Звук + вибро
               </span>
-              <span
-                className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
-                  feedbackOn
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-gray-200 text-gray-500"
-                }`}
-              >
-                {feedbackOn ? "вкл" : "выкл"}
-              </span>
+              <span className="motion-toggle" data-checked={feedbackOn} aria-hidden="true"><span /></span>
             </button>
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой
@@ -823,46 +931,15 @@ export default function Dashboard() {
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Выход</span>
             </button>
-            <button
-              type="button"
-              className="dropdown-item danger w-full"
-              onClick={async () => {
-                if (
-                  !window.confirm(
-                    "Удалить аккаунт безвозвратно? Все ваши данные пропадут. " +
-                      "Это действие нельзя отменить."
-                  )
-                ) {
-                  return;
-                }
-                try {
-                  const r = await fetchOrFriendlyError("/api/auth/me", {
-                    method: "DELETE",
-                    signal: AbortSignal.timeout(30_000),
-                  });
-                  const d = await r.json().catch(() => ({}));
-                  if (!r.ok) {
-                    alert(d?.message || "Не удалось удалить аккаунт");
-                    return;
-                  }
-                  setIsMenuOpen(false);
-                  setLocation("/");
-                  // Hard reload чтобы сбросить React Query кеш и context.
-                  window.location.href = "/";
-                } catch {
-                  alert("Ошибка сети при удалении аккаунта");
-                }
-              }}
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Удалить аккаунт</span>
-            </button>
+            {/* «Удалить аккаунт» переехал в «Мой аккаунт» → «Опасная зона»:
+                необратимое действие не должно стоять рядом с «Выход». */}
           </DashboardMenu>
       </header>
 
       {/* Main Content */}
       <main className="app-content">
-        {tasksError && <QueryError onRetry={() => { void retryTasks(); }} />}
+        {tasksError && <QueryError compact onRetry={() => { void retryTasks(); }} message="Не удалось обновить задачи — показаны последние загруженные." />}
+        {usersError && <QueryError compact onRetry={() => { void retryUsers(); }} message="Не удалось загрузить сотрудников — имена временно не видны." />}
         {/* Поиск задач — поднят на самый верх (по запросу владельца
             2026-05-05). Раньше прятался ниже фильтров — приходилось
             скроллить чтобы найти. Теперь сразу под header'ом. */}
@@ -989,100 +1066,65 @@ export default function Dashboard() {
         ) : null}
 
         {/* Filters — без поиска (он наверху как отдельный sticky-блок).
-            Тут остаются «Категория» и «Исполнитель» — нечастые фильтры. */}
-        {(user?.isAdmin || categories.length > 0) && (
-          <div className="filters-bar">
-            {categories.length > 0 && (
-              <Select value={filterByCategory} onValueChange={setFilterByCategory}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]">
-                  <Tag className="w-4 h-4 mr-1.5 text-muted-foreground" />
-                  <SelectValue placeholder="Категория" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все категории</SelectItem>
-                  <SelectItem value="uncategorized">Без категории</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {user?.isAdmin && (
-              <Select value={filterByUserId} onValueChange={setFilterByUserId}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[150px]">
-                  <User className="w-4 h-4 mr-1.5 text-muted-foreground" />
-                  <SelectValue placeholder="Исполнитель" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* «Только мои» — default для admin: видит свои задачи
-                      (как worker). Чтобы посмотреть что у других — переключает
-                      на «Все сотрудники» или конкретного человека. */}
-                  <SelectItem value="__self__">Только мои</SelectItem>
-                  <SelectItem value="all">Все сотрудники</SelectItem>
-                  <SelectItem value="unassigned">Не назначенные</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id.toString()}>
-                      {u.name || u.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-
-        {/* Quick filter chips — быстрые тумблеры поверх стандартных
-            фильтров. Скрываем когда задач слишком мало (меньше 4)
-            чтобы не плодить кнопки на пустом списке. */}
-        {tasks.length >= 4 ? (
-          <div className="quick-chips">
-            <button
-              type="button"
-              className={`quick-chip ${chipPhoto ? "quick-chip-active" : ""}`}
-              aria-pressed={chipPhoto}
-              onClick={() => setChipPhoto((v) => !v)}
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span>С фото</span>
-            </button>
-            <button
-              type="button"
-              className={`quick-chip ${chipBonus ? "quick-chip-active" : ""}`}
-              aria-pressed={chipBonus}
-              onClick={() => setChipBonus((v) => !v)}
-            >
-              <Coins className="w-3.5 h-3.5" />
-              <span>С премией</span>
-            </button>
-            {wesetupEnabled && (
+            Тут остаются «Категория» и «Исполнитель» — нечастые фильтры.
+            На desktop они в строке, на телефоне — в шторке за кнопкой
+            «Фильтры»: два селекта во всю ширину и чипы съедали ~200px
+            до первой задачи. */}
+        {showFilterControls ? (
+          isMobile ? (
+            <div className="filters-mobile">
               <button
                 type="button"
-                className={`quick-chip ${chipJournal ? "quick-chip-active" : ""}`}
-                aria-pressed={chipJournal}
-                onClick={() => setChipJournal((v) => !v)}
+                className="filters-trigger"
+                aria-haspopup="dialog"
+                aria-expanded={isFiltersOpen}
+                onClick={() => setIsFiltersOpen(true)}
               >
-                <Tag className="w-3.5 h-3.5" />
-                <span>Журнальные</span>
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Фильтры</span>
+                {activeFilterCount > 0 ? (
+                  <span className="filters-trigger-count" aria-label={`активно: ${activeFilterCount}`}>{activeFilterCount}</span>
+                ) : null}
               </button>
-            )}
-            {chipPhoto || chipBonus || chipJournal ? (
-              <button
-                type="button"
-                className="quick-chip quick-chip-reset"
-                onClick={() => {
-                  setChipPhoto(false);
-                  setChipBonus(false);
-                  setChipJournal(false);
-                }}
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Сбросить</span>
-              </button>
-            ) : null}
-          </div>
+              {activeFilterCount > 0 ? (
+                <button type="button" className="filters-mobile-reset" onClick={resetFilterControls}>
+                  <X className="w-3.5 h-3.5" />
+                  Сбросить
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {showFilterSelects && (
+                <div className="filters-bar">
+                  {categorySelect}
+                  {userSelect}
+                </div>
+              )}
+              {/* Quick filter chips — быстрые тумблеры поверх стандартных
+                  фильтров. Скрываем когда задач слишком мало (меньше 4)
+                  чтобы не плодить кнопки на пустом списке. */}
+              {showChips ? (
+                <div className="quick-chips">
+                  {chipButtons}
+                  {chipPhoto || chipBonus || chipJournal ? (
+                    <button
+                      type="button"
+                      className="quick-chip quick-chip-reset"
+                      onClick={() => {
+                        setChipPhoto(false);
+                        setChipBonus(false);
+                        setChipJournal(false);
+                      }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Сбросить</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          )
         ) : null}
 
         {/* Task List */}
@@ -1096,19 +1138,34 @@ export default function Dashboard() {
             </h3>
             <p className="empty-state-text">
               {hasActiveFilters ? "Попробуйте другой запрос или сбросьте фильтры." : canManageTasks
-                ? "Создайте первую задачу для начала работы"
+                ? tasks.length === 0
+                  ? "Начните с готового набора задач для вашей отрасли или создайте свою."
+                  : "Создайте первую задачу для начала работы"
                 : "Отдохни или загляни позже — задачи появляются по расписанию."}
             </p>
             {hasActiveFilters ? (
               <button type="button" onClick={resetFilters} className="empty-state-button ui-button"><X className="w-4 h-4" />Сбросить фильтры</button>
             ) : canManageTasks ? (
-              <button
-                onClick={() => setLocation("/tasks/new")}
-                className="empty-state-button"
-              >
-                <Plus className="w-5 h-5" />
-                Создать задачу
-              </button>
+              <div className="empty-state-actions">
+                {tasks.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => { setTemplatesMounted(true); setIsTemplatesOpen(true); }}
+                    className="empty-state-button"
+                  >
+                    <LayoutTemplate className="w-5 h-5" />
+                    Начать с шаблона
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setLocation("/tasks/new")}
+                  className={tasks.length === 0 ? "empty-state-button-secondary" : "empty-state-button"}
+                >
+                  <Plus className="w-5 h-5" />
+                  Создать задачу
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => setLocation("/help")}
@@ -1151,9 +1208,7 @@ export default function Dashboard() {
               setDuplicateTask(task);
               setIsDuplicateDialogOpen(true);
             }}
-            onDelete={(id) => {
-              if (confirm("Удалить задачу?")) deleteTask.mutate(id);
-            }}
+            onDelete={(id) => setTaskToDelete(tasks.find((t) => t.id === id) ?? null)}
             searchQuery={searchQuery}
             // isToVerify = verifier-summary || submitted-filler.
             // Active секция внутри GroupedTaskList разделит активные
@@ -1272,6 +1327,59 @@ export default function Dashboard() {
           onOpenChange={setIsDuplicateDialogOpen}
         />
       )}
+
+      <ConfirmDialog
+        open={taskToDelete !== null}
+        onOpenChange={(open) => { if (!open) setTaskToDelete(null); }}
+        title="Удалить задачу?"
+        description={taskToDelete ? <>«{taskToDelete.title}» пропадёт у исполнителя. Вернуть её будет нельзя.</> : null}
+        confirmLabel="Удалить"
+        destructive
+        busy={deleteTask.isPending}
+        onConfirm={() => {
+          if (!taskToDelete) return;
+          deleteTask.mutate(taskToDelete.id, {
+            onSuccess: () => setTaskToDelete(null),
+            onError: (err) => toast({
+              title: "Не удалось удалить задачу",
+              description: err instanceof Error ? err.message : "Попробуйте ещё раз",
+              variant: "destructive",
+            }),
+          });
+        }}
+      />
+
+      {canManageTasks && templatesMounted ? (
+        <Suspense fallback={null}>
+          <TaskTemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
+        </Suspense>
+      ) : null}
+
+      {isMobile && showFilterControls ? (
+        <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <DialogContent className="filters-sheet" aria-describedby={undefined}>
+            <DialogTitle className="text-lg font-semibold pr-8">Фильтры</DialogTitle>
+            <div className="filters-sheet-body">
+              {categorySelect ? <div className="filters-sheet-field"><span>Категория</span>{categorySelect}</div> : null}
+              {userSelect ? <div className="filters-sheet-field"><span>Исполнитель</span>{userSelect}</div> : null}
+              {showChips ? (
+                <div className="filters-sheet-field">
+                  <span>Показать только</span>
+                  <div className="quick-chips">{chipButtons}</div>
+                </div>
+              ) : null}
+            </div>
+            <div className="filters-sheet-actions">
+              <Button type="button" variant="outline" onClick={resetFilterControls} disabled={activeFilterCount === 0}>
+                Сбросить
+              </Button>
+              <Button type="button" onClick={() => setIsFiltersOpen(false)}>
+                Показать {filteredTasks.length} {plural(filteredTasks.length, "задачу", "задачи", "задач")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {/* Streak achievement modal — открывается один раз при достижении
           milestone (7/14/30/60/100/200 дней). Показ воркеру независимо
