@@ -13,7 +13,6 @@
  * SSR-safe: при первом рендере нет обращений к window.
  */
 import { useState, type FormEvent } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 import { User, Lock, Eye, EyeOff, Loader2, CheckCircle2, X, ArrowRight } from "lucide-react";
 import { suggestEmailFix } from "./email-typo";
 import { detectIdentity } from "./identity";
@@ -401,14 +400,3 @@ export function AuthForm({
   );
 }
 
-export function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-    <DialogContent className="max-w-md bg-card p-6 sm:p-7">
-      <div>
-        <DialogTitle className="text-xl font-bold text-foreground mb-1 pr-6">Вход в TasksFlow</DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground mb-5">Введите телефон или email — войдём или зарегистрируем.</DialogDescription>
-        <AuthForm layout="stacked" />
-      </div>
-    </DialogContent>
-  </Dialog>;
-}
