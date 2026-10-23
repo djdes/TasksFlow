@@ -9,6 +9,7 @@
 import type { InsertTask, Task } from "@shared/schema";
 import { storage } from "../storage";
 import { publishToCompany } from "../live-events";
+import { onTaskCreated, safely } from "../push/events";
 import {
   canAssignToWorker,
   resolveActorCompanyId,
@@ -88,5 +89,6 @@ export async function createTaskForActor({
   });
 
   publishToCompany(task.companyId, { type: "tasks", taskId: task.id });
+  safely(() => onTaskCreated(task, actor.kind === "apiKey" ? null : actor.userId));
   return task;
 }

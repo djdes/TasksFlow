@@ -24,6 +24,7 @@ import {
 import type { HistoryItem } from "@shared/history";
 import { todayItems } from "@shared/history-report";
 import { DatabaseStorage } from "../storage";
+import type { PushMessage } from "@shared/push";
 
 const LATE_WINDOW_MIN = 180;
 
@@ -100,9 +101,13 @@ export interface ReminderStore {
 }
 
 export interface ReminderSender {
-  /** Список задач с кнопками — как «Мои задачи». */
-  sendTaskList(chatId: number, tasks: Task[], header: string): Promise<void>;
-  sendText(chatId: number, html: string, button?: { text: string; url: string }): Promise<void>;
+  /** Список задач с кнопками — как «Мои задачи». Нет — Telegram-бот не запущен. */
+  sendTaskList?(chatId: number, tasks: Task[], header: string): Promise<void>;
+  sendText?(chatId: number, html: string, button?: { text: string; url: string }): Promise<void>;
+  /** Кто из этих людей получает push хотя бы на одно устройство. */
+  pushRecipients?(userIds: number[]): Promise<Set<number>>;
+  /** true — доставлено хотя бы на одно устройство. */
+  push?(userId: number, message: PushMessage): Promise<boolean>;
 }
 
 export type ReminderRun = { companyId: number; slot: NotifySlot; sent: number };
@@ -126,8 +131,15 @@ export async function runReminders(
 
     try {
       const [users, tasks] = await Promise.all([store.getUsers(company.id), store.getTasks(company.id)]);
+      const pushable = sender.pushRecipients
+        ? await sender.pushRecipients(users.map((u) => u.id)).catch(() => new Set<number>())
+        : new Set<number>();
       for (const slot of due) {
-        runs.push({ companyId: company.id, slot, sent: await sendSlot(slot, sender, users, tasks, tz, day, opts.reportUrl) });
+        runs.push({
+          companyId: company.id,
+          slot,
+          sent: await sendSlot(slot, sender, users, tasks, tz, day, opts.reportUrl, pushable),
+        });
       }
     } catch (err) {
       // Состояние уже записано: лучше пропустить одно напоминание, чем
@@ -146,38 +158,90 @@ async function sendSlot(
   tz: string,
   day: string,
   reportUrl: string,
+  pushable: Set<number>,
 ): Promise<number> {
   let sent = 0;
   const items = todayItems(tasks, tz, day, null);
   const byId = new Map(tasks.map((t) => [t.id, t]));
   for (const user of users) {
-    if (!linked(user)) continue;
-    try {
-      if (slot === "digest") {
-        const scope = digestScope(user);
-        if (scope === undefined) continue; // обычный сотрудник
-        const scoped = scope ? items.filter((i) => i.workerId != null && scope.includes(i.workerId)) : items;
-        const text = digestText(scoped, users, day, { scoped: scope !== null });
-        if (!text) continue;
-        await sender.sendText(user.tgChatId!, text, { text: "📈 Открыть отчёт", url: reportUrl });
-        sent++;
-        continue;
+    const tg = linked(user) && !!sender.sendText && !!sender.sendTaskList;
+    const push = pushable.has(user.id) && !!sender.push;
+    if (!tg && !push) continue;
+    // Каждый канал сам по себе: заблокированный бот не мешает push и наоборот.
+    let reached = false;
+    const via = async (run: () => Promise<unknown>) => {
+      try {
+        const ok = await run();
+        if (ok !== false) reached = true;
+      } catch {
+        // Один заблокировавший бота не должен оставить без напоминаний остальных.
       }
-      const mine = items.filter((i) => i.workerId === user.id && i.status !== "claimed");
-      const open = mine.filter((i) => i.status === "pending");
-      if (slot === "morning" && mine.length > 0) {
-        const list = mine.map((i) => byId.get(i.taskId)!).filter(Boolean);
-        const name = user.name ? `, ${escape(user.name.split(" ")[0])}` : "";
-        await sender.sendTaskList(user.tgChatId!, list, `☀️ <b>Доброе утро${name}!</b> Задач на сегодня: ${mine.length}`);
-        sent++;
-      } else if (slot === "evening" && open.length > 0) {
-        const list = open.map((i) => byId.get(i.taskId)!).filter(Boolean);
-        await sender.sendTaskList(user.tgChatId!, list, `⏰ <b>Осталось сделать: ${open.length}</b>`);
-        sent++;
-      }
-    } catch {
-      // Один заблокировавший бота не должен оставить без напоминаний остальных.
+    };
+    if (slot === "digest") {
+      const scope = digestScope(user);
+      if (scope === undefined) continue; // обычный сотрудник
+      const scoped = scope ? items.filter((i) => i.workerId != null && scope.includes(i.workerId)) : items;
+      const text = digestText(scoped, users, day, { scoped: scope !== null });
+      if (!text) continue;
+      if (tg) await via(() => sender.sendText!(user.tgChatId!, text, { text: "📈 Открыть отчёт", url: reportUrl }));
+      if (push) await via(() => sender.push!(user.id, digestPush(scoped, day)));
+      if (reached) sent++;
+      continue;
     }
+    const mine = items.filter((i) => i.workerId === user.id && i.status !== "claimed");
+    const open = mine.filter((i) => i.status === "pending");
+    if (slot === "morning" && mine.length > 0) {
+      const list = mine.map((i) => byId.get(i.taskId)!).filter(Boolean);
+      const first = user.name ? user.name.split(" ")[0] : "";
+      if (tg) {
+        const name = first ? `, ${escape(first)}` : "";
+        await via(() => sender.sendTaskList!(user.tgChatId!, list, `☀️ <b>Доброе утро${name}!</b> Задач на сегодня: ${mine.length}`));
+      }
+      if (push) {
+        await via(() =>
+          sender.push!(user.id, {
+            title: first ? `Доброе утро, ${first}!` : "Доброе утро!",
+            body: `Задач на сегодня: ${mine.length}. ${listBody(list.map((t) => t.title))}`,
+            url: "/dashboard",
+            tag: "morning",
+          }),
+        );
+      }
+    } else if (slot === "evening" && open.length > 0) {
+      const list = open.map((i) => byId.get(i.taskId)!).filter(Boolean);
+      if (tg) await via(() => sender.sendTaskList!(user.tgChatId!, list, `⏰ <b>Осталось сделать: ${open.length}</b>`));
+      if (push) {
+        await via(() =>
+          sender.push!(user.id, {
+            title: `Осталось сделать: ${open.length}`,
+            body: listBody(list.map((t) => t.title)),
+            url: "/dashboard",
+            tag: "evening",
+          }),
+        );
+      }
+    }
+    if (reached) sent++;
   }
   return sent;
+}
+
+/** Итог дня одной строкой — для push, где нет места на список. */
+export function digestPush(items: HistoryItem[], day: string): PushMessage {
+  const assigned = items.filter((i) => i.status !== "claimed");
+  const done = assigned.filter((i) => i.status === "done" || i.status === "submitted").length;
+  const left = assigned.filter((i) => i.status === "pending").length;
+  const pct = assigned.length > 0 ? Math.round((done / assigned.length) * 100) : 0;
+  return {
+    title: `Итоги дня · ${dayLabelRu(day)}`,
+    body: `Сделано ${done} из ${assigned.length} · ${pct}%` + (left > 0 ? ` · не сделано: ${left}` : " · всё сделано"),
+    url: "/reports",
+    tag: "digest",
+  };
+}
+
+function listBody(titles: string[]): string {
+  const shown = titles.slice(0, 3).map((t) => (t.length > 50 ? `${t.slice(0, 49)}…` : t));
+  const rest = titles.length - shown.length;
+  return shown.join(" · ") + (rest > 0 ? ` и ещё ${rest}` : "");
 }

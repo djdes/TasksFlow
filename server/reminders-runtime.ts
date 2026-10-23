@@ -5,6 +5,9 @@ import { storage } from "./storage";
 import type { ReminderSender, ReminderStore } from "./services/reminders";
 import type { TelegramRuntime } from "./telegram";
 import { renderTasksView, sendTaskListMessage } from "./telegram/my-tasks";
+import type { PushMessage } from "@shared/push";
+import { sendToUsers } from "./push";
+import { pushStore } from "./push/store";
 
 function affected(result: unknown): number {
   const header = Array.isArray(result) ? result[0] : result;
@@ -35,6 +38,24 @@ export const reminderStore: ReminderStore = {
   getUsers: (companyId) => storage.getAllUsers(companyId),
   getTasks: (companyId) => storage.getTasks(companyId),
 };
+
+/** Telegram (если бот запущен) и push (если включён) — одной рассылкой. */
+export function reminderSender(runtime: TelegramRuntime | null, pushOn: boolean): ReminderSender {
+  return {
+    ...(runtime ? telegramSender(runtime) : {}),
+    ...(pushOn
+      ? {
+          async pushRecipients(userIds: number[]) {
+            const subs = await pushStore.listForUsers(userIds);
+            return new Set(subs.map((s) => s.userId));
+          },
+          async push(userId: number, message: PushMessage) {
+            return (await sendToUsers([userId], message)).sent > 0;
+          },
+        }
+      : {}),
+  };
+}
 
 export function telegramSender(runtime: TelegramRuntime): ReminderSender {
   return {

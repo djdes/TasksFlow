@@ -42,7 +42,8 @@
     "add-tg-link-code-cols": "tsx script/_add-tg-link-code-cols.ts",
     "add-draft-autocreate-col": "tsx script/_add-draft-autocreate-col.ts",
     "add-pin-cols": "tsx script/_add-pin-cols.ts",
-    "add-company-features": "tsx script/_add-company-features.ts"
+    "add-company-features": "tsx script/_add-company-features.ts",
+    "add-push-subscriptions": "tsx script/_add-push-subscriptions.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -104,6 +105,7 @@
     "tailwindcss-animate": "^1.0.7",
     "undici": "^8.9.0",
     "vaul": "^1.1.2",
+    "web-push": "3.6.7",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
@@ -123,6 +125,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@types/supertest": "^6.0.3",
+    "@types/web-push": "3.6.4",
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/ui": "^4.0.17",

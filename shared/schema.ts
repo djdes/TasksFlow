@@ -705,6 +705,33 @@ export type TaskHistoryRow = typeof taskHistory.$inferSelect;
 export type InsertTaskHistory = typeof taskHistory.$inferInsert;
 export type TaskHistoryStatus = "done" | "claimed" | "missed";
 
+// ===== Push-уведомления =====
+// Устройство, куда слать уведомления: браузер или установленное PWA и
+// Android-приложение (Web Push) либо iOS-приложение (APNs). Таблицу
+// создаёт script/_add-push-subscriptions.ts.
+export const pushSubscriptions = mysqlTable("push_subscriptions", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").notNull(),
+  companyId: int("company_id"),
+  // web | apns
+  kind: varchar("kind", { length: 8 }).notNull(),
+  // web — URL push-сервиса браузера, apns — токен устройства.
+  endpoint: text("endpoint").notNull(),
+  // sha256(endpoint): уникальность длинного endpoint без индекса по TEXT.
+  endpointHash: varchar("endpoint_hash", { length: 64 }).notNull().unique(),
+  p256dh: varchar("p256dh", { length: 255 }),
+  auth: varchar("auth", { length: 64 }),
+  // Только для apns: sandbox | production.
+  environment: varchar("environment", { length: 16 }),
+  userAgent: varchar("user_agent", { length: 255 }),
+  createdAt: int("created_at").notNull().default(0),
+  lastSeenAt: int("last_seen_at").notNull().default(0),
+  // Подряд неудачных отправок (не 404/410 — те удаляют сразу).
+  failures: int("failures").notNull().default(0),
+});
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
 

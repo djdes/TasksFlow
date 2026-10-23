@@ -39,6 +39,7 @@ import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings"
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
 import { registerCompanyRoutes } from "./company-routes";
+import { registerPushRoutes } from "./push-routes";
 import { companyPlan, planLimitsEnforced, seatProblem } from "./plan-limits";
 import {
   encryptApiKey,
@@ -68,6 +69,7 @@ import {
   type TaskActor,
 } from "./services/task-actor";
 import { createTaskForActor } from "./services/task-create";
+import { onTaskApproved, onTaskRejected, onTaskSubmitted, safely } from "./push/events";
 import { completeTaskForActor } from "./services/task-complete";
 import {
   attachTaskPhoto,
@@ -2105,6 +2107,7 @@ export async function registerRoutes(
         rejectReason: reason,
         verifiedAt: Math.floor(Date.now() / 1000),
       } as never);
+      safely(() => onTaskRejected(task, reason));
       const fresh = await storage.getTask(taskId);
       return res.json(fresh ?? task);
     } catch (err: any) {
@@ -2319,6 +2322,7 @@ export async function registerRoutes(
           const fresh = await storage.getTask(taskId);
           return res.json(fresh ?? task);
         }
+        safely(() => onTaskApproved(task));
         // Side-effects (balance, sibling-claim, WeSetup-mirror) —
         // те же что в /complete, но запускаем сейчас, при approve.
         if (task.price && task.price > 0 && task.workerId) {
@@ -2414,6 +2418,7 @@ export async function registerRoutes(
         const fresh = await storage.getTask(taskId);
         return res.json(fresh ?? task);
       }
+      safely(() => onTaskRejected(task, reason));
       // Чистим submittedValues — задача отклонена, продавец будет
       // заполнять форму заново. Без этого при повторном /complete-with-
       // values старые значения «застряли» бы в submitted_values.
@@ -3965,6 +3970,7 @@ export async function registerRoutes(
             verificationPending: true,
           });
         }
+        safely(() => onTaskSubmitted(taskBeforeAny!, meId ?? null));
         return res.status(200).json({
           message: "Отправлено на проверку заведующей",
           verificationPending: true,
@@ -4481,6 +4487,9 @@ export async function registerRoutes(
 
   // Точки, привязка к точке, root «Компании» (server/company-routes.ts).
   registerCompanyRoutes(app, { requireAuthOrApiKey, requireAuth, requireAdmin, requireRoot, getCompanyIdFromReq });
+
+  // Push-уведомления: подписки устройств (server/push-routes.ts).
+  registerPushRoutes(app, { requireAuth });
 
   // Живые обновления кабинета (server/live-events.ts).
   app.get("/api/events", requireAuth, async (req, res) => {

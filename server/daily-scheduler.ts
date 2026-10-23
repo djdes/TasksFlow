@@ -4,13 +4,14 @@ import { publishToCompany } from "./live-events";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { runDueResets } from "./services/daily-reset";
 import { runReminders } from "./services/reminders";
-import { reminderStore, telegramSender } from "./reminders-runtime";
+import { reminderSender, reminderStore } from "./reminders-runtime";
+import { pushConfig } from "./push";
 import { photoRetentionDays, pruneHistoryPhotos, resetStore } from "./task-history-store";
 
 /**
  * Раз в минуту, по местному времени каждой компании:
  *   • сброс повторяющихся задач в полночь с переносом дня в историю;
- *   • напоминания и итоги дня в Telegram (если бот запущен);
+ *   • напоминания и итоги дня в Telegram (если бот запущен) и push;
  *   • раз в сутки — удаление фото старше PHOTO_RETENTION_DAYS, если задан.
  * Внешний cron для компаний больше не нужен; `npm run reset-tasks`
  * вызывает ту же логику сброса и безопасен при одновременном запуске.
@@ -33,8 +34,10 @@ export async function dailyTick(now: number = Math.floor(Date.now() / 1000)): Pr
 
     const { getTelegramRuntime } = await import("./telegram");
     const runtime = getTelegramRuntime();
-    if (runtime) {
-      const runs = await runReminders(reminderStore, telegramSender(runtime), now, {
+    const push = pushConfig();
+    const pushOn = push.web.enabled || push.apns.enabled;
+    if (runtime || pushOn) {
+      const runs = await runReminders(reminderStore, reminderSender(runtime, pushOn), now, {
         reportUrl: `${getPublicTasksflowBaseUrl()}/reports`,
         onError: (companyId, err) => logger.error({ err, companyId }, "[reminders] рассылка не прошла"),
       });

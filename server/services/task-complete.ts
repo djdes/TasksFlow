@@ -16,6 +16,7 @@
 import type { Task } from "@shared/schema";
 import { storage } from "../storage";
 import { publishToCompany } from "../live-events";
+import { onTaskSubmitted, safely } from "../push/events";
 import { sendTaskCompletedEmail } from "../mail";
 import { parseJournalLink } from "@shared/journal-link";
 import {
@@ -147,6 +148,7 @@ export async function completeTaskForActor({
     // — до approve журнальный entry в WeSetup НЕ помечается
     // выполненным.
     publishToCompany(task.companyId, { type: "tasks", taskId });
+    safely(() => onTaskSubmitted(updatedTask ?? task, meId));
     return { outcome: "submitted", task: updatedTask ?? task };
   }
 
