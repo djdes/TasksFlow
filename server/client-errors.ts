@@ -15,6 +15,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { logger } from "./logger";
+import { ownerAlertsEnabled, sendOwnerAlert } from "./owner-alert";
 
 const STACK_LIMIT = 4096;
 const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
@@ -62,9 +63,7 @@ function signatureOf(report: ClientErrorReport): string {
 }
 
 async function sendTelegramAlert(report: ClientErrorReport): Promise<void> {
-  const token = process.env.ALERT_TELEGRAM_BOT_TOKEN?.trim();
-  const chatId = process.env.ALERT_TELEGRAM_CHAT_ID?.trim();
-  if (!token || !chatId) return;
+  if (!ownerAlertsEnabled()) return;
 
   const signature = signatureOf(report);
   const now = Date.now();
@@ -80,19 +79,8 @@ async function sendTelegramAlert(report: ClientErrorReport): Promise<void> {
     report.release ? `Сборка: ${report.release}` : "",
   ]
     .filter(Boolean)
-    .join("\n")
-    .slice(0, 3500);
-  const base = (process.env.TELEGRAM_API_BASE_URL?.trim() || "https://api.telegram.org").replace(/\/+$/, "");
-  try {
-    await fetch(`${base}/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
-      signal: AbortSignal.timeout(5000),
-    });
-  } catch (err) {
-    logger.debug({ err }, "[client-errors] Telegram alert failed");
-  }
+    .join("\n");
+  await sendOwnerAlert(text);
 }
 
 export function registerClientErrorRoutes(app: Express): void {

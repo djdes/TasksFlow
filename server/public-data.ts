@@ -20,6 +20,8 @@ import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { DEFAULT_CONTACT_EMAIL, LEGAL_SLUGS, OPERATOR_PLACEHOLDERS } from "../client/src/public/legal";
 import QRCode from "qrcode";
 import { appInfo } from "./app-links";
+import { DEFAULT_PRICES } from "@shared/billing";
+import { billingStore } from "./billing/store";
 import type {
   AnalyticsIds,
   AppPageData,
@@ -158,7 +160,9 @@ export async function loadRouteData(
   switch (routeKey) {
     case "landing": {
       const featuredPosts = getAllPosts().slice(0, 3);
-      return { featuredPosts, totalPosts: totalPosts() };
+      // Лендинг важнее точности цены: без БД — цены по умолчанию.
+      const prices = await billingStore.getPrices().catch(() => DEFAULT_PRICES.map((p) => ({ ...p })));
+      return { featuredPosts, totalPosts: totalPosts(), prices };
     }
     case "blog-index": {
       const featured = getFeatured();

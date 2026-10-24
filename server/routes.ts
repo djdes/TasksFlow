@@ -40,6 +40,7 @@ import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
 import { registerCompanyRoutes } from "./company-routes";
 import { registerPushRoutes } from "./push-routes";
+import { registerBillingRoutes } from "./billing-routes";
 import { companyPlan, planLimitsEnforced, seatProblem } from "./plan-limits";
 import {
   encryptApiKey,
@@ -4490,6 +4491,9 @@ export async function registerRoutes(
 
   // Push-уведомления: подписки устройств (server/push-routes.ts).
   registerPushRoutes(app, { requireAuth });
+
+  // Оплата тарифа через Робокассу (server/billing-routes.ts).
+  registerBillingRoutes(app, { requireAdmin, requireRoot, getCompanyIdFromReq });
 
   // Живые обновления кабинета (server/live-events.ts).
   app.get("/api/events", requireAuth, async (req, res) => {

@@ -12,6 +12,7 @@ export const LEGAL_DOCS: ReadonlyArray<{ slug: LegalSlug; path: string; label: s
   { slug: "privacy", path: "/privacy", label: "Политика обработки данных", short: "Политика" },
   { slug: "consent", path: "/consent", label: "Согласие на обработку данных", short: "Согласие" },
   { slug: "terms", path: "/terms", label: "Пользовательское соглашение", short: "Соглашение" },
+  { slug: "offer", path: "/offer", label: "Публичная оферта", short: "Оферта" },
 ];
 
 export const LEGAL_SLUGS: ReadonlySet<string> = new Set(LEGAL_DOCS.map((d) => d.slug));

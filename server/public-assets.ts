@@ -11,6 +11,7 @@ import { getAllPosts, getPost } from "./blog";
 import { coverSvg } from "./og-cover";
 import { CLUSTERS } from "@shared/blog-clusters";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
+import { LEGAL_DOCS } from "../client/src/public/legal";
 
 export function setupPublicAssets(app: Express): void {
   // Обложка статьи. :slug.svg — slug + расширение.
@@ -40,7 +41,7 @@ export function setupPublicAssets(app: Express): void {
       { loc: `${origin}/blog`, priority: "0.8", changefreq: "daily" },
       { loc: `${origin}/app`, priority: "0.6", changefreq: "monthly" },
       // Юридические документы: поисковики и проверяющие должны их находить.
-      ...["privacy", "consent", "terms"].map((slug) => ({
+      ...LEGAL_DOCS.map(({ slug }) => ({
         loc: `${origin}/${slug}`,
         priority: "0.3",
         changefreq: "yearly",

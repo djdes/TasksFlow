@@ -51,7 +51,10 @@ function credentialsBox(email: string, password?: string): string {
     </table>`;
 }
 
-function layout(inner: string): string {
+const AUTH_FOOTER =
+  "Если вы не запрашивали это письмо — просто проигнорируйте его.<br>TasksFlow — постановка и контроль задач для выездных команд.";
+
+function layout(inner: string, footer: string = AUTH_FOOTER): string {
   return `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;">
@@ -66,8 +69,7 @@ function layout(inner: string): string {
           ${inner}
           <hr style="border:none;border-top:1px solid ${BORDER};margin:28px 0 16px;">
           <p style="color:${MUTED};font-size:12px;line-height:1.5;margin:0;">
-            Если вы не запрашивали это письмо — просто проигнорируйте его.<br>
-            TasksFlow — постановка и контроль задач для выездных команд.
+            ${footer}
           </p>
         </td></tr>
       </table>
@@ -115,4 +117,29 @@ export function renderEmail(kind: EmailKind, data: EmailData): { subject: string
         ),
       };
   }
+}
+
+/** Служебное письмо об оплате и автопродлении: заголовок, абзацы, кнопка. */
+export interface NoticeEmail {
+  subject: string;
+  heading: string;
+  /** Абзацы обычным текстом — экранируются здесь. */
+  paragraphs: string[];
+  button?: { url: string; label: string };
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const NOTICE_FOOTER =
+  "Письмо отправлено администратору компании в TasksFlow: оно касается тарифа и оплаты.<br>Вопросы — ответьте на это письмо или напишите в поддержку.";
+
+export function renderNoticeEmail(notice: NoticeEmail): { subject: string; html: string } {
+  const inner =
+    `<h1 style="font-size:22px;color:${INK};margin:0 0 12px;">${escapeHtml(notice.heading)}</h1>` +
+    notice.paragraphs
+      .map((p) => `<p style="font-size:15px;color:${INK};line-height:1.55;margin:0 0 8px;">${escapeHtml(p)}</p>`)
+      .join("") +
+    (notice.button ? button(escapeHtml(notice.button.url), escapeHtml(notice.button.label)) : "");
+  return { subject: notice.subject, html: layout(inner, NOTICE_FOOTER) };
 }

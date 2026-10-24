@@ -32,7 +32,13 @@ const SESSIONS = [
   ['script/smoke-demo.js'],
   // Приложение: манифест, /app, офлайн-страница, push на устройстве.
   ['script/smoke-pwa.js'],
+  // Тариф и оплата: форма, Робокасса (подменена), возврат, автопродление, root «Цены».
+  ['script/smoke-billing.js'],
 ];
+
+// SMOKE_ONLY=billing — только сессии, где есть такой сценарий (для отладки).
+const only = process.env.SMOKE_ONLY?.trim();
+const RUN = only ? SESSIONS.filter((files) => files.some((f) => f.includes(only))) : SESSIONS;
 
 process.chdir(root);
 if (!fs.existsSync('dist/server/entry-server.js') || !fs.existsSync('dist/public/index.html')) {
@@ -79,7 +85,7 @@ try {
   await waitForPreview();
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
   browser = await chromium.launch({ executablePath });
-  for (const [index, scripts] of SESSIONS.entries()) {
+  for (const [index, scripts] of RUN.entries()) {
     console.log(`— сессия ${index + 1}: ${scripts.map((s) => path.basename(s)).join(' → ')}`);
     // Service worker перехватывал бы навигации и ассеты мимо page.route —
     // его проверяет smoke-pwa.js в своём контексте.

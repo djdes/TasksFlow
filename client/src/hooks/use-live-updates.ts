@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { HISTORY_KEY, SUMMARY_KEY } from "@/lib/reports-api";
+import { BILLING_KEY } from "@/lib/billing-api";
 
 /**
  * Живые обновления: сервер шлёт «tasks», когда кто-то в компании закрыл,
  * создал или изменил задачу (сайт, Telegram, WeSetup). Перезапрашиваем
- * списки с небольшой паузой — пачка событий даёт один запрос.
+ * списки с небольшой паузой — пачка событий даёт один запрос. «billing» —
+ * оплата тарифа: перечитываем тариф и платежи.
  * Без EventSource (старый браузер) всё работает как раньше: по фокусу окна.
  */
 const REFRESH_DELAY_MS = 400;
@@ -28,10 +30,17 @@ export function useLiveUpdates(enabled: boolean): void {
         void queryClient.invalidateQueries({ queryKey: [SUMMARY_KEY] });
       }, REFRESH_DELAY_MS);
     };
+    // Оплата прошла или выключилось автопродление — тариф перечитываем сразу.
+    const billing = () => {
+      void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+      void queryClient.invalidateQueries({ queryKey: ["companies", "me"] });
+    };
     source.addEventListener("tasks", refresh);
+    source.addEventListener("billing", billing);
     return () => {
       window.clearTimeout(timer);
       source.removeEventListener("tasks", refresh);
+      source.removeEventListener("billing", billing);
       source.close();
     };
   }, [enabled, queryClient]);

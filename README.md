@@ -132,6 +132,7 @@ pm2 start npm --name "tasksflow" -- start
 - [API.md](./API.md) - Примеры API запросов
 - [DEPLOY.md](./DEPLOY.md) - Инструкция по деплою
 - [docs/mobile.md](./docs/mobile.md) - Приложения для Android и iPhone, push-уведомления, публикация в магазинах
+- [docs/billing.md](./docs/billing.md) - Оплата тарифов через Робокассу: подключение магазина, автопродление, цены
 
 ## Tech Stack
 

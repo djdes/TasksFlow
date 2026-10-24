@@ -2,15 +2,17 @@ import type { Express, Request, RequestHandler } from "express";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PLAN_IDS } from "@shared/plans";
+import { OFFER_REVISION } from "@shared/billing";
 import { companies, locations, users } from "@shared/schema";
 import { db } from "./db";
 import { storage } from "./storage";
 import { companyPlan, locationsProblem, planLimitsEnforced } from "./plan-limits";
+import { billingStore } from "./billing/store";
 
 /**
  * Точки компании, привязка сотрудника к точке и root-раздел «Компании»
- * (тарифы клиентов). Тариф ставит владелец сервиса вручную: платёжного
- * шлюза пока нет.
+ * (тарифы клиентов). Обычно тариф оплачивают картой (server/billing-routes.ts),
+ * здесь root ставит его вручную — например, после оплаты по счёту.
  */
 type Deps = {
   requireAuthOrApiKey: RequestHandler;
@@ -206,6 +208,26 @@ export function registerCompanyRoutes(app: Express, deps: Deps): void {
         .set({ plan: input.plan === "start" ? null : input.plan, planUntil: input.plan === "start" ? null : input.until })
         .where(eq(companies.id, id));
       if (affected(result) === 0) return res.status(404).json({ message: "Компания не найдена" });
+      // Ручная правка тарифа выключает автопродление: иначе списание по
+      // сохранённой карте вернуло бы прежний тариф поверх выставленного
+      // или прошло бы раньше нового срока. Отказ — в историю согласий.
+      try {
+        if (await billingStore.disableRecurring(id, nowSec())) {
+          await billingStore.addConsent({
+            companyId: id,
+            userId: req.session.userId ?? null,
+            orderId: null,
+            granted: false,
+            statementText: "Автопродление выключено: тариф изменён вручную администратором сервиса",
+            offerRevision: OFFER_REVISION,
+            ip: req.ip ?? null,
+            userAgent: String(req.headers["user-agent"] || "") || null,
+            createdAt: nowSec(),
+          });
+        }
+      } catch (err) {
+        console.error("[root] автопродление", err);
+      }
       res.json({ ok: true });
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json(zodError(err));

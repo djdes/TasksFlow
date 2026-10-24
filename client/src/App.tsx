@@ -50,6 +50,7 @@ const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const Account = lazy(() => import("@/pages/Account"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const RootCompanies = lazy(() => import("@/pages/RootCompanies"));
+const Billing = lazy(() => import("@/pages/Billing"));
 const DemoBar = lazy(() => import("@/demo/DemoBar").then((m) => ({ default: m.DemoBar })));
 
 /** Пока человек в кабинете — живые обновления задач (SSE). В демо сервера нет. */
@@ -152,6 +153,10 @@ function Router() {
             <Route path="/admin/invitations" component={Invitations} />
             <Route path="/admin/banners" component={AdminBanners} />
             <Route path="/admin/companies" component={RootCompanies} />
+            <Route path="/admin/billing" component={Billing} />
+            {/* SuccessURL и FailURL магазина в Робокассе */}
+            <Route path="/billing/success" component={Billing} />
+            <Route path="/billing/fail" component={Billing} />
             <Route path="/join/:token" component={JoinByInvite} />
             <Route path="/tasks/new" component={CreateTask} />
             <Route path="/tasks/:id/edit" component={EditTask} />

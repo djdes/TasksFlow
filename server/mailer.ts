@@ -15,7 +15,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { spawn } from "child_process";
-import { renderEmail, type EmailKind, type EmailData } from "./email-templates";
+import { renderEmail, renderNoticeEmail, type EmailKind, type EmailData, type NoticeEmail } from "./email-templates";
 
 export type MailTransport = "php-relay" | "php-cli" | "dev";
 
@@ -127,13 +127,23 @@ export interface SendMailArgs {
   data: EmailData;
 }
 
-/** Рендерит письмо и отправляет выбранным транспортом. Бросает при ошибке. */
-export async function sendMail({ to, kind, data }: SendMailArgs): Promise<void> {
-  const { subject, html } = renderEmail(kind, data);
+function deliver(to: string, subject: string, html: string): Promise<void> {
   const transport = resolveTransport();
   if (transport === "php-relay") return sendViaPhpRelay(to, subject, html);
   if (transport === "php-cli") return sendViaPhpCli(to, subject, html);
   return sendDev(to, subject, html);
+}
+
+/** Рендерит письмо и отправляет выбранным транспортом. Бросает при ошибке. */
+export async function sendMail({ to, kind, data }: SendMailArgs): Promise<void> {
+  const { subject, html } = renderEmail(kind, data);
+  return deliver(to, subject, html);
+}
+
+/** Письмо об оплате и автопродлении (server/billing). Бросает при ошибке. */
+export async function sendNoticeMail(to: string, notice: NoticeEmail): Promise<void> {
+  const { subject, html } = renderNoticeEmail(notice);
+  return deliver(to, subject, html);
 }
 
 /** Диагностика наличия PHP на хосте (для проверки прод-окружения). */

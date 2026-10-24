@@ -3,6 +3,7 @@ import { dayInZone, daysBetween, isDay, shiftDay } from "@shared/day";
 import { DEFAULT_NOTIFY } from "@shared/notify";
 import { DEFAULT_PHOTO_SETTINGS } from "@shared/photo-settings";
 import { PLANS } from "@shared/plans";
+import { DEFAULT_PRICES, type BillingInfo } from "@shared/billing";
 import { buildCsv, fromHistoryRow, sortItems, summarize, todayItems } from "@shared/history-report";
 import type { HistoryItem } from "@shared/history";
 import { createDemoState, DEMO_TZ, type DemoState } from "./demo-data";
@@ -28,6 +29,25 @@ function storedRole(): "admin" | "worker" {
 let state: DemoState = createDemoState();
 state.meId = storedRole() === "worker" ? 2 : 1;
 const now = () => Math.floor(Date.now() / 1000);
+
+/** Тариф демо-кофейни: «Команда» ещё на 12 дней, один прошлый платёж. */
+function demoBilling(): BillingInfo {
+  const t = now();
+  const paidAt = t - 18 * 86400;
+  return {
+    configured: true,
+    testMode: false,
+    recurringAvailable: true,
+    plan: { id: "team", until: t + 12 * 86400, perpetual: false, usersCount: state.users.length },
+    prices: DEFAULT_PRICES.map((p) => ({ ...p })),
+    recurring: { active: false, plan: null, months: null, amountRub: null, nextChargeAt: null },
+    orders: [
+      { id: 1042, plan: "team", months: 1, amountRub: 990, description: "TasksFlow, тариф «Команда» на 1 месяц", status: "paid", isTest: false, automatic: false, createdAt: paidAt, paidAt, planUntil: t + 12 * 86400 },
+    ],
+    email: null,
+    now: t,
+  };
+}
 const me = () => state.users.find((u) => u.id === state.meId)!;
 const isAdmin = () => me().isAdmin;
 
@@ -276,6 +296,14 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     const r = range(url);
     return { text: buildCsv(historyFor(r.from, r.to, scopeIds(url)), state.users, (p) => p), type: "text/csv; charset=utf-8" };
   }
+
+  // «Тариф и оплата»: форма как настоящая, но оплата не проводится.
+  if (path === "/api/billing" && method === "GET") return { json: demoBilling() };
+  if (path === "/api/billing/checkout") {
+    return { status: 400, json: { message: "В демо оплата не проводится. Зарегистрируйте компанию — оплатить тариф можно будет здесь же." } };
+  }
+  if (path.startsWith("/api/billing/orders/")) return { status: 404, json: { message: "Заказ не найден" } };
+  if (path === "/api/billing/recurring") return { json: { ok: true, active: false } };
 
   // Остальное (приглашения, ключи, интеграции): пусто, но без ошибок.
   return method === "GET" ? { json: [] } : { json: { ok: true } };

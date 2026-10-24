@@ -732,6 +732,82 @@ export const pushSubscriptions = mysqlTable("push_subscriptions", {
 
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
+// ===== Оплата тарифов (Робокасса) =====
+// Таблицы создаёт script/_add-billing.ts; правила — shared/billing.ts и
+// server/billing. Суммы — целые рубли, время — unix sec.
+
+// Цены: строка — тариф на N месяцев (PRIMARY KEY plan+months). Правит root.
+export const billingPrices = mysqlTable("billing_prices", {
+  plan: varchar("plan", { length: 20 }).notNull(),
+  months: int("months").notNull(),
+  priceRub: int("price_rub").notNull(),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Заказ на оплату. id уходит в Робокассу как InvId, поэтому int.
+export const paymentOrders = mysqlTable("payment_orders", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  // Кто оформил; у автосписаний — NULL.
+  userId: int("user_id"),
+  email: varchar("email", { length: 255 }),
+  plan: varchar("plan", { length: 20 }).notNull(),
+  months: int("months").notNull(),
+  amountRub: int("amount_rub").notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  // pending | paid | expired
+  status: varchar("status", { length: 16 }).notNull().default("pending"),
+  // Тестовый режим Робокассы: подпись проверяется тестовыми паролями.
+  isTest: boolean("is_test").notNull().default(false),
+  // Галочка автосписаний при оформлении: этот платёж — первый в серии.
+  recurringConsent: boolean("recurring_consent").notNull().default(false),
+  // Для автосписания — id первого платежа серии (PreviousInvoiceID).
+  recurringChargeOf: int("recurring_charge_of"),
+  // До какого момента оплата продлила тариф.
+  planUntilAfter: int("plan_until_after"),
+  // Тело уведомления ResultURL — для разбора спорных платежей.
+  rawResult: text("raw_result"),
+  createdAt: int("created_at").notNull().default(0),
+  paidAt: int("paid_at"),
+});
+
+// История согласий на автосписания: только добавление, отзыв — новая
+// строка с granted=false. Этого требует Робокасса.
+export const paymentConsents = mysqlTable("payment_consents", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  userId: int("user_id"),
+  orderId: int("order_id"),
+  granted: boolean("granted").notNull(),
+  statementText: text("statement_text").notNull(),
+  offerRevision: varchar("offer_revision", { length: 20 }).notNull(),
+  ip: varchar("ip", { length: 64 }),
+  userAgent: varchar("user_agent", { length: 255 }),
+  createdAt: int("created_at").notNull().default(0),
+});
+
+// Автопродление компании. Отдельно от companies, чтобы не трогать
+// горячую таблицу: нет строки — автопродления нет.
+export const companyBilling = mysqlTable("company_billing", {
+  companyId: int("company_id").primaryKey(),
+  recurringActive: boolean("recurring_active").notNull().default(false),
+  // Первый платёж серии: по нему касса списывает повторно.
+  recurringParentOrderId: int("recurring_parent_order_id"),
+  recurringPlan: varchar("recurring_plan", { length: 20 }),
+  recurringMonths: int("recurring_months"),
+  // Сумма серии фиксируется при согласии; новая цена на неё не влияет.
+  recurringAmountRub: int("recurring_amount_rub"),
+  recurringAttempts: int("recurring_attempts").notNull().default(0),
+  recurringLastAttemptAt: int("recurring_last_attempt_at"),
+  // Для какого plan_until уже ушло предупреждение о списании.
+  recurringNoticeFor: int("recurring_notice_for"),
+  recurringDisabledAt: int("recurring_disabled_at"),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+export type PaymentOrderRow = typeof paymentOrders.$inferSelect;
+export type CompanyBillingRow = typeof companyBilling.$inferSelect;
+
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
 

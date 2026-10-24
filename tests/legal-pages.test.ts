@@ -18,6 +18,7 @@ import {
   formatLegalDate,
   operatorLines,
 } from "../client/src/public/legal";
+import { RECURRING_OFFER_HREF } from "../shared/billing";
 import {
   CONSENT_KEY,
   analyticsScriptUrls,
@@ -36,7 +37,9 @@ const FULL_ENV = {
   LEGAL_CONTACT_EMAIL: "legal@example.test",
   LEGAL_UPDATED_AT: "2026-11-01",
 };
-const SLUGS = ["privacy", "consent", "terms"] as const;
+const SLUGS = ["privacy", "consent", "terms", "offer"] as const;
+// Дата редакции из файла (frontmatter updated), пока не задан LEGAL_UPDATED_AT.
+const FILE_DATES: Record<(typeof SLUGS)[number], string> = { privacy: "2026-10-23", consent: "2026-10-23", terms: "2026-10-24", offer: "2026-10-24" };
 const originalEnv = { ...process.env };
 
 afterEach(() => {
@@ -44,8 +47,9 @@ afterEach(() => {
 });
 
 describe("роуты документов", () => {
-  it("/privacy, /consent, /terms — SSR-страницы legal", () => {
+  it("/privacy, /consent, /terms, /offer — SSR-страницы legal", () => {
     expect(matchRoute("/privacy")).toEqual({ key: "legal", params: { doc: "privacy" } });
+    expect(matchRoute("/offer")).toEqual({ key: "legal", params: { doc: "offer" } });
     expect(matchRoute("/consent/")).toEqual({ key: "legal", params: { doc: "consent" } });
     expect(matchRoute("/terms").key).toBe("legal");
     expect(matchRoute("/privacy-old").key).toBe("not-found");
@@ -62,7 +66,7 @@ describe("данные документов", () => {
     expect(d.doc?.html).not.toContain("{{");
     expect(d.contactEmail).toBe("support@tasksflow.ru");
     expect(d.operator).toEqual({ name: null, inn: null, ogrn: null, address: null });
-    expect(d.doc?.updatedAt).toBe("2026-10-23");
+    expect(d.doc?.updatedAt).toBe(FILE_DATES[slug]);
   });
 
   it.each(SLUGS)("%s: с env — реквизиты и email подставлены, плейсхолдеров нет", (slug) => {
@@ -91,6 +95,14 @@ describe("данные документов", () => {
   it("согласие: цели, перечень данных, срок и отзыв — отдельными разделами", () => {
     const texts = loadLegalData("consent", {}).doc?.toc.map((t) => t.text) ?? [];
     expect(texts).toEqual(expect.arrayContaining(["Цели", "Какие данные", "Срок и отзыв"]));
+  });
+
+  it("оферта: раздел «Автопродление» — на него ведёт галочка согласия при оплате", () => {
+    const doc = loadLegalData("offer", {}).doc;
+    const anchor = RECURRING_OFFER_HREF.split("#")[1];
+    expect(doc?.toc.map((t) => t.id)).toContain(anchor);
+    expect(doc?.toc.map((t) => t.text)).toEqual(expect.arrayContaining(["Стоимость", "Оплата", "Автопродление", "Возврат"]));
+    expect(doc?.html).toContain("Робокасс");
   });
 
   it("неизвестный документ — null, а не исключение", async () => {

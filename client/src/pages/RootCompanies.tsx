@@ -5,6 +5,7 @@ import { ArrowLeft, Building2 } from "lucide-react";
 import { PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
+import { RootBillingPanel } from "@/components/RootBillingPanel";
 import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
@@ -28,8 +29,9 @@ const dateInput = (sec: number | null) => (sec ? new Date(sec * 1000).toISOStrin
 const shortDate = (sec: number | null) => (sec ? new Date(sec * 1000).toLocaleDateString("ru-RU") : "—");
 
 /**
- * Root: компании сервиса и их тарифы. Платёжного шлюза нет — тариф и срок
- * ставятся здесь вручную после оплаты по счёту.
+ * Root: компании сервиса и их тарифы, цены и платежи. Картой компании
+ * платят сами («Тариф и оплата»); здесь тариф и срок можно поставить
+ * вручную — например, после оплаты по счёту.
  */
 export default function RootCompanies() {
   const [, setLocation] = useLocation();
@@ -71,19 +73,22 @@ export default function RootCompanies() {
           </div>
         </div>
 
-        <section className="content-panel">
-          {query.isLoading ? (
-            <ListSkeleton rows={4} />
-          ) : query.isError ? (
-            <QueryError onRetry={() => void query.refetch()} />
-          ) : (
-            <div className="root-companies">
-              {(query.data?.companies ?? []).map((c) => (
-                <CompanyRow key={c.id} company={c} />
-              ))}
-            </div>
-          )}
-        </section>
+        <div className="page-sections">
+          <RootBillingPanel />
+          <section className="content-panel">
+            {query.isLoading ? (
+              <ListSkeleton rows={4} />
+            ) : query.isError ? (
+              <QueryError onRetry={() => void query.refetch()} />
+            ) : (
+              <div className="root-companies">
+                {(query.data?.companies ?? []).map((c) => (
+                  <CompanyRow key={c.id} company={c} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

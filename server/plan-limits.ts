@@ -27,12 +27,12 @@ export async function seatProblem(companyId: number | null | undefined): Promise
   const next = NEXT_PLAN[plan.id];
   return (
     `На тарифе «${plan.name}» — до ${plan.maxUsers} человек в компании.` +
-    (next ? ` Чтобы добавить ещё, подключите «${next.name}»: напишите на support@tasksflow.ru.` : "")
+    (next ? ` Чтобы добавить ещё, подключите «${next.name}» в меню → «Тариф и оплата».` : "")
   );
 }
 
 /** Точки доступны на «Бизнесе» (при выключенных лимитах — всем). */
 export function locationsProblem(company: Pick<Company, "plan" | "planUntil"> | null | undefined): string | null {
   if (!planLimitsEnforced() || companyPlan(company).locations) return null;
-  return "Несколько точек — на тарифе «Бизнес». Напишите на support@tasksflow.ru, подключим.";
+  return "Несколько точек — на тарифе «Бизнес»: меню → «Тариф и оплата» или support@tasksflow.ru.";
 }

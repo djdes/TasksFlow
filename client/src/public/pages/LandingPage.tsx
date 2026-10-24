@@ -13,6 +13,8 @@ import { StepsShowcase } from "../landing/StepsShowcase";
 import { FeatureBento } from "../landing/FeatureBento";
 import { CompareSlider } from "../landing/CompareSlider";
 import type { LandingData } from "../types";
+import { PLAN_FEATURES, PLANS, type PlanId } from "@shared/plans";
+import { DEFAULT_PRICES, formatRub, monthlyRate, type PlanPrice } from "@shared/billing";
 
 const BEFORE = [
   "Задачи теряются в чатах и на словах",
@@ -27,12 +29,49 @@ const AFTER = [
   "Видно каждого в реальном времени",
 ];
 
-// action: "start" — к форме входа в hero, "mail" — письмо в поддержку.
-const PRICING = [
-  { name: "Старт", price: "0 ₽", note: "навсегда", features: ["До 5 сотрудников", "Задачи и чек-листы", "Фото-отчёты"], cta: "Начать бесплатно", action: "start", highlight: false },
-  { name: "Команда", price: "990 ₽", note: "в месяц · примерно", features: ["До 30 сотрудников", "Повторяющиеся задачи", "Премии и проверка", "Приглашение по QR"], cta: "Попробовать", action: "start", highlight: true },
-  { name: "Бизнес", price: "по запросу", note: "для сети точек", features: ["Без лимита сотрудников", "Интеграции и API", "Помощь с запуском"], cta: "Обсудить", action: "mail", highlight: false },
-] as const;
+type PricingCard = {
+  id: PlanId;
+  name: string;
+  price: string;
+  note: string;
+  features: readonly string[];
+  cta: string;
+  /** "start" — к форме входа в hero, "mail" — письмо в поддержку. */
+  action: "start" | "mail";
+  highlight: boolean;
+};
+
+/**
+ * Карточки тарифов. Цены — те же, что на странице оплаты (root правит их
+ * в «Компании → Цены»); у тарифа без цены — «по запросу» и письмо нам.
+ */
+function pricingCards(prices: readonly PlanPrice[]): PricingCard[] {
+  const paid = (id: "team" | "business", fallbackNote: string, highlight: boolean): PricingCard => {
+    const rate = monthlyRate(prices, id);
+    return {
+      id,
+      name: PLANS[id].name,
+      price: rate !== null ? formatRub(Math.round(rate)) : "по запросу",
+      note: rate !== null ? "в месяц" : fallbackNote,
+      features: PLAN_FEATURES[id],
+      cta: rate !== null ? "Попробовать" : "Обсудить",
+      action: rate !== null ? "start" : "mail",
+      highlight,
+    };
+  };
+  return [
+    { id: "start", name: PLANS.start.name, price: "0 ₽", note: "навсегда", features: PLAN_FEATURES.start, cta: "Начать бесплатно", action: "start", highlight: false },
+    paid("team", "для команды до 30 человек", true),
+    paid("business", "для сети точек", false),
+  ];
+}
+
+/** «Сколько стоит?» с настоящей ценой: «от 990 ₽ в месяц». */
+function priceAnswer(prices: readonly PlanPrice[]): string {
+  const rates = (["team", "business"] as const).map((id) => monthlyRate(prices, id)).filter((r): r is number => r !== null);
+  const from = rates.length ? ` — от ${formatRub(Math.round(Math.min(...rates)))} в месяц` : "";
+  return `Тариф «Старт» бесплатный: до 5 сотрудников, без срока. Платные тарифы${from}, оплата картой или СБП прямо в кабинете, условия — в публичной оферте.`;
+}
 
 const BUSINESS_SUBJECT = "TasksFlow Бизнес: подключение сети точек";
 
@@ -41,7 +80,6 @@ const FAQ = [
   { q: "А сотрудникам сложно разобраться?", a: "Нет. Сотрудник видит простой список задач на день, отмечает «готово» и прикладывает фото. Учить никого не нужно." },
   { q: "Как сотрудники входят?", a: "По телефону без пароля или по QR-коду от руководителя — в один тап." },
   { q: "Подходит для выездных бригад?", a: "Да, для этого и создано: фото-отчёты с объекта, задачи на день, контроль без звонков." },
-  { q: "Сколько стоит?", a: "Есть бесплатный тариф для небольших команд. Платные тарифы — на странице «Тарифы» (цифры пока примерные)." },
 ];
 
 function SectionHead({ eyebrow, title, lead, align = "center" }: { eyebrow: string; title: ReactNode; lead?: string; align?: "center" | "left" }) {
@@ -57,8 +95,11 @@ function SectionHead({ eyebrow, title, lead, align = "center" }: { eyebrow: stri
 export function LandingPage({ data }: { data: LandingData | null }) {
   const featured = data?.featuredPosts ?? [];
   const { contactEmail } = useSite();
+  const prices = data?.prices ?? DEFAULT_PRICES;
+  const pricing = pricingCards(prices);
   const faq = [
     ...FAQ,
+    { q: "Сколько стоит?", a: priceAnswer(prices) },
     { q: "Как с вами связаться?", a: `Напишите на ${contactEmail} — поможем с запуском и ответим на вопросы.` },
   ];
   // Пришли по ссылке «Попробовать бесплатно» с другой страницы (/#start).
@@ -163,7 +204,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       <section id="pricing" className="max-w-6xl mx-auto px-4 py-20 sm:py-24">
         <SectionHead eyebrow="Тарифы" title="Простые тарифы" lead="Начните бесплатно. Платите, когда вырастете." />
         <div className="grid md:grid-cols-3 gap-5 items-stretch">
-          {PRICING.map((p, i) => (
+          {pricing.map((p, i) => (
             <div key={p.name} data-reveal style={{ transitionDelay: `${i * 80}ms` }} className={`plan-card ${p.highlight ? "is-hot" : ""}`}>
               {p.highlight && <div className="plan-badge"><Sparkles className="w-3.5 h-3.5" /> Популярный</div>}
               <h3 className="plan-name">{p.name}</h3>
@@ -239,7 +280,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
               <h2 className="cta-title">Наведите порядок уже сегодня</h2>
               <p className="cta-lead">Регистрация за секунду — по телефону или email. Бесплатно для старта.</p>
               <ul className="cta-points">
-                {PRICING[0].features.map((f) => <li key={f}><Check className="w-4 h-4" strokeWidth={3} />{f}</li>)}
+                {PLAN_FEATURES.start.map((f) => <li key={f}><Check className="w-4 h-4" strokeWidth={3} />{f}</li>)}
               </ul>
             </div>
             <div className="cta-form" data-cookie-avoid>

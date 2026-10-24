@@ -91,6 +91,7 @@ import {
   Bell,
   SlidersHorizontal,
   LayoutTemplate,
+  CreditCard,
 } from "lucide-react";
 import {
   Select,
@@ -902,6 +903,18 @@ export default function Dashboard() {
                 >
                   <Settings className="w-5 h-5 text-primary" />
                   <span className="font-medium">Настройки</span>
+                </button>
+                <button
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation("/admin/billing");
+                  }}
+                  data-testid="menu-billing"
+                >
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Тариф и оплата</span>
                 </button>
               </>
             )}

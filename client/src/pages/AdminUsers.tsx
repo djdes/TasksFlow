@@ -1,7 +1,7 @@
 import { QueryError } from "@/components/QueryError";
 import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,7 +246,7 @@ export default function AdminUsers() {
               <p className={`mb-5 rounded-xl px-3 py-2 text-sm ${users.length >= planInfo.maxUsers ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "bg-muted text-muted-foreground"}`}>
                 Тариф «{planInfo.name}»: {users.length} из {planInfo.maxUsers} человек.
                 {users.length >= planInfo.maxUsers && (
-                  <> Чтобы добавить ещё, <a className="font-medium underline" href="mailto:support@tasksflow.ru?subject=Сменить тариф TasksFlow">напишите нам</a>.</>
+                  <> Чтобы добавить ещё, <Link className="font-medium underline" href="/admin/billing">смените тариф</Link>.</>
                 )}
               </p>
             )}

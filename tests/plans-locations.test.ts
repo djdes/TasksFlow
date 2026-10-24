@@ -127,7 +127,9 @@ describe("тарифы", () => {
     expect(list.body.companies[0]).toMatchObject({ id: 1, usersCount: 7, effectivePlan: "team" });
     const set = await request(app).put("/api/root/companies/1/plan").send({ plan: "business", until: 2_000_000_000 });
     expect(set.status).toBe(200);
-    expect(dbState.updates.at(-1)?.values).toEqual({ plan: "business", planUntil: 2_000_000_000 });
+    expect(dbState.updates.find((u) => "plan" in (u.values as object))?.values).toEqual({ plan: "business", planUntil: 2_000_000_000 });
+    // Ручная смена тарифа выключает автопродление (иначе карта спишется по старому тарифу).
+    expect(dbState.updates.some((u) => (u.values as { recurringActive?: boolean }).recurringActive === false)).toBe(true);
     const bad = await request(app).put("/api/root/companies/1/plan").send({ plan: "gold", until: null });
     expect(bad.status).toBe(400);
   });

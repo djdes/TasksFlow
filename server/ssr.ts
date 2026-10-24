@@ -25,6 +25,7 @@ import { pathToFileURL } from "url";
 import type { Express, Request, Response, NextFunction } from "express";
 import { loadRouteData, siteConfig } from "./public-data";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
+import { LEGAL_DOCS } from "../client/src/public/legal";
 
 export interface SsrModule {
   matchRoute: (pathname: string) => { key: string; params: Record<string, string> };
@@ -93,10 +94,8 @@ function registerRoutes(app: Express, handler: (req: Request, res: Response, nex
   app.get("/blog", handler);
   app.get("/blog/category/:cluster", handler);
   app.get("/blog/:slug", handler);
-  // Юридические документы (content/legal/*.md).
-  app.get("/privacy", handler);
-  app.get("/consent", handler);
-  app.get("/terms", handler);
+  // Юридические документы (content/legal/*.md): /privacy, /consent, /terms, /offer.
+  for (const doc of LEGAL_DOCS) app.get(doc.path, handler);
   // Приложение для телефона: как поставить на Android и iPhone.
   app.get("/app", handler);
 }

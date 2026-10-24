@@ -120,7 +120,7 @@ async (page) => {
     await tab.getByText('людей: 7 из 5').waitFor();
     await tab.getByRole('combobox', { name: 'Тариф: Кафе' }).selectOption('team');
     await tab.getByRole('textbox', { name: 'Действует до: Кафе' }).fill('2026-12-31');
-    await tab.getByRole('button', { name: 'Сохранить' }).first().click();
+    await tab.locator('.root-company').first().getByRole('button', { name: 'Сохранить' }).click();
     await tab.waitForTimeout(300);
     const put = calls.find((c) => c.p === '/api/root/companies/1/plan');
     check(put?.body?.plan === 'team' && typeof put?.body?.until === 'number', `root plan ${JSON.stringify(put)}`);

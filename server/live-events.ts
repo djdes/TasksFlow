@@ -12,7 +12,7 @@ import type { Request, Response } from "express";
  * Один процесс (как и очередь вебхуков): шина в памяти. При нескольких
  * процессах кабинет просто обновится по фокусу окна, как раньше.
  */
-export type LiveEvent = { type: "tasks"; taskId?: number | null };
+export type LiveEvent = { type: "tasks"; taskId?: number | null } | { type: "billing" };
 
 const bus = new EventEmitter();
 bus.setMaxListeners(0);

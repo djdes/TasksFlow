@@ -40,6 +40,8 @@ export interface ClusterStat {
 export interface LandingData {
   featuredPosts: PostMeta[];
   totalPosts: number;
+  /** Цены тарифов (как на странице оплаты); нет — цены по умолчанию. */
+  prices?: import("@shared/billing").PlanPrice[];
 }
 
 export interface BlogIndexData {
@@ -57,7 +59,7 @@ export interface ArticleData {
   post: PostFull | null;
 }
 
-export type LegalSlug = "privacy" | "consent" | "terms";
+export type LegalSlug = "privacy" | "consent" | "terms" | "offer";
 
 /** Реквизиты оператора из env (LEGAL_OPERATOR_*). Пустое поле — null, на странице не выводится. */
 export interface LegalOperator {
