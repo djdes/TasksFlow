@@ -199,6 +199,17 @@ async (page) => {
       await tab.waitForURL('**/tasks/new');
       check(await sidebar.getByRole('link', { name: /Создать задачу/ }).getAttribute('aria-current') === 'page', 'create action not marked on /tasks/new');
       check(await sidebar.locator('[aria-current="page"]').count() === 1, 'only the create action is current on /tasks/new');
+      // Расписание словами: дни меняют сводку, срок делает задачу разовой и выключает дни.
+      const summary = tab.getByTestId('schedule-summary');
+      check((await summary.innerText()).startsWith('Каждый день'), `default schedule ${await summary.innerText()}`);
+      for (const day of ['Пн', 'Ср', 'Пт']) await tab.getByRole('button', { name: day, exact: true }).click();
+      check((await summary.innerText()).startsWith('По понедельникам, средам и пятницам'), `weekday schedule ${await summary.innerText()}`);
+      check(await tab.getByRole('button', { name: 'Пн', exact: true }).getAttribute('aria-pressed') === 'true', 'weekday chip not pressed');
+      await tab.getByTestId('input-due-date').fill('2026-12-30');
+      check((await summary.innerText()).startsWith('Разово, срок — 30 декабря'), `due schedule ${await summary.innerText()}`);
+      check(await tab.getByRole('button', { name: 'Ср', exact: true }).isDisabled(), 'weekdays still active with a due date');
+      await tab.getByRole('button', { name: 'Убрать', exact: true }).click();
+      check((await summary.innerText()).startsWith('По понедельникам'), 'removing due date did not restore weekdays');
 
       // Страница упала (здесь — неподменённый API оплаты) — меню на месте, уйти можно.
       await tab.goto(base + '/admin/billing');
@@ -281,5 +292,5 @@ async (page) => {
   }
 
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'admin/root nav groups + active + count + plan warn, nav click + subpage active + home back hidden, sticky on scroll, Ctrl+K keyword/person/empty/Esc, N shortcut, theme from sidebar + dark, 1024/1023, worker nav + no N + no queue + legacy redirect, users page (search, highlight, confirm), tab titles, skip link, phone sheet same sections', failures };
+  return { checks: 'admin/root nav groups + active + count + plan warn, nav click + subpage active + home back hidden, sticky on scroll, Ctrl+K keyword/person/empty/Esc, N shortcut, theme from sidebar + dark, 1024/1023, worker nav + no N + no queue + legacy redirect, users page (search, highlight, confirm), tab titles, skip link, task schedule summary, phone sheet same sections', failures };
 }

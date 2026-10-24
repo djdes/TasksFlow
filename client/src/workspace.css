@@ -1420,3 +1420,24 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 }
 .skip-link:focus-visible { transform: none; outline: 2px solid hsl(var(--background)); outline-offset: 2px; }
 .cabinet-main:focus { outline: none; }
+
+/* ===== Форма задачи: «Когда задача видна» ===== */
+.task-schedule { display: grid; gap: 16px; padding: 18px; border: 1px solid hsl(var(--border) / .7); border-radius: 16px; }
+.task-schedule-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
+.task-schedule-title svg { width: 18px; height: 18px; color: hsl(var(--primary)); }
+.task-schedule-summary {
+  display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px;
+  background: hsl(var(--primary) / .07); color: hsl(var(--muted-foreground)); font-size: 13.5px; line-height: 1.4;
+}
+.task-schedule-summary strong { font-size: 15px; font-weight: 650; color: hsl(var(--foreground)); }
+.task-schedule-note { color: hsl(28 82% 36%); font-weight: 500; }
+.dark .task-schedule-summary { background: hsl(var(--primary) / .14); }
+.dark .task-schedule-note { color: hsl(40 92% 68%); }
+/* Две колонки, только когда дни недели помещаются в строку (форма правки уже формы создания). */
+.task-schedule-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr)); }
+.task-schedule-field { display: grid; gap: 8px; }
+.task-schedule-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.task-schedule-label svg { width: 16px; height: 16px; color: hsl(var(--muted-foreground)); }
+.task-schedule-hint { font-size: 12.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+.task-schedule-check { display: flex; align-items: flex-start; gap: 12px; padding-top: 4px; }
+.task-schedule-due { padding-top: 14px; border-top: 1px dashed hsl(var(--border)); }

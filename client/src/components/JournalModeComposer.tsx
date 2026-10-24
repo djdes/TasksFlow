@@ -4,6 +4,7 @@ import { JournalStepCard } from "@/components/JournalStepCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CheckMark } from "@/components/ui/check-mark";
 import {
   Select,
   SelectContent,
@@ -419,6 +420,8 @@ export function JournalModeComposer({
                                     type="button"
                                     key={`${item.document.documentId}/${item.row.rowKey}`}
                                     disabled={taken}
+                                    role="checkbox"
+                                    aria-checked={selected}
                                     onClick={() => onRowToggle(item)}
                                     className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${
                                       selected
@@ -428,12 +431,8 @@ export function JournalModeComposer({
                                         : "border-border/50 hover:bg-muted/30"
                                     }`}
                                   >
-                                    <Checkbox
-                                      checked={selected}
-                                      disabled={taken}
-                                      tabIndex={-1}
-                                      className="mt-0.5 shrink-0"
-                                    />
+                                    {/* Не radix Checkbox: <button> в <button> — бесконечный цикл. */}
+                                    <CheckMark checked={selected} disabled={taken} className="mt-0.5" />
                                     <div className="min-w-0 flex-1">
                                       <div className="truncate text-sm font-medium">
                                         {item.row.label}

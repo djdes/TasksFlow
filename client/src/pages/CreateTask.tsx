@@ -12,13 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaskScheduleFields } from "@/components/TaskScheduleFields";
+import { CheckMark } from "@/components/ui/check-mark";
 import {
   ArrowLeft,
   User,
   Plus,
-  Calendar,
-  RefreshCw,
-  CalendarDays,
   Coins,
   Tag,
   FileText,
@@ -27,7 +26,6 @@ import {
   BookOpen,
   Sparkles,
   Check,
-  CalendarClock,
   LayoutTemplate,
 } from "lucide-react";
 import { TaskTemplatesDialog } from "@/components/TaskTemplatesDialog";
@@ -42,13 +40,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { insertTaskSchema } from "@shared/schema";
 import type {
   WesetupCatalog,
@@ -82,16 +73,6 @@ const formSchema = insertTaskSchema.extend({
 });
 
 type FormValues = z.input<typeof formSchema>;
-
-const WEEK_DAYS = [
-  { value: 1, label: "Пн" },
-  { value: 2, label: "Вт" },
-  { value: 3, label: "Ср" },
-  { value: 4, label: "Чт" },
-  { value: 5, label: "Пт" },
-  { value: 6, label: "Сб" },
-  { value: 0, label: "Вс" },
-];
 
 export default function CreateTask() {
   const [, setLocation] = useLocation();
@@ -373,9 +354,6 @@ export default function CreateTask() {
     },
   });
 
-  // Срок отключает блоки повторения: повторяющаяся задача сбрасывается
-  // каждый день и «съела» бы срок.
-  const hasDueDate = Boolean(form.watch("dueDateInput"));
 
   // Проверка прав администратора — после всех хуков, иначе React
   // ругается на «Rendered more hooks than during the previous render»,
@@ -867,7 +845,7 @@ export default function CreateTask() {
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">
-                    Необязательно. Отображается при просмотре задачи пользователем.
+                    Необязательно. Сотрудник увидит его, открыв задачу.
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -935,20 +913,8 @@ export default function CreateTask() {
                         role="checkbox"
                         aria-checked={checked}
                       >
-                        {/* Визуальный чекбокс (НЕ radix-кнопка): radix Checkbox —
-                            это <button>, а вложенный <button> внутри <button>-строки
-                            вызывал бесконечный цикл ref'ов («Maximum update depth»)
-                            и подвешивал создание задачи на сотрудника. */}
-                        <span
-                          aria-hidden="true"
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                            checked
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-muted-foreground/40"
-                          }`}
-                        >
-                          {checked && <Check className="h-3 w-3" />}
-                        </span>
+                        {/* Не radix Checkbox: <button> в <button> — бесконечный цикл. */}
+                        <CheckMark checked={checked} />
                         <span className="truncate">
                           {user.name || user.phone}
                         </span>
@@ -1079,7 +1045,7 @@ export default function CreateTask() {
                         Добавить фото результатов
                       </FormLabel>
                       <p className="text-xs text-muted-foreground">
-                        Пользователь должен будет загрузить фотографию перед завершением задачи
+                        Сотрудник не закроет задачу без фото
                       </p>
                     </div>
                   </div>
@@ -1135,159 +1101,7 @@ export default function CreateTask() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="dueDateInput"
-              render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CalendarClock className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Срок</FormLabel>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Разовая задача с датой. Видна сразу, после срока не исчезает —
-                    получает бейдж «Просрочено». Срок отключает повторение.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="date"
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="max-w-[200px]"
-                      data-testid="input-due-date"
-                    />
-                    {field.value && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => field.onChange("")}
-                      >
-                        Убрать
-                      </Button>
-                    )}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="weekDays"
-              render={({ field }) => (
-                <FormItem
-                  className={`rounded-md border border-border/50 p-4 ${
-                    hasDueDate ? "opacity-50 pointer-events-none" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Дни недели</FormLabel>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Выберите дни, когда задача будет показываться пользователю. Если ничего не выбрано - задача видна всегда.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEK_DAYS.map((day) => {
-                      const isSelected = field.value?.includes(day.value) ?? false;
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          onClick={() => {
-                            const currentDays = field.value ?? [];
-                            if (isSelected) {
-                              field.onChange(currentDays.filter((d: number) => d !== day.value));
-                            } else {
-                              field.onChange([...currentDays, day.value]);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
-                        >
-                          {day.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="monthDay"
-              render={({ field }) => (
-                <FormItem
-                  className={`rounded-md border border-border/50 p-4 ${
-                    hasDueDate ? "opacity-50 pointer-events-none" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">День месяца</FormLabel>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Укажите день месяца (1-31), когда задача будет показываться. Если не указано - задача видна всегда.
-                  </p>
-                  <Select
-                    onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
-                    value={field.value?.toString() || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="things-input w-full">
-                        <SelectValue placeholder="Не указан" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Не указан</SelectItem>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                        <SelectItem key={day} value={day.toString()}>
-                          {day} день
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isRecurring"
-              render={({ field }) => (
-                <FormItem
-                  className={`flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-4 ${
-                    hasDueDate ? "opacity-50 pointer-events-none" : ""
-                  }`}
-                >
-                  <FormControl>
-                    <Checkbox
-                      checked={hasDueDate ? false : field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={hasDueDate}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="cursor-pointer flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />
-                      Повторяющаяся задача
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground">
-                      {hasDueDate
-                        ? "Недоступно: у задачи задан срок, она разовая."
-                        : "Задача будет автоматически сбрасываться каждый день. Фотографии удаляются, статус выполнения сбрасывается."}
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
+            <TaskScheduleFields form={form} />
 
               <div className="flex gap-4 pt-4">
                 <Button 

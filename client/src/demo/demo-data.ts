@@ -88,7 +88,7 @@ const SEEDS: TaskSeed[] = [
   { title: "Выложить витрину и проверить ценники", workerId: 2, category: "Открытие смены", photo: "showcase", price: 100, reliability: 0.93, at: 8.3 },
   { title: "Уборка зала по чек-листу", workerId: 4, category: "Уборка", photo: "floor", checklist: ["Столы и стулья", "Пол", "Окна у входа", "Санузел"], reliability: 0.82, at: 11.5 },
   { title: "Санобработка поверхностей на кухне", workerId: 3, category: "Кухня", photo: "kitchen", verifier: 1, reliability: 0.88, at: 10.2 },
-  { title: "Проверить сроки годности в холодильнике", workerId: 3, category: "Кухня", photo: "storage", price: 150, reliability: 0.9, at: 9.1 },
+  { title: "Проверить сроки годности в холодильнике", workerId: 3, category: "Кухня", photo: "storage", price: 150, verifier: 1, reliability: 0.9, at: 9.1 },
   { title: "Принять поставку молока и выпечки", workerId: 5, category: "Склад", photo: "storage", weekDays: [1, 3, 5], reliability: 0.95, at: 9.6 },
   { title: "Сверить кассу в середине дня", workerId: 5, category: "Касса", photo: "cash", reliability: 0.91, at: 14.1 },
   { title: "Вынести мусор и заменить пакеты", workerId: 4, category: "Уборка", reliability: 0.78, at: 16.4 },
@@ -167,6 +167,16 @@ export function createDemoState(now: number = Math.floor(Date.now() / 1000)): De
     }
     return base;
   });
+
+  // Сверка фото — одна из главных функций: очередь «На проверке» в демо не
+  // пустует ни утром, ни ночью — хотя бы одна задача ждёт решения.
+  if (!tasks.some((t) => t.verificationStatus === "submitted")) {
+    // Самая ранняя по расписанию — правдоподобнее всего, что её уже сдали.
+    const candidates = SEEDS.map((seed, j) => ({ seed, j })).filter(({ seed, j }) => seed.verifier && !tasks[j].isCompleted);
+    const i = candidates.sort((a, b) => a.seed.at - b.seed.at)[0]?.j ?? -1;
+    const photo = i >= 0 ? SEEDS[i].photo : undefined;
+    if (i >= 0) tasks[i] = { ...tasks[i], verificationStatus: "submitted", photoUrls: photo ? [demoPhoto(photo, 1)] : [] } as Task;
+  }
 
   // Две недели истории, как её пишет ночной сброс.
   const history: TaskHistoryRow[] = [];

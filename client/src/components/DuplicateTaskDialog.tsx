@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, RefreshCw, Copy, CalendarDays, Coins, Tag, FileText, ImagePlus, X } from "lucide-react";
+import { TaskScheduleFields } from "@/components/TaskScheduleFields";
+import { CheckMark } from "@/components/ui/check-mark";
+import { formatDueDateInput, parseDueDateInput } from "@shared/task-visibility";
+import { Copy, Coins, Tag, FileText, ImagePlus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -25,13 +28,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { insertTaskSchema } from "@shared/schema";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -43,22 +39,13 @@ const formSchema = insertTaskSchema.extend({
   weekDays: z.array(z.number().int()).nullable().optional(),
   monthDay: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   isRecurring: z.boolean().optional().default(true),
+  dueDateInput: z.string().optional(),
   price: z.string().optional().transform(val => val ? parseInt(val, 10) : 0),
   category: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
   description: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
 });
 
 type FormValues = z.input<typeof formSchema>;
-
-const WEEK_DAYS = [
-  { value: 1, label: "Пн" },
-  { value: 2, label: "Вт" },
-  { value: 3, label: "Ср" },
-  { value: 4, label: "Чт" },
-  { value: 5, label: "Пт" },
-  { value: 6, label: "Сб" },
-  { value: 0, label: "Вс" },
-];
 
 interface Task {
   id: number;
@@ -105,6 +92,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       weekDays: null,
       monthDay: undefined,
       isRecurring: true,
+      dueDateInput: "",
       price: "0",
       category: "",
       description: "",
@@ -125,6 +113,8 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         weekDays: weekDaysArray,
         monthDay: task.monthDay ? task.monthDay.toString() : undefined,
         isRecurring: task.isRecurring ?? true,
+        // Срок видно и можно сменить: копия просроченной задачи иначе сразу была бы просрочена.
+        dueDateInput: formatDueDateInput(task.dueDate),
         price: task.price ? task.price.toString() : "0",
         category: task.category || "",
         description: task.description || "",
@@ -198,16 +188,16 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       });
       return;
     }
+    // Как в создании задачи: срок делает её разовой и отменяет дни и повтор.
+    const dueDate = parseDueDateInput(values.dueDateInput);
     const base = {
       title: values.title,
       requiresPhoto: values.requiresPhoto ?? false,
       weekDays:
-        values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
-      monthDay: values.monthDay || null,
-      isRecurring: values.isRecurring ?? true,
-      // Срок переносится как есть — форма его не редактирует, но терять
-      // его при дублировании нельзя: копия должна быть копией.
-      dueDate: task?.dueDate ?? null,
+        dueDate !== null ? null : values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
+      monthDay: dueDate !== null ? null : values.monthDay || null,
+      isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
+      dueDate,
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
@@ -358,12 +348,11 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                           ? "bg-primary/10 text-primary"
                           : "hover:bg-muted/30"
                       }`}
+                      role="checkbox"
+                      aria-checked={checked}
                     >
-                      <Checkbox
-                        checked={checked}
-                        tabIndex={-1}
-                        className="shrink-0"
-                      />
+                      {/* Не radix Checkbox: <button> в <button> — бесконечный цикл, окно падало. */}
+                      <CheckMark checked={checked} />
                       <span className="truncate">
                         {user.name || user.phone}
                       </span>
@@ -494,98 +483,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="weekDays"
-              render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Дни недели</FormLabel>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEK_DAYS.map((day) => {
-                      const isSelected = field.value?.includes(day.value) ?? false;
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          onClick={() => {
-                            const currentDays = field.value ?? [];
-                            if (isSelected) {
-                              field.onChange(currentDays.filter((d: number) => d !== day.value));
-                            } else {
-                              field.onChange([...currentDays, day.value]);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
-                        >
-                          {day.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="monthDay"
-              render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">День месяца</FormLabel>
-                  </div>
-                  <Select
-                    onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
-                    value={field.value?.toString() || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="things-input w-full">
-                        <SelectValue placeholder="Не указан" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Не указан</SelectItem>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                        <SelectItem key={day} value={day.toString()}>
-                          {day} день
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isRecurring"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="cursor-pointer flex items-center gap-2 text-sm">
-                      <RefreshCw className="w-4 h-4" />
-                      Повторяющаяся задача
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
+            <TaskScheduleFields form={form} />
 
             <div className="flex gap-3 pt-2">
               <Button

@@ -26,6 +26,20 @@ async (page) => {
       check(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth && [...document.querySelectorAll('.demo-bar > *')].every((el) => el.getBoundingClientRect().right <= innerWidth + 0.5)), `${label}: demo bar overflows`);
       await tab.screenshot({ path: `output/playwright/demo-${label}.png` });
       if (label !== 'desktop') { await context.close(); continue; }
+      // В очереди «На проверке» всегда есть что показать — в любое время суток.
+      await tab.locator('.app-sidebar-count').waitFor();
+      // «Дублировать»: окно открывается (раньше падало — флажок внутри кнопки), срок виден и меняется.
+      await tab.getByText(/Илья Кузнецов/).first().click();
+      await tab.getByRole('button', { name: /^Дублировать:/ }).first().click({ force: true });
+      const dup = tab.getByRole('dialog');
+      await dup.getByText('Когда задача видна').waitFor();
+      await dup.getByTestId('input-due-date').fill('2026-12-30');
+      check((await dup.getByTestId('schedule-summary').innerText()).startsWith('Разово, срок — 30 декабря'), 'duplicate due date summary');
+      await dup.getByRole('checkbox', { name: /Анна Петрова/ }).click();
+      check(await dup.getByRole('checkbox', { name: /Анна Петрова/ }).getAttribute('aria-checked') === 'true', 'duplicate worker toggle');
+      await tab.keyboard.press('Escape');
+      await dup.waitFor({ state: 'hidden' });
+      check(await tab.getByText('Что-то пошло не так').count() === 0, 'duplicate dialog crashed the page');
       await tab.goto(base + '/reports');
       await tab.getByRole('heading', { name: 'Сегодня' }).waitFor();
       await tab.getByRole('button', { name: 'Предыдущий день' }).click();
@@ -50,5 +64,5 @@ async (page) => {
     }
   }
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'demo entry, no real API calls, history and summary from shared code, CSV, worker role persists, bar fits 360/390', failures };
+  return { checks: 'demo entry, verification queue not empty, duplicate dialog (schedule, workers), no real API calls, history and summary from shared code, CSV, worker role persists, bar fits 360/390', failures };
 }
