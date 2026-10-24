@@ -332,10 +332,13 @@ export function TaskViewDialog({
             <DialogTitle className="text-lg font-bold text-white pr-8">
               {currentTask.title}
             </DialogTitle>
-            {(currentTask as any).description && (
+            {(currentTask as any).description ? (
               <DialogDescription className="text-white/80 text-sm mt-1">
                 {(currentTask as any).description}
               </DialogDescription>
+            ) : (
+              // Без описания — короткая подсказка для экранного диктора.
+              <DialogDescription className="sr-only">Задача: выполнение, фото и детали</DialogDescription>
             )}
           </DialogHeader>
 

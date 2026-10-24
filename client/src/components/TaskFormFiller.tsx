@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -433,15 +434,17 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                   Заполнить журнал
                 </DialogTitle>
                 {visibleFieldCount > 0 ? (
-                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                  <DialogDescription className="mt-0.5 text-[12.5px] text-muted-foreground">
                     {visibleFieldCount === 1
                       ? "1 поле"
                       : visibleFieldCount < 5
                         ? `${visibleFieldCount} поля`
                         : `${visibleFieldCount} полей`}
                     {" · данные сразу попадут в WeSetup"}
-                  </p>
-                ) : null}
+                  </DialogDescription>
+                ) : (
+                  <DialogDescription className="sr-only">Данные сразу попадут в WeSetup</DialogDescription>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -611,9 +614,9 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
                 <DialogTitle className="text-[17px] font-semibold leading-tight tracking-[-0.01em]">
                   Подтвердите данные
                 </DialogTitle>
-                <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                <DialogDescription className="mt-0.5 text-[12.5px] text-muted-foreground">
                   После сохранения изменить можно будет только через менеджера
-                </p>
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>

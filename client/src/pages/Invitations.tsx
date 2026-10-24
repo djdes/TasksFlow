@@ -13,7 +13,7 @@ import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { formatTimestamp } from "@/lib/format-timestamp";
 import { ArrowLeft, QrCode, Copy, Trash2, Share2, Download, ChevronDown, ChevronUp, UserPlus, ShieldCheck } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -274,6 +274,7 @@ export default function Invitations() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Новое приглашение</DialogTitle>
+            <DialogDescription>По ссылке или QR-коду человек сам зарегистрируется в вашей компании.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -323,6 +324,7 @@ export default function Invitations() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>QR-код приглашения</DialogTitle>
+            <DialogDescription>Покажите код сотруднику или отправьте ему ссылку.</DialogDescription>
           </DialogHeader>
           {showQrFor && <QrPanel url={showQrFor.url} onCopy={copyToClipboard} />}
         </DialogContent>

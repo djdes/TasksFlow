@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -257,6 +258,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
             <Copy className="w-5 h-5" />
             Дублировать задачу
           </DialogTitle>
+          <DialogDescription>Копия получит новое расписание и исполнителей — исходная задача не меняется.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

@@ -96,6 +96,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 // Шаблоны нужны только новой компании с пустым списком: грузим отдельным
@@ -1297,6 +1298,7 @@ export default function Dashboard() {
               </div>
               Дополнительная премия
             </DialogTitle>
+            <DialogDescription className="sr-only">Как начисляется и выплачивается премия за задачи</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl">

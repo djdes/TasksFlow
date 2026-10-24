@@ -86,15 +86,17 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       const errorMessage = this.state.error?.message ?? "(пустое сообщение)";
+      // Цвета темы: в тёмной теме белая карточка на весь экран слепила.
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="max-w-lg w-full bg-white rounded-2xl shadow-lg p-6 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="min-h-[70dvh] flex items-center justify-center p-4" role="alert">
+          <div className="max-w-lg w-full rounded-2xl border border-border bg-card p-6 text-center shadow-lg">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="w-8 h-8 text-destructive"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -104,28 +106,21 @@ export class ErrorBoundary extends Component<Props, State> {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Что-то пошло не так
             </h2>
-            <p className="text-gray-600 mb-4">
-              Произошла непредвиденная ошибка. Попробуйте обновить страницу или
-              повторить действие.
+            <p className="text-muted-foreground mb-4">
+              Страница не открылась. Нажмите «Повторить» или обновите страницу. Если
+              повторится — скопируйте детали и пришлите нам.
             </p>
             {/*
-             * Сообщение ошибки показываем всегда (раньше было только в dev) —
-             * иначе пользователь видит "что-то пошло не так" и не может
-             * сообщить разработчикам что именно случилось. В проде сюда
-             * могут попадать сообщения типа "Cannot read properties of
-             * undefined (reading 'rows')" — это уже шаг вперёд.
+             * Технический текст нужен поддержке, а не повару: он под
+             * «Подробностями», а «Скопировать детали» отдаёт полный отчёт.
              */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 text-left">
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
-                Сообщение
-              </p>
-              <p className="text-sm font-mono text-red-700 break-all">
-                {errorMessage}
-              </p>
-            </div>
+            <details className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-left">
+              <summary className="cursor-pointer text-sm text-muted-foreground">Подробности для поддержки</summary>
+              <p className="mt-2 text-sm font-mono text-destructive break-all">{errorMessage}</p>
+            </details>
             <div className="flex flex-wrap gap-2 justify-center">
               <Button variant="outline" onClick={this.handleRetry}>
                 Повторить

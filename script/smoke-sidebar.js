@@ -214,6 +214,12 @@ async (page) => {
       // Страница упала (здесь — неподменённый API оплаты) — меню на месте, уйти можно.
       await tab.goto(base + '/admin/billing');
       await tab.getByText('Что-то пошло не так').waitFor();
+      // Технический текст — под «Подробностями», не перед глазами.
+      check(await tab.getByText('Подробности для поддержки').isVisible(), 'error details summary missing');
+      check(!(await tab.locator('details:not([open]) p.font-mono').isVisible()), 'raw error message shown by default');
+      await tab.evaluate(() => document.documentElement.classList.add('dark'));
+      await tab.screenshot({ path: 'output/playwright/sidebar-page-error-dark.png' });
+      await tab.evaluate(() => document.documentElement.classList.remove('dark'));
       await sidebar.getByRole('link', { name: 'Помощь', exact: true }).click();
       await tab.waitForURL('**/help');
       check(await tab.getByText('Что-то пошло не так').count() === 0, 'page error survived navigation');
