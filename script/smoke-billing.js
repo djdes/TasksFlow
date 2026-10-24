@@ -1,7 +1,8 @@
 // Оплата тарифа на UI-превью: форма тарифов, срок и сумма, галочка
 // автосписаний (не стоит по умолчанию), оплата обычной страницей кассы и в
 // окне поверх страницы, возврат на SuccessURL/FailURL, автопродление,
-// касса не настроена, iOS-приложение без оплаты, root «Цены», 390px и
+// касса не настроена, iOS-приложение без оплаты, root «Касса» (секреты,
+// адреса, проверка подключения), «Цены», сверка и возврат платежа, 390px и
 // тёмная тема. API и Робокасса подменены — сервер, БД и касса не участвуют.
 async (page) => {
   const base = new URL(page.url()).origin;
@@ -36,7 +37,14 @@ async (page) => {
     tab.setDefaultTimeout(10000);
     const errors = [];
     const calls = [];
-    const state = { info: info ?? baseInfo(), orderPolls: {} };
+    const state = {
+      info: info ?? baseInfo(),
+      orderPolls: {},
+      rootOrders: [
+        { id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, refundStatus: null, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' },
+        { id: 71, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 3600, paidAt: null, planUntil: null, refundStatus: null, companyId: 3, companyName: 'Бар', email: null },
+      ],
+    };
     tab.on('pageerror', (e) => errors.push(e.message));
     // Скрипт окна оплаты: заглушка Robokassa.StartPayment или «не загрузился».
     await tab.route('https://auth.robokassa.ru/**', (route) =>
@@ -70,7 +78,28 @@ async (page) => {
         state.info = { ...state.info, recurring: { active: false, plan: null, months: null, amountRub: null, nextChargeAt: null } };
         return route.fulfill({ json: { ok: true, active: false } });
       }
-      if (p === '/api/root/billing') return route.fulfill({ json: { prices, orders: [{ id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' }] } });
+      if (p === '/api/root/billing') return route.fulfill({ json: { prices, orders: state.rootOrders } });
+      if (p === '/api/root/billing/diagnostics') {
+        return route.fulfill({
+          json: {
+            secrets: { login: true, password1: true, password2: true, testPassword1: false, testPassword2: false, password3: false },
+            testMode: false, configured: true, hash: 'md5', recurring: true, receipt: false, sno: null, tax: 'none',
+            urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
+            stats: { tables: true, byStatus: { paid: 1, pending: 1 }, lastPaidAt: now - DAY, activeSeries: 1 },
+          },
+        });
+      }
+      if (p === '/api/root/billing/check') return route.fulfill({ json: { ok: true, message: 'Касса отвечает: логин и Пароль #2 верны. Пароль #1 проверит тестовый платёж.' } });
+      const rootAction = p.match(/^\/api\/root\/billing\/orders\/(\d+)\/(reconcile|refund)$/);
+      if (rootAction) {
+        const id = Number(rootAction[1]);
+        if (rootAction[2] === 'reconcile') {
+          state.rootOrders = state.rootOrders.map((o) => (o.id === id ? { ...o, status: 'paid', paidAt: now } : o));
+          return route.fulfill({ json: { status: 'paid', message: 'Оплата найдена в кассе и засчитана', order: state.rootOrders.find((o) => o.id === id) } });
+        }
+        state.rootOrders = state.rootOrders.map((o) => (o.id === id ? { ...o, refundStatus: 'pending' } : o));
+        return route.fulfill({ json: { message: 'Возврат отправлен в кассу.', order: state.rootOrders.find((o) => o.id === id) } });
+      }
       if (p === '/api/root/billing/prices') return route.fulfill({ json: { ok: true, prices: body.prices } });
       if (p === '/api/root/companies') return route.fulfill({ json: { enforced: false, companies: [] } });
       return route.fulfill({ json: [] });
@@ -192,11 +221,22 @@ async (page) => {
     }
   }
 
-  // 6. Root: цены и платежи.
+  // 6. Root: касса, цены и платежи (сверка и возврат).
   {
     const { context, tab, errors, calls } = await open();
     try {
       await tab.goto(base + '/admin/companies');
+      await tab.getByRole('heading', { name: 'Касса' }).waitFor();
+      const cashbox = tab.locator('section', { has: tab.getByRole('heading', { name: 'Касса' }) });
+      await cashbox.getByText('принимает оплату').waitFor();
+      check(await cashbox.locator('.root-cashbox-list .is-ok').count() === 4, 'cashbox: 4 settings set (login, #1, #2, recurring)');
+      check(await cashbox.getByText(/Пароль #3/).count() === 1, 'cashbox: no password #3 row');
+      check(await cashbox.getByText(/Тестовый пароль/).count() === 0, 'cashbox: test passwords shown in live mode');
+      await cashbox.getByText(`${base}/api/billing/robokassa/result`).waitFor();
+      await cashbox.getByRole('button', { name: 'Проверить подключение' }).click();
+      await cashbox.getByText(/логин и Пароль #2 верны/).waitFor();
+      check(calls.some((c) => c.p === '/api/root/billing/check' && c.method === 'POST'), 'check not called');
+
       await tab.getByRole('heading', { name: 'Цены тарифов' }).waitFor();
       await tab.getByText('Пекарня · Команда на 1 месяц').waitFor();
       await tab.getByRole('spinbutton', { name: 'Цена, ₽' }).first().fill('1190');
@@ -204,6 +244,35 @@ async (page) => {
       await tab.waitForTimeout(300);
       const put = calls.find((c) => c.p === '/api/root/billing/prices');
       check(put?.body?.prices?.[0]?.priceRub === 1190 && put.body.prices.length === 3, `prices ${JSON.stringify(put?.body)}`);
+
+      // Зависший заказ — «Проверить в кассе» засчитывает оплату.
+      const bar = tab.locator('.billing-order', { hasText: 'Бар' });
+      check(await bar.getByRole('button', { name: 'Вернуть деньги' }).count() === 0, 'refund offered for pending order');
+      await bar.getByRole('button', { name: 'Проверить в кассе' }).click();
+      await tab.getByText('Оплата найдена в кассе и засчитана').first().waitFor();
+      await bar.getByText('Оплачен').waitFor();
+
+      // Возврат — только через подтверждение; после — «возврат в обработке», кнопки нет.
+      const bakery = tab.locator('.billing-order', { hasText: 'Пекарня' });
+      await bakery.getByRole('button', { name: 'Вернуть деньги' }).click();
+      const dialog = tab.getByRole('dialog');
+      await dialog.getByText(/отменить возврат нельзя/).waitFor();
+      check(!calls.some((c) => /\/refund$/.test(c.p)), 'refund sent before confirm');
+      await dialog.getByRole('button', { name: 'Вернуть деньги' }).click();
+      await bakery.getByText('возврат в обработке').waitFor();
+      check(await bakery.getByRole('button', { name: 'Вернуть деньги' }).count() === 0, 'refund button still shown');
+      check(calls.filter((c) => c.p === '/api/root/billing/orders/70/refund').length === 1, 'refund calls');
+      await tab.screenshot({ path: 'output/playwright/billing-root-cashbox.png', fullPage: true });
+
+      // 390px: адреса переносятся, страница не шире экрана.
+      await tab.setViewportSize({ width: 390, height: 844 });
+      await tab.waitForTimeout(200);
+      const overflow = await tab.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      check(overflow <= 1, `root 390 overflow ${overflow}px`);
+      await tab.screenshot({ path: 'output/playwright/billing-root-cashbox-390.png', fullPage: true });
+      await tab.evaluate(() => document.documentElement.classList.add('dark'));
+      await tab.getByRole('heading', { name: 'Касса' }).scrollIntoViewIfNeeded();
+      await tab.screenshot({ path: 'output/playwright/billing-root-cashbox-dark.png' });
       check(errors.length === 0, `root errors: ${errors.join('; ')}`);
     } finally {
       await context.close();
@@ -211,5 +280,5 @@ async (page) => {
   }
 
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, root prices', failures };
+  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, root cashbox + check + prices + reconcile + refund confirm + 390', failures };
 }

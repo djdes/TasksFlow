@@ -249,12 +249,24 @@ export function recurringAction(state: RecurringState, now: number): RecurringAc
 
 // --- Заказы ------------------------------------------------------------------
 
-export type OrderStatus = "pending" | "paid" | "expired";
+export type OrderStatus = "pending" | "paid" | "expired" | "refunded";
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "Ожидает оплаты",
   paid: "Оплачен",
   expired: "Не оплачен",
+  refunded: "Возвращён",
+};
+
+/** Возврат через API Робокассы. */
+export type RefundStatus = "sending" | "pending" | "uncertain" | "finished" | "canceled";
+
+export const REFUND_STATUS_LABEL: Record<RefundStatus, string> = {
+  sending: "возврат отправляется",
+  pending: "возврат в обработке",
+  uncertain: "возврат: проверьте кассу",
+  finished: "деньги возвращены",
+  canceled: "возврат отменён",
 };
 
 /** Заказ в истории платежей кабинета. */
@@ -272,6 +284,7 @@ export type BillingOrder = {
   paidAt: number | null;
   /** До какого момента продлил тариф (после оплаты). */
   planUntil: number | null;
+  refundStatus: RefundStatus | null;
 };
 
 /** Ответ GET /api/billing — всё для страницы «Тариф и оплата». */
@@ -296,6 +309,52 @@ export type BillingInfo = {
   email: string | null;
   now: number;
 };
+
+/** Заказ в списке root: с компанией и почтой плательщика. */
+export type RootBillingOrder = BillingOrder & { companyId: number; companyName: string | null; email: string | null };
+
+/** Сводка по оплате для root («Касса»). */
+export type BillingStats = {
+  /** Таблицы оплаты созданы (npm run add-billing). */
+  tables: boolean;
+  byStatus: Record<string, number>;
+  lastPaidAt: number | null;
+  activeSeries: number;
+};
+
+/** GET /api/root/billing/diagnostics — что задано в env и куда смотрит касса. Без значений секретов. */
+export type BillingDiagnostics = {
+  /** Задан ли параметр (true/false), а не его значение. */
+  secrets: {
+    login: boolean;
+    password1: boolean;
+    password2: boolean;
+    testPassword1: boolean;
+    testPassword2: boolean;
+    password3: boolean;
+  };
+  testMode: boolean;
+  /** Новые заказы можно оплатить: есть логин и пароли текущего режима. */
+  configured: boolean;
+  hash: string;
+  recurring: boolean;
+  receipt: boolean;
+  sno: string | null;
+  tax: string;
+  /** Адреса для «Технических настроек» магазина. */
+  urls: { result: string; success: string; fail: string };
+  stats: BillingStats;
+};
+
+/** POST /api/root/billing/check — ответ кассы на проверочный запрос. */
+export type BillingCheckResult = { ok: boolean; message: string };
+
+/** Результат сверки заказа с кассой (OpStateExt). */
+export type ReconcileStatus = "paid" | "already" | "waiting" | "not_found" | "cancelled" | "refunded" | "error";
+export type ReconcileResult = { status: ReconcileStatus; message: string; order: RootBillingOrder | null };
+
+/** POST /api/root/billing/orders/:id/refund. */
+export type RefundResult = { message: string; order: RootBillingOrder | null };
 
 /** Ответ POST /api/billing/checkout. */
 export type CheckoutResult = {

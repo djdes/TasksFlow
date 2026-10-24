@@ -11,9 +11,10 @@ import { sql } from "drizzle-orm";
  *   payment_consents  — история согласий на автосписания и их отзывов.
  *   company_billing   — автопродление компании (серия платежей).
  *
- * Только CREATE TABLE и одна строка цены в новой таблице; существующие
- * таблицы и строки не трогает. Идемпотентно: ER_TABLE_EXISTS_ERROR = уже
- * есть. Без таблиц сайт работает как раньше, только без оплаты.
+ * Только CREATE TABLE, ADD COLUMN к этим же таблицам и одна строка цены в
+ * новой таблице; остальные таблицы и строки не трогает. Идемпотентно:
+ * ER_TABLE_EXISTS_ERROR / ER_DUP_FIELDNAME = уже есть. Шаг деплоя
+ * обязательный: код читает все эти колонки.
  */
 const TABLES: Array<[string, string]> = [
   [
@@ -85,6 +86,20 @@ const TABLES: Array<[string, string]> = [
   ],
 ];
 
+// Колонки, добавленные после первой выкладки (11.2026): откат тарифа при
+// возврате, сверка с кассой, возвраты, напоминания об окончании тарифа.
+const COLUMNS: Array<[string, string, string]> = [
+  ["payment_orders", "plan_before", "VARCHAR(20) NULL"],
+  ["payment_orders", "plan_until_before", "INT NULL"],
+  ["payment_orders", "checked_at", "INT NULL"],
+  ["payment_orders", "refund_status", "VARCHAR(16) NULL"],
+  ["payment_orders", "refund_request_id", "VARCHAR(64) NULL"],
+  ["payment_orders", "refund_requested_at", "INT NULL"],
+  ["payment_orders", "refunded_at", "INT NULL"],
+  ["company_billing", "expiry_notice_for", "INT NULL"],
+  ["company_billing", "expired_notice_for", "INT NULL"],
+];
+
 async function main() {
   for (const [name, ddl] of TABLES) {
     try {
@@ -98,6 +113,15 @@ async function main() {
       }
     } catch (err: any) {
       if (err?.code === "ER_TABLE_EXISTS_ERROR") console.log(`[migrate] ${name} already exists, skipping`);
+      else throw err;
+    }
+  }
+  for (const [table, column, ddl] of COLUMNS) {
+    try {
+      await db.execute(sql.raw(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${ddl}`));
+      console.log(`[migrate] added ${table}.${column}`);
+    } catch (err: any) {
+      if (err?.code === "ER_DUP_FIELDNAME") console.log(`[migrate] ${table}.${column} already exists, skipping`);
       else throw err;
     }
   }

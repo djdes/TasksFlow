@@ -1,3 +1,4 @@
+import { getPublicTasksflowBaseUrl } from "../public-urls";
 import { storage } from "../storage";
 import { billingNotifier } from "./notify";
 import { robokassaConfig } from "./robokassa";
@@ -12,5 +13,6 @@ export function defaultBillingDeps(): BillingDeps {
     notify: billingNotifier,
     getCompany: (id) => storage.getCompanyById(id),
     countUsers: (companyId) => storage.countCompanyUsers(companyId),
+    baseUrl: () => getPublicTasksflowBaseUrl(),
   };
 }

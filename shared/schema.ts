@@ -755,7 +755,7 @@ export const paymentOrders = mysqlTable("payment_orders", {
   months: int("months").notNull(),
   amountRub: int("amount_rub").notNull(),
   description: varchar("description", { length: 255 }).notNull(),
-  // pending | paid | expired
+  // pending | paid | expired | refunded
   status: varchar("status", { length: 16 }).notNull().default("pending"),
   // Тестовый режим Робокассы: подпись проверяется тестовыми паролями.
   isTest: boolean("is_test").notNull().default(false),
@@ -765,6 +765,18 @@ export const paymentOrders = mysqlTable("payment_orders", {
   recurringChargeOf: int("recurring_charge_of"),
   // До какого момента оплата продлила тариф.
   planUntilAfter: int("plan_until_after"),
+  // Тариф и срок до оплаты — чтобы вернуть их, если деньги вернули.
+  // "" — тарифа не было («Старт»); NULL — неизвестно (оплата до 11.2026).
+  planBefore: varchar("plan_before", { length: 20 }),
+  planUntilBefore: int("plan_until_before"),
+  // Последняя сверка с кассой (OpStateExt) — для зависших «ожидает оплаты».
+  checkedAt: int("checked_at"),
+  // Возврат через API Робокассы: sending | pending | uncertain | finished | canceled.
+  refundStatus: varchar("refund_status", { length: 16 }),
+  refundRequestId: varchar("refund_request_id", { length: 64 }),
+  // Когда возврат начали отправлять: «sending» дольше 10 минут — завис.
+  refundRequestedAt: int("refund_requested_at"),
+  refundedAt: int("refunded_at"),
   // Тело уведомления ResultURL — для разбора спорных платежей.
   rawResult: text("raw_result"),
   createdAt: int("created_at").notNull().default(0),
@@ -802,6 +814,10 @@ export const companyBilling = mysqlTable("company_billing", {
   // Для какого plan_until уже ушло предупреждение о списании.
   recurringNoticeFor: int("recurring_notice_for"),
   recurringDisabledAt: int("recurring_disabled_at"),
+  // Для какого plan_until ушли «тариф скоро закончится» и «тариф закончился»
+  // (без автопродления).
+  expiryNoticeFor: int("expiry_notice_for"),
+  expiredNoticeFor: int("expired_notice_for"),
   updatedAt: int("updated_at").notNull().default(0),
 });
 

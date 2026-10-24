@@ -647,6 +647,9 @@ function Orders({ orders, inApp }: { orders: BillingOrder[]; inApp: boolean }) {
                   {PLANS[o.plan].name} на {periodLabel(o.months)}
                   {o.automatic && <span className="billing-chip is-muted">автопродление</span>}
                   {o.isTest && <span className="billing-chip is-warn">тест</span>}
+                  {o.status === "paid" && (o.refundStatus === "sending" || o.refundStatus === "pending" || o.refundStatus === "uncertain") && (
+                    <span className="billing-chip is-muted">возврат в обработке</span>
+                  )}
                 </p>
                 <p className="billing-order-meta">
                   №{o.id} · {shortDate(o.paidAt ?? o.createdAt)}

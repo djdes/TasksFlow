@@ -110,7 +110,9 @@ async (page) => {
     // Отчёты: точка уходит в запрос.
     await tab.goto(base + '/reports');
     await tab.getByRole('heading', { name: 'Сегодня' }).waitFor();
-    await tab.locator('.reports-select').first().selectOption('5');
+    // По имени, а не .first(): пока точки грузятся, первым стоит другой select
+    // (сотрудник или пояс), и выбор ждал бы на нём опцию, которой там нет.
+    await tab.getByRole('combobox', { name: 'Точка', exact: true }).selectOption('5');
     await tab.waitForTimeout(300);
     check(calls.some((c) => c.p === '/api/history' && /locationId=5/.test(c.q)), 'reports location not sent');
 

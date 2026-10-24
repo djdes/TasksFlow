@@ -42,7 +42,7 @@ function demoBilling(): BillingInfo {
     prices: DEFAULT_PRICES.map((p) => ({ ...p })),
     recurring: { active: false, plan: null, months: null, amountRub: null, nextChargeAt: null },
     orders: [
-      { id: 1042, plan: "team", months: 1, amountRub: 990, description: "TasksFlow, тариф «Команда» на 1 месяц", status: "paid", isTest: false, automatic: false, createdAt: paidAt, paidAt, planUntil: t + 12 * 86400 },
+      { id: 1042, plan: "team", months: 1, amountRub: 990, description: "TasksFlow, тариф «Команда» на 1 месяц", status: "paid", isTest: false, automatic: false, createdAt: paidAt, paidAt, planUntil: t + 12 * 86400, refundStatus: null },
     ],
     email: null,
     now: t,

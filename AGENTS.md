@@ -35,7 +35,7 @@
 - Для бага "сотрудники не создались" нельзя ограничиваться UI. Нужно проверить сетевой запрос, server route, storage, валидацию телефона и уникальность пользователя в БД.
 - Приложения для телефонов — оболочки над tasksflow.ru: `mobile/android` (Trusted Web Activity) и `mobile/ios` (Swift + WKWebView). Веб-изменения доходят до них сразу; пересборка нужна только при правках `mobile/`. Собираются в CI (`mobile-android.yml`, `mobile-ios.yml`), Android-эмулятор и iOS-симулятор проверяют запуск. Подробности, ключи и публикация — `docs/mobile.md`.
 - Репозиторий публичный: ключи подписи (`*.jks`, `.p8`), пароли и токены не коммитить и не печатать в логах CI. Ключ подписи Android живёт на сервере в `~/.tasksflow-deploy/android`.
-- Оплата тарифов — Робокасса: `shared/billing.ts`, `server/billing/*`, `server/billing-routes.ts`, страница `/admin/billing`, оферта `content/legal/offer.md`. Сумму считает только сервер, оплата засчитывается только по ResultURL с подписью Пароля #2. Внутри приложений оплаты нет (правила App Store и Google Play). Подключение магазина, секреты `ROBOKASSA_*` и автопродление — `docs/billing.md`.
+- Оплата тарифов — Робокасса: `shared/billing.ts`, `server/billing/*`, `server/billing-routes.ts`, страница `/admin/billing`, оферта `content/legal/offer.md`. Сумму считает только сервер, оплата засчитывается только по ResultURL с подписью Пароля #2 или по сверке с кассой (наш запрос OpStateExt с Паролем #2); возвраты — через API кассы с Паролем #3. Внутри приложений оплаты нет (правила App Store и Google Play). Подключение магазина, секреты `ROBOKASSA_*`, автопродление, сверка и возвраты — `docs/billing.md`.
 
 ## Quality Bar
 - Исправляй корневую причину, а не симптом.

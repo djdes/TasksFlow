@@ -5,10 +5,15 @@ import { storage } from "./storage";
 import { defaultBillingDeps } from "./billing/deps";
 import { isAppUserAgent } from "./billing/robokassa";
 import {
+  billingDiagnostics,
   billingInfo,
+  checkConnection,
+  checkWhilePolling,
   createCheckout,
   disableRecurring,
   handleResult,
+  reconcileOne,
+  refundOrder,
   toBillingOrder,
   type BillingDeps,
 } from "./billing/service";
@@ -23,6 +28,10 @@ import {
  *   POST   /api/billing/robokassa/result — ResultURL: уведомление кассы об оплате
  *   POST   /billing/success, /billing/fail — возврат с оплаты методом POST → GET
  *   GET    /api/root/billing, PUT /api/root/billing/prices — цены и все платежи (root)
+ *   GET    /api/root/billing/diagnostics — что задано в env, адреса для кассы (root)
+ *   POST   /api/root/billing/check       — проверить логин и Пароль #2 без денег (root)
+ *   POST   /api/root/billing/orders/:id/reconcile — сверить заказ с кассой (root)
+ *   POST   /api/root/billing/orders/:id/refund    — вернуть деньги через API кассы (root)
  *
  * В кабинете магазина: ResultURL — https://<сайт>/api/billing/robokassa/result,
  * SuccessURL — https://<сайт>/billing/success, FailURL — https://<сайт>/billing/fail.
@@ -124,6 +133,9 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
       const order = Number.isInteger(id) && id > 0 ? await billing.store.getOrder(id) : null;
       // Чужой заказ — как несуществующий: номер заказа не раскрывает чужие оплаты.
       if (!order || order.companyId !== ctx.companyId) return res.status(404).json({ message: "Заказ не найден" });
+      // Завис в «ожидает оплаты» — в фоне спросим кассу: потерянное
+      // уведомление не оставит человека ждать.
+      checkWhilePolling(billing, order);
       res.set("Cache-Control", "no-store").json(toBillingOrder(order));
     } catch (err) {
       logger.error({ err }, "[billing] статус заказа");
@@ -186,6 +198,54 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
     } catch (err) {
       logger.error({ err }, "[root] платежи");
       res.status(500).json({ message: "Не удалось загрузить платежи" });
+    }
+  });
+
+  app.get("/api/root/billing/diagnostics", deps.requireRoot, async (_req, res) => {
+    try {
+      res.set("Cache-Control", "no-store").json(await billingDiagnostics(billing));
+    } catch (err) {
+      logger.error({ err }, "[root] диагностика оплаты");
+      res.status(500).json({ message: "Не удалось собрать настройки кассы" });
+    }
+  });
+
+  app.post("/api/root/billing/check", deps.requireRoot, async (_req, res) => {
+    try {
+      res.json(await checkConnection(billing));
+    } catch (err) {
+      logger.error({ err }, "[root] проверка кассы");
+      res.status(500).json({ message: "Не удалось проверить подключение" });
+    }
+  });
+
+  const orderId = (req: Request) => {
+    const id = Number(req.params.id);
+    return Number.isInteger(id) && id > 0 ? id : null;
+  };
+
+  app.post("/api/root/billing/orders/:id/reconcile", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Заказ не найден" });
+    try {
+      const reply = await reconcileOne(billing, id);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] сверка заказа");
+      res.status(500).json({ message: "Не удалось сверить заказ с кассой" });
+    }
+  });
+
+  app.post("/api/root/billing/orders/:id/refund", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Заказ не найден" });
+    try {
+      // force — повтор после «касса не ответила», root подтвердил, что проверил кабинет.
+      const reply = await refundOrder(billing, id, { force: (req.body as { force?: unknown } | undefined)?.force === true });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] возврат");
+      res.status(500).json({ message: "Возврат не отправлен из-за ошибки сервера. Проверьте статус заказа перед повтором." });
     }
   });
 

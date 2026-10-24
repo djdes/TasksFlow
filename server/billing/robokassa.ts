@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 /**
  * Протокол Робокассы: подписи, параметры формы оплаты, чек и повторное
@@ -7,7 +7,11 @@ import { createHash } from "node:crypto";
  * Пароли не путать:
  *   • Пароль #1 — подпись запроса на оплату, возврата на SuccessURL и
  *     повторного списания;
- *   • Пароль #2 — проверка уведомления об оплате на ResultURL.
+ *   • Пароль #2 — проверка уведомления об оплате на ResultURL и запрос
+ *     состояния операции (OpStateExt);
+ *   • Пароль #3 — API возвратов (JWT).
+ * Форматы сверены с официальным плагином Робокассы для WordPress
+ * (github.com/robokassa/cms-wordpress, RobokassaPayAPI.php, RefundApi.php).
  * В тестовом режиме (ROBOKASSA_IS_TEST=1) у магазина свои тестовые пароли,
  * поэтому подпись проверяется по режиму конкретного заказа, а не по
  * текущему env: тестовые заказы, оставшиеся после запуска, не «сломаются».
@@ -17,6 +21,9 @@ import { createHash } from "node:crypto";
 
 export const PAYMENT_URL = "https://auth.robokassa.ru/Merchant/Index.aspx";
 export const RECURRING_URL = "https://auth.robokassa.ru/Merchant/Recurring";
+export const OP_STATE_URL = "https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt";
+export const REFUND_CREATE_URL = "https://services.robokassa.ru/RefundService/Refund/Create";
+export const REFUND_STATE_URL = "https://services.robokassa.ru/RefundService/Refund/GetState";
 
 /** Алгоритмы подписи из кабинета магазина («Технические настройки»). */
 export const HASH_ALGORITHMS = ["md5", "ripemd160", "sha1", "sha256", "sha384", "sha512"] as const;
@@ -28,6 +35,8 @@ export type RobokassaConfig = {
   password2: string;
   testPassword1: string;
   testPassword2: string;
+  /** Пароль #3 — только для API возвратов. */
+  password3: string;
   /** Новые заказы — в тестовом режиме. */
   isTest: boolean;
   hash: HashAlgorithm;
@@ -54,6 +63,7 @@ export function robokassaConfig(env: Env = process.env): RobokassaConfig {
     password2: read(env, "ROBOKASSA_PASSWORD2"),
     testPassword1: read(env, "ROBOKASSA_TEST_PASSWORD1"),
     testPassword2: read(env, "ROBOKASSA_TEST_PASSWORD2"),
+    password3: read(env, "ROBOKASSA_PASSWORD3"),
     isTest: flag(env, "ROBOKASSA_IS_TEST"),
     hash: (HASH_ALGORITHMS as readonly string[]).includes(hash) ? (hash as HashAlgorithm) : "md5",
     recurring: flag(env, "ROBOKASSA_RECURRING"),
@@ -210,13 +220,14 @@ export type ChargeResult = {
  */
 export async function chargeRecurring(
   cfg: RobokassaConfig,
-  charge: { invId: number; previousInvId: number; amountRub: number; description: string },
+  charge: { invId: number; previousInvId: number; amountRub: number; description: string; isTest?: boolean },
   fetchImpl: typeof fetch = fetch,
 ): Promise<ChargeResult> {
   const outSum = formatOutSum(charge.amountRub);
   const invId = String(charge.invId);
+  const isTest = charge.isTest === true;
   const receipt = cfg.receipt ? buildReceipt(cfg, { name: charge.description, sumRub: charge.amountRub }) : null;
-  const base = [cfg.login, outSum, invId, ...(receipt ? [receipt.encoded] : []), cfg.password1].join(":");
+  const base = [cfg.login, outSum, invId, ...(receipt ? [receipt.encoded] : []), password1(cfg, isTest)].join(":");
   const body = new URLSearchParams({
     MerchantLogin: cfg.login,
     InvoiceID: invId,
@@ -225,6 +236,9 @@ export async function chargeRecurring(
     SignatureValue: digest(cfg, base),
     OutSum: outSum,
     ...(receipt ? { Receipt: receipt.encoded } : {}),
+    // Серия из тестового режима списывается тестово — так автопродление
+    // можно проверить без денег (как в официальном плагине).
+    ...(isTest ? { IsTest: "1" } : {}),
   });
   let res: Response;
   let response: string;
@@ -241,6 +255,139 @@ export async function chargeRecurring(
   }
   const accepted = res.ok && /^OK/i.test(response);
   return { accepted, definitive: accepted || res.status < 500, response };
+}
+
+// --- Состояние операции (OpStateExt) ------------------------------------------
+
+/** Коды Result в ответе OpStateExt. */
+export const OP_RESULT = { ok: 0, badSignature: 1, shopNotFound: 2, notFound: 3, many: 4 } as const;
+
+/**
+ * Состояние операции (State/Code): 5 — создана, денег нет; 10 — отменена;
+ * 50 — деньги получены, идёт зачисление; 60 — возвращены покупателю;
+ * 80 — приостановлена; 100 — оплачена.
+ */
+export const OP_STATE = { created: 5, cancelled: 10, crediting: 50, refunded: 60, suspended: 80, paid: 100 } as const;
+
+export type OpState =
+  | { ok: true; resultCode: number; description: string; stateCode: number | null; opKey: string | null; incSum: string | null; paymentMethod: string | null }
+  | { ok: false; error: string };
+
+const xmlText = (xml: string, path: string[]): string | null => {
+  // Без XML-парсера: ответ маленький и плоский, ищем вложенные теги по
+  // локальному имени (пространство имён у Робокассы одно на весь ответ).
+  let rest = xml;
+  for (const tag of path) {
+    const m = new RegExp(`<(?:\\w+:)?${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?${tag}>`).exec(rest);
+    if (!m) return null;
+    rest = m[1];
+  }
+  return rest.trim();
+};
+
+export function parseOpState(xml: string): OpState {
+  const code = xmlText(xml, ["Result", "Code"]);
+  if (code === null || !/^\d+$/.test(code)) return { ok: false, error: "Робокасса вернула непонятный ответ" };
+  const state = xmlText(xml, ["State", "Code"]);
+  return {
+    ok: true,
+    resultCode: Number(code),
+    description: xmlText(xml, ["Result", "Description"]) ?? "",
+    stateCode: state && /^\d+$/.test(state) ? Number(state) : null,
+    opKey: xmlText(xml, ["Info", "OpKey"]) || null,
+    incSum: xmlText(xml, ["Info", "IncSum"]) || null,
+    paymentMethod: xmlText(xml, ["Info", "PaymentMethod", "Description"]) || null,
+  };
+}
+
+/**
+ * Что касса знает об операции по номеру заказа. Подпись —
+ * `MerchantLogin:InvoiceID:Пароль#2`. Нужна, чтобы засчитать оплату, если
+ * уведомление на ResultURL потерялось, и чтобы проверить логин и Пароль #2.
+ */
+export async function opState(cfg: RobokassaConfig, invId: number, fetchImpl: typeof fetch = fetch): Promise<OpState> {
+  if (!cfg.login || !cfg.password2) return { ok: false, error: "Не заданы логин магазина или Пароль #2" };
+  const signature = digest(cfg, `${cfg.login}:${invId}:${cfg.password2}`).toUpperCase();
+  const url = `${OP_STATE_URL}?${new URLSearchParams({ MerchantLogin: cfg.login, InvoiceID: String(invId), Signature: signature })}`;
+  try {
+    const res = await fetchImpl(url, { signal: AbortSignal.timeout(15_000) });
+    const body = await res.text();
+    if (!res.ok) return { ok: false, error: `Робокасса ответила ${res.status}` };
+    return parseOpState(body);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// --- Возвраты (RefundService) ----------------------------------------------------
+
+const base64Url = (value: string | Buffer) => Buffer.from(value).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+/** Compact JWT HS256 на Пароле #3 — тело запроса RefundService. */
+export function refundToken(payload: Record<string, unknown>, password3: string): string {
+  const head = base64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = base64Url(JSON.stringify(payload));
+  const sign = base64Url(createHmac("sha256", password3).update(`${head}.${body}`).digest());
+  return `${head}.${body}.${sign}`;
+}
+
+export type RefundCreated =
+  | { ok: true; requestId: string }
+  /** definitive=false — ответа нет: возврат мог и уйти, повторять нельзя. */
+  | { ok: false; definitive: boolean; error: string };
+
+/**
+ * Заявка на возврат. Без суммы — полный возврат (так требует документация
+ * для полного), с суммой — частичный.
+ */
+export async function createRefund(
+  cfg: RobokassaConfig,
+  refund: { opKey: string; amountRub?: number | null },
+  fetchImpl: typeof fetch = fetch,
+): Promise<RefundCreated> {
+  if (!cfg.password3) return { ok: false, definitive: true, error: "Не задан Пароль #3 (ROBOKASSA_PASSWORD3) — он нужен для возвратов" };
+  const payload: Record<string, unknown> = { OpKey: refund.opKey };
+  if (refund.amountRub) payload.RefundSum = refund.amountRub;
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetchImpl(REFUND_CREATE_URL, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      // По OpenAPI тело — JSON-строка с compact JWT.
+      body: JSON.stringify(refundToken(payload, cfg.password3)),
+      signal: AbortSignal.timeout(30_000),
+    });
+    text = await res.text();
+  } catch (err) {
+    return { ok: false, definitive: false, error: err instanceof Error ? err.message : String(err) };
+  }
+  let data: { success?: boolean; requestId?: string; message?: string | null } | null = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = null;
+  }
+  if (res.ok && data?.success && data.requestId) return { ok: true, requestId: String(data.requestId) };
+  const definitive = res.status >= 400 && res.status < 500 ? true : res.ok && !!data;
+  return { ok: false, definitive, error: data?.message || `Робокасса отклонила возврат (HTTP ${res.status})` };
+}
+
+export type RefundState = { ok: true; label: string } | { ok: false; error: string };
+
+/** Статус заявки на возврат: finished — деньги ушли, canceled — отменена. */
+export async function refundState(requestId: string, fetchImpl: typeof fetch = fetch): Promise<RefundState> {
+  try {
+    const res = await fetchImpl(`${REFUND_STATE_URL}?${new URLSearchParams({ id: requestId })}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const data = (await res.json().catch(() => null)) as { label?: string } | null;
+    if (!res.ok || !data?.label) return { ok: false, error: `Нет статуса возврата (HTTP ${res.status})` };
+    return { ok: true, label: String(data.label) };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 /**

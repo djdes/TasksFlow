@@ -90,6 +90,7 @@ jobs:
           ROBOKASSA_MERCHANT_LOGIN: ${{ secrets.ROBOKASSA_MERCHANT_LOGIN }}
           ROBOKASSA_PASSWORD1: ${{ secrets.ROBOKASSA_PASSWORD1 }}
           ROBOKASSA_PASSWORD2: ${{ secrets.ROBOKASSA_PASSWORD2 }}
+          ROBOKASSA_PASSWORD3: ${{ secrets.ROBOKASSA_PASSWORD3 }}
           ROBOKASSA_TEST_PASSWORD1: ${{ secrets.ROBOKASSA_TEST_PASSWORD1 }}
           ROBOKASSA_TEST_PASSWORD2: ${{ secrets.ROBOKASSA_TEST_PASSWORD2 }}
           ROBOKASSA_IS_TEST: ${{ secrets.ROBOKASSA_IS_TEST }}
@@ -112,7 +113,7 @@ jobs:
           # Секреты бота — чтобы не ходить на сервер руками ради двух строк
           # в .env. Пустые значения ничего не меняют: .env на сервере
           # остаётся источником правды, как в ProjectsFlow.
-          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP,PF_API_URL,PF_AGENT_TOKEN,PF_TASKSFLOW_PROJECT_ID,SMTP_HOST,SMTP_PORT,SMTP_FROM,MAIL_FROM,ROBOKASSA_MERCHANT_LOGIN,ROBOKASSA_PASSWORD1,ROBOKASSA_PASSWORD2,ROBOKASSA_TEST_PASSWORD1,ROBOKASSA_TEST_PASSWORD2,ROBOKASSA_IS_TEST,ROBOKASSA_RECURRING,ROBOKASSA_HASH,ROBOKASSA_SEND_RECEIPT,ROBOKASSA_RECEIPT_SNO,ROBOKASSA_RECEIPT_TAX,LEGAL_OPERATOR_NAME,LEGAL_OPERATOR_INN,LEGAL_OPERATOR_OGRN,LEGAL_OPERATOR_ADDRESS,LEGAL_CONTACT_EMAIL
+          envs: TASKSFLOW_BOT_TOKEN,TELEGRAM_BOT_TOKEN,TELEGRAM_BOT_USERNAME,TELEGRAM_MODE,TELEGRAM_HTTP_PROXY,TELEGRAM_API_BASE_URL,TELEGRAM_API_IP,PF_API_URL,PF_AGENT_TOKEN,PF_TASKSFLOW_PROJECT_ID,SMTP_HOST,SMTP_PORT,SMTP_FROM,MAIL_FROM,ROBOKASSA_MERCHANT_LOGIN,ROBOKASSA_PASSWORD1,ROBOKASSA_PASSWORD2,ROBOKASSA_PASSWORD3,ROBOKASSA_TEST_PASSWORD1,ROBOKASSA_TEST_PASSWORD2,ROBOKASSA_IS_TEST,ROBOKASSA_RECURRING,ROBOKASSA_HASH,ROBOKASSA_SEND_RECEIPT,ROBOKASSA_RECEIPT_SNO,ROBOKASSA_RECEIPT_TAX,LEGAL_OPERATOR_NAME,LEGAL_OPERATOR_INN,LEGAL_OPERATOR_OGRN,LEGAL_OPERATOR_ADDRESS,LEGAL_CONTACT_EMAIL
           script: |
             set -Eeuo pipefail
 
@@ -178,6 +179,7 @@ jobs:
             upsert_env ROBOKASSA_MERCHANT_LOGIN "${ROBOKASSA_MERCHANT_LOGIN:-}"
             upsert_env ROBOKASSA_PASSWORD1 "${ROBOKASSA_PASSWORD1:-}"
             upsert_env ROBOKASSA_PASSWORD2 "${ROBOKASSA_PASSWORD2:-}"
+            upsert_env ROBOKASSA_PASSWORD3 "${ROBOKASSA_PASSWORD3:-}"
             upsert_env ROBOKASSA_TEST_PASSWORD1 "${ROBOKASSA_TEST_PASSWORD1:-}"
             upsert_env ROBOKASSA_TEST_PASSWORD2 "${ROBOKASSA_TEST_PASSWORD2:-}"
             upsert_env ROBOKASSA_IS_TEST "${ROBOKASSA_IS_TEST:-}"
@@ -253,8 +255,10 @@ jobs:
             npm run add-company-features
             # Устройства для push. Без таблицы сайт работает, только без push.
             npm run add-push-subscriptions || echo "push subscriptions migration failed (non-fatal)"
-            # Оплата тарифов: без таблиц сайт работает, только без оплаты.
-            npm run add-billing || echo "billing migration failed (non-fatal)"
+            # Оплата тарифов: код читает колонки сверки и возвратов, без них
+            # ResultURL и страница оплаты падают. Обязательный шаг, как PIN:
+            # упавшая миграция оставляет прод на старом коде.
+            npm run add-billing
 
             echo ">>> build (в dist.next, рабочий dist не трогаем)"
             # Раньше npm run build первым делом удалял dist: на время сборки
@@ -348,6 +352,26 @@ jobs:
               pm2 status
               exit 1
             fi
+
+            # Оплата после выкладки: адреса для кассы живы и отвечают тем,
+            # чем должны (текст, а не HTML SPA; JSON, а не редирект). Не
+            # откатываем — это предупреждение для того, кто смотрит лог.
+            billing_smoke() {
+              local port base code body
+              port="$(app_port)"
+              base="http://127.0.0.1:${port}"
+              body="$(mktemp)"
+              code="$(curl -sS -o "$body" -w '%{http_code}' --max-time 5 -X POST "$base/api/billing/robokassa/result" 2>/dev/null || true)"
+              if [ "$code" = "400" ] && grep -qx 'bad request' "$body"; then echo ">>> оплата: ResultURL отвечает"; else echo "WARNING: ResultURL ответил ${code}: $(head -c 120 "$body")"; fi
+              code="$(curl -sS -o /dev/null -D "$body" -w '%{http_code}' --max-time 5 "$base/billing/success" 2>/dev/null || true)"
+              if [ "$code" = "200" ] && grep -qi '^x-frame-options: *SAMEORIGIN' "$body"; then echo ">>> оплата: SuccessURL открывается в окне оплаты"; else echo "WARNING: SuccessURL ответил ${code} или без X-Frame-Options: SAMEORIGIN"; fi
+              code="$(curl -sS -o "$body" -w '%{http_code}' --max-time 5 "$base/api/billing" 2>/dev/null || true)"
+              if [ "$code" = "401" ] && grep -q '"message"' "$body"; then echo ">>> оплата: API без входа — 401 JSON"; else echo "WARNING: /api/billing без входа ответил ${code}: $(head -c 120 "$body")"; fi
+              code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "$base/offer" 2>/dev/null || true)"
+              if [ "$code" = "200" ]; then echo ">>> оплата: оферта /offer открывается"; else echo "WARNING: /offer ответил ${code}"; fi
+              rm -f "$body"
+            }
+            billing_smoke || true
 
             echo ">>> ensure autostart cron"
             # У PM2 на этом сервере нет systemd-юнита: `pm2 startup` требует

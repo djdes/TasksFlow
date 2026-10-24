@@ -3,7 +3,7 @@
  * правило автопродления, сервис (заказ, ResultURL, автосписания) на
  * хранилище в памяти и маршруты.
  */
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,21 +25,36 @@ import {
   buildPaymentUrl,
   buildReceipt,
   chargeRecurring,
+  createRefund,
   formatOutSum,
   isAppUserAgent,
   isConfigured,
+  OP_STATE_URL,
+  opState,
+  parseOpState,
+  REFUND_CREATE_URL,
+  REFUND_STATE_URL,
+  refundState,
+  refundToken,
   robokassaConfig,
   verifyResultSignature,
   verifySuccessSignature,
   type RobokassaConfig,
 } from "../server/billing/robokassa";
 import {
+  billingDiagnostics,
   billingInfo,
+  checkConnection,
+  coversAmount,
+  checkWhilePolling,
   createCheckout,
   decideSettlement,
   formatDay,
   disableRecurring,
   handleResult,
+  PROBE_INV_ID,
+  reconcileOne,
+  refundOrder,
   runBillingTick,
   type BillingDeps,
   type BillingNotice,
@@ -58,6 +73,7 @@ const CFG: RobokassaConfig = {
   password2: "p2",
   testPassword1: "t1",
   testPassword2: "t2",
+  password3: "p3",
   isTest: false,
   hash: "md5",
   recurring: true,
@@ -270,6 +286,8 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     recurringLastAttemptAt: null,
     recurringNoticeFor: null,
     recurringDisabledAt: null,
+    expiryNoticeFor: null,
+    expiredNoticeFor: null,
     updatedAt: 0,
   });
   const store: BillingStore = {
@@ -278,7 +296,21 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
       prices = next;
     },
     createOrder: async (o) => {
-      const row: PaymentOrderRow = { ...o, id: nextId++, status: "pending", planUntilAfter: null, rawResult: null, paidAt: null };
+      const row: PaymentOrderRow = {
+        ...o,
+        id: nextId++,
+        status: "pending",
+        planUntilAfter: null,
+        planBefore: null,
+        planUntilBefore: null,
+        checkedAt: null,
+        refundStatus: null,
+        refundRequestId: null,
+        refundRequestedAt: null,
+        refundedAt: null,
+        rawResult: null,
+        paidAt: null,
+      };
       orders.set(row.id, row);
       return { ...row };
     },
@@ -287,11 +319,12 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     listRecentOrders: async () => Array.from(orders.values()).map((o) => ({ ...o, companyName: companies.get(o.companyId)?.name ?? null })),
     settle: async (orderId: number, raw: string, now: number, decide: (ctx: SettleContext) => SettlePatch) => {
       const order = orders.get(orderId);
-      if (!order || order.status === "paid") return { claimed: false as const, order: order ?? null };
+      if (!order || (order.status !== "pending" && order.status !== "expired")) return { claimed: false as const, order: order ?? null };
       const company = companies.get(order.companyId)!;
       const context: SettleContext = { order: { ...order }, company: { ...company }, billing: billing.has(company.id) ? { ...billing.get(company.id)! } : null };
       const patch = decide(context);
-      Object.assign(order, { status: "paid", paidAt: now, rawResult: raw, planUntilAfter: patch.plan?.until ?? null });
+      const before = patch.plan ? { planBefore: company.plan ?? "", planUntilBefore: company.planUntil } : {};
+      Object.assign(order, { status: "paid", paidAt: now, rawResult: raw, planUntilAfter: patch.plan?.until ?? null, ...before });
       if (patch.plan) Object.assign(company, { plan: patch.plan.id, planUntil: patch.plan.until });
       if (patch.billing) billing.set(company.id, { ...(billing.get(company.id) ?? emptyBilling(company.id)), ...patch.billing, updatedAt: now });
       return { claimed: true as const, order: { ...order }, context, patch };
@@ -330,6 +363,82 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     },
     setNoticeFor: async (id, until) => {
       billing.get(id)!.recurringNoticeFor = until;
+    },
+    listPendingForCheck: async ({ tiers, createdBefore, limit }) =>
+      Array.from(orders.values())
+        .filter((o) => o.status === "pending" && !o.isTest && o.createdAt <= createdBefore)
+        .filter((o) => tiers.some((t) => o.createdAt >= t.createdAfter && (o.checkedAt === null || o.checkedAt <= t.checkedBefore)))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, limit)
+        .map((o) => ({ ...o })),
+    claimCheck: async (id, now, checkedBefore) => {
+      const o = orders.get(id);
+      if (!o || o.status !== "pending" || (o.checkedAt !== null && o.checkedAt > checkedBefore)) return false;
+      o.checkedAt = now;
+      return true;
+    },
+    claimRefund: async (id, now, opts = {}) => {
+      const o = orders.get(id);
+      const allowed = opts.allowUncertain ? ["canceled", "uncertain"] : ["canceled"];
+      if (!o || o.status !== "paid" || (o.refundStatus !== null && !allowed.includes(o.refundStatus))) return false;
+      Object.assign(o, { refundStatus: "sending", refundRequestId: null, refundRequestedAt: now });
+      return true;
+    },
+    setRefund: async (id, patch) => {
+      const o = orders.get(id)!;
+      o.refundStatus = patch.refundStatus;
+      if (patch.refundRequestId !== undefined) o.refundRequestId = patch.refundRequestId;
+    },
+    listRefundsInProgress: async (staleBefore) =>
+      Array.from(orders.values())
+        .filter((o) => o.status === "paid")
+        .filter((o) => o.refundStatus === "pending" || o.refundStatus === "uncertain" || (o.refundStatus === "sending" && (o.refundRequestedAt ?? 0) <= staleBefore))
+        .map((o) => ({ ...o })),
+    markChecked: async (id, now) => {
+      orders.get(id)!.checkedAt = now;
+    },
+    finishRefund: async (id, now) => {
+      const o = orders.get(id);
+      if (!o || o.status !== "paid" || (o.refundStatus !== "pending" && o.refundStatus !== "uncertain")) return null;
+      const company = companies.get(o.companyId);
+      let rolledBack: { plan: string | null; until: number | null } | null = null;
+      if (company && o.planUntilAfter !== null && company.planUntil === o.planUntilAfter && o.planBefore !== null) {
+        let target = { plan: o.planBefore || null, until: o.planUntilBefore };
+        for (let i = 0; i < 24 && target.until !== null; i++) {
+          const prev = Array.from(orders.values()).find((x) => x.companyId === o.companyId && x.status === "refunded" && x.planUntilAfter === target.until);
+          if (!prev || prev.planBefore === null) break;
+          target = { plan: prev.planBefore || null, until: prev.planUntilBefore };
+        }
+        rolledBack = target;
+        Object.assign(company, { plan: target.plan, planUntil: target.until });
+      }
+      Object.assign(o, { status: "refunded", refundStatus: "finished", refundedAt: now });
+      return { order: { ...o }, rolledBack };
+    },
+    listExpiringPlans: async (from, to) =>
+      Array.from(companies.values())
+        .filter((c) => c.plan && c.planUntil !== null && c.planUntil >= from && c.planUntil <= to && !billing.get(c.id)?.recurringActive)
+        .filter((c) => Array.from(orders.values()).some((o) => o.companyId === c.id && o.status === "paid" && o.planUntilAfter === c.planUntil))
+        .map((c) => ({
+          companyId: c.id,
+          companyName: c.name,
+          plan: c.plan!,
+          planUntil: c.planUntil!,
+          expiryNoticeFor: billing.get(c.id)?.expiryNoticeFor ?? null,
+          expiredNoticeFor: billing.get(c.id)?.expiredNoticeFor ?? null,
+        })),
+    claimExpiryNotice: async (id, kind, until) => {
+      const b = billing.get(id) ?? emptyBilling(id);
+      billing.set(id, b);
+      const key = kind === "expiry" ? "expiryNoticeFor" : "expiredNoticeFor";
+      if (b[key] === until) return false;
+      b[key] = until;
+      return true;
+    },
+    stats: async () => {
+      const byStatus: Record<string, number> = {};
+      for (const o of Array.from(orders.values())) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
+      return { tables: true, byStatus, lastPaidAt: null, activeSeries: Array.from(billing.values()).filter((b) => b.recurringActive).length };
     },
   };
   return { store, orders, billing, companies, consents };
@@ -550,12 +659,32 @@ describe("автопродление", () => {
     expect(t.owner.at(-1)).toMatch(/Автопродление выключено — «Кафе»/);
   });
 
-  it("серия из тестового режима не списывает, а выключается", async () => {
+  it("серия из тестового режима списывается тестово: IsTest=1 и тестовый пароль", async () => {
     const t = setup({ isTest: true });
     const { invId } = (await checkout(t.deps, { plan: "team", months: 1, recurringConsent: true })).json as { invId: number };
     await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }, "t2"));
-    t.clock.now = t.companies.get(1)!.planUntil! - 3600;
+    const until = t.companies.get(1)!.planUntil!;
+    t.fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => "OK" });
+    t.clock.now = until - 3600;
     await runBillingTick(t.deps);
+    expect(t.fetchMock).toHaveBeenCalledTimes(1);
+    const body = new URLSearchParams(t.fetchMock.mock.calls[0][1].body as string);
+    const childId = Number(body.get("InvoiceID"));
+    expect(body.get("IsTest")).toBe("1");
+    expect(body.get("SignatureValue")).toBe(md5(`shop:990.00:${childId}:t1`));
+    expect(t.orders.get(childId)).toMatchObject({ isTest: true, recurringChargeOf: invId });
+    // Уведомление тестового списания — тоже по тестовому паролю.
+    expect((await handleResult(t.deps, resultFor({ id: childId, amountRub: 990 }, "t2"))).body).toBe(`OK${childId}`);
+    expect(t.companies.get(1)!.planUntil).toBe(addMonths(until, 1));
+  });
+
+  it("тестовая серия в боевом режиме не списывается, а выключается — иначе тариф продлевался бы даром", async () => {
+    const t = setup({ isTest: true });
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1, recurringConsent: true })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }, "t2"));
+    const live = { ...t.deps, config: () => ({ ...CFG, isTest: false }) };
+    t.clock.now = t.companies.get(1)!.planUntil! - 3600;
+    await runBillingTick(live);
     expect(t.fetchMock).not.toHaveBeenCalled();
     expect(t.billing.get(1)!.recurringActive).toBe(false);
     expect(t.owner.at(-1)).toMatch(/тестовом режиме/);
@@ -650,6 +779,493 @@ describe("автопродление", () => {
   });
 });
 
+// --- Сверка, возвраты, напоминания, диагностика ------------------------------------------
+
+/** Ответ OpStateExt: Result/Code, State/Code и Info, как присылает касса (с пространством имён). */
+const opXml = (code: number, state?: number, incSum = "990.000000") =>
+  `<?xml version="1.0" encoding="utf-8"?><OperationStateResponse xmlns="http://merchant.roboxchange.com/WebService/">` +
+  `<Result><Code>${code}</Code><Description>${code === 3 ? "Операция не найдена" : ""}</Description></Result>` +
+  (state === undefined ? "" : `<State><Code>${state}</Code><RequestDate>2026-03-15T12:00:00+03:00</RequestDate></State>`) +
+  `<Info><IncCurrLabel>BankCardPSR</IncCurrLabel><IncSum>${incSum}</IncSum><PaymentMethod><Code>BankCard</Code><Description>Банковская карта</Description></PaymentMethod><OutSum>950.000000</OutSum><OpKey>op-key-1</OpKey></Info>` +
+  `</OperationStateResponse>`;
+const http = (status: number, body: string) => ({ ok: status >= 200 && status < 300, status, text: async () => body, json: async () => JSON.parse(body) });
+
+/** Касса в памяти: состояние операции по номеру, ответы API возвратов. */
+function cashbox(t: ReturnType<typeof setup>) {
+  const box = {
+    states: new Map<number, number>(),
+    refund: http(200, JSON.stringify({ success: true, requestId: "req-1", message: null })) as ReturnType<typeof http> | Error,
+    refundLabel: "processing",
+    calls: [] as string[],
+  };
+  t.fetchMock.mockImplementation(async (url: string) => {
+    box.calls.push(url.split("?")[0]);
+    if (url.startsWith(OP_STATE_URL)) {
+      const id = Number(new URL(url).searchParams.get("InvoiceID"));
+      return box.states.has(id) ? http(200, opXml(0, box.states.get(id))) : http(200, opXml(3));
+    }
+    if (url === REFUND_CREATE_URL) {
+      if (box.refund instanceof Error) throw box.refund;
+      return box.refund;
+    }
+    if (url.startsWith(REFUND_STATE_URL)) return http(200, JSON.stringify({ requestId: "req-1", label: box.refundLabel }));
+    return http(200, "OK");
+  });
+  return box;
+}
+
+describe("протокол: состояние операции и возвраты", () => {
+  it("OpStateExt: подпись login:InvId:Пароль#2 заглавными, ответ с пространством имён", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(http(200, opXml(0, 100)));
+    const state = await opState(CFG, 42, fetchMock as unknown as typeof fetch);
+    expect(state).toEqual({ ok: true, resultCode: 0, description: "", stateCode: 100, opKey: "op-key-1", incSum: "990.000000", paymentMethod: "Банковская карта" });
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.origin + url.pathname).toBe(OP_STATE_URL);
+    expect(url.searchParams.get("MerchantLogin")).toBe("shop");
+    expect(url.searchParams.get("InvoiceID")).toBe("42");
+    expect(url.searchParams.get("Signature")).toBe(md5("shop:42:p2").toUpperCase());
+
+    expect(parseOpState(opXml(3))).toMatchObject({ ok: true, resultCode: 3, stateCode: null, description: "Операция не найдена" });
+    expect(parseOpState("<html>502 Bad Gateway</html>")).toMatchObject({ ok: false });
+    const down = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
+    expect(await opState(CFG, 42, down as unknown as typeof fetch)).toEqual({ ok: false, error: "ECONNRESET" });
+    expect(await opState({ ...CFG, password2: "" }, 42, fetchMock as unknown as typeof fetch)).toMatchObject({ ok: false });
+  });
+
+  it("возврат: тело — JWT HS256 на Пароле #3, без суммы — полный", async () => {
+    const token = refundToken({ OpKey: "op-key-1" }, "p3");
+    const [head, body, sign] = token.split(".");
+    expect(JSON.parse(Buffer.from(head, "base64url").toString())).toEqual({ alg: "HS256", typ: "JWT" });
+    expect(JSON.parse(Buffer.from(body, "base64url").toString())).toEqual({ OpKey: "op-key-1" });
+    expect(sign).toBe(createHmac("sha256", "p3").update(`${head}.${body}`).digest("base64url"));
+
+    const fetchMock = vi.fn().mockResolvedValue(http(200, JSON.stringify({ success: true, requestId: "req-1", message: null })));
+    expect(await createRefund(CFG, { opKey: "op-key-1" }, fetchMock as unknown as typeof fetch)).toEqual({ ok: true, requestId: "req-1" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(REFUND_CREATE_URL);
+    expect(JSON.parse(init.body as string)).toBe(token);
+    const partial = vi.fn().mockResolvedValue(http(200, JSON.stringify({ success: true, requestId: "req-2" })));
+    await createRefund(CFG, { opKey: "op-key-1", amountRub: 100 }, partial as unknown as typeof fetch);
+    const payload = JSON.parse(Buffer.from(String(JSON.parse(partial.mock.calls[0][1].body)).split(".")[1], "base64url").toString());
+    expect(payload).toEqual({ OpKey: "op-key-1", RefundSum: 100 });
+  });
+
+  it("возврат: отказ — окончательный, нет ответа — нельзя повторять", async () => {
+    const rejected = vi.fn().mockResolvedValue(http(401, JSON.stringify({ success: false, message: "Signature key is not exists", requestId: null })));
+    expect(await createRefund(CFG, { opKey: "k" }, rejected as unknown as typeof fetch)).toEqual({ ok: false, definitive: true, error: "Signature key is not exists" });
+    const timeout = vi.fn().mockRejectedValue(new Error("timeout"));
+    expect(await createRefund(CFG, { opKey: "k" }, timeout as unknown as typeof fetch)).toMatchObject({ ok: false, definitive: false });
+    const gateway = vi.fn().mockResolvedValue(http(502, "<html>Bad Gateway</html>"));
+    expect(await createRefund(CFG, { opKey: "k" }, gateway as unknown as typeof fetch)).toMatchObject({ ok: false, definitive: false });
+    const noPassword = vi.fn();
+    expect(await createRefund({ ...CFG, password3: "" }, { opKey: "k" }, noPassword as unknown as typeof fetch)).toMatchObject({ ok: false, definitive: true });
+    expect(noPassword).not.toHaveBeenCalled();
+    const state = vi.fn().mockResolvedValue(http(200, JSON.stringify({ requestId: "req-1", label: "finished" })));
+    expect(await refundState("req-1", state as unknown as typeof fetch)).toEqual({ ok: true, label: "finished" });
+    expect(state.mock.calls[0][0]).toBe(`${REFUND_STATE_URL}?id=req-1`);
+  });
+});
+
+describe("сверка с кассой", () => {
+  async function pendingOrder(t: ReturnType<typeof setup>, body: unknown = { plan: "team", months: 1 }) {
+    const { invId } = (await checkout(t.deps, body)).json as { invId: number };
+    return invId;
+  }
+
+  it("уведомление потерялось — тик находит оплату в кассе, тариф продлевается, владелец знает про ResultURL", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await pendingOrder(t);
+    // Свежий заказ не трогаем: человек ещё платит.
+    t.clock.now = NOW + 60;
+    await runBillingTick(t.deps);
+    expect(box.calls).toEqual([]);
+
+    t.clock.now = NOW + 5 * 60;
+    await runBillingTick(t.deps);
+    expect(box.calls).toEqual([OP_STATE_URL]);
+    expect(t.orders.get(invId)!.status).toBe("pending");
+
+    box.states.set(invId, 100);
+    t.clock.now = NOW + 11 * 60;
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "paid", planUntilAfter: addMonths(NOW + 11 * 60, 1) });
+    expect(JSON.parse(t.orders.get(invId)!.rawResult!)).toMatchObject({ source: "OpStateExt", state: 100 });
+    expect(t.companies.get(1)).toMatchObject({ plan: "team", planUntil: addMonths(NOW + 11 * 60, 1) });
+    await flush();
+    expect(t.notices.at(-1)!.notice.title).toBe("Оплата получена");
+    expect(t.owner.at(-1)).toMatch(/ResultURL не пришло/);
+
+    // Позднее уведомление ResultURL по тому же заказу — «OK», второй раз не продлевает.
+    expect((await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }))).body).toBe(`OK${invId}`);
+    expect(t.companies.get(1)!.planUntil).toBe(addMonths(NOW + 11 * 60, 1));
+  });
+
+  it("старые заказы сверяются реже, тестовые — никогда", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    await pendingOrder(t);
+    t.clock.now = NOW + 2 * 3600;
+    await runBillingTick(t.deps);
+    expect(box.calls).toHaveLength(1);
+    t.clock.now += 10 * 60;
+    await runBillingTick(t.deps);
+    expect(box.calls).toHaveLength(1);
+    t.clock.now += 60 * 60;
+    await runBillingTick(t.deps);
+    expect(box.calls).toHaveLength(2);
+
+    const test = setup({ isTest: true });
+    const testBox = cashbox(test);
+    await pendingOrder(test);
+    test.clock.now = NOW + 3600;
+    await runBillingTick(test.deps);
+    expect(testBox.calls).toEqual([]);
+  });
+
+  it("зачисление идёт — ждём; отменена — «не оплачен»; сумма меньше заказа — не засчитываем", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const a = await pendingOrder(t);
+    const b = await pendingOrder(t);
+    box.states.set(a, 50);
+    box.states.set(b, 10);
+    expect((await reconcileOne(t.deps, a)).json).toMatchObject({ status: "waiting" });
+    expect(t.orders.get(a)!.status).toBe("pending");
+    expect((await reconcileOne(t.deps, b)).json).toMatchObject({ status: "cancelled" });
+    expect(t.orders.get(b)!.status).toBe("expired");
+
+    const c = await pendingOrder(t);
+    t.fetchMock.mockResolvedValueOnce(http(200, opXml(0, 100, "1.000000")));
+    expect((await reconcileOne(t.deps, c)).json).toMatchObject({ status: "error" });
+    expect(t.orders.get(c)!.status).toBe("pending");
+    expect(t.owner.at(-1)).toMatch(/не засчитано/i);
+  });
+
+  it("сотня брошенных заказов не забивает очередь: свежий проверяется вовремя", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    for (let i = 0; i < 60; i++) {
+      const o = await t.store.createOrder({ companyId: 1, userId: null, email: null, plan: "team", months: 1, amountRub: 990, description: "old", isTest: false, recurringConsent: false, recurringChargeOf: null, createdAt: NOW - 2 * DAY });
+      t.orders.get(o.id)!.checkedAt = NOW - 3600;
+    }
+    const fresh = await pendingOrder(t);
+    t.orders.get(fresh)!.checkedAt = NOW - 6 * 60;
+    t.clock.now = NOW + 10 * 60;
+    await runBillingTick(t.deps);
+    expect(box.calls).toHaveLength(1);
+    expect(t.orders.get(fresh)!.checkedAt).toBe(NOW + 10 * 60);
+  });
+
+  it("сумма из кассы: пробелы и запятая понимаются, непонятная — не засчитываем", () => {
+    expect(coversAmount("990.000000", 990)).toBe(true);
+    expect(coversAmount("1 990,00", 1990)).toBe(true);
+    expect(coversAmount("989.99", 990)).toBe(false);
+    expect(coversAmount("abc", 990)).toBe(false);
+    expect(coversAmount(null, 990)).toBe(true);
+  });
+
+  it("опрос статуса со страницы оплаты спрашивает кассу в фоне, не чаще раза в 30 секунд", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await pendingOrder(t);
+    box.states.set(invId, 100);
+    checkWhilePolling(t.deps, t.orders.get(invId)!);
+    await flush();
+    expect(box.calls).toEqual([]);
+    t.clock.now = NOW + 90;
+    checkWhilePolling(t.deps, t.orders.get(invId)!);
+    checkWhilePolling(t.deps, t.orders.get(invId)!);
+    await flush();
+    await flush();
+    expect(box.calls).toEqual([OP_STATE_URL]);
+    expect(t.orders.get(invId)!.status).toBe("paid");
+  });
+
+  it("проверка подключения: «не найдено» — логин и Пароль #2 верны; неверная подпись — понятный текст", async () => {
+    const t = setup();
+    t.fetchMock.mockResolvedValueOnce(http(200, opXml(3)));
+    expect(await checkConnection(t.deps)).toMatchObject({ ok: true });
+    expect(new URL(t.fetchMock.mock.calls[0][0]).searchParams.get("InvoiceID")).toBe(String(PROBE_INV_ID));
+    t.fetchMock.mockResolvedValueOnce(http(200, opXml(1)));
+    expect(await checkConnection(t.deps)).toEqual({ ok: false, message: expect.stringMatching(/Пароль #2/) });
+    t.fetchMock.mockResolvedValueOnce(http(200, opXml(2)));
+    expect((await checkConnection(t.deps)).message).toMatch(/логин/);
+    t.fetchMock.mockRejectedValueOnce(new Error("getaddrinfo ENOTFOUND"));
+    expect(await checkConnection(t.deps)).toMatchObject({ ok: false, message: expect.stringMatching(/ENOTFOUND/) });
+    expect(await checkConnection({ ...t.deps, config: () => ({ ...CFG, password2: "" }) })).toMatchObject({ ok: false });
+  });
+
+  it("диагностика: что задано — да/нет, без значений паролей; адреса для кабинета", async () => {
+    const t = setup({ password3: "" });
+    const diag = await billingDiagnostics({ ...t.deps, baseUrl: () => "https://tasksflow.ru/" });
+    expect(diag.secrets).toEqual({ login: true, password1: true, password2: true, testPassword1: true, testPassword2: true, password3: false });
+    expect(diag.urls).toEqual({
+      result: "https://tasksflow.ru/api/billing/robokassa/result",
+      success: "https://tasksflow.ru/billing/success",
+      fail: "https://tasksflow.ru/billing/fail",
+    });
+    const json = JSON.stringify(diag);
+    for (const secret of ["p1", "p2", "t1", "t2"]) expect(json).not.toContain(`"${secret}"`);
+  });
+});
+
+describe("возвраты", () => {
+  async function paid(t: ReturnType<typeof setup>, body: unknown = { plan: "team", months: 1 }) {
+    const { invId } = (await checkout(t.deps, body)).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    await flush();
+    return invId;
+  }
+
+  it("возврат через кассу: заявка → «возврат в обработке» → деньги ушли → «возвращён», тариф как до оплаты", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    box.states.set(invId, 100);
+    // "" — до оплаты тарифа не было (NULL оставлен для оплат до снимка).
+    expect(t.orders.get(invId)).toMatchObject({ planBefore: "", planUntilBefore: null });
+
+    const reply = await refundOrder(t.deps, invId);
+    expect(reply.status).toBe(200);
+    expect(box.calls).toEqual([OP_STATE_URL, REFUND_CREATE_URL]);
+    expect(t.orders.get(invId)).toMatchObject({ status: "paid", refundStatus: "pending", refundRequestId: "req-1" });
+    expect((reply.json as { order: { refundStatus: string } }).order.refundStatus).toBe("pending");
+    // Второй раз не отправить — двойной возврат.
+    expect((await refundOrder(t.deps, invId)).status).toBe(409);
+
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)!.status).toBe("paid");
+    box.refundLabel = "finished";
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "refunded", refundStatus: "finished", refundedAt: NOW });
+    expect(t.companies.get(1)).toMatchObject({ plan: null, planUntil: null });
+    expect(t.notices.at(-1)!.notice.title).toBe("Деньги возвращены");
+    expect(t.owner.at(-1)).toMatch(/Возврат .* завершён/);
+
+    // Повторное уведомление ResultURL по возвращённому заказу тариф не включит.
+    expect((await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }))).body).toBe(`OK${invId}`);
+    expect(t.companies.get(1)!.plan).toBeNull();
+  });
+
+  it("после возвращённой оплаты была другая — срок не откатываем", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const first = await paid(t);
+    const second = await paid(t);
+    const until = t.companies.get(1)!.planUntil!;
+    box.states.set(first, 100);
+    box.refundLabel = "finished";
+    await refundOrder(t.deps, first);
+    await runBillingTick(t.deps);
+    expect(t.orders.get(first)!.status).toBe("refunded");
+    expect(t.companies.get(1)!.planUntil).toBe(until);
+    expect(t.notices.at(-1)!.notice.paragraphs.join(" ")).toMatch(/Срок тарифа не меняли/);
+    expect(t.orders.get(second)!.status).toBe("paid");
+  });
+
+  it("вернули сначала раннюю оплату, потом позднюю — тариф откатывается до первой, без подарка", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const first = await paid(t);
+    const second = await paid(t);
+    box.states.set(first, 100);
+    box.states.set(second, 100);
+    box.refundLabel = "finished";
+    await refundOrder(t.deps, first);
+    await runBillingTick(t.deps);
+    await refundOrder(t.deps, second);
+    await runBillingTick(t.deps);
+    expect([t.orders.get(first)!.status, t.orders.get(second)!.status]).toEqual(["refunded", "refunded"]);
+    expect(t.companies.get(1)).toMatchObject({ plan: null, planUntil: null });
+  });
+
+  it("оплата до снимка «до оплаты» (planBefore NULL) — срок не трогаем, владельцу — поправить вручную", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    const until = t.companies.get(1)!.planUntil;
+    Object.assign(t.orders.get(invId)!, { planBefore: null, planUntilBefore: null });
+    box.states.set(invId, 100);
+    box.refundLabel = "finished";
+    await refundOrder(t.deps, invId);
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)!.status).toBe("refunded");
+    expect(t.companies.get(1)!.planUntil).toBe(until);
+    expect(t.owner.at(-1)).toMatch(/Поправьте срок вручную/);
+  });
+
+  it("зависшее «отправляется» (процесс упал посреди отправки) — через 10 минут «проверьте кассу», State 60 заканчивает", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    expect(await t.store.claimRefund(invId, NOW)).toBe(true);
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)!.refundStatus).toBe("sending");
+    box.states.set(invId, 60);
+    t.clock.now = NOW + 11 * 60;
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "refunded", refundStatus: "finished" });
+    expect(t.owner.some((m) => /завис на отправке/.test(m))).toBe(true);
+  });
+
+  it("«касса не ответила» — повтор только с force; перед отправкой касса спрашивается снова", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    box.states.set(invId, 100);
+    box.refund = new Error("timeout");
+    expect((await refundOrder(t.deps, invId)).status).toBe(202);
+    expect(await refundOrder(t.deps, invId)).toMatchObject({ status: 409, json: { code: "refund_uncertain" } });
+    box.refund = http(200, JSON.stringify({ success: true, requestId: "req-2" }));
+    const before = box.calls.length;
+    expect((await refundOrder(t.deps, invId, { force: true })).status).toBe(200);
+    expect(box.calls.slice(before)).toEqual([OP_STATE_URL, REFUND_CREATE_URL]);
+    expect(t.orders.get(invId)).toMatchObject({ refundStatus: "pending", refundRequestId: "req-2" });
+    // Если касса уже вернула — повтор не отправляет вторую заявку.
+    const other = await paid(t);
+    box.states.set(other, 100);
+    box.refund = new Error("timeout");
+    await refundOrder(t.deps, other);
+    box.states.set(other, 60);
+    const mark = box.calls.length;
+    expect((await refundOrder(t.deps, other, { force: true })).status).toBe(200);
+    expect(box.calls.slice(mark)).toEqual([OP_STATE_URL]);
+    expect(t.orders.get(other)!.status).toBe("refunded");
+  });
+
+  it("возврат оплаты серии выключает автопродление — иначе откат срока сразу вызвал бы списание", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t, { plan: "team", months: 1, recurringConsent: true });
+    expect(t.billing.get(1)!.recurringActive).toBe(true);
+    box.states.set(invId, 100);
+    await refundOrder(t.deps, invId);
+    expect(t.billing.get(1)!.recurringActive).toBe(false);
+    expect(t.consents.at(-1)).toMatchObject({ granted: false, statementText: expect.stringMatching(/возврат оплаты/) });
+  });
+
+  it("касса не ответила на возврат — «проверьте кассу», без повтора; сверка видит State 60 и заканчивает", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    box.states.set(invId, 100);
+    box.refund = new Error("timeout");
+    const reply = await refundOrder(t.deps, invId);
+    expect(reply.status).toBe(202);
+    expect(t.orders.get(invId)!.refundStatus).toBe("uncertain");
+    expect(t.owner.at(-1)).toMatch(/не повторяйте/);
+    expect((await refundOrder(t.deps, invId)).status).toBe(409);
+
+    box.states.set(invId, 60);
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "refunded", refundStatus: "finished" });
+  });
+
+  it("касса отклонила или отменила возврат — можно отправить снова", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    box.states.set(invId, 100);
+    box.refund = http(400, JSON.stringify({ success: false, message: "Недостаточно средств на балансе", requestId: null }));
+    const rejected = await refundOrder(t.deps, invId);
+    expect(rejected.status).toBe(502);
+    expect((rejected.json as { message: string }).message).toMatch(/Недостаточно средств/);
+    expect(t.orders.get(invId)!.refundStatus).toBeNull();
+
+    box.refund = http(200, JSON.stringify({ success: true, requestId: "req-1" }));
+    expect((await refundOrder(t.deps, invId)).status).toBe(200);
+    box.refundLabel = "canceled";
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "paid", refundStatus: "canceled" });
+    expect((await refundOrder(t.deps, invId)).status).toBe(200);
+  });
+
+  it("деньги вернули в кабинете кассы — «Проверить в кассе» отмечает возврат", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const invId = await paid(t);
+    box.states.set(invId, 60);
+    expect((await reconcileOne(t.deps, invId)).json).toMatchObject({ status: "refunded", order: { status: "refunded" } });
+    expect(t.companies.get(1)!.plan).toBeNull();
+    expect(box.calls).not.toContain(REFUND_CREATE_URL);
+  });
+
+  it("без Пароля #3, тестовый или неоплаченный заказ — понятный отказ, касса не трогается", async () => {
+    const t = setup({ password3: "" });
+    const box = cashbox(t);
+    const invId = await paid(t);
+    expect(await refundOrder(t.deps, invId)).toMatchObject({ status: 503, json: { code: "no_password3" } });
+    const { invId: pending } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    expect((await refundOrder(t.deps, pending)).status).toBe(409);
+    expect((await refundOrder(t.deps, 9999)).status).toBe(404);
+
+    const test = setup({ isTest: true });
+    cashbox(test);
+    const { invId: testId } = (await checkout(test.deps, { plan: "team", months: 1 })).json as { invId: number };
+    await handleResult(test.deps, resultFor({ id: testId, amountRub: 990 }, "t2"));
+    expect((await refundOrder(test.deps, testId)).status).toBe(409);
+    expect(box.calls).toEqual([]);
+  });
+});
+
+describe("напоминания об окончании тарифа", () => {
+  it("без автопродления: за 3 дня — «скоро закончится», после конца — «закончился», по разу", async () => {
+    const t = setup();
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    await flush();
+    t.notices.length = 0;
+    const until = t.companies.get(1)!.planUntil!;
+    await runBillingTick(t.deps);
+    expect(t.notices).toHaveLength(0);
+
+    t.clock.now = until - 3 * DAY + 60;
+    await runBillingTick(t.deps);
+    await runBillingTick(t.deps);
+    expect(t.notices.map((n) => n.notice.title)).toEqual(["Тариф скоро закончится"]);
+    expect(t.notices[0].notice.paragraphs[0]).toContain(formatDay(until));
+
+    t.clock.now = until + 600;
+    await runBillingTick(t.deps);
+    await runBillingTick(t.deps);
+    expect(t.notices.map((n) => n.notice.title)).toEqual(["Тариф скоро закончится", "Тариф закончился"]);
+    expect(t.notices[1].notice.paragraphs[0]).toMatch(/«Старт»/);
+
+    // Через сутки после конца — уже не напоминаем (и старые тарифы при выкладке не всплывут).
+    t.clock.now = until + DAY + 600;
+    t.billing.get(1)!.expiredNoticeFor = null;
+    await runBillingTick(t.deps);
+    expect(t.notices).toHaveLength(2);
+  });
+
+  it("тариф, подключённый root вручную (по счёту), напоминаний не получает", async () => {
+    const t = setup();
+    t.companies.set(1, { id: 1, name: "Кафе", plan: "team", planUntil: NOW + 2 * DAY } as never);
+    await runBillingTick(t.deps);
+    t.clock.now = NOW + 2 * DAY + 600;
+    await runBillingTick(t.deps);
+    expect(t.notices).toHaveLength(0);
+  });
+
+  it("с автопродлением и бессрочный тариф — без этих напоминаний", async () => {
+    const t = setup();
+    t.companies.set(1, { id: 1, name: "Кафе", plan: "team", planUntil: null } as never);
+    t.clock.now = NOW + DAY;
+    await runBillingTick(t.deps);
+    expect(t.notices).toHaveLength(0);
+
+    t.companies.set(1, { id: 1, name: "Кафе", plan: null, planUntil: null } as never);
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1, recurringConsent: true })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    await flush();
+    t.notices.length = 0;
+    t.clock.now = t.companies.get(1)!.planUntil! - 2 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.notices.map((n) => n.notice.title)).toEqual(["Скоро продление тарифа"]);
+  });
+});
+
 describe("маршруты оплаты", () => {
   async function buildApp(t: ReturnType<typeof setup>, role: "admin" | "worker" | "root" = "admin") {
     const { registerBillingRoutes, __resetCheckoutLimit } = await import("../server/billing-routes");
@@ -713,6 +1329,34 @@ describe("маршруты оплаты", () => {
     expect(post.headers.location).toBe("/billing/success?InvId=15&OutSum=990.00");
     const get = await request(app).get("/billing/success?InvId=15");
     expect(get.headers["x-frame-options"]).toBe("SAMEORIGIN");
+  });
+
+  it("касса для root: диагностика, проверка, сверка и возврат — только root", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const adminApp = await buildApp(t);
+    for (const [method, url] of [
+      ["get", "/api/root/billing/diagnostics"],
+      ["post", "/api/root/billing/check"],
+      ["post", "/api/root/billing/orders/15/reconcile"],
+      ["post", "/api/root/billing/orders/15/refund"],
+    ] as const) {
+      expect((await request(adminApp)[method](url)).status).toBe(403);
+    }
+    const app = await buildApp(t, "root");
+    const diag = await request(app).get("/api/root/billing/diagnostics");
+    expect(diag.status).toBe(200);
+    expect(diag.body).toMatchObject({ configured: true, testMode: false, secrets: { password3: true }, stats: { tables: true } });
+    expect((await request(app).post("/api/root/billing/check")).body).toMatchObject({ ok: true });
+    expect((await request(app).post("/api/root/billing/orders/abc/refund")).status).toBe(404);
+
+    const created = await request(await buildApp(t)).post("/api/billing/checkout").send({ plan: "team", months: 1 });
+    box.states.set(created.body.invId, 100);
+    const rec = await request(app).post(`/api/root/billing/orders/${created.body.invId}/reconcile`);
+    expect(rec.body).toMatchObject({ status: "paid", order: { id: created.body.invId, status: "paid", companyName: "Кафе" } });
+    const refund = await request(app).post(`/api/root/billing/orders/${created.body.invId}/refund`);
+    expect(refund.status).toBe(200);
+    expect(refund.body.order).toMatchObject({ refundStatus: "pending" });
   });
 
   it("цены меняет только root, с проверкой", async () => {

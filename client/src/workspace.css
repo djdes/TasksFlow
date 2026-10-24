@@ -1120,6 +1120,24 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .root-price .reports-select { width: 130px; }
 .root-price-input { width: 120px; height: 40px; padding: 0 10px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-variant-numeric: tabular-nums; }
 .root-price-input:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
+.root-cashbox { display: grid; gap: 14px; }
+.root-cashbox-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 16px; }
+.root-cashbox-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+.root-cashbox-list li b { color: hsl(var(--foreground)); font-weight: 600; }
+.root-cashbox-list svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.root-cashbox-list .is-ok svg { color: hsl(152 62% 36%); }
+.root-cashbox-list .is-missing svg { color: hsl(var(--destructive)); }
+.root-cashbox-list .is-off svg { color: hsl(var(--muted-foreground)); }
+.root-cashbox-urls { display: grid; gap: 6px; }
+.root-cashbox-url { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; }
+.root-cashbox-url-label { font-size: 12.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.root-cashbox-url code { min-width: 0; overflow-wrap: anywhere; padding: 6px 10px; border-radius: 8px; background: hsl(var(--muted)); font-size: 12.5px; }
+.root-cashbox-result { padding: 10px 12px; border-radius: 10px; font-size: 13.5px; line-height: 1.45; }
+.root-cashbox-result.is-ok { background: hsl(152 60% 40% / .12); color: hsl(152 62% 26%); }
+.root-cashbox-result.is-fail { background: hsl(var(--destructive) / .1); color: hsl(var(--destructive)); }
+.dark .root-cashbox-list .is-ok svg { color: hsl(152 60% 62%); }
+.dark .root-cashbox-result.is-ok { color: hsl(152 60% 72%); }
+.root-order-actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0 -10px; }
 
 @media (max-width: 760px) {
   .billing-seats { flex: 1 1 100%; }
@@ -1133,6 +1151,8 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 }
 @media (max-width: 420px) {
   .billing-plan-features { grid-template-columns: 1fr; }
+  .root-cashbox-url { grid-template-columns: minmax(0, 1fr) auto; }
+  .root-cashbox-url-label { grid-column: 1 / -1; }
   .billing-period { flex: 1 1 calc(50% - 4px); min-width: 0; }
   .billing-order { align-items: flex-start; }
 }

@@ -106,13 +106,15 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  /** Дольше обычного — для запросов, которые ждут внешний сервис (касса). */
+  timeoutMs: number = DEFAULT_FETCH_TIMEOUT_MS,
 ): Promise<Response> {
   const res = await fetchOrFriendlyError(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-    signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   await throwIfResNotOk(res);

@@ -10,6 +10,12 @@
  *    за 3 дня до конца срока — предупреждение, в последний день —
  *    списание, неудача — ещё две попытки раз в сутки, потом автопродление
  *    выключается и админы получают письмо.
+ *  • Сверка: зависший «ожидает оплаты» спрашиваем у кассы (OpStateExt) —
+ *    потерянное уведомление не оставит человека без оплаченного тарифа.
+ *  • Возврат — через API кассы (Пароль #3): тариф и срок откатываются,
+ *    если после этой оплаты их никто не менял.
+ *  • Без автопродления — напоминание за 3 дня до конца тарифа и в день,
+ *    когда он закончился.
  *
  * Всё внешнее (БД, касса, уведомления, время) приходит в deps — тесты
  * подставляют своё.
@@ -30,11 +36,18 @@ import {
   recurringStatement,
   RECURRING_MAX_ATTEMPTS,
   RECURRING_NOTICE_DAYS,
+  type BillingCheckResult,
+  type BillingDiagnostics,
   type BillingInfo,
   type BillingOrder,
   type CheckoutResult,
   type OrderStatus,
   type PlanPrice,
+  type ReconcileResult,
+  type ReconcileStatus,
+  type RefundResult,
+  type RefundStatus,
+  type RootBillingOrder,
 } from "@shared/billing";
 import type { Company, PaymentOrderRow, User } from "@shared/schema";
 import { logger } from "../logger";
@@ -42,12 +55,18 @@ import {
   buildPaymentParams,
   buildPaymentUrl,
   chargeRecurring,
+  createRefund,
   formatOutSum,
   isConfigured,
+  OP_RESULT,
+  OP_STATE,
+  opState,
+  refundState,
   verifyResultSignature,
+  type OpState,
   type RobokassaConfig,
 } from "./robokassa";
-import type { BillingStore, DueRecurring, SettleContext, SettlePatch } from "./store";
+import type { BillingStore, DueRecurring, ExpiringPlan, SettleContext, SettlePatch } from "./store";
 
 export const DAY = 24 * 60 * 60;
 /** Неоплаченный заказ через столько секунд помечается «не оплачен». */
@@ -78,6 +97,8 @@ export type BillingDeps = {
   countUsers: (companyId: number) => Promise<number>;
   fetch?: typeof fetch;
   now?: () => number;
+  /** Адрес сайта для ResultURL/SuccessURL в диагностике. */
+  baseUrl?: () => string;
 };
 
 const nowOf = (deps: BillingDeps) => (deps.now ?? (() => Math.floor(Date.now() / 1000)))();
@@ -88,8 +109,12 @@ export function formatDay(sec: number): string {
 
 const planName = (id: string) => (isPaidPlan(id) ? PLANS[id].name : id);
 
+const ORDER_STATUSES: readonly OrderStatus[] = ["pending", "paid", "expired", "refunded"];
+const REFUND_STATUSES: readonly RefundStatus[] = ["sending", "pending", "uncertain", "finished", "canceled"];
+
 export function toBillingOrder(row: PaymentOrderRow): BillingOrder {
-  const status: OrderStatus = row.status === "paid" || row.status === "expired" ? row.status : "pending";
+  const status: OrderStatus = (ORDER_STATUSES as readonly string[]).includes(row.status) ? (row.status as OrderStatus) : "pending";
+  const refundStatus = (REFUND_STATUSES as readonly string[]).includes(row.refundStatus ?? "") ? (row.refundStatus as RefundStatus) : null;
   return {
     id: row.id,
     plan: isPaidPlan(row.plan) ? row.plan : "team",
@@ -102,6 +127,7 @@ export function toBillingOrder(row: PaymentOrderRow): BillingOrder {
     createdAt: row.createdAt,
     paidAt: row.paidAt,
     planUntil: row.planUntilAfter,
+    refundStatus,
   };
 }
 
@@ -304,18 +330,26 @@ export async function handleResult(deps: BillingDeps, params: Record<string, str
     return bad("bad signature");
   }
 
-  const now = nowOf(deps);
-  const prices = await deps.store.getPrices();
   const raw = JSON.stringify(Object.fromEntries(Object.entries(params).filter(([k]) => k !== "SignatureValue")));
-  const result = await deps.store.settle(invId, raw, now, (ctx) => decideSettlement(ctx, prices, now));
-  if (!result.claimed) return ok(invIdRaw);
-
-  logger.info({ invId, companyId: result.order.companyId, planUntil: result.patch.plan?.until ?? null }, "[billing] оплата получена");
-  void afterPaid(deps, result.context, result.patch).catch((err) => logger.warn({ err, invId }, "[billing] уведомления об оплате не ушли"));
+  await settleOrder(deps, invId, raw, "result");
   return ok(invIdRaw);
 }
 
-async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePatch): Promise<void> {
+/**
+ * Засчитать оплату заказа: по уведомлению ResultURL или по сверке с кассой.
+ * true — засчитали сейчас; false — уже был оплачен (или возвращён).
+ */
+async function settleOrder(deps: BillingDeps, invId: number, raw: string, via: "result" | "check"): Promise<boolean> {
+  const now = nowOf(deps);
+  const prices = await deps.store.getPrices();
+  const result = await deps.store.settle(invId, raw, now, (ctx) => decideSettlement(ctx, prices, now));
+  if (!result.claimed) return false;
+  logger.info({ invId, companyId: result.order.companyId, planUntil: result.patch.plan?.until ?? null, via }, "[billing] оплата получена");
+  void afterPaid(deps, result.context, result.patch, via).catch((err) => logger.warn({ err, invId }, "[billing] уведомления об оплате не ушли"));
+  return true;
+}
+
+async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePatch, via: "result" | "check" = "result"): Promise<void> {
   const { order, company, billing } = ctx;
   deps.notify.live(company.id);
   const name = planName(order.plan);
@@ -335,7 +369,7 @@ async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePat
     );
     await deps.notify.owner(
       `⚠️ Автосписание после отключения автопродления — «${company.name}» (#${company.id}), заказ №${order.id}, ${formatRub(order.amountRub)}. ` +
-        "Верните деньги в кабинете Робокассы (оферта: 10 рабочих дней).",
+        "Верните деньги: root → «Платежи» → «Вернуть деньги» (или в кабинете Робокассы). Оферта: 10 рабочих дней.",
     );
     return;
   }
@@ -372,7 +406,10 @@ async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePat
   await deps.notify.owner(
     `💳 Оплата ${formatRub(order.amountRub)} — «${company.name}» (#${company.id}), «${name}» на ${periodLabel(order.months)}` +
       `${automatic ? ", автопродление" : order.recurringConsent ? ", с автопродлением" : ""}${order.isTest ? " [ТЕСТ]" : ""}` +
-      `${patch.plan ? `, до ${formatDay(patch.plan.until)}` : ". Тариф бессрочный — срок не менялся, разберите вручную"}. Заказ №${order.id}`,
+      `${patch.plan ? `, до ${formatDay(patch.plan.until)}` : ". Тариф бессрочный — срок не менялся, разберите вручную"}. Заказ №${order.id}` +
+      (via === "check"
+        ? ". ⚠️ Уведомление на ResultURL не пришло — оплату нашла сверка с кассой. Проверьте ResultURL в «Технических настройках» магазина."
+        : ""),
   );
 }
 
@@ -403,11 +440,31 @@ export async function disableRecurring(
   return wasActive;
 }
 
-/** Раз в несколько минут: протухшие заказы, предупреждения и автосписания. */
+/**
+ * Раз в несколько минут: протухшие заказы, сверка зависших с кассой,
+ * статусы возвратов, предупреждения и автосписания, напоминания об
+ * окончании тарифа. Каждый шаг сам ловит свои ошибки — один сбой не
+ * останавливает остальные.
+ */
 export async function runBillingTick(deps: BillingDeps): Promise<void> {
   const now = nowOf(deps);
   const expired = await deps.store.expirePending(now - PENDING_TTL_SEC);
   if (expired > 0) logger.info({ expired }, "[billing] неоплаченные заказы закрыты");
+  await step("сверка заказов", () => reconcilePending(deps, now));
+  await step("статусы возвратов", () => pollRefunds(deps));
+  await step("автопродление", () => processRecurring(deps, now));
+  await step("напоминания об окончании тарифа", () => sendExpiryNotices(deps, now));
+}
+
+async function step(name: string, run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch (err) {
+    logger.error({ err }, `[billing] ${name} не прошли`);
+  }
+}
+
+async function processRecurring(deps: BillingDeps, now: number): Promise<void> {
   const due = await deps.store.listDueRecurring(now + RECURRING_NOTICE_DAYS * DAY + 60);
   for (const row of due) {
     try {
@@ -454,15 +511,17 @@ async function sendUpcomingNotice(deps: BillingDeps, row: DueRecurring, now: num
 
 async function chargeSeries(deps: BillingDeps, row: DueRecurring, now: number): Promise<void> {
   const cfg = deps.config();
-  if (!cfg.login || !cfg.password1) {
-    logger.warn({ companyId: row.companyId }, "[billing] касса не настроена — автосписание отложено");
-    return;
-  }
   const terms = seriesTerms(row);
   const parent = row.recurringParentOrderId ? await deps.store.getOrder(row.recurringParentOrderId) : null;
   if (!terms || !parent || parent.status !== "paid") return giveUp(deps, row, "нет оплаченного первого платежа серии");
-  // Тестовые платежи карту не сохраняют: списывать нечего.
-  if (parent.isTest) return giveUp(deps, row, "серия создана в тестовом режиме — автосписаний нет");
+  // Серия из тестового режима и списывается тестово (IsTest=1, тестовые
+  // пароли): автопродление проверяется без денег — но только пока магазин
+  // в тестовом режиме. В боевом тестовая серия продлевала бы тариф даром.
+  if (parent.isTest && !cfg.isTest) return giveUp(deps, row, "серия создана в тестовом режиме — в боевом режиме её не списываем");
+  if (!cfg.login || !(parent.isTest ? cfg.testPassword1 : cfg.password1)) {
+    logger.warn({ companyId: row.companyId, isTest: parent.isTest }, "[billing] касса не настроена — автосписание отложено");
+    return;
+  }
 
   // Попытку «занимаем» до запроса одним условным UPDATE: второй процесс
   // (перезапуск при деплое) или повторный тик в те же сутки её не получат,
@@ -476,14 +535,14 @@ async function chargeSeries(deps: BillingDeps, row: DueRecurring, now: number): 
     months: terms.months,
     amountRub: terms.amount,
     description: `${orderDescription(terms.plan, terms.months)}, автопродление`,
-    isTest: false,
+    isTest: parent.isTest,
     recurringConsent: false,
     recurringChargeOf: parent.id,
     createdAt: now,
   });
   const result = await chargeRecurring(
     cfg,
-    { invId: order.id, previousInvId: parent.id, amountRub: terms.amount, description: order.description },
+    { invId: order.id, previousInvId: parent.id, amountRub: terms.amount, description: order.description, isTest: parent.isTest },
     deps.fetch,
   );
   if (result.accepted) {
@@ -496,7 +555,7 @@ async function chargeSeries(deps: BillingDeps, row: DueRecurring, now: number): 
     logger.warn({ companyId: row.companyId, orderId: order.id, response: result.response }, "[billing] касса не ответила на автосписание");
     await deps.notify.owner(
       `⚠️ Робокасса не ответила на автосписание — «${row.companyName}» (#${row.companyId}), заказ №${order.id}: ${result.response}. ` +
-        "Проверьте операцию в кабинете кассы; повтор — через сутки.",
+        "Сверка с кассой засчитает его сама, если списание прошло; повтор — через сутки.",
     );
     return;
   }
@@ -534,4 +593,388 @@ async function giveUp(deps: BillingDeps, row: DueRecurring, reason: string, atte
   });
   await deps.notify.owner(`⚠️ Автопродление выключено — «${row.companyName}» (#${row.companyId}): ${reason}`);
   deps.notify.live(row.companyId);
+}
+
+// --- Сверка с кассой (OpStateExt) -------------------------------------------------
+
+/** Моложе не сверяем: человек ещё на странице оплаты, уведомление в пути. */
+export const CHECK_MIN_AGE_SEC = 2 * 60;
+/** Сколько зависших заказов сверяем за один тик. */
+const CHECKS_PER_TICK = 10;
+
+/** Как часто сверять заказ: свежий — каждые 5 минут, старше часа — раз в час, старше суток — раз в 6 часов. */
+export function checkInterval(ageSec: number): number {
+  if (ageSec < 60 * 60) return 5 * 60;
+  if (ageSec < DAY) return 60 * 60;
+  return 6 * 60 * 60;
+}
+
+/** Проверочный номер заказа: такого нет, касса ответит «не найдено», если логин и Пароль #2 верны. */
+export const PROBE_INV_ID = 2_147_000_000;
+
+function opResultMessage(state: Extract<OpState, { ok: true }>): string {
+  if (state.resultCode === OP_RESULT.badSignature) return "Касса не приняла подпись: проверьте Пароль #2 и алгоритм хеша (ROBOKASSA_HASH)";
+  if (state.resultCode === OP_RESULT.shopNotFound) return "Касса не нашла магазин: проверьте логин (ROBOKASSA_MERCHANT_LOGIN)";
+  return `Касса ответила кодом ${state.resultCode}${state.description ? `: ${state.description}` : ""}`;
+}
+
+/**
+ * IncSum — сколько заплатил покупатель; меньше суммы заказа быть не может.
+ * Непонятный формат — не засчитываем сами: пусть посмотрит человек.
+ */
+export function coversAmount(incSum: string | null, amountRub: number): boolean {
+  if (incSum === null) return true;
+  const sum = Number(incSum.replace(/[\s\u00a0]/g, "").replace(",", "."));
+  return Number.isFinite(sum) && sum + 0.005 >= amountRub;
+}
+
+/**
+ * Спросить кассу о заказе и привести его в соответствие: оплачен — засчитать
+ * (как по ResultURL), отменён — «не оплачен», деньги возвращены в кабинете
+ * кассы — отметить возврат и откатить тариф. Ответ кассы подписан нашим
+ * Паролем #2 и пришёл на наш запрос, сумма привязана к InvId подписью
+ * формы оплаты, поэтому State 100 достаточно.
+ */
+export async function reconcileOrder(deps: BillingDeps, order: PaymentOrderRow): Promise<{ status: ReconcileStatus; message: string }> {
+  const state = await opState(deps.config(), order.id, deps.fetch);
+  if (!state.ok) return { status: "error", message: state.error };
+  if (state.resultCode === OP_RESULT.notFound) {
+    return { status: "not_found", message: order.isTest ? "Касса не показывает тестовые операции" : "В кассе такой операции нет: оплату не начинали" };
+  }
+  if (state.resultCode !== OP_RESULT.ok) return { status: "error", message: opResultMessage(state) };
+
+  switch (state.stateCode) {
+    case OP_STATE.paid: {
+      if (order.status === "paid" || order.status === "refunded") return { status: "already", message: "Оплачен — в кассе так же" };
+      if (!coversAmount(state.incSum, order.amountRub)) {
+        logger.error({ invId: order.id, incSum: state.incSum, expected: order.amountRub }, "[billing] сверка: сумма в кассе не сходится с заказом");
+        await deps.notify.owner(`⚠️ Сверка: по заказу №${order.id} касса показывает сумму «${state.incSum}» при заказе на ${formatRub(order.amountRub)}. Не засчитано — разберите вручную.`);
+        return { status: "error", message: `Касса показывает сумму «${state.incSum}» при заказе на ${formatRub(order.amountRub)} — не засчитано` };
+      }
+      const raw = JSON.stringify({ source: "OpStateExt", state: state.stateCode, incSum: state.incSum, paymentMethod: state.paymentMethod });
+      const settled = await settleOrder(deps, order.id, raw, "check");
+      return settled ? { status: "paid", message: "Оплата найдена в кассе и засчитана" } : { status: "already", message: "Уже засчитан" };
+    }
+    case OP_STATE.cancelled:
+      if (order.status === "pending") await deps.store.expireOrder(order.id);
+      return { status: "cancelled", message: "Касса: операция отменена, денег нет" };
+    case OP_STATE.refunded:
+      if (order.status === "paid") {
+        // Деньги вернули в кабинете кассы — у нас заказ ещё «оплачен».
+        if (order.refundStatus !== "pending" && order.refundStatus !== "uncertain") {
+          if (!(await deps.store.claimRefund(order.id, nowOf(deps)))) return { status: "refunded", message: "Касса: деньги возвращены, возврат уже обрабатывается" };
+          await deps.store.setRefund(order.id, { refundStatus: "uncertain" });
+          await stopSeriesForRefund(deps, order);
+        }
+        await completeRefund(deps, order.id);
+        return { status: "refunded", message: "Касса: деньги возвращены — заказ отмечен возвращённым" };
+      }
+      return { status: "refunded", message: "Касса: деньги возвращены покупателю" };
+    case OP_STATE.crediting:
+      return { status: "waiting", message: "Деньги получены, касса их зачисляет — засчитаем, когда закончит" };
+    default:
+      return { status: "waiting", message: "Касса: операция создана, оплаты пока нет" };
+  }
+}
+
+/** Зависшие «ожидает оплаты» (боевые): свежие — чаще, старые — реже. */
+async function reconcilePending(deps: BillingDeps, now: number): Promise<void> {
+  const cfg = deps.config();
+  if (!cfg.login || !cfg.password2) return;
+  // Ярусы — те же интервалы, что в checkInterval: отбор целиком в SQL, иначе
+  // старые брошенные заказы забили бы выборку и свежие не проверялись бы.
+  const tiers = [
+    { createdAfter: now - 60 * 60, checkedBefore: now - checkInterval(0) },
+    { createdAfter: now - DAY, checkedBefore: now - checkInterval(60 * 60) },
+    { createdAfter: now - PENDING_TTL_SEC, checkedBefore: now - checkInterval(DAY) },
+  ];
+  const candidates = await deps.store.listPendingForCheck({ tiers, createdBefore: now - CHECK_MIN_AGE_SEC, limit: CHECKS_PER_TICK });
+  for (const order of candidates) {
+    if (!(await deps.store.claimCheck(order.id, now, now - checkInterval(now - order.createdAt)))) continue;
+    const result = await reconcileOrder(deps, order).catch((err) => ({ status: "error" as const, message: String(err) }));
+    if (result.status === "paid" || result.status === "error") logger.info({ invId: order.id, ...result }, "[billing] сверка заказа");
+  }
+}
+
+/**
+ * Опрос статуса заказа со страницы оплаты: если он завис в «ожидает
+ * оплаты», в фоне спрашиваем кассу (не чаще раза в 30 секунд на заказ) —
+ * следующий опрос увидит результат.
+ */
+export function checkWhilePolling(deps: BillingDeps, order: PaymentOrderRow): void {
+  const now = nowOf(deps);
+  if (order.status !== "pending" || order.isTest || now - order.createdAt < 60) return;
+  if (order.checkedAt !== null && now - order.checkedAt < 30) return;
+  void (async () => {
+    if (!(await deps.store.claimCheck(order.id, now, now - 30))) return;
+    await reconcileOrder(deps, order);
+  })().catch((err) => logger.warn({ err, invId: order.id }, "[billing] сверка при опросе не прошла"));
+}
+
+// --- Возвраты ---------------------------------------------------------------------
+
+/**
+ * Возвращённая оплата серии автопродления выключает серию: иначе откат
+ * срока сразу вызвал бы новое списание.
+ */
+async function stopSeriesForRefund(deps: BillingDeps, order: PaymentOrderRow): Promise<void> {
+  const billing = await deps.store.getCompanyBilling(order.companyId);
+  const parent = billing?.recurringParentOrderId ?? null;
+  if (!billing?.recurringActive || parent === null || (order.id !== parent && order.recurringChargeOf !== parent)) return;
+  const now = nowOf(deps);
+  if (!(await deps.store.disableRecurring(order.companyId, now))) return;
+  await deps.store.addConsent({
+    companyId: order.companyId,
+    userId: null,
+    orderId: order.id,
+    granted: false,
+    statementText: `Автопродление выключено: возврат оплаты по заказу №${order.id}`,
+    offerRevision: OFFER_REVISION,
+    ip: null,
+    userAgent: null,
+    createdAt: now,
+  });
+  deps.notify.live(order.companyId);
+}
+
+/** Деньги вернулись: заказ «возвращён», тариф откатывается, админам — уведомление. */
+async function completeRefund(deps: BillingDeps, orderId: number): Promise<void> {
+  const finished = await deps.store.finishRefund(orderId, nowOf(deps));
+  if (!finished) return;
+  const { order, rolledBack } = finished;
+  const name = planName(order.plan);
+  logger.info({ invId: order.id, companyId: order.companyId, rolledBack }, "[billing] возврат завершён");
+  deps.notify.live(order.companyId);
+  const company = await deps.getCompany(order.companyId);
+  const planText = rolledBack
+    ? isPaidPlan(rolledBack.plan) && (rolledBack.until === null || rolledBack.until > nowOf(deps))
+      ? `Тариф «${planName(rolledBack.plan)}» действует ${rolledBack.until ? `до ${formatDay(rolledBack.until)}` : "бессрочно"}, как до этой оплаты.`
+      : `Срок, оплаченный этим платежом, снят: кабинет на тарифе «${PLANS.start.name}».`
+    : "Срок тарифа не меняли.";
+  await deps.notify
+    .admins(
+      order.companyId,
+      {
+        title: "Деньги возвращены",
+        body: `Вернули ${formatRub(order.amountRub)} за «${name}», заказ №${order.id}.`,
+        paragraphs: [
+          `Вернули ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)} (заказ №${order.id}). Деньги придут на карту, которой платили; срок зачисления зависит от банка.`,
+          planText,
+        ],
+      },
+      [order.email],
+    )
+    .catch((err) => logger.warn({ err, invId: order.id }, "[billing] уведомление о возврате не ушло"));
+  await deps.notify.owner(
+    `↩️ Возврат ${formatRub(order.amountRub)} завершён — «${company?.name ?? `#${order.companyId}`}», заказ №${order.id}. ` +
+      (rolledBack
+        ? "Тариф откачен к состоянию до оплаты."
+        : "Тариф не откатывали: после оплаты он менялся или оплата старше снимка «до оплаты». Поправьте срок вручную, если нужно."),
+  );
+}
+
+const rootOrder = async (deps: BillingDeps, id: number): Promise<RootBillingOrder | null> => {
+  const row = await deps.store.getOrder(id);
+  if (!row) return null;
+  const company = await deps.getCompany(row.companyId);
+  return { ...toBillingOrder(row), companyId: row.companyId, companyName: company?.name ?? null, email: row.email };
+};
+
+/**
+ * Возврат оплаты целиком через API кассы. Повторно отправить нельзя, пока
+ * касса не ответила, что прошлый возврат отменён: двойной возврат — это
+ * потерянные деньги. Исключение — «касса не ответила»: root может повторить
+ * (force), подтвердив, что проверил кабинет; перед отправкой касса всё
+ * равно спрашивается, не вернули ли уже (State 60).
+ */
+export async function refundOrder(deps: BillingDeps, orderId: number, opts: { force?: boolean } = {}): Promise<Reply<RefundResult>> {
+  const order = await deps.store.getOrder(orderId);
+  if (!order) return { status: 404, json: { message: "Заказ не найден" } };
+  if (order.status !== "paid") return { status: 409, json: { message: "Вернуть можно только оплаченный заказ" } };
+  if (order.isTest) return { status: 409, json: { message: "Тестовый платёж: денег не было, возвращать нечего" } };
+  const retryUncertain = order.refundStatus === "uncertain" && opts.force === true;
+  if (order.refundStatus === "uncertain" && !retryUncertain) {
+    return {
+      status: 409,
+      json: {
+        message: "Касса не подтвердила прошлый возврат. Проверьте в кабинете Робокассы, что деньги не вернулись, и только тогда повторите.",
+        code: "refund_uncertain",
+      },
+    };
+  }
+  if (order.refundStatus && order.refundStatus !== "canceled" && !retryUncertain) {
+    return { status: 409, json: { message: "Возврат по этому заказу уже отправлен" } };
+  }
+  const cfg = deps.config();
+  if (!cfg.password3) {
+    return {
+      status: 503,
+      json: { message: "Нужен Пароль #3 (ROBOKASSA_PASSWORD3) — без него касса не принимает возвраты. Можно вернуть деньги в кабинете Робокассы, затем нажать «Проверить в кассе».", code: "no_password3" },
+    };
+  }
+  if (!(await deps.store.claimRefund(order.id, nowOf(deps), { allowUncertain: retryUncertain }))) {
+    return { status: 409, json: { message: "Возврат по этому заказу уже отправлен" } };
+  }
+
+  const state = await opState(cfg, order.id, deps.fetch);
+  if (!state.ok || state.resultCode !== OP_RESULT.ok || !state.opKey) {
+    await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+    const reason = !state.ok ? state.error : state.resultCode !== OP_RESULT.ok ? opResultMessage(state) : "касса не вернула ключ операции";
+    return { status: 502, json: { message: `Не удалось найти операцию в кассе: ${reason}` } };
+  }
+  if (state.stateCode === OP_STATE.refunded) {
+    await deps.store.setRefund(order.id, { refundStatus: "uncertain" });
+    await stopSeriesForRefund(deps, order);
+    await completeRefund(deps, order.id);
+    return { status: 200, json: { message: "Касса уже вернула эти деньги — заказ отмечен возвращённым", order: await rootOrder(deps, order.id) } };
+  }
+
+  const created = await createRefund(cfg, { opKey: state.opKey }, deps.fetch);
+  if (created.ok) {
+    await deps.store.setRefund(order.id, { refundStatus: "pending", refundRequestId: created.requestId });
+    await stopSeriesForRefund(deps, order);
+    logger.info({ invId: order.id, requestId: created.requestId }, "[billing] возврат отправлен");
+    return { status: 200, json: { message: "Возврат отправлен в кассу. Когда деньги уйдут, заказ станет «Возвращён», а тариф откатится.", order: await rootOrder(deps, order.id) } };
+  }
+  if (!created.definitive) {
+    // Ответа нет: возврат мог уйти. Повтор — риск вернуть дважды, поэтому
+    // ждём: сверка увидит State 60 и закончит возврат сама.
+    await deps.store.setRefund(order.id, { refundStatus: "uncertain" });
+    await stopSeriesForRefund(deps, order);
+    await deps.notify.owner(`⚠️ Робокасса не ответила на возврат по заказу №${order.id}: ${created.error}. Проверьте операцию в кабинете кассы и не повторяйте возврат.`);
+    return { status: 202, json: { message: "Касса не ответила. Не повторяйте возврат: проверьте операцию в кабинете Робокассы — статус обновится сам.", order: await rootOrder(deps, order.id) } };
+  }
+  await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+  return { status: 502, json: { message: `Касса отклонила возврат: ${created.error}` } };
+}
+
+/** Сколько минут «отправляется» считается нормальным: два запроса к кассе — меньше минуты. */
+const REFUND_SENDING_STALE_SEC = 10 * 60;
+
+/**
+ * Статусы отправленных возвратов: деньги ушли — заказ «возвращён», отменён —
+ * снова можно вернуть. Зависшее «отправляется» (процесс упал посреди
+ * отправки) становится «касса не ответила» и проверяется по State 60.
+ * Очередь по checked_at — по кругу, не одни и те же 20.
+ */
+async function pollRefunds(deps: BillingDeps): Promise<void> {
+  const now = nowOf(deps);
+  const rows = await deps.store.listRefundsInProgress(now - REFUND_SENDING_STALE_SEC, 20);
+  if (!rows.length) return;
+  const cfg = deps.config();
+  for (const order of rows) {
+    await deps.store.markChecked(order.id, now);
+    if (order.refundStatus === "sending") {
+      await deps.store.setRefund(order.id, { refundStatus: "uncertain" });
+      await deps.notify.owner(`⚠️ Возврат по заказу №${order.id} завис на отправке. Проверьте операцию в кабинете Робокассы: если денег не вернули — повторите возврат в root.`);
+    }
+    if (order.refundStatus === "pending" && order.refundRequestId) {
+      const state = await refundState(order.refundRequestId, deps.fetch);
+      if (!state.ok) continue;
+      if (state.label === "finished") await completeRefund(deps, order.id);
+      else if (state.label === "canceled") {
+        await deps.store.setRefund(order.id, { refundStatus: "canceled" });
+        await deps.notify.owner(
+          `⚠️ Робокасса отменила возврат по заказу №${order.id} (${formatRub(order.amountRub)}). Его можно отправить ещё раз. ` +
+            "Если это была оплата серии, автопродление выключилось при отправке возврата — включить его можно только новой оплатой с галочкой.",
+        );
+      }
+    } else {
+      // Без ответа кассы при отправке — смотрим состояние самой операции.
+      const state = await opState(cfg, order.id, deps.fetch);
+      if (state.ok && state.resultCode === OP_RESULT.ok && state.stateCode === OP_STATE.refunded) await completeRefund(deps, order.id);
+    }
+  }
+}
+
+// --- Напоминания об окончании тарифа -----------------------------------------------
+
+/**
+ * Оплаченный онлайн тариф без автопродления: за 3 дня до конца — «скоро
+ * закончится», после конца (в течение суток) — «закончился». По одному
+ * разу на срок.
+ */
+async function sendExpiryNotices(deps: BillingDeps, now: number): Promise<void> {
+  const rows = await deps.store.listExpiringPlans(now - DAY, now + RECURRING_NOTICE_DAYS * DAY);
+  for (const row of rows) {
+    if (!isPaidPlan(row.plan)) continue;
+    const kind = row.planUntil > now ? "expiry" : "expired";
+    if ((kind === "expiry" ? row.expiryNoticeFor : row.expiredNoticeFor) === row.planUntil) continue;
+    if (!(await deps.store.claimExpiryNotice(row.companyId, kind, row.planUntil, now))) continue;
+    await deps.notify.admins(row.companyId, expiryNotice(row, kind, now)).catch((err) => logger.warn({ err, companyId: row.companyId }, "[billing] напоминание о тарифе не ушло"));
+  }
+}
+
+export function expiryNotice(row: Pick<ExpiringPlan, "plan" | "planUntil">, kind: "expiry" | "expired", now: number): BillingNotice {
+  const name = planName(row.plan);
+  if (kind === "expiry") {
+    const days = Math.max(1, Math.ceil((row.planUntil - now) / DAY));
+    return {
+      title: "Тариф скоро закончится",
+      body: `«${name}» действует до ${formatDay(row.planUntil)}. Продлить — в «Тариф и оплата».`,
+      paragraphs: [
+        `Тариф «${name}» действует до ${formatDay(row.planUntil)} — осталось ${daysLabel(days)}.`,
+        "Чтобы ничего не отключилось, продлите его в «Тариф и оплата». Оставшиеся дни не пропадут — новый срок прибавится к ним.",
+      ],
+    };
+  }
+  return {
+    title: "Тариф закончился",
+    body: `«${name}» закончился ${formatDay(row.planUntil)}. Продлить — в «Тариф и оплата».`,
+    paragraphs: [
+      `Тариф «${name}» закончился ${formatDay(row.planUntil)}. Кабинет перешёл на бесплатный «${PLANS.start.name}»: данные и история на месте.`,
+      "Продлить тариф можно в «Тариф и оплата» — всё вернётся сразу после оплаты.",
+    ],
+  };
+}
+
+// --- Диагностика для root -------------------------------------------------------------
+
+export async function billingDiagnostics(deps: BillingDeps): Promise<BillingDiagnostics> {
+  const cfg = deps.config();
+  const base = (deps.baseUrl?.() ?? "").replace(/\/+$/, "");
+  return {
+    secrets: {
+      login: !!cfg.login,
+      password1: !!cfg.password1,
+      password2: !!cfg.password2,
+      testPassword1: !!cfg.testPassword1,
+      testPassword2: !!cfg.testPassword2,
+      password3: !!cfg.password3,
+    },
+    testMode: cfg.isTest,
+    configured: isConfigured(cfg),
+    hash: cfg.hash,
+    recurring: cfg.recurring,
+    receipt: cfg.receipt,
+    sno: cfg.sno,
+    tax: cfg.tax,
+    urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
+    stats: await deps.store.stats(),
+  };
+}
+
+/**
+ * Проверка подключения без денег: запрос состояния заведомо несуществующего
+ * заказа. «Не найдено» — касса узнала магазин и приняла подпись Пароля #2.
+ * Пароль #1 так не проверить — только тестовым платежом.
+ */
+export async function checkConnection(deps: BillingDeps): Promise<BillingCheckResult> {
+  const cfg = deps.config();
+  if (!cfg.login || !cfg.password2) return { ok: false, message: "Не заданы ROBOKASSA_MERCHANT_LOGIN и ROBOKASSA_PASSWORD2" };
+  const state = await opState(cfg, PROBE_INV_ID, deps.fetch);
+  if (!state.ok) return { ok: false, message: `Касса не ответила: ${state.error}` };
+  if (state.resultCode === OP_RESULT.notFound || state.resultCode === OP_RESULT.ok) {
+    return { ok: true, message: "Касса отвечает: логин и Пароль #2 верны. Пароль #1 проверит тестовый платёж." };
+  }
+  return { ok: false, message: opResultMessage(state) };
+}
+
+/** Сверка одного заказа по кнопке root. */
+export async function reconcileOne(deps: BillingDeps, orderId: number): Promise<Reply<ReconcileResult>> {
+  const order = await deps.store.getOrder(orderId);
+  if (!order) return { status: 404, json: { message: "Заказ не найден" } };
+  const result = await reconcileOrder(deps, order);
+  if (order.status === "pending") await deps.store.claimCheck(order.id, nowOf(deps), nowOf(deps)).catch(() => false);
+  return { status: 200, json: { ...result, order: await rootOrder(deps, order.id) } };
 }
