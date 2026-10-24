@@ -36,8 +36,13 @@ import {
   recurringStatement,
   RECURRING_MAX_ATTEMPTS,
   RECURRING_NOTICE_DAYS,
+  PAYMENT_METHODS,
   type BillingCheckResult,
   type BillingDiagnostics,
+  type CompanyRequisites,
+  type PaidPlanId,
+  type PaymentMethod,
+  type PromoQuote,
   type BillingInfo,
   type BillingOrder,
   type CheckoutResult,
@@ -49,7 +54,7 @@ import {
   type RefundStatus,
   type RootBillingOrder,
 } from "@shared/billing";
-import type { Company, PaymentOrderRow, User } from "@shared/schema";
+import type { Company, CompanyRequisitesRow, PaymentOrderRow, User } from "@shared/schema";
 import { logger } from "../logger";
 import {
   buildPaymentParams,
@@ -66,7 +71,11 @@ import {
   type OpState,
   type RobokassaConfig,
 } from "./robokassa";
-import type { BillingStore, DueRecurring, ExpiringPlan, SettleContext, SettlePatch } from "./store";
+import { issueClosingDocument } from "./closing";
+import { sellerMissing, type SellerRequisites } from "./legal";
+import { documentsReady, requisitesOf, sellerOf } from "./parties";
+import { applyPromo, PROMO_HOLD_SEC, RESERVATION_MESSAGES, type PromoApplied } from "./promo";
+import type { BillingStore, DueRecurring, ExpiringPlan, NewOrder, SettleContext, SettlePatch } from "./store";
 
 export const DAY = 24 * 60 * 60;
 /** Неоплаченный заказ через столько секунд помечается «не оплачен». */
@@ -97,9 +106,13 @@ export type BillingDeps = {
   countUsers: (companyId: number) => Promise<number>;
   fetch?: typeof fetch;
   now?: () => number;
-  /** Адрес сайта для ResultURL/SuccessURL в диагностике. */
+  /** Адрес сайта для ResultURL/SuccessURL в диагностике и в документах. */
   baseUrl?: () => string;
+  /** Реквизиты Исполнителя для счетов и УПД; по умолчанию — из env LEGAL_*. */
+  seller?: () => SellerRequisites;
 };
+
+export { documentsReady, requisitesOf, sellerOf } from "./parties";
 
 const nowOf = (deps: BillingDeps) => (deps.now ?? (() => Math.floor(Date.now() / 1000)))();
 
@@ -109,12 +122,18 @@ export function formatDay(sec: number): string {
 
 const planName = (id: string) => (isPaidPlan(id) ? PLANS[id].name : id);
 
-const ORDER_STATUSES: readonly OrderStatus[] = ["pending", "paid", "expired", "refunded"];
+const ORDER_STATUSES: readonly OrderStatus[] = ["pending", "paid", "expired", "refunded", "cancelled"];
 const REFUND_STATUSES: readonly RefundStatus[] = ["sending", "pending", "uncertain", "finished", "canceled"];
 
-export function toBillingOrder(row: PaymentOrderRow): BillingOrder {
+/**
+ * docs — реквизиты Исполнителя заполнены: тогда у счёта есть PDF, а у
+ * оплаченного боевого заказа — УПД.
+ */
+export function toBillingOrder(row: PaymentOrderRow, opts: { docs?: boolean } = {}): BillingOrder {
   const status: OrderStatus = (ORDER_STATUSES as readonly string[]).includes(row.status) ? (row.status as OrderStatus) : "pending";
   const refundStatus = (REFUND_STATUSES as readonly string[]).includes(row.refundStatus ?? "") ? (row.refundStatus as RefundStatus) : null;
+  const method: PaymentMethod = (PAYMENT_METHODS as readonly string[]).includes(row.paymentMethod) ? (row.paymentMethod as PaymentMethod) : "card";
+  const docs = opts.docs === true;
   return {
     id: row.id,
     plan: isPaidPlan(row.plan) ? row.plan : "team",
@@ -128,6 +147,12 @@ export function toBillingOrder(row: PaymentOrderRow): BillingOrder {
     paidAt: row.paidAt,
     planUntil: row.planUntilAfter,
     refundStatus,
+    method,
+    promoCode: row.promoCode,
+    discountRub: row.discountRub,
+    invoiceDueAt: row.invoiceDueAt,
+    hasInvoice: docs && method === "invoice",
+    hasUpd: docs && status === "paid" && !row.isTest && row.amountRub > 0,
   };
 }
 
@@ -141,12 +166,14 @@ export async function billingInfo(
   if (!company) return null;
   const cfg = deps.config();
   const now = nowOf(deps);
-  const [prices, billing, orders, usersCount] = await Promise.all([
+  const [prices, billing, orders, usersCount, requisites] = await Promise.all([
     deps.store.getPrices(),
     deps.store.getCompanyBilling(ctx.companyId),
     deps.store.listOrders(ctx.companyId, 20),
     deps.countUsers(ctx.companyId),
+    deps.store.getRequisites(ctx.companyId),
   ]);
+  const docs = documentsReady(deps);
   const plan = effectivePlan(company.plan, company.planUntil, now);
   const active = Boolean(billing?.recurringActive);
   return {
@@ -167,10 +194,62 @@ export async function billingInfo(
       amountRub: active ? billing?.recurringAmountRub ?? null : null,
       nextChargeAt: active && company.planUntil ? chargeAt(company.planUntil) : null,
     },
-    orders: orders.map(toBillingOrder),
+    orders: orders.map((o) => toBillingOrder(o, { docs })),
     email: ctx.user.email ?? null,
     now,
+    requisites: requisites ? requisitesOf(requisites) : null,
+    invoiceAvailable: docs,
   };
+}
+
+/**
+ * Цена тарифа и срока с промокодом. Ошибка — готовый ответ: нет цены,
+ * код не подошёл или сумма на странице устарела.
+ */
+export async function quoteOrder(
+  deps: BillingDeps,
+  input: { companyId: number; plan: PaidPlanId; months: number; promoCode?: string; expectedRub?: number; now: number },
+): Promise<{ ok: true; baseRub: number; amountRub: number; promo: PromoApplied | null } | { ok: false; reply: Reply<never> }> {
+  const prices = await deps.store.getPrices();
+  const base = priceFor(prices, input.plan, input.months);
+  if (base === null) return { ok: false, reply: { status: 400, json: { message: "Этот тариф сейчас нельзя оплатить онлайн — напишите нам, подключим." } } };
+  let promo: PromoApplied | null = null;
+  if (input.promoCode) {
+    const applied = await applyPromo(deps.store, { code: input.promoCode, companyId: input.companyId, baseRub: base, now: input.now });
+    if (!applied.ok) return { ok: false, reply: { status: 400, json: { message: applied.message, code: "promo" } } };
+    promo = applied.applied;
+  }
+  const amount = promo ? promo.amountRub : base;
+  if (input.expectedRub !== undefined && input.expectedRub !== amount) {
+    return { ok: false, reply: { status: 409, json: { message: "Цена изменилась — проверьте сумму и нажмите ещё раз.", code: "price_changed", priceRub: amount } } };
+  }
+  return { ok: true, baseRub: base, amountRub: amount, promo };
+}
+
+/**
+ * Создать заказ: с промокодом — атомарным резервом (лимит, «один раз на
+ * компанию», «только первая оплата» под блокировкой кода), без — как обычно.
+ */
+export async function placeOrder(
+  deps: BillingDeps,
+  order: NewOrder,
+  promo: PromoApplied | null,
+  now: number,
+): Promise<{ ok: true; order: PaymentOrderRow } | { ok: false; reply: Reply<never> }> {
+  if (!promo) return { ok: true, order: await deps.store.createOrder(order) };
+  const placed = await deps.store.createOrderWithPromo(order, { code: promo.code, companyId: order.companyId, free: order.amountRub === 0, reservedSince: now - PROMO_HOLD_SEC });
+  if (!placed.ok) return { ok: false, reply: { status: 400, json: { message: RESERVATION_MESSAGES[placed.reason], code: "promo" } } };
+  return placed;
+}
+
+/** POST /api/billing/promo: что даст код на выбранный тариф и срок. */
+export async function quotePromo(deps: BillingDeps, ctx: { companyId: number; body: unknown }): Promise<PromoQuote> {
+  const parsed = checkoutSchema.pick({ plan: true, months: true, promoCode: true }).safeParse(ctx.body);
+  if (!parsed.success || !parsed.data.promoCode) return { ok: false, message: "Введите промокод" };
+  const quote = await quoteOrder(deps, { companyId: ctx.companyId, ...parsed.data, now: nowOf(deps) });
+  if (!quote.ok) return { ok: false, message: (quote.reply.json as { message: string }).message };
+  const promo = quote.promo!;
+  return { ok: true, code: promo.code, label: promo.label, baseRub: quote.baseRub, discountRub: promo.discountRub, amountRub: quote.amountRub };
 }
 
 // --- Заказ ---------------------------------------------------------------------
@@ -185,27 +264,53 @@ export async function createCheckout(
   if (!parsed.success) return { status: 400, json: { message: parsed.error.errors[0]?.message ?? "Проверьте данные" } };
   const input = parsed.data;
   const cfg = deps.config();
-  if (!isConfigured(cfg)) {
+  const now = nowOf(deps);
+  const quote = await quoteOrder(deps, { companyId: ctx.companyId, ...input, now });
+  if (!quote.ok) return quote.reply;
+  // Промокод на всю сумму работает и без кассы: денег нет, касса не нужна.
+  if (quote.amountRub > 0 && !isConfigured(cfg)) {
     return {
       status: 503,
       json: { message: "Онлайн-оплата пока не подключена. Напишите на support@tasksflow.ru — подключим тариф по счёту.", code: "not_configured" },
     };
   }
-  const prices = await deps.store.getPrices();
-  const price = priceFor(prices, input.plan, input.months);
-  if (price === null) return { status: 400, json: { message: "Этот тариф сейчас нельзя оплатить онлайн — напишите нам, подключим." } };
-  if (input.expectedRub !== undefined && input.expectedRub !== price) {
-    return { status: 409, json: { message: "Цена изменилась — проверьте сумму и нажмите ещё раз.", code: "price_changed", priceRub: price } };
-  }
+  const price = quote.amountRub;
+  const promo = quote.promo;
   const company = await deps.getCompany(ctx.companyId);
   if (!company) return { status: 404, json: { message: "Компания не найдена" } };
   if (isPaidPlan(company.plan) && company.planUntil == null) {
     return { status: 409, json: { message: "Тариф подключён бессрочно — оплачивать его не нужно. Сменить тариф поможет поддержка.", code: "perpetual" } };
   }
 
-  const now = nowOf(deps);
+  const discount = promo ? { baseRub: quote.baseRub, discountRub: promo.discountRub, promoCode: promo.code } : {};
+  if (price === 0) {
+    // Промокод на всю сумму: тариф включается сразу, автопродления нет —
+    // карту никто не вводил.
+    const placed = await placeOrder(deps, {
+      companyId: ctx.companyId,
+      userId: ctx.user.id,
+      email: input.email ?? ctx.user.email ?? null,
+      plan: input.plan,
+      months: input.months,
+      amountRub: 0,
+      description: orderDescription(input.plan, input.months),
+      isTest: false,
+      recurringConsent: false,
+      recurringChargeOf: null,
+      createdAt: now,
+      paymentMethod: "promo",
+      ...discount,
+    }, promo, now);
+    if (!placed.ok) return placed.reply;
+    const order = placed.order;
+    await settleOrder(deps, order.id, JSON.stringify({ source: "promo", code: promo!.code }), "promo");
+    const paid = await deps.store.getOrder(order.id);
+    logger.info({ orderId: order.id, companyId: ctx.companyId, promo: promo!.code }, "[billing] тариф включён промокодом");
+    return { status: 200, json: { invId: order.id, amountRub: 0, params: {}, paymentUrl: "", free: true, order: paid ? toBillingOrder(paid, { docs: documentsReady(deps) }) : undefined } };
+  }
+
   const recurring = input.recurringConsent && cfg.recurring;
-  const order = await deps.store.createOrder({
+  const placed = await placeOrder(deps, {
     companyId: ctx.companyId,
     userId: ctx.user.id,
     email: input.email ?? ctx.user.email ?? null,
@@ -217,7 +322,10 @@ export async function createCheckout(
     recurringConsent: recurring,
     recurringChargeOf: null,
     createdAt: now,
-  });
+    ...discount,
+  }, promo, now);
+  if (!placed.ok) return placed.reply;
+  const order = placed.order;
   if (recurring) {
     // Историю согласий Робокасса требует хранить: когда дано и какой текст
     // человек видел. Отзыв — отдельная строка, старые не правятся.
@@ -226,7 +334,8 @@ export async function createCheckout(
       userId: ctx.user.id,
       orderId: order.id,
       granted: true,
-      statementText: recurringStatement(price, input.months),
+      // Серия списывает полную цену: скидка промокода — только на этот платёж.
+      statementText: recurringStatement(quote.baseRub, input.months) + (promo ? ` Первый платёж — ${formatRub(price)} по промокоду ${promo.code}.` : ""),
       offerRevision: OFFER_REVISION,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
@@ -241,7 +350,7 @@ export async function createCheckout(
     isTest: order.isTest,
     recurring,
   });
-  logger.info({ orderId: order.id, companyId: ctx.companyId, plan: input.plan, months: input.months, amountRub: price, recurring, isTest: order.isTest }, "[billing] заказ создан");
+  logger.info({ orderId: order.id, companyId: ctx.companyId, plan: input.plan, months: input.months, amountRub: price, promo: promo?.code ?? null, recurring, isTest: order.isTest }, "[billing] заказ создан");
   return { status: 200, json: { invId: order.id, amountRub: price, params, paymentUrl: buildPaymentUrl(params) } };
 }
 
@@ -287,7 +396,8 @@ export function decideSettlement(ctx: SettleContext, prices: readonly PlanPrice[
       recurringParentOrderId: order.id,
       recurringPlan: order.plan,
       recurringMonths: order.months,
-      recurringAmountRub: order.amountRub,
+      // Серия — по полной цене: скидка промокода была только на первый платёж.
+      recurringAmountRub: order.baseRub ?? order.amountRub,
       recurringAttempts: 0,
       recurringLastAttemptAt: null,
       recurringNoticeFor: null,
@@ -339,17 +449,21 @@ export async function handleResult(deps: BillingDeps, params: Record<string, str
  * Засчитать оплату заказа: по уведомлению ResultURL или по сверке с кассой.
  * true — засчитали сейчас; false — уже был оплачен (или возвращён).
  */
-async function settleOrder(deps: BillingDeps, invId: number, raw: string, via: "result" | "check"): Promise<boolean> {
+export type SettleVia = "result" | "check" | "invoice" | "promo";
+
+export async function settleOrder(deps: BillingDeps, invId: number, raw: string, via: SettleVia): Promise<boolean> {
   const now = nowOf(deps);
   const prices = await deps.store.getPrices();
   const result = await deps.store.settle(invId, raw, now, (ctx) => decideSettlement(ctx, prices, now));
   if (!result.claimed) return false;
   logger.info({ invId, companyId: result.order.companyId, planUntil: result.patch.plan?.until ?? null, via }, "[billing] оплата получена");
   void afterPaid(deps, result.context, result.patch, via).catch((err) => logger.warn({ err, invId }, "[billing] уведомления об оплате не ушли"));
+  // УПД — снимком на дату оплаты (best-effort: не вышло — выпустится при скачивании).
+  void issueClosingDocument(deps, invId).catch((err) => logger.warn({ err, invId }, "[billing] УПД не выпущен"));
   return true;
 }
 
-async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePatch, via: "result" | "check" = "result"): Promise<void> {
+async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePatch, via: SettleVia = "result"): Promise<void> {
   const { order, company, billing } = ctx;
   deps.notify.live(company.id);
   const name = planName(order.plan);
@@ -394,17 +508,22 @@ async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePat
   if (patch.billing?.recurringActive === false && billing?.recurringActive) {
     lines.push("Автопродление прежнего тарифа выключено. Включить его для нового тарифа можно при следующей оплате.");
   }
+  if (order.amountRub > 0 && !order.isTest && documentsReady(deps)) {
+    lines.push("Закрывающий документ (УПД) — в кабинете: «Тариф и оплата» → «Платежи».");
+  }
+  const what = via === "promo" ? `Тариф «${name}» на ${periodLabel(order.months)} включён по промокоду ${order.promoCode ?? ""}.` : `Получили ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)}${via === "invoice" ? " по счёту" : ""}.`;
   await deps.notify.admins(
     company.id,
     {
-      title: automatic ? "Тариф продлён" : "Оплата получена",
-      body: `${formatRub(order.amountRub)} · «${name}» ${untilText}`,
-      paragraphs: [`Получили ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)}.`, ...lines],
+      title: automatic ? "Тариф продлён" : via === "promo" ? "Тариф включён" : "Оплата получена",
+      body: `${via === "promo" ? "Промокод" : formatRub(order.amountRub)} · «${name}» ${untilText}`,
+      paragraphs: [what, ...lines],
     },
     [order.email],
   );
   await deps.notify.owner(
-    `💳 Оплата ${formatRub(order.amountRub)} — «${company.name}» (#${company.id}), «${name}» на ${periodLabel(order.months)}` +
+    `${via === "promo" ? "🎟 Промокод на всю сумму" : `💳 Оплата ${formatRub(order.amountRub)}`} — «${company.name}» (#${company.id}), «${name}» на ${periodLabel(order.months)}` +
+      `${via === "invoice" ? ", по счёту" : ""}${order.promoCode ? `, промокод ${order.promoCode} (−${formatRub(order.discountRub)})` : ""}` +
       `${automatic ? ", автопродление" : order.recurringConsent ? ", с автопродлением" : ""}${order.isTest ? " [ТЕСТ]" : ""}` +
       `${patch.plan ? `, до ${formatDay(patch.plan.until)}` : ". Тариф бессрочный — срок не менялся, разберите вручную"}. Заказ №${order.id}` +
       (via === "check"
@@ -703,7 +822,8 @@ async function reconcilePending(deps: BillingDeps, now: number): Promise<void> {
  */
 export function checkWhilePolling(deps: BillingDeps, order: PaymentOrderRow): void {
   const now = nowOf(deps);
-  if (order.status !== "pending" || order.isTest || now - order.createdAt < 60) return;
+  // Только оплаты через кассу: счёт и промокод касса не видела.
+  if (order.status !== "pending" || order.isTest || order.paymentMethod !== "card" || now - order.createdAt < 60) return;
   if (order.checkedAt !== null && now - order.checkedAt < 30) return;
   void (async () => {
     if (!(await deps.store.claimCheck(order.id, now, now - 30))) return;
@@ -741,6 +861,8 @@ async function stopSeriesForRefund(deps: BillingDeps, order: PaymentOrderRow): P
 async function completeRefund(deps: BillingDeps, orderId: number): Promise<void> {
   const finished = await deps.store.finishRefund(orderId, nowOf(deps));
   if (!finished) return;
+  // Деньги вернулись — УПД по этой оплате аннулируется.
+  await deps.store.voidClosingDocument(orderId, nowOf(deps)).catch((err) => logger.warn({ err, orderId }, "[billing] УПД не аннулирован"));
   const { order, rolledBack } = finished;
   const name = planName(order.plan);
   logger.info({ invId: order.id, companyId: order.companyId, rolledBack }, "[billing] возврат завершён");
@@ -773,11 +895,11 @@ async function completeRefund(deps: BillingDeps, orderId: number): Promise<void>
   );
 }
 
-const rootOrder = async (deps: BillingDeps, id: number): Promise<RootBillingOrder | null> => {
+export const rootOrder = async (deps: BillingDeps, id: number): Promise<RootBillingOrder | null> => {
   const row = await deps.store.getOrder(id);
   if (!row) return null;
   const company = await deps.getCompany(row.companyId);
-  return { ...toBillingOrder(row), companyId: row.companyId, companyName: company?.name ?? null, email: row.email };
+  return { ...toBillingOrder(row, { docs: documentsReady(deps) }), companyId: row.companyId, companyName: company?.name ?? null, email: row.email };
 };
 
 /**
@@ -792,6 +914,17 @@ export async function refundOrder(deps: BillingDeps, orderId: number, opts: { fo
   if (!order) return { status: 404, json: { message: "Заказ не найден" } };
   if (order.status !== "paid") return { status: 409, json: { message: "Вернуть можно только оплаченный заказ" } };
   if (order.isTest) return { status: 409, json: { message: "Тестовый платёж: денег не было, возвращать нечего" } };
+  if (order.paymentMethod !== "card") {
+    return {
+      status: 409,
+      json: {
+        message:
+          order.paymentMethod === "invoice"
+            ? "Счёт оплачен переводом — касса его не вернёт. Верните деньги переводом по реквизитам плательщика."
+            : "Тариф включён промокодом — денег не было, возвращать нечего.",
+      },
+    };
+  }
   const retryUncertain = order.refundStatus === "uncertain" && opts.force === true;
   if (order.refundStatus === "uncertain" && !retryUncertain) {
     return {
@@ -951,6 +1084,7 @@ export async function billingDiagnostics(deps: BillingDeps): Promise<BillingDiag
     tax: cfg.tax,
     urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
     stats: await deps.store.stats(),
+    documents: { ready: documentsReady(deps), missing: sellerMissing(sellerOf(deps)) },
   };
 }
 
@@ -974,6 +1108,9 @@ export async function checkConnection(deps: BillingDeps): Promise<BillingCheckRe
 export async function reconcileOne(deps: BillingDeps, orderId: number): Promise<Reply<ReconcileResult>> {
   const order = await deps.store.getOrder(orderId);
   if (!order) return { status: 404, json: { message: "Заказ не найден" } };
+  if (order.paymentMethod !== "card") {
+    return { status: 409, json: { message: order.paymentMethod === "invoice" ? "Счёт оплачивают переводом — касса о нём не знает. Отметьте оплату вручную." : "Заказ без оплаты через кассу" } };
+  }
   const result = await reconcileOrder(deps, order);
   if (order.status === "pending") await deps.store.claimCheck(order.id, nowOf(deps), nowOf(deps)).catch(() => false);
   return { status: 200, json: { ...result, order: await rootOrder(deps, order.id) } };

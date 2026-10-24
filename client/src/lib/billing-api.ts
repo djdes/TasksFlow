@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { ROBOKASSA_IFRAME_SCRIPT_URL, type BillingInfo, type BillingOrder, type CheckoutResult, type CheckoutInput } from "@shared/billing";
+import {
+  ROBOKASSA_IFRAME_SCRIPT_URL,
+  type BillingInfo,
+  type BillingOrder,
+  type CheckoutInput,
+  type CheckoutResult,
+  type CompanyRequisites,
+  type InvoiceInput,
+  type InvoiceResult,
+  type PromoQuote,
+} from "@shared/billing";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "./queryClient";
 
 /** Тариф и оплата компании: страница «Тариф и оплата» (server/billing-routes.ts). */
@@ -33,6 +43,25 @@ export async function startCheckout(input: Omit<CheckoutInput, "recurringConsent
 export async function cancelRecurring(): Promise<void> {
   await apiRequest("DELETE", "/api/billing/recurring");
 }
+
+/** Что даст промокод на тариф и срок. Ошибка сети — исключение, «не подошёл» — ok: false. */
+export async function checkPromo(input: { plan: string; months: number; promoCode: string }): Promise<PromoQuote> {
+  const res = await apiRequest("POST", "/api/billing/promo", input);
+  return res.json();
+}
+
+export async function saveRequisites(requisites: Record<string, string>): Promise<{ requisites: CompanyRequisites }> {
+  const res = await apiRequest("PUT", "/api/billing/requisites", requisites);
+  return res.json();
+}
+
+export async function createInvoice(input: InvoiceInput): Promise<InvoiceResult> {
+  const res = await apiRequest("POST", "/api/billing/invoice", input);
+  return res.json();
+}
+
+export const invoicePdfUrl = (orderId: number) => `/api/billing/orders/${orderId}/invoice.pdf`;
+export const updPdfUrl = (orderId: number) => `/api/billing/orders/${orderId}/upd.pdf`;
 
 /**
  * Скрипт окна оплаты Робокассы — лениво, один раз на страницу. Не

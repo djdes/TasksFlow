@@ -1,5 +1,8 @@
 import type { Express, Request, RequestHandler, Response } from "express";
 import { pricesSchema } from "@shared/billing";
+import { documentFilename } from "./billing/documents";
+import { cancelInvoiceOrder, closingPdf, createInvoice, ensureClosingDocument, invoicePdf, markInvoicePaid, saveCompanyRequisites } from "./billing/invoices";
+import { createRootPromo, listRootPromos, updateRootPromo } from "./billing/root-promo";
 import { logger } from "./logger";
 import { storage } from "./storage";
 import { defaultBillingDeps } from "./billing/deps";
@@ -11,7 +14,9 @@ import {
   checkWhilePolling,
   createCheckout,
   disableRecurring,
+  documentsReady,
   handleResult,
+  quotePromo,
   reconcileOne,
   refundOrder,
   toBillingOrder,
@@ -28,6 +33,12 @@ import {
  *   POST   /api/billing/robokassa/result — ResultURL: уведомление кассы об оплате
  *   POST   /billing/success, /billing/fail — возврат с оплаты методом POST → GET
  *   GET    /api/root/billing, PUT /api/root/billing/prices — цены и все платежи (root)
+ *   POST   /api/billing/promo           — что даст промокод на тариф и срок (админ)
+ *   PUT    /api/billing/requisites      — реквизиты компании для счёта и УПД (админ)
+ *   POST   /api/billing/invoice         — выставить счёт юрлицу или ИП (админ)
+ *   GET    /api/billing/orders/:id/invoice.pdf, /upd.pdf — счёт и УПД (админ компании или root)
+ *   GET/POST /api/root/billing/promo-codes, PATCH /api/root/billing/promo-codes/:id — промокоды (root)
+ *   POST   /api/root/billing/orders/:id/invoice-paid, /invoice-cancel — оплата по счёту (root)
  *   GET    /api/root/billing/diagnostics — что задано в env, адреса для кассы (root)
  *   POST   /api/root/billing/check       — проверить логин и Пароль #2 без денег (root)
  *   POST   /api/root/billing/orders/:id/reconcile — сверить заказ с кассой (root)
@@ -62,6 +73,35 @@ function checkoutAllowed(companyId: number, nowMs = Date.now()): boolean {
 
 export function __resetCheckoutLimit(): void {
   checkoutHits.clear();
+  promoHits.clear();
+}
+
+/** Проверок промокода за 10 минут на компанию: перебор кодов не пройдёт. */
+const PROMO_LIMIT = 20;
+const promoHits = new Map<number, number[]>();
+
+function promoAllowed(companyId: number, nowMs = Date.now()): boolean {
+  const recent = (promoHits.get(companyId) ?? []).filter((t) => nowMs - t < CHECKOUT_WINDOW_MS);
+  if (recent.length >= PROMO_LIMIT) {
+    promoHits.set(companyId, recent);
+    return false;
+  }
+  recent.push(nowMs);
+  promoHits.set(companyId, recent);
+  if (promoHits.size > 10_000) promoHits.clear();
+  return true;
+}
+
+/** Заголовки PDF: кириллическое имя файла — в filename*, ASCII — для старых браузеров. */
+function sendPdf(res: Response, pdf: Buffer, name: { ascii: string; utf8: string }) {
+  res
+    .status(200)
+    .set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${name.ascii}"; filename*=UTF-8''${encodeURIComponent(name.utf8)}`,
+      "Cache-Control": "private, no-store",
+    })
+    .send(pdf);
 }
 
 /** Поля формы и query как строки: Робокасса шлёт уведомление POST или GET. */
@@ -136,10 +176,96 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
       // Завис в «ожидает оплаты» — в фоне спросим кассу: потерянное
       // уведомление не оставит человека ждать.
       checkWhilePolling(billing, order);
-      res.set("Cache-Control", "no-store").json(toBillingOrder(order));
+      res.set("Cache-Control", "no-store").json(toBillingOrder(order, { docs: documentsReady(billing) }));
     } catch (err) {
       logger.error({ err }, "[billing] статус заказа");
       res.status(500).json({ message: "Не удалось проверить оплату" });
+    }
+  });
+
+  app.post("/api/billing/promo", deps.requireAdmin, async (req, res) => {
+    try {
+      const ctx = await adminContext(req, res);
+      if (!ctx) return;
+      if (!promoAllowed(ctx.companyId)) return res.status(429).json({ ok: false, message: "Слишком много попыток — подождите несколько минут" });
+      res.json(await quotePromo(billing, { companyId: ctx.companyId, body: req.body }));
+    } catch (err) {
+      logger.error({ err }, "[billing] проверка промокода");
+      res.status(500).json({ ok: false, message: "Не удалось проверить промокод" });
+    }
+  });
+
+  app.put("/api/billing/requisites", deps.requireAdmin, async (req, res) => {
+    try {
+      const ctx = await adminContext(req, res);
+      if (!ctx) return;
+      const reply = await saveCompanyRequisites(billing, { companyId: ctx.companyId, body: req.body });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[billing] реквизиты компании");
+      res.status(500).json({ message: "Не удалось сохранить реквизиты. Попробуйте ещё раз." });
+    }
+  });
+
+  app.post("/api/billing/invoice", deps.requireAdmin, async (req, res) => {
+    try {
+      // Счёт — тоже покупка подписки: в приложениях её нет (App Store 3.1.1).
+      if (isAppUserAgent(req.headers["user-agent"])) {
+        return res.status(403).json({ message: "Оплата в приложении недоступна", code: "app_payment" });
+      }
+      const ctx = await adminContext(req, res);
+      if (!ctx) return;
+      if (!checkoutAllowed(ctx.companyId)) {
+        return res.status(429).json({ message: "Слишком много попыток. Попробуйте через несколько минут." });
+      }
+      const reply = await createInvoice(billing, { ...ctx, body: req.body });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[billing] счёт");
+      res.status(500).json({ message: "Не удалось выставить счёт. Попробуйте ещё раз." });
+    }
+  });
+
+  /** Заказ для документа: админ своей компании или root. Чужой — как несуществующий. */
+  const documentOrder = async (req: Request, res: Response) => {
+    const user = req.session.userId ? await storage.getUserById(req.session.userId) : undefined;
+    if (!user) {
+      res.status(401).json({ message: "Требуется авторизация" });
+      return null;
+    }
+    const id = Number(req.params.id);
+    const order = Number.isInteger(id) && id > 0 ? await billing.store.getOrder(id) : null;
+    const companyId = user.isRoot ? null : user.isAdmin ? await deps.getCompanyIdFromReq(req) : null;
+    if (!order || (!user.isRoot && order.companyId !== companyId)) {
+      res.status(404).json({ message: "Документ не найден" });
+      return null;
+    }
+    return order;
+  };
+
+  app.get("/api/billing/orders/:id/invoice.pdf", async (req, res) => {
+    try {
+      const order = await documentOrder(req, res);
+      if (!order) return;
+      const pdf = await invoicePdf(billing, order);
+      if (!pdf) return res.status(404).json({ message: "Счёта по этому заказу нет" });
+      sendPdf(res, pdf, documentFilename("invoice", String(order.id)));
+    } catch (err) {
+      logger.error({ err }, "[billing] PDF счёта");
+      res.status(500).json({ message: "Не удалось сформировать счёт" });
+    }
+  });
+
+  app.get("/api/billing/orders/:id/upd.pdf", async (req, res) => {
+    try {
+      const order = await documentOrder(req, res);
+      if (!order) return;
+      const doc = await ensureClosingDocument(billing, order);
+      if (!doc) return res.status(404).json({ message: "Закрывающего документа по этому заказу нет" });
+      sendPdf(res, closingPdf(doc), documentFilename("upd", doc.number));
+    } catch (err) {
+      logger.error({ err }, "[billing] PDF УПД");
+      res.status(500).json({ message: "Не удалось сформировать УПД" });
     }
   });
 
@@ -191,9 +317,10 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
   app.get("/api/root/billing", deps.requireRoot, async (_req, res) => {
     try {
       const [prices, orders] = await Promise.all([billing.store.getPrices(), billing.store.listRecentOrders(200)]);
+      const docs = documentsReady(billing);
       res.set("Cache-Control", "no-store").json({
         prices,
-        orders: orders.map((o) => ({ ...toBillingOrder(o), companyId: o.companyId, companyName: o.companyName, email: o.email })),
+        orders: orders.map((o) => ({ ...toBillingOrder(o, { docs }), companyId: o.companyId, companyName: o.companyName, email: o.email })),
       });
     } catch (err) {
       logger.error({ err }, "[root] платежи");
@@ -246,6 +373,61 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
     } catch (err) {
       logger.error({ err, id }, "[root] возврат");
       res.status(500).json({ message: "Возврат не отправлен из-за ошибки сервера. Проверьте статус заказа перед повтором." });
+    }
+  });
+
+  app.get("/api/root/billing/promo-codes", deps.requireRoot, async (_req, res) => {
+    try {
+      res.set("Cache-Control", "no-store").json({ promos: await listRootPromos(billing) });
+    } catch (err) {
+      logger.error({ err }, "[root] промокоды");
+      res.status(500).json({ message: "Не удалось загрузить промокоды" });
+    }
+  });
+
+  app.post("/api/root/billing/promo-codes", deps.requireRoot, async (req, res) => {
+    try {
+      const reply = await createRootPromo(billing, req.body);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[root] новый промокод");
+      res.status(500).json({ message: "Не удалось создать промокод" });
+    }
+  });
+
+  app.patch("/api/root/billing/promo-codes/:id", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Промокод не найден" });
+    try {
+      const reply = await updateRootPromo(billing, id, req.body);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] промокод");
+      res.status(500).json({ message: "Не удалось сохранить промокод" });
+    }
+  });
+
+  app.post("/api/root/billing/orders/:id/invoice-paid", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Счёт не найден" });
+    try {
+      const reply = await markInvoicePaid(billing, id, { userId: req.session.userId ?? 0 });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] оплата счёта");
+      res.status(500).json({ message: "Не удалось отметить оплату. Проверьте статус счёта перед повтором." });
+    }
+  });
+
+  app.post("/api/root/billing/orders/:id/invoice-cancel", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Счёт не найден" });
+    try {
+      const reply = await cancelInvoiceOrder(billing, id);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] отмена счёта");
+      res.status(500).json({ message: "Не удалось отменить счёт" });
     }
   });
 

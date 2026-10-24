@@ -1098,6 +1098,57 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .billing-legal svg { flex: none; width: 16px; height: 16px; margin-top: 2px; color: hsl(var(--primary)); }
 .billing-legal a { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
 
+/* Промокод */
+.billing-promo { margin-top: 16px; }
+.billing-promo-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 2px; font-size: 13.5px; font-weight: 600; color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 3px; }
+.billing-promo-toggle svg { width: 16px; height: 16px; }
+.billing-promo-toggle:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; border-radius: 6px; }
+.billing-promo-form { display: grid; gap: 6px; }
+.billing-promo-row { display: flex; gap: 8px; max-width: 420px; }
+.billing-promo-row input { flex: 1 1 auto; min-width: 0; max-width: none; text-transform: uppercase; }
+.billing-promo-ok { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: hsl(152 62% 30%); }
+.billing-promo-ok svg { width: 16px; height: 16px; }
+.dark .billing-promo-ok { color: hsl(152 60% 70%); }
+.billing-promo-error, .billing-field-error { font-size: 12.5px; font-weight: 500; color: hsl(var(--destructive)); }
+.billing-summary-discount { font-weight: 600; color: hsl(152 62% 30%); font-variant-numeric: tabular-nums; }
+.dark .billing-summary-discount { color: hsl(152 60% 70%); }
+
+/* Способ оплаты и тип плательщика */
+.billing-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.billing-methods.is-compact { display: flex; flex-wrap: wrap; margin-top: 0; }
+.billing-method { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 14px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); text-align: left; color: hsl(var(--foreground)); transition: border-color 150ms, box-shadow 150ms, background-color 150ms; }
+.billing-methods.is-compact .billing-method { min-height: 40px; padding: 6px 14px; }
+.billing-method > svg { flex: none; width: 20px; height: 20px; color: hsl(var(--primary)); }
+.billing-method span { display: grid; gap: 1px; min-width: 0; }
+.billing-method b { font-size: 14px; font-weight: 650; }
+.billing-method small { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.billing-method:hover { border-color: hsl(var(--primary) / .45); }
+.billing-method[aria-checked="true"] { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .05); box-shadow: 0 0 0 3px hsl(var(--primary) / .14); }
+.billing-method:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+
+/* Счёт и документы */
+.billing-invoice { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 14px; background: hsl(var(--primary) / .07); }
+.billing-invoice-icon { flex: none; width: 22px; height: 22px; margin-top: 2px; color: hsl(var(--primary)); }
+.billing-invoice-title { font-size: 15px; font-weight: 650; color: hsl(var(--foreground)); }
+.billing-invoice-text { margin-top: 2px; font-size: 13.5px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.billing-invoice .billing-doc-link { margin-top: 8px; }
+.billing-doc-link { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; font-size: 13px; font-weight: 600; color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 3px; }
+.billing-doc-link svg { width: 15px; height: 15px; }
+.billing-doc-link:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; border-radius: 6px; }
+.billing-order-docs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 2px; }
+
+/* Реквизиты */
+.billing-requisites { display: grid; gap: 14px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+.billing-requisites-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.billing-requisites-grid .billing-field input { max-width: none; }
+.billing-requisites-wide { grid-column: 1 / -1; }
+.billing-requisites-summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+.billing-requisites-summary > svg { flex: none; width: 20px; height: 20px; color: hsl(var(--primary)); }
+.billing-requisites-summary > div, .billing-requisites-summary > p { flex: 1 1 0; min-width: 0; }
+.billing-requisites-summary.is-empty > svg { color: hsl(var(--muted-foreground)); }
+.billing-requisites-name { font-size: 14px; font-weight: 650; color: hsl(var(--foreground)); overflow-wrap: anywhere; }
+.billing-requisites-meta { margin-top: 2px; font-size: 12.5px; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+
 .billing-return { display: flex; align-items: flex-start; gap: 14px; }
 .billing-return h2 { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
 .billing-return p { margin-top: 4px; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
@@ -1138,6 +1189,20 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .dark .root-cashbox-list .is-ok svg { color: hsl(152 60% 62%); }
 .dark .root-cashbox-result.is-ok { color: hsl(152 60% 72%); }
 .root-order-actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0 -10px; }
+.root-cashbox-docs { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+.root-cashbox-docs b { color: hsl(var(--foreground)); font-weight: 600; }
+.root-cashbox-docs > svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.root-cashbox-docs.is-ok > svg { color: hsl(152 62% 36%); }
+.root-cashbox-docs.is-missing > svg { color: hsl(var(--destructive)); }
+.root-cashbox-docs ul { margin-top: 4px; padding-left: 18px; list-style: disc; font-size: 12.5px; }
+.dark .root-cashbox-docs.is-ok > svg { color: hsl(152 60% 62%); }
+.root-promos { margin-top: 8px; }
+.root-promo-code { padding: 2px 8px; border-radius: 6px; background: hsl(var(--muted)); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.root-promo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; }
+.root-promo-form .root-price-input { width: 100%; }
+.root-promo-value { display: flex; gap: 6px; }
+.root-promo-value .reports-select { width: 76px; flex: none; }
+.root-promo-note, .root-promo-check, .root-promo-wide { grid-column: 1 / -1; }
 
 @media (max-width: 760px) {
   .billing-seats { flex: 1 1 100%; }
@@ -1151,6 +1216,9 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 }
 @media (max-width: 420px) {
   .billing-plan-features { grid-template-columns: 1fr; }
+  .billing-methods:not(.is-compact) { grid-template-columns: 1fr; }
+  .billing-requisites-grid { grid-template-columns: 1fr; }
+  .billing-requisites-summary { align-items: flex-start; }
   .root-cashbox-url { grid-template-columns: minmax(0, 1fr) auto; }
   .root-cashbox-url-label { grid-column: 1 / -1; }
   .billing-period { flex: 1 1 calc(50% - 4px); min-width: 0; }

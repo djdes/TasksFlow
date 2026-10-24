@@ -755,7 +755,7 @@ export const paymentOrders = mysqlTable("payment_orders", {
   months: int("months").notNull(),
   amountRub: int("amount_rub").notNull(),
   description: varchar("description", { length: 255 }).notNull(),
-  // pending | paid | expired | refunded
+  // pending | paid | expired | refunded | cancelled (счёт отменён)
   status: varchar("status", { length: 16 }).notNull().default("pending"),
   // Тестовый режим Робокассы: подпись проверяется тестовыми паролями.
   isTest: boolean("is_test").notNull().default(false),
@@ -781,6 +781,73 @@ export const paymentOrders = mysqlTable("payment_orders", {
   rawResult: text("raw_result"),
   createdAt: int("created_at").notNull().default(0),
   paidAt: int("paid_at"),
+  // card — картой/СБП через кассу, invoice — по счёту, promo — промокод на всю сумму.
+  paymentMethod: varchar("payment_method", { length: 16 }).notNull().default("card"),
+  // Цена без скидки; NULL — скидки не было (сумма = amount_rub).
+  baseRub: int("base_rub"),
+  discountRub: int("discount_rub").notNull().default(0),
+  promoCode: varchar("promo_code", { length: 32 }),
+  // Счёт: оплатить до.
+  invoiceDueAt: int("invoice_due_at"),
+});
+
+// Промокоды (root): скидка в процентах или рублях на оплату тарифа.
+export const promoCodes = mysqlTable("promo_codes", {
+  id: int("id").primaryKey().autoincrement(),
+  // Верхний регистр, без пробелов.
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  // percent | fixed
+  kind: varchar("kind", { length: 8 }).notNull(),
+  value: int("value").notNull(),
+  active: boolean("active").notNull().default(true),
+  startsAt: int("starts_at"),
+  endsAt: int("ends_at"),
+  // NULL — без лимита; считаются оплаченные заказы с кодом.
+  maxUses: int("max_uses"),
+  // Только компаниям без оплат.
+  newClientsOnly: boolean("new_clients_only").notNull().default(false),
+  // Персональный код: только для этой компании.
+  companyId: int("company_id"),
+  note: varchar("note", { length: 255 }),
+  createdAt: int("created_at").notNull().default(0),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Реквизиты компании-заказчика: для счёта и закрывающих документов.
+export const companyRequisites = mysqlTable("company_requisites", {
+  companyId: int("company_id").primaryKey(),
+  // org — организация, ip — ИП.
+  kind: varchar("kind", { length: 8 }).notNull().default("org"),
+  name: varchar("name", { length: 255 }).notNull(),
+  inn: varchar("inn", { length: 12 }).notNull(),
+  kpp: varchar("kpp", { length: 9 }),
+  ogrn: varchar("ogrn", { length: 15 }),
+  address: varchar("address", { length: 500 }).notNull(),
+  headPost: varchar("head_post", { length: 100 }),
+  headName: varchar("head_name", { length: 150 }),
+  email: varchar("email", { length: 255 }),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Закрывающие документы (УПД): снимок сторон и строк на дату оплаты —
+// документ не меняется, когда потом меняются реквизиты.
+export const closingDocuments = mysqlTable("closing_documents", {
+  id: int("id").primaryKey().autoincrement(),
+  orderId: int("order_id").notNull().unique(),
+  companyId: int("company_id").notNull(),
+  // Номер = номер заказа.
+  number: varchar("number", { length: 32 }).notNull(),
+  // Дата документа = дата оплаты.
+  issuedAt: int("issued_at").notNull(),
+  seller: text("seller").notNull(),
+  buyer: text("buyer").notNull(),
+  // Строки документа (JSON). Не «lines»: это зарезервированное слово MySQL.
+  lines: text("line_items").notNull(),
+  totalRub: int("total_rub").notNull(),
+  // issued | voided (деньги возвращены).
+  status: varchar("status", { length: 16 }).notNull().default("issued"),
+  voidedAt: int("voided_at"),
+  createdAt: int("created_at").notNull().default(0),
 });
 
 // История согласий на автосписания: только добавление, отзыв — новая
@@ -823,6 +890,9 @@ export const companyBilling = mysqlTable("company_billing", {
 
 export type PaymentOrderRow = typeof paymentOrders.$inferSelect;
 export type CompanyBillingRow = typeof companyBilling.$inferSelect;
+export type PromoCodeRow = typeof promoCodes.$inferSelect;
+export type CompanyRequisitesRow = typeof companyRequisites.$inferSelect;
+export type ClosingDocumentRow = typeof closingDocuments.$inferSelect;
 
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;

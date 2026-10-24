@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Check, CircleAlert, CreditCard, Loader2, ReceiptText, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, CircleAlert, CreditCard, Download, FileText, Loader2, ReceiptText, RefreshCw, ShieldCheck, Ticket } from "lucide-react";
 import { PLAN_FEATURES, PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import {
   daysLabel,
   formatRub,
+  INVOICE_VALID_DAYS,
   isPaidPlan,
   monthlyRate,
   monthsFor,
@@ -18,10 +19,14 @@ import {
   RECURRING_NOTICE_DAYS,
   RECURRING_OFFER_HREF,
   recurringTerms,
+  requisitesSchema,
   type BillingInfo,
   type BillingMonths,
   type BillingOrder,
+  type CompanyRequisites,
+  type InvoiceResult,
   type PaidPlanId,
+  type PromoQuote,
 } from "@shared/billing";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -30,7 +35,19 @@ import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { BILLING_KEY, cancelRecurring, fetchBilling, fetchOrder, startCheckout, useRobokassaScript } from "@/lib/billing-api";
+import {
+  BILLING_KEY,
+  cancelRecurring,
+  checkPromo,
+  createInvoice,
+  fetchBilling,
+  fetchOrder,
+  invoicePdfUrl,
+  saveRequisites,
+  startCheckout,
+  updPdfUrl,
+  useRobokassaScript,
+} from "@/lib/billing-api";
 import { useInstallState } from "@/lib/pwa";
 import { ApiError } from "@/lib/queryClient";
 
@@ -70,6 +87,11 @@ export default function Billing() {
     return Number.isInteger(n) && n > 0 ? n : null;
   }, [search]);
   const framed = typeof window !== "undefined" && window.self !== window.top;
+  // Ссылка из рассылки: /admin/billing?promo=CODE — код подставится сам.
+  const initialPromo = useMemo(() => {
+    const code = (search.get("promo") ?? "").trim().toUpperCase();
+    return /^[A-Z0-9_-]{3,32}$/.test(code) ? code : null;
+  }, [search]);
 
   useEffect(() => {
     if (mode === "checkout" || !framed) return;
@@ -126,8 +148,18 @@ export default function Billing() {
           ) : (
             <>
               <CurrentPlan info={info} inApp={inApp} />
-              {!inApp && <Checkout info={info} defaultRecurring={search.get("recurring") === "1"} />}
+              {!inApp && <Checkout info={info} defaultRecurring={search.get("recurring") === "1"} initialPromo={initialPromo} />}
               <Orders orders={info.orders} inApp={inApp} />
+              {!inApp && info.invoiceAvailable && (
+                <section className="content-panel" aria-labelledby="billing-requisites-title">
+                  <div className="section-title">
+                    <Building2 className="w-5 h-5 text-primary" />
+                    <h2 id="billing-requisites-title">Реквизиты для документов</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">Попадут в счёт и в закрывающий документ (УПД) по каждой оплате.</p>
+                  <RequisitesCard requisites={info.requisites} purpose="documents" />
+                </section>
+              )}
             </>
           )}
         </div>
@@ -235,7 +267,7 @@ function CurrentPlan({ info, inApp }: { info: BillingInfo; inApp: boolean }) {
 
 // --- Выбор тарифа и оплата ---------------------------------------------------------
 
-function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurring: boolean }) {
+function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo; defaultRecurring: boolean; initialPromo: string | null }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const purchasable = PLAN_IDS.filter((id): id is PaidPlanId => isPaidPlan(id) && monthsFor(info.prices, id).length > 0);
@@ -249,18 +281,61 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
     const series = info.recurring.months as BillingMonths | null;
     return series && list.includes(series) ? series : list[0] ?? null;
   });
+  const [method, setMethod] = useState<"card" | "invoice">("card");
   const [email, setEmail] = useState(info.email ?? "");
   const [consent, setConsent] = useState(defaultRecurring && info.recurringAvailable);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [watch, setWatch] = useState<number | null>(null);
   const [paid, setPaid] = useState<BillingOrder | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceResult | null>(null);
+  const [promoOpen, setPromoOpen] = useState(!!initialPromo);
+  const [promoInput, setPromoInput] = useState(initialPromo ?? "");
+  // Код, который человек применил: при смене тарифа или срока пересчитываем его.
+  const [promoCode, setPromoCode] = useState<string | null>(initialPromo);
+  const [promo, setPromo] = useState<Extract<PromoQuote, { ok: true }> | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
   const scriptReady = useRobokassaScript(info.configured);
 
   // Выбранного срока у нового тарифа может не быть — берём ближайший.
   useEffect(() => {
     if (plan && months && !available.includes(months)) setMonths(available[0] ?? null);
   }, [plan, months, available]);
+
+  useEffect(() => {
+    if (!plan || !months || !promoCode) {
+      setPromo(null);
+      return;
+    }
+    let stale = false;
+    setPromoBusy(true);
+    checkPromo({ plan, months, promoCode })
+      .then((quote) => {
+        if (stale) return;
+        if (quote.ok) {
+          setPromo(quote);
+          setPromoError(null);
+        } else {
+          setPromo(null);
+          setPromoError(quote.message);
+          setPromoCode(null);
+        }
+      })
+      .catch((err) => {
+        // Старая скидка относилась к другому тарифу или сроку — не показываем её.
+        if (stale) return;
+        setPromo(null);
+        setPromoCode(null);
+        setPromoError(err instanceof Error ? err.message : "Не удалось проверить промокод");
+      })
+      .finally(() => {
+        if (!stale) setPromoBusy(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [plan, months, promoCode]);
 
   // Пока человек платит в окне Робокассы, ждём подтверждения здесь: возврат
   // на SuccessURL происходит внутри окна, а эта страница о нём не узнает.
@@ -292,19 +367,71 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
   }, [watch, queryClient]);
 
   const price = plan && months ? priceFor(info.prices, plan, months) : null;
+  // Сумма к оплате — со скидкой; серия автопродления списывает полную цену.
+  const amount = price !== null && promo ? promo.amountRub : price;
   const preview = plan && months && price !== null
     ? planAfterPayment({ currentPlan: info.plan.id, currentUntil: info.plan.until, plan, months, now: nowSec(), prices: info.prices })
     : null;
   const remainingDays = info.plan.until && info.plan.id !== "start" ? Math.max(0, Math.ceil((info.plan.until - info.now) / DAY)) : 0;
   const seriesOther =
     info.recurring.active && plan && months && (info.recurring.plan !== plan || info.recurring.months !== months) && !consent;
+  const free = amount === 0;
+  const byInvoice = method === "invoice" && info.invoiceAvailable && !free;
+
+  // Выставленный счёт — на прежние условия: сменили тариф, срок, промокод
+  // или способ — показываем кнопку для нового счёта.
+  useEffect(() => {
+    setInvoice(null);
+  }, [plan, months, promo?.code, method]);
+
+  const applyPromo = () => {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError("Введите промокод");
+      return;
+    }
+    setPromoError(null);
+    if (code.toUpperCase() === promoCode) return;
+    setPromoCode(code.toUpperCase());
+  };
+  const clearPromo = () => {
+    setPromoCode(null);
+    setPromo(null);
+    setPromoInput("");
+    setPromoError(null);
+  };
+
+  const failed = (err: unknown) => {
+    if (err instanceof ApiError && err.body?.code === "price_changed") {
+      void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+    }
+    if (err instanceof ApiError && err.body?.code === "promo") {
+      setPromo(null);
+      setPromoCode(null);
+    }
+    setError(err instanceof Error ? err.message : "Не удалось начать оплату");
+    setBusy(false);
+  };
 
   const pay = async () => {
-    if (!plan || !months || price === null) return;
+    if (!plan || !months || amount === null) return;
     setBusy(true);
     setError(null);
     try {
-      const data = await startCheckout({ plan, months, recurringConsent: consent && info.recurringAvailable, email: email.trim() || undefined, expectedRub: price });
+      const data = await startCheckout({
+        plan,
+        months,
+        recurringConsent: consent && info.recurringAvailable && !free,
+        email: email.trim() || undefined,
+        expectedRub: amount,
+        promoCode: promo?.code,
+      });
+      if (data.free) {
+        setPaid(data.order ?? null);
+        setBusy(false);
+        void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+        return;
+      }
       if (scriptReady && window.Robokassa) {
         window.Robokassa.StartPayment(data.params);
         setWatch(data.invId);
@@ -313,16 +440,26 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
       }
       window.location.href = data.paymentUrl;
     } catch (err) {
-      if (err instanceof ApiError && err.body?.code === "price_changed") {
-        void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
-      }
-      setError(err instanceof Error ? err.message : "Не удалось начать оплату");
+      failed(err);
+    }
+  };
+
+  const issueInvoice = async () => {
+    if (!plan || !months || amount === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await createInvoice({ plan, months, expectedRub: amount, promoCode: promo?.code });
+      setInvoice(result);
       setBusy(false);
+      void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+    } catch (err) {
+      failed(err);
     }
   };
 
   useEffect(() => {
-    if (paid) toast({ title: "Оплата получена", description: paid.planUntil ? `Тариф действует до ${longDate(paid.planUntil)}.` : undefined });
+    if (paid) toast({ title: paid.method === "promo" ? "Тариф включён" : "Оплата получена", description: paid.planUntil ? `Тариф действует до ${longDate(paid.planUntil)}.` : undefined });
   }, [paid, toast]);
 
   if (info.plan.perpetual) {
@@ -338,6 +475,8 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
       </section>
     );
   }
+
+  const canPay = info.configured || free;
 
   return (
     <section className="content-panel" aria-labelledby="billing-checkout-title">
@@ -420,21 +559,81 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
         </>
       )}
 
-      {plan && months && price !== null && preview && (
+      {plan && months && price !== null && (
+        <div className="billing-promo">
+          {promoOpen || promo ? (
+            <form
+              className="billing-promo-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applyPromo();
+              }}
+            >
+              <label className="billing-field">
+                <span>Промокод</span>
+                <span className="billing-promo-row">
+                  <Input
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value)}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="Например, START"
+                    aria-invalid={!!promoError || undefined}
+                    disabled={!!promo}
+                  />
+                  {promo ? (
+                    <Button type="button" variant="outline" onClick={clearPromo}>
+                      Убрать
+                    </Button>
+                  ) : (
+                    <Button type="submit" variant="outline" loading={promoBusy} loadingLabel="Проверяем…">
+                      Применить
+                    </Button>
+                  )}
+                </span>
+              </label>
+              {promo && (
+                <p className="billing-promo-ok" role="status">
+                  <Check aria-hidden /> {promo.code}: скидка {promo.label} — {formatRub(promo.discountRub)}
+                </p>
+              )}
+              {promoError && (
+                <p className="billing-promo-error" role="alert">
+                  {promoError}
+                </p>
+              )}
+            </form>
+          ) : (
+            <button type="button" className="billing-promo-toggle" onClick={() => setPromoOpen(true)}>
+              <Ticket aria-hidden /> Есть промокод?
+            </button>
+          )}
+        </div>
+      )}
+
+      {plan && months && price !== null && amount !== null && preview && (
         <div className="billing-summary" aria-live="polite">
+          {promo && (
+            <div className="billing-summary-row">
+              <span>Цена {formatRub(price)} · скидка по промокоду</span>
+              <span className="billing-summary-discount">−{formatRub(promo.discountRub)}</span>
+            </div>
+          )}
           <div className="billing-summary-row">
             <span>К оплате</span>
-            <b className="billing-summary-sum">{formatRub(price)}</b>
+            <b className="billing-summary-sum">{formatRub(amount)}</b>
           </div>
           <p className="billing-summary-text">
-            Тариф «{PLANS[plan].name}» на {periodLabel(months)} — будет действовать до <b>{longDate(preview.until)}</b>.
+            Тариф «{PLANS[plan].name}» на {periodLabel(months)} — будет действовать до <b>{longDate(preview.until)}</b>
+            {byInvoice ? " (срок начнётся, когда деньги поступят)" : ""}.
             {preview.convertedFrom && remainingDays > 0
               ? ` Оставшиеся ${daysLabel(remainingDays)} «${PLANS[preview.convertedFrom].name}» пересчитаем по цене: это ${daysLabel(Math.round(preview.carriedSec / DAY))} «${PLANS[plan].name}».`
               : preview.carriedSec > 0
                 ? " Срок прибавится к оставшемуся."
                 : ""}
           </p>
-          {seriesOther && info.recurringAvailable && (
+          {seriesOther && info.recurringAvailable && !byInvoice && (
             <p className="billing-summary-warn">
               <CircleAlert aria-hidden />
               Автопродление «{PLANS[info.recurring.plan ?? "team"].name}» выключится. Чтобы новый тариф продлевался сам, поставьте галочку ниже.
@@ -443,7 +642,81 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
         </div>
       )}
 
-      {plan && months && price !== null && (
+      {plan && months && price !== null && amount !== null && info.invoiceAvailable && !free && (
+        <div className="billing-methods" role="radiogroup" aria-label="Способ оплаты">
+          <button type="button" role="radio" aria-checked={method === "card"} className="billing-method" onClick={() => setMethod("card")}>
+            <CreditCard aria-hidden />
+            <span>
+              <b>Картой или СБП</b>
+              <small>Сразу, через Робокассу</small>
+            </span>
+          </button>
+          <button type="button" role="radio" aria-checked={method === "invoice"} className="billing-method" onClick={() => setMethod("invoice")}>
+            <FileText aria-hidden />
+            <span>
+              <b>Счёт для юрлица или ИП</b>
+              <small>Безналичный перевод, УПД</small>
+            </span>
+          </button>
+        </div>
+      )}
+
+      {plan && months && price !== null && amount !== null && byInvoice && (
+        <div className="billing-form">
+          <RequisitesCard requisites={info.requisites} purpose="invoice" />
+          {error && (
+            <p className="billing-error" role="alert">
+              {error}
+            </p>
+          )}
+          {invoice ? (
+            <div className="billing-invoice" role="status">
+              <FileText className="billing-invoice-icon" aria-hidden />
+              <div className="min-w-0">
+                <p className="billing-invoice-title">
+                  Счёт №{invoice.order.id} на {formatRub(invoice.order.amountRub)}
+                </p>
+                <p className="billing-invoice-text">
+                  {invoice.existing ? "Счёт на эти условия уже выставлен. " : ""}
+                  Оплатите до {invoice.order.invoiceDueAt ? longDate(invoice.order.invoiceDueAt) : "конца недели"}. Тариф включится, когда деньги поступят, — пришлём уведомление. УПД появится в истории платежей.
+                </p>
+                <a className="billing-doc-link" href={invoice.pdfUrl} download>
+                  <Download aria-hidden /> Скачать счёт (PDF)
+                </a>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="page-cta billing-pay"
+              disabled={busy || promoBusy || !info.requisites}
+              onClick={() => void issueInvoice()}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> Выставляем счёт…
+                </>
+              ) : (
+                <>
+                  Выставить счёт · {formatRub(amount)} <ArrowRight className="w-5 h-5" aria-hidden />
+                </>
+              )}
+            </button>
+          )}
+          <p className="billing-legal">
+            <ShieldCheck aria-hidden />
+            <span>
+              Выставляя счёт, вы принимаете{" "}
+              <a href={OFFER_PATH} target="_blank" rel="noopener">
+                оферту
+              </a>
+              . Счёт действует {daysLabel(INVOICE_VALID_DAYS)}; оплатить его может только организация или ИП из реквизитов.
+            </span>
+          </p>
+        </div>
+      )}
+
+      {plan && months && price !== null && amount !== null && !byInvoice && (
         <form
           className="billing-form"
           onSubmit={(e) => {
@@ -451,13 +724,15 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
             void pay();
           }}
         >
-          <label className="billing-field">
-            <span>Почта для чека</span>
-            <Input type="email" inputMode="email" autoComplete="email" placeholder="boss@company.ru" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <small>Робокасса пришлёт сюда чек. Можно оставить пустым — спросит на странице оплаты.</small>
-          </label>
+          {!free && (
+            <label className="billing-field">
+              <span>Почта для чека</span>
+              <Input type="email" inputMode="email" autoComplete="email" placeholder="boss@company.ru" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <small>Робокасса пришлёт сюда чек. Можно оставить пустым — спросит на странице оплаты.</small>
+            </label>
+          )}
 
-          {info.recurringAvailable && (
+          {info.recurringAvailable && !free && (
             // Требования Робокассы: галочка не стоит по умолчанию, рядом —
             // текст согласия, ссылка на оферту и периодичность списаний.
             <label className="billing-consent">
@@ -468,7 +743,10 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
                   раздел «Автопродление»
                 </a>
                 ).
-                <small>{recurringTerms(price, months)}</small>
+                <small>
+                  {recurringTerms(price, months)}
+                  {promo ? ` Скидка по промокоду — только на этот платёж (${formatRub(amount)}).` : ""}
+                </small>
                 <small className="billing-consent-hint">Без галочки — разовый платёж, автосписаний не будет.</small>
               </span>
             </label>
@@ -482,17 +760,22 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
 
           {paid ? (
             <p className="billing-paid" role="status">
-              <Check aria-hidden /> Оплата получена{paid.planUntil ? ` — тариф до ${longDate(paid.planUntil)}` : ""}.
+              <Check aria-hidden /> {paid.method === "promo" ? "Тариф включён" : "Оплата получена"}
+              {paid.planUntil ? ` — тариф до ${longDate(paid.planUntil)}` : ""}.
             </p>
-          ) : info.configured ? (
-            <button type="submit" className="page-cta billing-pay" disabled={busy || !!watch}>
+          ) : canPay ? (
+            <button type="submit" className="page-cta billing-pay" disabled={busy || !!watch || promoBusy}>
               {busy ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> Открываем оплату…
+                  <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> {free ? "Включаем тариф…" : "Открываем оплату…"}
+                </>
+              ) : free ? (
+                <>
+                  Включить тариф по промокоду <ArrowRight className="w-5 h-5" aria-hidden />
                 </>
               ) : (
                 <>
-                  Перейти к оплате · {formatRub(price)} <ArrowRight className="w-5 h-5" aria-hidden />
+                  Перейти к оплате · {formatRub(amount)} <ArrowRight className="w-5 h-5" aria-hidden />
                 </>
               )}
             </button>
@@ -511,7 +794,7 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
           <p className="billing-legal">
             <ShieldCheck aria-hidden />
             <span>
-              Оплата проходит на стороне Робокассы: данные карты нам не передаются. Нажимая «Перейти к оплате», вы принимаете{" "}
+              {free ? "Нажимая «Включить тариф», вы принимаете " : "Оплата проходит на стороне Робокассы: данные карты нам не передаются. Нажимая «Перейти к оплате», вы принимаете "}
               <a href={OFFER_PATH} target="_blank" rel="noopener">
                 оферту
               </a>{" "}
@@ -531,6 +814,171 @@ function Checkout({ info, defaultRecurring }: { info: BillingInfo; defaultRecurr
         </p>
       )}
     </section>
+  );
+}
+
+// --- Реквизиты компании ------------------------------------------------------------
+
+type RequisitesDraft = {
+  kind: "org" | "ip";
+  name: string;
+  inn: string;
+  kpp: string;
+  ogrn: string;
+  address: string;
+  headPost: string;
+  headName: string;
+  email: string;
+};
+
+const toDraft = (r: CompanyRequisites | null): RequisitesDraft => ({
+  kind: r?.kind ?? "org",
+  name: r?.name ?? "",
+  inn: r?.inn ?? "",
+  kpp: r?.kpp ?? "",
+  ogrn: r?.ogrn ?? "",
+  address: r?.address ?? "",
+  headPost: r?.headPost ?? "",
+  headName: r?.headName ?? "",
+  email: r?.email ?? "",
+});
+
+/**
+ * Реквизиты компании: для счёта и для закрывающих документов (УПД). ИНН и
+ * ОГРН проверяются по контрольным цифрам ещё до отправки.
+ */
+function RequisitesCard({ requisites, purpose }: { requisites: CompanyRequisites | null; purpose: "invoice" | "documents" }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(!requisites && purpose === "invoice");
+  const [draft, setDraft] = useState<RequisitesDraft>(() => toDraft(requisites));
+  const [errors, setErrors] = useState<Partial<Record<keyof RequisitesDraft, string>>>({});
+  const [busy, setBusy] = useState(false);
+  const formId = useId();
+
+  useEffect(() => {
+    if (!editing) setDraft(toDraft(requisites));
+  }, [requisites, editing]);
+
+  const set = (key: keyof RequisitesDraft, value: string) => {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setErrors((e) => ({ ...e, [key]: undefined }));
+  };
+
+  const save = async () => {
+    const parsed = requisitesSchema.safeParse(draft);
+    if (!parsed.success) {
+      const next: Partial<Record<keyof RequisitesDraft, string>> = {};
+      for (const issue of parsed.error.errors) {
+        const key = issue.path[0] as keyof RequisitesDraft;
+        if (key && !next[key]) next[key] = issue.message;
+      }
+      setErrors(next);
+      return;
+    }
+    setBusy(true);
+    try {
+      await saveRequisites(draft);
+      await queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+      setEditing(false);
+      toast({ title: "Реквизиты сохранены", description: purpose === "invoice" ? "Теперь можно выставить счёт." : "Они попадут в закрывающие документы." });
+    } catch (err) {
+      const field = err instanceof ApiError ? (err.body?.code as keyof RequisitesDraft | undefined) : undefined;
+      const message = err instanceof Error ? err.message : "Не удалось сохранить";
+      if (field && field in draft) setErrors({ [field]: message });
+      else toast({ title: "Не сохранилось", description: message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!editing) {
+    return requisites ? (
+      <div className="billing-requisites-summary">
+        <Building2 aria-hidden />
+        <div className="min-w-0">
+          <p className="billing-requisites-name">{requisites.name}</p>
+          <p className="billing-requisites-meta">
+            ИНН {requisites.inn}
+            {requisites.kpp ? ` · КПП ${requisites.kpp}` : ""} · {requisites.address}
+          </p>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+          Изменить
+        </Button>
+      </div>
+    ) : (
+      <div className="billing-requisites-summary is-empty">
+        <Building2 aria-hidden />
+        <p className="min-w-0 text-sm text-muted-foreground">
+          Реквизиты не заполнены — в УПД будет только название компании.
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+          Заполнить
+        </Button>
+      </div>
+    );
+  }
+
+  const field = (key: keyof RequisitesDraft, label: string, props: React.ComponentProps<typeof Input> = {}, hint?: string) => (
+    <label className="billing-field" key={key}>
+      <span>{label}</span>
+      <Input
+        value={draft[key]}
+        onChange={(e) => set(key, e.target.value)}
+        aria-invalid={!!errors[key] || undefined}
+        aria-describedby={errors[key] ? `${formId}-${key}` : undefined}
+        {...props}
+      />
+      {errors[key] ? (
+        <small id={`${formId}-${key}`} className="billing-field-error" role="alert">
+          {errors[key]}
+        </small>
+      ) : hint ? (
+        <small>{hint}</small>
+      ) : null}
+    </label>
+  );
+
+  return (
+    <form
+      className="billing-requisites"
+      aria-label="Реквизиты компании"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
+    >
+      <div className="billing-methods is-compact" role="radiogroup" aria-label="Кто платит">
+        {(["org", "ip"] as const).map((kind) => (
+          <button key={kind} type="button" role="radio" aria-checked={draft.kind === kind} className="billing-method" onClick={() => set("kind", kind)}>
+            <span>
+              <b>{kind === "org" ? "Организация" : "ИП"}</b>
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="billing-requisites-grid">
+        {field("name", draft.kind === "org" ? "Название организации" : "ФИО предпринимателя", { placeholder: draft.kind === "org" ? "ООО «Ромашка»" : "ИП Иванов Иван Иванович", autoComplete: "organization" })}
+        {field("inn", "ИНН", { inputMode: "numeric", placeholder: draft.kind === "org" ? "10 цифр" : "12 цифр", maxLength: 14 })}
+        {draft.kind === "org" && field("kpp", "КПП", { inputMode: "numeric", placeholder: "9 цифр", maxLength: 11 })}
+        {field("ogrn", draft.kind === "org" ? "ОГРН" : "ОГРНИП", { inputMode: "numeric", maxLength: 17 }, "Необязательно")}
+        <div className="billing-requisites-wide">{field("address", "Юридический адрес", { autoComplete: "street-address" })}</div>
+        {draft.kind === "org" && field("headPost", "Должность руководителя", { placeholder: "Генеральный директор" }, "Для подписи в УПД")}
+        {field("headName", draft.kind === "org" ? "ФИО руководителя" : "ФИО для подписи", { placeholder: "Иванов И. И." }, "Необязательно")}
+        {field("email", "Почта для документов", { type: "email", inputMode: "email" }, "Сюда — уведомления о счетах")}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={busy} loadingLabel="Сохраняем…">
+          Сохранить реквизиты
+        </Button>
+        {requisites && (
+          <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
+            Отмена
+          </Button>
+        )}
+      </div>
+    </form>
   );
 }
 
@@ -647,6 +1095,8 @@ function Orders({ orders, inApp }: { orders: BillingOrder[]; inApp: boolean }) {
                   {PLANS[o.plan].name} на {periodLabel(o.months)}
                   {o.automatic && <span className="billing-chip is-muted">автопродление</span>}
                   {o.isTest && <span className="billing-chip is-warn">тест</span>}
+                  {o.method === "invoice" && <span className="billing-chip is-muted">по счёту</span>}
+                  {o.promoCode && <span className="billing-chip is-muted">промокод {o.promoCode}</span>}
                   {o.status === "paid" && (o.refundStatus === "sending" || o.refundStatus === "pending" || o.refundStatus === "uncertain") && (
                     <span className="billing-chip is-muted">возврат в обработке</span>
                   )}
@@ -654,7 +1104,22 @@ function Orders({ orders, inApp }: { orders: BillingOrder[]; inApp: boolean }) {
                 <p className="billing-order-meta">
                   №{o.id} · {shortDate(o.paidAt ?? o.createdAt)}
                   {o.status === "paid" && o.planUntil ? ` · тариф до ${shortDate(o.planUntil)}` : ""}
+                  {o.method === "invoice" && o.status === "pending" && o.invoiceDueAt ? ` · оплатить до ${shortDate(o.invoiceDueAt)}` : ""}
                 </p>
+                {!inApp && (o.hasInvoice || o.hasUpd) && (
+                  <p className="billing-order-docs">
+                    {o.hasInvoice && (
+                      <a className="billing-doc-link" href={invoicePdfUrl(o.id)} download>
+                        <Download aria-hidden /> Счёт
+                      </a>
+                    )}
+                    {o.hasUpd && (
+                      <a className="billing-doc-link" href={updPdfUrl(o.id)} download>
+                        <Download aria-hidden /> УПД
+                      </a>
+                    )}
+                  </p>
+                )}
               </div>
               <div className="billing-order-side">
                 <b>{formatRub(o.amountRub)}</b>
@@ -666,7 +1131,7 @@ function Orders({ orders, inApp }: { orders: BillingOrder[]; inApp: boolean }) {
           ))}
         </ul>
       )}
-      {!inApp && <p className="billing-orders-hint">Кассовые чеки присылает Робокасса на почту, указанную при оплате.</p>}
+      {!inApp && <p className="billing-orders-hint">Кассовые чеки присылает Робокасса на почту, указанную при оплате. УПД — по каждой оплате, когда заполнены реквизиты исполнителя.</p>}
     </section>
   );
 }

@@ -51,12 +51,19 @@ export const checkoutSchema = z.object({
     .transform((v) => (v ? v.toLowerCase() : undefined))
     .refine((v) => v === undefined || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v), "Проверьте адрес почты"),
   /**
-   * Сумма, которую человек видел на странице. Не сумма к оплате, а сверка:
-   * если root поменял цену, пока форма была открыта, заказ не создаём.
+   * Сумма, которую человек видел на странице (уже со скидкой). Не сумма к
+   * оплате, а сверка: если цена или промокод изменились, пока форма была
+   * открыта, заказ не создаём.
    */
   expectedRub: z.number().int().optional(),
+  /** Промокод. Скидку считает только сервер. */
+  promoCode: z.string().trim().max(40).optional(),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+/** Счёт для юрлица или ИП: тариф, срок, промокод. Без автопродления и почты для чека. */
+export const invoiceSchema = checkoutSchema.pick({ plan: true, months: true, expectedRub: true, promoCode: true });
+export type InvoiceInput = z.infer<typeof invoiceSchema>;
 
 export function isPaidPlan(id: string | null | undefined): id is PaidPlanId {
   return (PAID_PLAN_IDS as readonly string[]).includes(id ?? "");
@@ -177,7 +184,8 @@ export const ROBOKASSA_IFRAME_SCRIPT_URL = "https://auth.robokassa.ru/Merchant/b
 
 export const OFFER_PATH = "/offer";
 /** Редакция оферты — пишется в историю согласий вместе с текстом. */
-export const OFFER_REVISION = "2026-10-24";
+// .2 — промокоды, оплата по счёту, закрывающие документы (24.10.2026).
+export const OFFER_REVISION = "2026-10-24.2";
 /** Раздел оферты об автопродлении (id заголовка «Автопродление»). */
 export const RECURRING_OFFER_HREF = `${OFFER_PATH}#avtoprodlenie`;
 
@@ -249,14 +257,19 @@ export function recurringAction(state: RecurringState, now: number): RecurringAc
 
 // --- Заказы ------------------------------------------------------------------
 
-export type OrderStatus = "pending" | "paid" | "expired" | "refunded";
+export type OrderStatus = "pending" | "paid" | "expired" | "refunded" | "cancelled";
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "Ожидает оплаты",
   paid: "Оплачен",
   expired: "Не оплачен",
   refunded: "Возвращён",
+  cancelled: "Отменён",
 };
+
+/** Как оплачен заказ: картой/СБП через кассу, по счёту или промокодом на всю сумму. */
+export type PaymentMethod = "card" | "invoice" | "promo";
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ["card", "invoice", "promo"];
 
 /** Возврат через API Робокассы. */
 export type RefundStatus = "sending" | "pending" | "uncertain" | "finished" | "canceled";
@@ -285,6 +298,16 @@ export type BillingOrder = {
   /** До какого момента продлил тариф (после оплаты). */
   planUntil: number | null;
   refundStatus: RefundStatus | null;
+  method: PaymentMethod;
+  /** Промокод заказа и скидка по нему, ₽. */
+  promoCode: string | null;
+  discountRub: number;
+  /** Счёт: оплатить до (unix sec). */
+  invoiceDueAt: number | null;
+  /** Можно скачать счёт (PDF). */
+  hasInvoice: boolean;
+  /** Можно скачать закрывающий документ (УПД). */
+  hasUpd: boolean;
 };
 
 /** Ответ GET /api/billing — всё для страницы «Тариф и оплата». */
@@ -308,6 +331,10 @@ export type BillingInfo = {
   /** Почта админа для чека, если есть. */
   email: string | null;
   now: number;
+  /** Реквизиты компании для счёта и УПД; null — не заполнены. */
+  requisites: CompanyRequisites | null;
+  /** Оплата по счёту открыта: реквизиты исполнителя заполнены. */
+  invoiceAvailable: boolean;
 };
 
 /** Заказ в списке root: с компанией и почтой плательщика. */
@@ -344,6 +371,8 @@ export type BillingDiagnostics = {
   /** Адреса для «Технических настроек» магазина. */
   urls: { result: string; success: string; fail: string };
   stats: BillingStats;
+  /** Реквизиты исполнителя для счетов и УПД (LEGAL_*): чего не хватает. */
+  documents: { ready: boolean; missing: string[] };
 };
 
 /** POST /api/root/billing/check — ответ кассы на проверочный запрос. */
@@ -364,4 +393,158 @@ export type CheckoutResult = {
   params: Record<string, string>;
   /** Обычная страница оплаты — если окно Робокассы не загрузилось. */
   paymentUrl: string;
+  /** Промокод закрыл всю сумму: тариф уже включён, касса не нужна. */
+  free?: boolean;
+  order?: BillingOrder;
 };
+
+/** Ответ POST /api/billing/invoice. */
+export type InvoiceResult = {
+  order: BillingOrder;
+  /** Счёт уже был выставлен на те же условия — вернули его. */
+  existing: boolean;
+  pdfUrl: string;
+};
+
+// --- Промокоды -------------------------------------------------------------------
+
+export const PROMO_KINDS = ["percent", "fixed"] as const;
+export type PromoKind = (typeof PROMO_KINDS)[number];
+
+/** Код хранится и сравнивается в верхнем регистре без пробелов. */
+export function normalizePromoCode(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+export function isValidPromoCodeFormat(code: string): boolean {
+  return /^[A-Z0-9_-]{3,32}$/.test(code);
+}
+
+/** Скидка в рублях: целая, не больше цены. */
+export function promoDiscountRub(kind: PromoKind, value: number, priceRub: number): number {
+  const base = Math.max(0, Math.round(priceRub));
+  if (kind === "percent") return Math.min(base, Math.round((base * Math.min(100, Math.max(0, value))) / 100));
+  return Math.min(base, Math.max(0, Math.round(value)));
+}
+
+/** «−20 %» или «−500 ₽». */
+export function promoLabel(kind: PromoKind, value: number): string {
+  return kind === "percent" ? `−${value} %` : `−${formatRub(value)}`;
+}
+
+const optionalTime = z.number().int().positive().nullable().optional();
+
+export const promoCodeCreateSchema = z
+  .object({
+    code: z.string().trim().min(1, "Введите код").max(40),
+    kind: z.enum(PROMO_KINDS),
+    value: z.number().int().min(1, "Скидка — от 1").max(MAX_PRICE_RUB),
+    startsAt: optionalTime,
+    endsAt: optionalTime,
+    maxUses: z.number().int().min(1, "Лимит — от 1").max(1_000_000).nullable().optional(),
+    newClientsOnly: z.boolean().optional().default(false),
+    /** Персональный код: только для этой компании. */
+    companyId: z.number().int().positive().nullable().optional(),
+    note: z.string().trim().max(255).optional(),
+  })
+  .refine((v) => v.kind !== "percent" || v.value <= 100, { message: "Процент — не больше 100", path: ["value"] })
+  .refine((v) => !v.startsAt || !v.endsAt || v.startsAt < v.endsAt, { message: "Конец раньше начала", path: ["endsAt"] });
+export type PromoCodeCreate = z.infer<typeof promoCodeCreateSchema>;
+
+/** Код и размер скидки не меняются: на них уже могли сослаться. */
+export const promoCodePatchSchema = z.object({
+  active: z.boolean().optional(),
+  endsAt: optionalTime,
+  maxUses: z.number().int().min(1).max(1_000_000).nullable().optional(),
+  note: z.string().trim().max(255).optional(),
+});
+
+export type RootPromoCode = {
+  id: number;
+  code: string;
+  kind: PromoKind;
+  value: number;
+  active: boolean;
+  startsAt: number | null;
+  endsAt: number | null;
+  maxUses: number | null;
+  newClientsOnly: boolean;
+  companyId: number | null;
+  companyName: string | null;
+  note: string | null;
+  /** Оплаченных заказов с кодом. */
+  paidUses: number;
+  createdAt: number;
+};
+
+/** Ответ POST /api/billing/promo — что даст код на выбранный тариф и срок. */
+export type PromoQuote =
+  | { ok: true; code: string; label: string; baseRub: number; discountRub: number; amountRub: number }
+  | { ok: false; message: string };
+
+// --- Реквизиты компании (счёт и УПД) -----------------------------------------------
+
+const onlyDigits = (v: string) => /^\d+$/.test(v);
+
+/** ИНН: 10 цифр — организация, 12 — ИП (и физлицо); контрольные цифры по алгоритму ФНС. */
+export function isValidInn(inn: string): boolean {
+  if (!onlyDigits(inn)) return false;
+  const d = inn.split("").map(Number);
+  const check = (weights: number[]) => (weights.reduce((sum, w, i) => sum + w * d[i], 0) % 11) % 10;
+  if (d.length === 10) return check([2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[9];
+  if (d.length === 12) {
+    return check([7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[10] && check([3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[11];
+  }
+  return false;
+}
+
+/** ОГРН — 13 цифр, ОГРНИП — 15; последняя — остаток от деления. */
+export function isValidOgrn(ogrn: string): boolean {
+  if (!onlyDigits(ogrn)) return false;
+  // Остаток длинного числа — по цифрам: в Number 14 цифр без потерь не поместятся.
+  const mod = (digits: string, m: number) => digits.split("").reduce((r, ch) => (r * 10 + Number(ch)) % m, 0);
+  if (ogrn.length === 13) return mod(ogrn.slice(0, 12), 11) % 10 === Number(ogrn[12]);
+  if (ogrn.length === 15) return mod(ogrn.slice(0, 14), 13) % 10 === Number(ogrn[14]);
+  return false;
+}
+
+const cleanDigits = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\s+/g, ""));
+
+export const requisitesSchema = z
+  .object({
+    /** org — организация, ip — индивидуальный предприниматель. */
+    kind: z.enum(["org", "ip"]),
+    name: z.string().trim().min(3, "Укажите название").max(255),
+    inn: cleanDigits,
+    kpp: cleanDigits.optional().transform((v) => v || null),
+    ogrn: cleanDigits.optional().transform((v) => v || null),
+    address: z.string().trim().min(10, "Укажите юридический адрес").max(500),
+    headPost: z.string().trim().max(100).optional().transform((v) => v || null),
+    headName: z.string().trim().max(150).optional().transform((v) => v || null),
+    /** Куда присылать уведомления о счетах и документах. */
+    email: z
+      .string()
+      .trim()
+      .max(200)
+      .optional()
+      .transform((v) => (v ? v.toLowerCase() : null))
+      .refine((v) => v === null || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v), "Проверьте адрес почты"),
+  })
+  .superRefine((v, ctx) => {
+    const innLength = v.kind === "org" ? 10 : 12;
+    if (v.inn.length !== innLength || !isValidInn(v.inn)) {
+      ctx.addIssue({ code: "custom", path: ["inn"], message: `ИНН ${v.kind === "org" ? "организации — 10" : "ИП — 12"} цифр, проверьте его` });
+    }
+    if (v.kind === "org" && (!v.kpp || !/^\d{9}$/.test(v.kpp))) ctx.addIssue({ code: "custom", path: ["kpp"], message: "КПП — 9 цифр" });
+    if (v.ogrn && (v.ogrn.length !== (v.kind === "org" ? 13 : 15) || !isValidOgrn(v.ogrn))) {
+      ctx.addIssue({ code: "custom", path: ["ogrn"], message: v.kind === "org" ? "ОГРН — 13 цифр, проверьте его" : "ОГРНИП — 15 цифр, проверьте его" });
+    }
+  })
+  .transform((v) => ({ ...v, kpp: v.kind === "org" ? v.kpp : null }));
+export type CompanyRequisites = z.infer<typeof requisitesSchema>;
+
+/** Счёт действует столько дней; оплатить можно и позже — тогда root отметит оплату вручную. */
+export const INVOICE_VALID_DAYS = 7;

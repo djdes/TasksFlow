@@ -6,14 +6,27 @@
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, max, or, sql } from "drizzle-orm";
 import {
   billingPrices,
+  closingDocuments,
   companies,
   companyBilling,
+  companyRequisites,
   paymentConsents,
   paymentOrders,
+  promoCodes,
+  type ClosingDocumentRow,
   type CompanyBillingRow,
+  type CompanyRequisitesRow,
   type PaymentOrderRow,
+  type PromoCodeRow,
 } from "@shared/schema";
-import { DEFAULT_PRICES, isPaidPlan, type BillingMonths, type BillingStats, type PlanPrice } from "@shared/billing";
+import {
+  DEFAULT_PRICES,
+  isPaidPlan,
+  type BillingMonths,
+  type BillingStats,
+  type CompanyRequisites,
+  type PlanPrice,
+} from "@shared/billing";
 import { db } from "../db";
 import { logger } from "../logger";
 
@@ -29,7 +42,27 @@ export type NewOrder = {
   recurringConsent: boolean;
   recurringChargeOf: number | null;
   createdAt: number;
+  /** По умолчанию card. */
+  paymentMethod?: string;
+  baseRub?: number | null;
+  discountRub?: number;
+  promoCode?: string | null;
+  invoiceDueAt?: number | null;
 };
+
+export type NewPromoCode = Omit<PromoCodeRow, "id">;
+
+/**
+ * Заказ с промокодом: лимиты проверяются в той же транзакции, что и вставка
+ * заказа, под блокировкой строки кода. «Занятые» использования — оплаченные
+ * заказы, неоплаченные счета и заказы, ждущие оплаты с reservedSince.
+ */
+export type PromoReservation = { code: string; companyId: number; free: boolean; reservedSince: number };
+export type PromoReservationResult =
+  | { ok: true; order: PaymentOrderRow }
+  | { ok: false; reason: "gone" | "exhausted" | "used" | "newClientsOnly" };
+export type PromoCodeListRow = PromoCodeRow & { paidUses: number; companyName: string | null };
+export type NewClosingDocument = Omit<ClosingDocumentRow, "id">;
 
 export type NewConsent = {
   companyId: number;
@@ -81,6 +114,7 @@ export interface BillingStore {
   getPrices(): Promise<PlanPrice[]>;
   setPrices(prices: PlanPrice[], now: number): Promise<void>;
   createOrder(order: NewOrder): Promise<PaymentOrderRow>;
+  createOrderWithPromo(order: NewOrder, reservation: PromoReservation): Promise<PromoReservationResult>;
   getOrder(id: number): Promise<PaymentOrderRow | null>;
   listOrders(companyId: number, limit: number): Promise<PaymentOrderRow[]>;
   listRecentOrders(limit: number): Promise<Array<PaymentOrderRow & { companyName: string | null }>>;
@@ -141,6 +175,31 @@ export interface BillingStore {
   /** Занять напоминание о сроке until. false — уже отправлено (другим процессом). */
   claimExpiryNotice(companyId: number, kind: "expiry" | "expired", until: number, now: number): Promise<boolean>;
   stats(): Promise<BillingStats>;
+
+  getPromo(code: string): Promise<PromoCodeRow | null>;
+  listPromos(): Promise<PromoCodeListRow[]>;
+  /** null — такой код уже есть. */
+  createPromo(row: NewPromoCode): Promise<PromoCodeRow | null>;
+  updatePromo(id: number, patch: Partial<Pick<PromoCodeRow, "active" | "endsAt" | "maxUses" | "note">>, now: number): Promise<PromoCodeRow | null>;
+  /** Оплаченных заказов с этим кодом. */
+  promoPaidUses(code: string): Promise<number>;
+  /** Компания уже оплатила заказ с этим кодом. */
+  promoPaidByCompany(code: string, companyId: number): Promise<boolean>;
+  hasPaidOrders(companyId: number): Promise<boolean>;
+
+  getRequisites(companyId: number): Promise<CompanyRequisitesRow | null>;
+  saveRequisites(companyId: number, requisites: CompanyRequisites, now: number): Promise<void>;
+
+  /** Неоплаченные (ждут оплаты) счета компании, новые первыми. */
+  listOpenInvoices(companyId: number): Promise<PaymentOrderRow[]>;
+  /** Ждёт оплаты → отменён. false — уже оплачен или отменён. */
+  cancelInvoice(id: number): Promise<boolean>;
+
+  getClosingDocument(orderId: number): Promise<ClosingDocumentRow | null>;
+  /** Документ уже есть (гонка двух скачиваний) — вернёт существующий. */
+  insertClosingDocument(doc: NewClosingDocument): Promise<ClosingDocumentRow>;
+  setClosingBuyer(orderId: number, buyer: string): Promise<void>;
+  voidClosingDocument(orderId: number, now: number): Promise<void>;
 }
 
 let warnedMissingTable = false;
@@ -216,6 +275,41 @@ export const billingStore: BillingStore = {
     return row;
   },
 
+  async createOrderWithPromo(order, r) {
+    return db.transaction(async (tx) => {
+      const [promo] = await tx.select().from(promoCodes).where(eq(promoCodes.code, r.code)).for("update");
+      if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
+      const held = or(
+        eq(paymentOrders.status, "paid"),
+        and(eq(paymentOrders.status, "pending"), or(eq(paymentOrders.paymentMethod, "invoice"), gte(paymentOrders.createdAt, r.reservedSince))),
+      );
+      if (promo.maxUses !== null) {
+        const [row] = await tx.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, r.code), held));
+        if (Number(row?.n ?? 0) >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
+      }
+      // Один код — одна оплата компании. Код на всю сумму засчитывается
+      // сразу, поэтому ждущий заказ с ним — это параллельный запрос.
+      const [mine] = await tx
+        .select({ id: paymentOrders.id })
+        .from(paymentOrders)
+        .where(and(eq(paymentOrders.promoCode, r.code), eq(paymentOrders.companyId, r.companyId), r.free ? held : eq(paymentOrders.status, "paid")))
+        .limit(1);
+      if (mine) return { ok: false as const, reason: "used" as const };
+      if (promo.newClientsOnly) {
+        const [paid] = await tx
+          .select({ id: paymentOrders.id })
+          .from(paymentOrders)
+          .where(and(eq(paymentOrders.companyId, r.companyId), inArray(paymentOrders.status, ["paid", "refunded"])))
+          .limit(1);
+        if (paid) return { ok: false as const, reason: "newClientsOnly" as const };
+      }
+      const result = await tx.insert(paymentOrders).values({ ...order, status: "pending" });
+      const [row] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, insertId(result)));
+      if (!row) throw new Error("payment order was not created");
+      return { ok: true as const, order: row };
+    });
+  },
+
   async getOrder(id) {
     const [row] = await guard([] as PaymentOrderRow[], () => db.select().from(paymentOrders).where(eq(paymentOrders.id, id)));
     return row ?? null;
@@ -240,9 +334,10 @@ export const billingStore: BillingStore = {
   async settle(orderId, raw, now, decide) {
     return db.transaction(async (tx) => {
       const [order] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).for("update");
-      // Засчитываем только ждущий или просроченный заказ: оплаченный и
-      // возвращённый повторное уведомление или сверка не трогают.
-      if (!order || (order.status !== "pending" && order.status !== "expired")) return { claimed: false as const, order: order ?? null };
+      // Засчитываем только ждущий, просроченный или отменённый (счёт оплатили
+      // после отмены) заказ: оплаченный и возвращённый повторное уведомление
+      // или сверка не трогают.
+      if (!order || !["pending", "expired", "cancelled"].includes(order.status)) return { claimed: false as const, order: order ?? null };
       const [company] = await tx
         .select({ id: companies.id, name: companies.name, plan: companies.plan, planUntil: companies.planUntil })
         .from(companies)
@@ -283,7 +378,8 @@ export const billingStore: BillingStore = {
         await db
           .update(paymentOrders)
           .set({ status: "expired" })
-          .where(and(eq(paymentOrders.status, "pending"), lte(paymentOrders.createdAt, createdBefore))),
+          // Счёт живёт дольше кассовой ссылки: его закрывает root или новый счёт.
+          .where(and(eq(paymentOrders.status, "pending"), eq(paymentOrders.paymentMethod, "card"), lte(paymentOrders.createdAt, createdBefore))),
       ),
     );
   },
@@ -354,6 +450,7 @@ export const billingStore: BillingStore = {
           and(
             eq(paymentOrders.status, "pending"),
             eq(paymentOrders.isTest, false),
+            eq(paymentOrders.paymentMethod, "card"),
             lte(paymentOrders.createdAt, createdBefore),
             or(
               ...tiers.map((t) =>
@@ -525,5 +622,143 @@ export const billingStore: BillingStore = {
       if (!isMissingTable(err)) throw err;
       return { tables: false, byStatus: {}, lastPaidAt: null, activeSeries: 0 };
     }
+  },
+
+  async getPromo(code) {
+    const [row] = await guard([] as PromoCodeRow[], () => db.select().from(promoCodes).where(eq(promoCodes.code, code)));
+    return row ?? null;
+  },
+
+  async listPromos() {
+    const rows = await guard([] as PromoCodeRow[], () => db.select().from(promoCodes).orderBy(desc(promoCodes.id)).limit(500));
+    if (!rows.length) return [];
+    const uses = await db
+      .select({ code: paymentOrders.promoCode, n: count() })
+      .from(paymentOrders)
+      .where(and(eq(paymentOrders.status, "paid"), inArray(paymentOrders.promoCode, rows.map((r) => r.code))))
+      .groupBy(paymentOrders.promoCode);
+    const byCode = new Map(uses.map((u) => [u.code, Number(u.n)]));
+    const ids = Array.from(new Set(rows.map((r) => r.companyId).filter((id): id is number => id !== null)));
+    const names = ids.length ? await db.select({ id: companies.id, name: companies.name }).from(companies).where(inArray(companies.id, ids)) : [];
+    const byId = new Map(names.map((c) => [c.id, c.name]));
+    return rows.map((r) => ({ ...r, paidUses: byCode.get(r.code) ?? 0, companyName: r.companyId ? byId.get(r.companyId) ?? null : null }));
+  },
+
+  async createPromo(row) {
+    try {
+      const result = await db.insert(promoCodes).values(row);
+      const [created] = await db.select().from(promoCodes).where(eq(promoCodes.id, insertId(result)));
+      return created ?? null;
+    } catch (err) {
+      const e = err as { code?: string; cause?: { code?: string } };
+      if ((e?.code ?? e?.cause?.code) === "ER_DUP_ENTRY") return null;
+      throw err;
+    }
+  },
+
+  async updatePromo(id, patch, now) {
+    await db.update(promoCodes).set({ ...patch, updatedAt: now }).where(eq(promoCodes.id, id));
+    const [row] = await db.select().from(promoCodes).where(eq(promoCodes.id, id));
+    return row ?? null;
+  },
+
+  async promoPaidUses(code) {
+    const [row] = await guard([{ n: 0 }] as Array<{ n: number }>, () =>
+      db.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, code), eq(paymentOrders.status, "paid"))),
+    );
+    return Number(row?.n ?? 0);
+  },
+
+  async promoPaidByCompany(code, companyId) {
+    const [row] = await guard([] as Array<{ id: number }>, () =>
+      db
+        .select({ id: paymentOrders.id })
+        .from(paymentOrders)
+        .where(and(eq(paymentOrders.promoCode, code), eq(paymentOrders.companyId, companyId), eq(paymentOrders.status, "paid")))
+        .limit(1),
+    );
+    return Boolean(row);
+  },
+
+  async hasPaidOrders(companyId) {
+    const [row] = await guard([] as Array<{ id: number }>, () =>
+      db
+        .select({ id: paymentOrders.id })
+        .from(paymentOrders)
+        .where(and(eq(paymentOrders.companyId, companyId), inArray(paymentOrders.status, ["paid", "refunded"])))
+        .limit(1),
+    );
+    return Boolean(row);
+  },
+
+  async getRequisites(companyId) {
+    const [row] = await guard([] as CompanyRequisitesRow[], () =>
+      db.select().from(companyRequisites).where(eq(companyRequisites.companyId, companyId)),
+    );
+    return row ?? null;
+  },
+
+  async saveRequisites(companyId, r, now) {
+    const values = {
+      kind: r.kind,
+      name: r.name,
+      inn: r.inn,
+      kpp: r.kpp,
+      ogrn: r.ogrn,
+      address: r.address,
+      headPost: r.headPost,
+      headName: r.headName,
+      email: r.email,
+      updatedAt: now,
+    };
+    await db.insert(companyRequisites).values({ companyId, ...values }).onDuplicateKeyUpdate({ set: values });
+  },
+
+  async listOpenInvoices(companyId) {
+    return guard([], () =>
+      db
+        .select()
+        .from(paymentOrders)
+        .where(and(eq(paymentOrders.companyId, companyId), eq(paymentOrders.paymentMethod, "invoice"), eq(paymentOrders.status, "pending")))
+        .orderBy(desc(paymentOrders.id)),
+    );
+  },
+
+  async cancelInvoice(id) {
+    const result = await db
+      .update(paymentOrders)
+      .set({ status: "cancelled" })
+      .where(and(eq(paymentOrders.id, id), eq(paymentOrders.paymentMethod, "invoice"), eq(paymentOrders.status, "pending")));
+    return affected(result) === 1;
+  },
+
+  async getClosingDocument(orderId) {
+    const [row] = await guard([] as ClosingDocumentRow[], () => db.select().from(closingDocuments).where(eq(closingDocuments.orderId, orderId)));
+    return row ?? null;
+  },
+
+  async insertClosingDocument(doc) {
+    try {
+      await db.insert(closingDocuments).values(doc);
+    } catch (err) {
+      const e = err as { code?: string; cause?: { code?: string } };
+      if ((e?.code ?? e?.cause?.code) !== "ER_DUP_ENTRY") throw err;
+    }
+    const [row] = await db.select().from(closingDocuments).where(eq(closingDocuments.orderId, doc.orderId));
+    if (!row) throw new Error("closing document was not created");
+    return row;
+  },
+
+  async setClosingBuyer(orderId, buyer) {
+    await db.update(closingDocuments).set({ buyer }).where(eq(closingDocuments.orderId, orderId));
+  },
+
+  async voidClosingDocument(orderId, now) {
+    await guard(null, () =>
+      db
+        .update(closingDocuments)
+        .set({ status: "voided", voidedAt: now })
+        .where(and(eq(closingDocuments.orderId, orderId), eq(closingDocuments.status, "issued"))),
+    );
   },
 };

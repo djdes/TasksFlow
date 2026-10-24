@@ -1,9 +1,11 @@
 // Оплата тарифа на UI-превью: форма тарифов, срок и сумма, галочка
 // автосписаний (не стоит по умолчанию), оплата обычной страницей кассы и в
 // окне поверх страницы, возврат на SuccessURL/FailURL, автопродление,
-// касса не настроена, iOS-приложение без оплаты, root «Касса» (секреты,
-// адреса, проверка подключения), «Цены», сверка и возврат платежа, 390px и
-// тёмная тема. API и Робокасса подменены — сервер, БД и касса не участвуют.
+// касса не настроена, iOS-приложение без оплаты, промокод (и ссылкой
+// ?promo=, и на всю сумму), счёт для юрлица с реквизитами, ссылки на счёт
+// и УПД, root «Касса» (секреты, адреса, проверка подключения, счета и
+// УПД), «Цены», «Промокоды», сверка и возврат платежа, отметка оплаты по
+// счёту, 390px и тёмная тема. API и Робокасса подменены — сервер, БД и касса не участвуют.
 async (page) => {
   const base = new URL(page.url()).origin;
   const browser = page.context().browser();
@@ -28,6 +30,8 @@ async (page) => {
     orders: [],
     email: 'boss@cafe.ru',
     now,
+    requisites: null,
+    invoiceAvailable: false,
   });
 
   async function open({ ua, info, rkScript, orders = {} } = {}) {
@@ -41,8 +45,12 @@ async (page) => {
       info: info ?? baseInfo(),
       orderPolls: {},
       rootOrders: [
-        { id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, refundStatus: null, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' },
-        { id: 71, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 3600, paidAt: null, planUntil: null, refundStatus: null, companyId: 3, companyName: 'Бар', email: null },
+        { id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: true, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' },
+        { id: 71, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 3600, paidAt: null, planUntil: null, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: false, companyId: 3, companyName: 'Бар', email: null },
+        { id: 72, plan: 'team', months: 12, amountRub: 7920, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 7200, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: 'START', discountRub: 1980, invoiceDueAt: now + 6 * DAY, hasInvoice: true, hasUpd: false, companyId: 4, companyName: 'ООО Столовая', email: 'buh@st.ru' },
+      ],
+      promos: [
+        { id: 1, code: 'START', kind: 'percent', value: 20, active: true, startsAt: null, endsAt: now + 30 * DAY, maxUses: 100, newClientsOnly: true, companyId: null, companyName: null, note: 'рассылка', paidUses: 3, createdAt: now - DAY },
       ],
     };
     tab.on('pageerror', (e) => errors.push(e.message));
@@ -60,6 +68,26 @@ async (page) => {
       if (p !== '/api/events') calls.push({ method: req.method(), p, body });
       if (p === '/api/auth/me') return route.fulfill({ json: admin });
       if (p === '/api/billing' && req.method() === 'GET') return route.fulfill({ json: state.info });
+      if (p === '/api/billing/promo') {
+        const price = prices.find((x) => x.plan === body.plan && x.months === body.months).priceRub;
+        const code = String(body.promoCode || '').toUpperCase();
+        if (code === 'START') return route.fulfill({ json: { ok: true, code, label: '−20 %', baseRub: price, discountRub: Math.round(price * 0.2), amountRub: price - Math.round(price * 0.2) } });
+        if (code === 'FREE') return route.fulfill({ json: { ok: true, code, label: '−100 %', baseRub: price, discountRub: price, amountRub: 0 } });
+        return route.fulfill({ json: { ok: false, message: 'Такого промокода нет' } });
+      }
+      if (p === '/api/billing/requisites' && req.method() === 'PUT') {
+        state.info = { ...state.info, requisites: { ...body, kpp: body.kind === 'org' ? body.kpp : null } };
+        return route.fulfill({ json: { requisites: state.info.requisites } });
+      }
+      if (p === '/api/billing/invoice') {
+        const order = { id: 90, plan: body.plan, months: body.months, amountRub: body.expectedRub, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: body.promoCode ?? null, discountRub: 0, invoiceDueAt: now + 7 * DAY, hasInvoice: true, hasUpd: false };
+        state.info = { ...state.info, orders: [order, ...state.info.orders] };
+        return route.fulfill({ json: { order, existing: false, pdfUrl: '/api/billing/orders/90/invoice.pdf' } });
+      }
+      if (p === '/api/billing/checkout' && String(body.promoCode || '').toUpperCase() === 'FREE') {
+        const order = { id: 79, plan: body.plan, months: body.months, amountRub: 0, description: 'x', status: 'paid', isTest: false, automatic: false, createdAt: now, paidAt: now, planUntil: now + 30 * DAY, refundStatus: null, method: 'promo', promoCode: 'FREE', discountRub: 990, invoiceDueAt: null, hasInvoice: false, hasUpd: false };
+        return route.fulfill({ json: { invId: 79, amountRub: 0, params: {}, paymentUrl: '', free: true, order } });
+      }
       if (p === '/api/billing/checkout') {
         const price = prices.find((x) => x.plan === body.plan && x.months === body.months).priceRub;
         const params = { MerchantLogin: 'shop', OutSum: `${price}.00`, InvId: '77', Description: 'TasksFlow', SignatureValue: 'abc', Culture: 'ru' };
@@ -86,6 +114,7 @@ async (page) => {
             testMode: false, configured: true, hash: 'md5', recurring: true, receipt: false, sno: null, tax: 'none',
             urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
             stats: { tables: true, byStatus: { paid: 1, pending: 1 }, lastPaidAt: now - DAY, activeSeries: 1 },
+            documents: { ready: false, missing: ['LEGAL_BANK_BIK — БИК, 9 цифр'] },
           },
         });
       }
@@ -101,6 +130,23 @@ async (page) => {
         return route.fulfill({ json: { message: 'Возврат отправлен в кассу.', order: state.rootOrders.find((o) => o.id === id) } });
       }
       if (p === '/api/root/billing/prices') return route.fulfill({ json: { ok: true, prices: body.prices } });
+      if (p === '/api/root/billing/promo-codes' && req.method() === 'GET') return route.fulfill({ json: { promos: state.promos } });
+      if (p === '/api/root/billing/promo-codes' && req.method() === 'POST') {
+        const promo = { id: state.promos.length + 1, code: String(body.code).toUpperCase(), kind: body.kind, value: body.value, active: true, startsAt: null, endsAt: body.endsAt, maxUses: body.maxUses, newClientsOnly: body.newClientsOnly, companyId: body.companyId, companyName: null, note: body.note ?? null, paidUses: 0, createdAt: now };
+        state.promos = [promo, ...state.promos];
+        return route.fulfill({ json: { promo } });
+      }
+      const promoPatch = p.match(/^\/api\/root\/billing\/promo-codes\/(\d+)$/);
+      if (promoPatch) {
+        state.promos = state.promos.map((x) => (x.id === Number(promoPatch[1]) ? { ...x, ...body } : x));
+        return route.fulfill({ json: { promo: state.promos.find((x) => x.id === Number(promoPatch[1])) } });
+      }
+      const invoiceAction = p.match(/^\/api\/root\/billing\/orders\/(\d+)\/invoice-(paid|cancel)$/);
+      if (invoiceAction) {
+        const id = Number(invoiceAction[1]);
+        state.rootOrders = state.rootOrders.map((o) => (o.id === id ? { ...o, status: invoiceAction[2] === 'paid' ? 'paid' : 'cancelled', paidAt: now, hasUpd: invoiceAction[2] === 'paid' } : o));
+        return route.fulfill({ json: { message: invoiceAction[2] === 'paid' ? 'Оплата отмечена: тариф продлён, админы получили уведомление.' : 'Счёт отменён' } });
+      }
       if (p === '/api/root/companies') return route.fulfill({ json: { enforced: false, companies: [] } });
       return route.fulfill({ json: [] });
     });
@@ -221,6 +267,79 @@ async (page) => {
     }
   }
 
+  // 5б. Промокод: скидка в сумме, код уходит в заказ; ссылка ?promo=FREE — тариф без оплаты.
+  {
+    const { context, tab, errors, calls } = await open();
+    try {
+      await tab.goto(base + '/admin/billing');
+      await tab.getByRole('button', { name: 'Есть промокод?' }).click();
+      const promoInput = tab.getByRole('textbox', { name: 'Промокод' });
+      await promoInput.fill('nope');
+      await tab.getByRole('button', { name: 'Применить' }).click();
+      await tab.getByText('Такого промокода нет').waitFor();
+      await promoInput.fill('start');
+      await tab.getByRole('button', { name: 'Применить' }).click();
+      await tab.getByText(/START: скидка −20 %/).waitFor();
+      await tab.locator('.billing-summary').getByText('792 ₽', { exact: true }).waitFor();
+      await tab.locator('.billing-summary').getByText('−198 ₽').waitFor();
+      // Срок поменяли — скидка пересчитана.
+      await tab.getByRole('radio', { name: /12 месяцев/ }).click();
+      await tab.locator('.billing-summary').getByText('7 920 ₽', { exact: true }).waitFor();
+      await tab.getByRole('checkbox', { name: /Я согласен на автоматические списания/ }).check();
+      await tab.locator('.billing-consent').getByText(/Спишем 9\s900\s₽ раз в год.*только на этот платёж \(7\s920\s₽\)/).waitFor();
+      await tab.getByRole('button', { name: /Перейти к оплате · 7\s920\s₽/ }).click();
+      await tab.waitForURL('**/billing/success**');
+      const sent = calls.find((c) => c.p === '/api/billing/checkout');
+      check(sent?.body?.promoCode === 'START' && sent.body.expectedRub === 7920, `promo checkout ${JSON.stringify(sent?.body)}`);
+
+      await tab.goto(base + '/admin/billing?promo=free');
+      await tab.getByText(/FREE: скидка −100 %/).waitFor();
+      check(await tab.getByRole('textbox', { name: /Почта для чека/ }).count() === 0, 'receipt email shown for free promo');
+      check(await tab.getByRole('checkbox', { name: /автоматические списания/ }).count() === 0, 'recurring consent shown for free promo');
+      await tab.getByRole('button', { name: 'Включить тариф по промокоду' }).click();
+      await tab.locator('.billing-paid').getByText(/Тариф включён/).waitFor();
+      check(errors.length === 0, `promo errors: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
+  // 5в. Счёт для юрлица: реквизиты с проверкой ИНН, счёт и ссылка на PDF, УПД в истории; 390px.
+  {
+    const paidOrder = { id: 60, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: false, createdAt: now - 40 * DAY, paidAt: now - 40 * DAY, planUntil: now - 10 * DAY, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: true };
+    const { context, tab, errors, calls } = await open({ info: { ...baseInfo(), invoiceAvailable: true, orders: [paidOrder] } });
+    try {
+      await tab.setViewportSize({ width: 390, height: 844 });
+      await tab.goto(base + '/admin/billing');
+      await tab.getByRole('radio', { name: /Счёт для юрлица или ИП/ }).click();
+      const form = tab.getByRole('form', { name: 'Реквизиты компании' }).first();
+      check(await tab.getByRole('button', { name: /Выставить счёт/ }).isDisabled(), 'invoice button enabled without requisites');
+      await form.getByRole('textbox', { name: 'Название организации' }).fill('ООО «Столовая»');
+      await form.getByRole('textbox', { name: 'ИНН' }).fill('7707083894');
+      await form.getByRole('textbox', { name: 'КПП' }).fill('773601001');
+      await form.getByRole('textbox', { name: 'Юридический адрес' }).fill('117312, г. Москва, ул. Вавилова, д. 19');
+      await form.getByRole('button', { name: 'Сохранить реквизиты' }).click();
+      await form.getByText(/ИНН организации — 10 цифр, проверьте его/).waitFor();
+      check(!calls.some((c) => c.p === '/api/billing/requisites'), 'invalid requisites sent');
+      await form.getByRole('textbox', { name: 'ИНН' }).fill('7707083893');
+      await form.getByRole('button', { name: 'Сохранить реквизиты' }).click();
+      await tab.locator('.billing-requisites-summary').first().getByText('ООО «Столовая»').waitFor();
+      check(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'invoice form overflows at 390');
+      await tab.getByRole('button', { name: /Выставить счёт · 990\s₽/ }).click();
+      await tab.getByText(/Счёт №90 на 990/).waitFor();
+      check(await tab.getByRole('link', { name: /Скачать счёт/ }).getAttribute('href') === '/api/billing/orders/90/invoice.pdf', 'invoice pdf link');
+      const inv = calls.find((c) => c.p === '/api/billing/invoice');
+      check(inv?.body?.plan === 'team' && inv.body.months === 1 && inv.body.expectedRub === 990, `invoice body ${JSON.stringify(inv?.body)}`);
+      const history = tab.locator('.billing-order', { hasText: '№60' });
+      check(await history.getByRole('link', { name: 'УПД' }).getAttribute('href') === '/api/billing/orders/60/upd.pdf', 'upd link');
+      await tab.locator('.billing-order', { hasText: '№90' }).getByText('по счёту').waitFor();
+      await tab.screenshot({ path: 'output/playwright/billing-invoice-390.png', fullPage: true });
+      check(errors.length === 0, `invoice errors: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
   // 6. Root: касса, цены и платежи (сверка и возврат).
   {
     const { context, tab, errors, calls } = await open();
@@ -262,6 +381,34 @@ async (page) => {
       await bakery.getByText('возврат в обработке').waitFor();
       check(await bakery.getByRole('button', { name: 'Вернуть деньги' }).count() === 0, 'refund button still shown');
       check(calls.filter((c) => c.p === '/api/root/billing/orders/70/refund').length === 1, 'refund calls');
+
+      // Счета и УПД: чего не хватает — видно в «Кассе».
+      await cashbox.getByText(/не хватает реквизитов исполнителя/).waitFor();
+      await cashbox.getByText('LEGAL_BANK_BIK — БИК, 9 цифр').waitFor();
+
+      // Счёт: без «Проверить в кассе» и «Вернуть деньги»; оплату отмечает root.
+      const canteen = tab.locator('.billing-order', { hasText: 'ООО Столовая' });
+      check(await canteen.getByRole('button', { name: 'Проверить в кассе' }).count() === 0, 'reconcile on invoice');
+      check(await canteen.getByRole('link', { name: 'Счёт' }).getAttribute('href') === '/api/billing/orders/72/invoice.pdf', 'root invoice link');
+      await canteen.getByRole('button', { name: 'Отметить оплату' }).click();
+      await tab.getByRole('dialog').getByText(/деньги по счёту №72 пришли/).waitFor();
+      await tab.getByRole('dialog').getByRole('button', { name: 'Деньги пришли' }).click();
+      await canteen.getByText('Оплачен').waitFor();
+      check(calls.filter((c) => c.p === '/api/root/billing/orders/72/invoice-paid').length === 1, 'invoice-paid calls');
+
+      // Промокоды: список, новый код, выключение.
+      const promos = tab.locator('section', { has: tab.getByRole('heading', { name: 'Промокоды' }) });
+      await promos.getByText('оплат: 3 из 100').waitFor();
+      await promos.getByRole('button', { name: 'Новый промокод' }).click();
+      await promos.getByRole('textbox', { name: 'Код' }).fill('autumn');
+      await promos.getByRole('spinbutton', { name: 'Размер скидки' }).fill('500');
+      await promos.getByRole('combobox', { name: 'Вид скидки' }).selectOption('fixed');
+      await promos.getByRole('button', { name: 'Создать промокод' }).click();
+      await promos.getByText('AUTUMN').waitFor();
+      const createdPromo = calls.find((c) => c.p === '/api/root/billing/promo-codes' && c.method === 'POST');
+      check(createdPromo?.body?.code === 'AUTUMN' && createdPromo.body.kind === 'fixed' && createdPromo.body.value === 500, `promo body ${JSON.stringify(createdPromo?.body)}`);
+      await promos.locator('.billing-order', { hasText: 'START' }).getByRole('button', { name: 'Выключить' }).click();
+      await promos.locator('.billing-order', { hasText: 'START' }).getByText('выключен').waitFor();
       await tab.screenshot({ path: 'output/playwright/billing-root-cashbox.png', fullPage: true });
 
       // 390px: адреса переносятся, страница не шире экрана.
@@ -280,5 +427,5 @@ async (page) => {
   }
 
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, root cashbox + check + prices + reconcile + refund confirm + 390', failures };
+  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, promo + ?promo + free, invoice + requisites + docs 390, root cashbox + check + docs + prices + promo codes + reconcile + refund confirm + invoice paid + 390', failures };
 }

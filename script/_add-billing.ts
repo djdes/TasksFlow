@@ -10,8 +10,11 @@ import { sql } from "drizzle-orm";
  *   payment_orders    — заказы; id уходит в Робокассу как InvId.
  *   payment_consents  — история согласий на автосписания и их отзывов.
  *   company_billing   — автопродление компании (серия платежей).
+ *   promo_codes       — промокоды (root).
+ *   company_requisites — реквизиты компании для счёта и УПД.
+ *   closing_documents — закрывающие документы: снимок на дату оплаты.
  *
- * Только CREATE TABLE, ADD COLUMN к этим же таблицам и одна строка цены в
+ * Только CREATE TABLE, ADD COLUMN / ADD INDEX к этим же таблицам и одна строка цены в
  * новой таблице; остальные таблицы и строки не трогает. Идемпотентно:
  * ER_TABLE_EXISTS_ERROR / ER_DUP_FIELDNAME = уже есть. Шаг деплоя
  * обязательный: код читает все эти колонки.
@@ -84,6 +87,60 @@ const TABLES: Array<[string, string]> = [
       KEY idx_company_billing_active (recurring_active)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   ],
+  [
+    "promo_codes",
+    `CREATE TABLE promo_codes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(32) NOT NULL,
+      kind VARCHAR(8) NOT NULL,
+      value INT NOT NULL,
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      starts_at INT NULL,
+      ends_at INT NULL,
+      max_uses INT NULL,
+      new_clients_only TINYINT(1) NOT NULL DEFAULT 0,
+      company_id INT NULL,
+      note VARCHAR(255) NULL,
+      created_at INT NOT NULL DEFAULT 0,
+      updated_at INT NOT NULL DEFAULT 0,
+      UNIQUE KEY uq_promo_codes_code (code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
+  [
+    "company_requisites",
+    `CREATE TABLE company_requisites (
+      company_id INT NOT NULL PRIMARY KEY,
+      kind VARCHAR(8) NOT NULL DEFAULT 'org',
+      name VARCHAR(255) NOT NULL,
+      inn VARCHAR(12) NOT NULL,
+      kpp VARCHAR(9) NULL,
+      ogrn VARCHAR(15) NULL,
+      address VARCHAR(500) NOT NULL,
+      head_post VARCHAR(100) NULL,
+      head_name VARCHAR(150) NULL,
+      email VARCHAR(255) NULL,
+      updated_at INT NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
+  [
+    "closing_documents",
+    `CREATE TABLE closing_documents (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      company_id INT NOT NULL,
+      number VARCHAR(32) NOT NULL,
+      issued_at INT NOT NULL,
+      seller TEXT NOT NULL,
+      buyer TEXT NOT NULL,
+      line_items TEXT NOT NULL,
+      total_rub INT NOT NULL,
+      status VARCHAR(16) NOT NULL DEFAULT 'issued',
+      voided_at INT NULL,
+      created_at INT NOT NULL DEFAULT 0,
+      UNIQUE KEY uq_closing_documents_order (order_id),
+      KEY idx_closing_documents_company (company_id, issued_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
 ];
 
 // Колонки, добавленные после первой выкладки (11.2026): откат тарифа при
@@ -98,7 +155,16 @@ const COLUMNS: Array<[string, string, string]> = [
   ["payment_orders", "refunded_at", "INT NULL"],
   ["company_billing", "expiry_notice_for", "INT NULL"],
   ["company_billing", "expired_notice_for", "INT NULL"],
+  // Промокоды и оплата по счёту.
+  ["payment_orders", "payment_method", "VARCHAR(16) NOT NULL DEFAULT 'card'"],
+  ["payment_orders", "base_rub", "INT NULL"],
+  ["payment_orders", "discount_rub", "INT NOT NULL DEFAULT 0"],
+  ["payment_orders", "promo_code", "VARCHAR(32) NULL"],
+  ["payment_orders", "invoice_due_at", "INT NULL"],
 ];
+
+// Индексы к колонкам выше: использования промокода считаются по заказам.
+const INDEXES: Array<[string, string, string]> = [["payment_orders", "idx_payment_orders_promo", "(promo_code, status)"]];
 
 async function main() {
   for (const [name, ddl] of TABLES) {
@@ -122,6 +188,15 @@ async function main() {
       console.log(`[migrate] added ${table}.${column}`);
     } catch (err: any) {
       if (err?.code === "ER_DUP_FIELDNAME") console.log(`[migrate] ${table}.${column} already exists, skipping`);
+      else throw err;
+    }
+  }
+  for (const [table, name, columns] of INDEXES) {
+    try {
+      await db.execute(sql.raw(`ALTER TABLE \`${table}\` ADD INDEX \`${name}\` ${columns}`));
+      console.log(`[migrate] added index ${table}.${name}`);
+    } catch (err: any) {
+      if (err?.code === "ER_DUP_KEYNAME") console.log(`[migrate] ${table}.${name} already exists, skipping`);
       else throw err;
     }
   }

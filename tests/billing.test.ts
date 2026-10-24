@@ -4,6 +4,7 @@
  * хранилище в памяти и маршруты.
  */
 import { createHash, createHmac } from "node:crypto";
+import { inflateSync } from "node:zlib";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,11 +16,18 @@ import {
   periodLabel,
   planAfterPayment,
   pricesSchema,
+  isValidInn,
+  isValidOgrn,
+  normalizePromoCode,
+  OFFER_REVISION,
+  promoDiscountRub,
+  promoLabel,
   recurringAction,
   recurringStatement,
+  requisitesSchema,
   type PlanPrice,
 } from "../shared/billing";
-import type { CompanyBillingRow, PaymentOrderRow } from "../shared/schema";
+import type { ClosingDocumentRow, CompanyBillingRow, CompanyRequisitesRow, PaymentOrderRow, PromoCodeRow } from "../shared/schema";
 import {
   buildPaymentParams,
   buildPaymentUrl,
@@ -60,6 +68,11 @@ import {
   type BillingNotice,
 } from "../server/billing/service";
 import type { BillingStore, NewConsent, SettleContext, SettlePatch } from "../server/billing/store";
+import { amountInWords, documentFont, formatRuDate, money } from "../server/billing/documents";
+import { cancelInvoiceOrder, closingPdf, createInvoice, ensureClosingDocument, invoicePdf, markInvoicePaid, saveCompanyRequisites } from "../server/billing/invoices";
+import { sellerMissing, sellerRequisites } from "../server/billing/legal";
+import { drawTable, PdfDocument } from "../server/billing/pdf/pdf";
+import { parseTrueType, subsetTrueType } from "../server/billing/pdf/ttf";
 
 const storageMock = { getUserById: vi.fn() };
 vi.mock("../server/storage", () => ({ storage: storageMock }));
@@ -274,7 +287,11 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
   const billing = new Map<number, CompanyBillingRow>();
   const companies = new Map<number, Company>();
   const consents: NewConsent[] = [];
+  const promos = new Map<string, PromoCodeRow>();
+  const requisites = new Map<number, CompanyRequisitesRow>();
+  const documents = new Map<number, ClosingDocumentRow>();
   let nextId = 15;
+  let nextPromo = 1;
   const emptyBilling = (companyId: number): CompanyBillingRow => ({
     companyId,
     recurringActive: false,
@@ -310,16 +327,34 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
         refundedAt: null,
         rawResult: null,
         paidAt: null,
+        paymentMethod: o.paymentMethod ?? "card",
+        baseRub: o.baseRub ?? null,
+        discountRub: o.discountRub ?? 0,
+        promoCode: o.promoCode ?? null,
+        invoiceDueAt: o.invoiceDueAt ?? null,
       };
       orders.set(row.id, row);
       return { ...row };
+    },
+    createOrderWithPromo: async (o, r) => {
+      // Как транзакция под блокировкой кода в MySQL: проверка и вставка без await между ними.
+      const promo = promos.get(r.code);
+      if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
+      const held = (x: PaymentOrderRow) => x.status === "paid" || (x.status === "pending" && (x.paymentMethod === "invoice" || x.createdAt >= r.reservedSince));
+      const withCode = Array.from(orders.values()).filter((x) => x.promoCode === r.code);
+      if (promo.maxUses !== null && withCode.filter(held).length >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
+      if (withCode.some((x) => x.companyId === r.companyId && (r.free ? held(x) : x.status === "paid"))) return { ok: false as const, reason: "used" as const };
+      if (promo.newClientsOnly && Array.from(orders.values()).some((x) => x.companyId === r.companyId && (x.status === "paid" || x.status === "refunded"))) {
+        return { ok: false as const, reason: "newClientsOnly" as const };
+      }
+      return { ok: true as const, order: await store.createOrder(o) };
     },
     getOrder: async (id) => (orders.has(id) ? { ...orders.get(id)! } : null),
     listOrders: async (companyId) => Array.from(orders.values()).filter((o) => o.companyId === companyId).reverse(),
     listRecentOrders: async () => Array.from(orders.values()).map((o) => ({ ...o, companyName: companies.get(o.companyId)?.name ?? null })),
     settle: async (orderId: number, raw: string, now: number, decide: (ctx: SettleContext) => SettlePatch) => {
       const order = orders.get(orderId);
-      if (!order || (order.status !== "pending" && order.status !== "expired")) return { claimed: false as const, order: order ?? null };
+      if (!order || !["pending", "expired", "cancelled"].includes(order.status)) return { claimed: false as const, order: order ?? null };
       const company = companies.get(order.companyId)!;
       const context: SettleContext = { order: { ...order }, company: { ...company }, billing: billing.has(company.id) ? { ...billing.get(company.id)! } : null };
       const patch = decide(context);
@@ -335,7 +370,7 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     },
     expirePending: async (before) => {
       let n = 0;
-      for (const o of Array.from(orders.values())) if (o.status === "pending" && o.createdAt <= before) (o.status = "expired"), n++;
+      for (const o of Array.from(orders.values())) if (o.status === "pending" && o.paymentMethod === "card" && o.createdAt <= before) (o.status = "expired"), n++;
       return n;
     },
     addConsent: async (c) => {
@@ -366,7 +401,7 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     },
     listPendingForCheck: async ({ tiers, createdBefore, limit }) =>
       Array.from(orders.values())
-        .filter((o) => o.status === "pending" && !o.isTest && o.createdAt <= createdBefore)
+        .filter((o) => o.status === "pending" && !o.isTest && o.paymentMethod === "card" && o.createdAt <= createdBefore)
         .filter((o) => tiers.some((t) => o.createdAt >= t.createdAfter && (o.checkedAt === null || o.checkedAt <= t.checkedBefore)))
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, limit)
@@ -440,8 +475,57 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
       for (const o of Array.from(orders.values())) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
       return { tables: true, byStatus, lastPaidAt: null, activeSeries: Array.from(billing.values()).filter((b) => b.recurringActive).length };
     },
+    getPromo: async (code) => (promos.has(code) ? { ...promos.get(code)! } : null),
+    listPromos: async () =>
+      Array.from(promos.values()).map((p) => ({
+        ...p,
+        paidUses: Array.from(orders.values()).filter((o) => o.promoCode === p.code && o.status === "paid").length,
+        companyName: p.companyId ? companies.get(p.companyId)?.name ?? null : null,
+      })),
+    createPromo: async (row) => {
+      if (promos.has(row.code)) return null;
+      const created = { ...row, id: nextPromo++ };
+      promos.set(row.code, created);
+      return { ...created };
+    },
+    updatePromo: async (id, patch, now) => {
+      const row = Array.from(promos.values()).find((p) => p.id === id);
+      if (!row) return null;
+      Object.assign(row, patch, { updatedAt: now });
+      return { ...row };
+    },
+    promoPaidUses: async (code) => Array.from(orders.values()).filter((o) => o.promoCode === code && o.status === "paid").length,
+    promoPaidByCompany: async (code, companyId) => Array.from(orders.values()).some((o) => o.promoCode === code && o.companyId === companyId && o.status === "paid"),
+    hasPaidOrders: async (companyId) => Array.from(orders.values()).some((o) => o.companyId === companyId && (o.status === "paid" || o.status === "refunded")),
+    getRequisites: async (companyId) => (requisites.has(companyId) ? { ...requisites.get(companyId)! } : null),
+    saveRequisites: async (companyId, r, now) => {
+      requisites.set(companyId, { companyId, ...r, updatedAt: now });
+    },
+    listOpenInvoices: async (companyId) =>
+      Array.from(orders.values())
+        .filter((o) => o.companyId === companyId && o.paymentMethod === "invoice" && o.status === "pending")
+        .reverse()
+        .map((o) => ({ ...o })),
+    cancelInvoice: async (id) => {
+      const o = orders.get(id);
+      if (!o || o.paymentMethod !== "invoice" || o.status !== "pending") return false;
+      o.status = "cancelled";
+      return true;
+    },
+    getClosingDocument: async (orderId) => (documents.has(orderId) ? { ...documents.get(orderId)! } : null),
+    insertClosingDocument: async (doc) => {
+      if (!documents.has(doc.orderId)) documents.set(doc.orderId, { ...doc, id: documents.size + 1 });
+      return { ...documents.get(doc.orderId)! };
+    },
+    setClosingBuyer: async (orderId, buyer) => {
+      documents.get(orderId)!.buyer = buyer;
+    },
+    voidClosingDocument: async (orderId, now) => {
+      const d = documents.get(orderId);
+      if (d && d.status === "issued") Object.assign(d, { status: "voided", voidedAt: now });
+    },
   };
-  return { store, orders, billing, companies, consents };
+  return { store, orders, billing, companies, consents, promos, requisites, documents };
 }
 
 function setup(over: Partial<RobokassaConfig> = {}) {
@@ -516,7 +600,7 @@ describe("заказ", () => {
     const r = (await checkout(t.deps, { plan: "team", months: 1, recurringConsent: true })).json as { invId: number; params: Record<string, string> };
     expect(r.params.Recurring).toBe("true");
     expect(t.consents).toHaveLength(1);
-    expect(t.consents[0]).toMatchObject({ companyId: 1, userId: 5, orderId: r.invId, granted: true, ip: "1.2.3.4", offerRevision: "2026-10-24" });
+    expect(t.consents[0]).toMatchObject({ companyId: 1, userId: 5, orderId: r.invId, granted: true, ip: "1.2.3.4", offerRevision: OFFER_REVISION });
     expect(t.consents[0].statementText).toBe(recurringStatement(990, 1));
 
     const off = setup({ recurring: false });
@@ -1375,4 +1459,495 @@ afterEach(() => {
 });
 beforeEach(() => {
   storageMock.getUserById.mockReset();
+});
+
+// --- Промокоды, счета, УПД, PDF --------------------------------------------------------
+
+const SELLER = sellerRequisites({
+  LEGAL_OPERATOR_NAME: "ИП Петров Пётр Петрович",
+  LEGAL_OPERATOR_INN: "500100732259",
+  LEGAL_OPERATOR_OGRN: "304500116000157",
+  LEGAL_OPERATOR_ADDRESS: "123456, г. Москва, ул. Примерная, д. 1",
+  LEGAL_BANK_NAME: "АО «ТБанк»",
+  LEGAL_BANK_BIK: "044525974",
+  LEGAL_BANK_ACCOUNT: "40802810000000000001",
+  LEGAL_BANK_CORR_ACCOUNT: "30101810145250000974",
+  LEGAL_SIGNER_NAME: "Петров П. П.",
+} as NodeJS.ProcessEnv);
+const BUYER = { kind: "org", name: "ООО «Кафе»", inn: "7707083893", kpp: "773601001", address: "117312, г. Москва, ул. Вавилова, д. 19", headPost: "Директор", headName: "Сидорова А. Б." };
+
+function withDocs(t: ReturnType<typeof setup>) {
+  t.deps.seller = () => SELLER;
+  t.deps.baseUrl = () => "https://tasksflow.ru";
+  return t;
+}
+
+async function addPromo(t: ReturnType<typeof setup>, over: Partial<PromoCodeRow> = {}) {
+  return (await t.store.createPromo({
+    code: "START",
+    kind: "percent",
+    value: 20,
+    active: true,
+    startsAt: null,
+    endsAt: null,
+    maxUses: null,
+    newClientsOnly: false,
+    companyId: null,
+    note: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...over,
+  }))!;
+}
+
+/** PDF разбирается: заголовок, xref указывает ровно на начала объектов. */
+function checkPdf(pdf: Buffer) {
+  const text = pdf.toString("latin1");
+  expect(text.startsWith("%PDF-1.7")).toBe(true);
+  expect(text.trimEnd().endsWith("%%EOF")).toBe(true);
+  const startxref = Number(/startxref\n(\d+)/.exec(text)![1]);
+  expect(text.slice(startxref, startxref + 4)).toBe("xref");
+  const entries = text.slice(startxref).split("\n").filter((l) => / 00000 n $/.test(l));
+  entries.forEach((line, i) => {
+    const offset = Number(line.slice(0, 10));
+    expect(text.slice(offset, offset + `${i + 1} 0 obj`.length)).toBe(`${i + 1} 0 obj`);
+  });
+  expect(text).toContain("/FontFile2");
+  expect(text).toContain("/ToUnicode");
+}
+
+describe("реквизиты: ИНН, ОГРН, схема", () => {
+  it("контрольные цифры ИНН и ОГРН — по алгоритму ФНС", () => {
+    expect(isValidInn("7707083893")).toBe(true);
+    expect(isValidInn("500100732259")).toBe(true);
+    expect(isValidInn("7707083894")).toBe(false);
+    expect(isValidInn("500100732258")).toBe(false);
+    expect(isValidInn("12345")).toBe(false);
+    expect(isValidOgrn("1027700132195")).toBe(true);
+    expect(isValidOgrn("304500116000157")).toBe(true);
+    expect(isValidOgrn("1027700132196")).toBe(false);
+  });
+
+  it("организации нужен КПП, у ИП его нет; ИНН — по виду; пробелы убираются", () => {
+    expect(requisitesSchema.safeParse({ ...BUYER, kpp: "" }).success).toBe(false);
+    expect(requisitesSchema.safeParse({ ...BUYER, inn: "500100732259" }).success).toBe(false);
+    const ip = requisitesSchema.parse({ kind: "ip", name: "ИП Иванов", inn: "5001 0073 2259", kpp: "773601001", address: "г. Москва, ул. Ленина, 1" });
+    expect(ip).toMatchObject({ inn: "500100732259", kpp: null, ogrn: null, email: null });
+    expect(requisitesSchema.safeParse({ ...BUYER, ogrn: "1027700132196" }).success).toBe(false);
+  });
+
+  it("реквизиты исполнителя: чего не хватает — по имени секрета", () => {
+    expect(sellerMissing(SELLER)).toEqual([]);
+    const missing = sellerMissing(sellerRequisites({ LEGAL_OPERATOR_NAME: "ООО «Ромашка»", LEGAL_OPERATOR_INN: "7707083893" } as NodeJS.ProcessEnv));
+    expect(missing.some((m) => m.startsWith("LEGAL_OPERATOR_KPP"))).toBe(true);
+    expect(missing.some((m) => m.startsWith("LEGAL_BANK_BIK"))).toBe(true);
+    expect(missing.some((m) => m.startsWith("LEGAL_SIGNER_POST"))).toBe(true);
+    // ИП подписывает сам: должность выводится из ИНН из 12 цифр.
+    expect(SELLER.head).toEqual({ post: "Индивидуальный предприниматель", name: "Петров П. П." });
+  });
+});
+
+describe("промокоды", () => {
+  it("скидка: процент и рубли, не больше цены; код — в верхнем регистре", () => {
+    expect(promoDiscountRub("percent", 20, 990)).toBe(198);
+    expect(promoDiscountRub("fixed", 500, 990)).toBe(500);
+    expect(promoDiscountRub("fixed", 5000, 990)).toBe(990);
+    expect(promoDiscountRub("percent", 150, 990)).toBe(990);
+    expect(normalizePromoCode("  start 2026 ")).toBe("START2026");
+    expect(promoLabel("percent", 20)).toBe("−20 %");
+  });
+
+  it("заказ с кодом: сумма со скидкой, серия — по полной цене, согласие говорит об этом", async () => {
+    const t = setup();
+    await addPromo(t);
+    // Сумма на странице без скидки — заказ не создаётся.
+    expect((await checkout(t.deps, { plan: "team", months: 1, promoCode: "START", expectedRub: 990 })).status).toBe(409);
+    const r = await checkout(t.deps, { plan: "team", months: 1, promoCode: "start", recurringConsent: true, expectedRub: 792 });
+    expect(r.status).toBe(200);
+    const { invId, amountRub, params } = r.json as { invId: number; amountRub: number; params: Record<string, string> };
+    expect(amountRub).toBe(792);
+    expect(params.OutSum).toBe("792.00");
+    expect(t.orders.get(invId)).toMatchObject({ amountRub: 792, baseRub: 990, discountRub: 198, promoCode: "START", paymentMethod: "card" });
+    expect(t.consents.at(-1)!.statementText).toMatch(/Спишем 990\s₽.*Первый платёж — 792\s₽ по промокоду START/);
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 792 }));
+    expect(t.billing.get(1)).toMatchObject({ recurringActive: true, recurringAmountRub: 990 });
+  });
+
+  it("неподходящий код — понятная причина, заказ не создаётся", async () => {
+    const t = setup();
+    t.companies.set(2, { id: 2, name: "Бар", plan: null, planUntil: null } as never);
+    await addPromo(t, { code: "OFF", active: false });
+    await addPromo(t, { code: "LATER", startsAt: NOW + DAY });
+    await addPromo(t, { code: "OLD", endsAt: NOW - 1 });
+    await addPromo(t, { code: "BAR", companyId: 2 });
+    const reason = async (code: string) => ((await checkout(t.deps, { plan: "team", months: 1, promoCode: code })).json as { message: string; code?: string });
+    expect(await reason("NOPE")).toEqual({ message: "Такого промокода нет", code: "promo" });
+    expect((await reason("OFF")).message).toBe("Промокод отключён");
+    expect((await reason("LATER")).message).toBe("Промокод ещё не начал действовать");
+    expect((await reason("OLD")).message).toBe("Срок действия промокода истёк");
+    expect((await reason("BAR")).message).toBe("Этот промокод выдан другой компании");
+    expect(t.orders.size).toBe(0);
+  });
+
+  it("лимит использований и «только первая оплата»: после оплаты код не подходит", async () => {
+    const t = setup();
+    await addPromo(t, { code: "ONCE", maxUses: 1 });
+    await addPromo(t, { code: "FIRST", newClientsOnly: true });
+    const first = (await checkout(t.deps, { plan: "team", months: 1, promoCode: "ONCE" })).json as { invId: number; amountRub: number };
+    await handleResult(t.deps, resultFor({ id: first.invId, amountRub: first.amountRub }));
+    expect(((await checkout(t.deps, { plan: "team", months: 1, promoCode: "ONCE" })).json as { message: string }).message).toMatch(/максимальное число раз/);
+    expect(((await checkout(t.deps, { plan: "team", months: 1, promoCode: "FIRST" })).json as { message: string }).message).toMatch(/только для первой оплаты/);
+  });
+
+  it("промокод на всю сумму включает тариф сразу — даже без кассы, без автопродления", async () => {
+    const t = setup({ login: "", password1: "", password2: "" });
+    await addPromo(t, { code: "FREE", kind: "percent", value: 100 });
+    const r = await checkout(t.deps, { plan: "team", months: 1, promoCode: "FREE", recurringConsent: true, expectedRub: 0 });
+    expect(r.status).toBe(200);
+    const json = r.json as { free: boolean; order: { status: string; method: string } };
+    expect(json.free).toBe(true);
+    expect(json.order).toMatchObject({ status: "paid", method: "promo" });
+    expect(t.companies.get(1)).toMatchObject({ plan: "team", planUntil: addMonths(NOW, 1) });
+    expect(t.billing.get(1)?.recurringActive ?? false).toBe(false);
+    expect(t.fetchMock).not.toHaveBeenCalled();
+    await flush();
+    expect(t.notices.at(-1)!.notice.title).toBe("Тариф включён");
+    expect(t.owner.at(-1)).toMatch(/Промокод на всю сумму/);
+    // Без кассы обычная оплата по-прежнему недоступна.
+    expect((await checkout(t.deps, { plan: "team", months: 1 })).status).toBe(503);
+  });
+});
+
+describe("промокоды: гонки и повторы", () => {
+  it("два одновременных включения по коду с лимитом 1 — одно; одна компания не включает код дважды", async () => {
+    const t = setup();
+    t.companies.set(2, { id: 2, name: "Бар", plan: null, planUntil: null } as never);
+    await addPromo(t, { code: "GIFT", value: 100, maxUses: 1 });
+    const [a, b] = await Promise.all([
+      checkout(t.deps, { plan: "team", months: 1, promoCode: "GIFT" }),
+      createCheckout(t.deps, { companyId: 2, user: admin, body: { plan: "team", months: 1, promoCode: "GIFT" }, ip: null, userAgent: null }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 400]);
+    expect(Array.from(t.orders.values()).filter((o) => o.status === "paid")).toHaveLength(1);
+
+    await addPromo(t, { code: "MONTH", value: 100 });
+    expect((await checkout(t.deps, { plan: "team", months: 1, promoCode: "MONTH" })).status).toBe(200);
+    const again = await checkout(t.deps, { plan: "team", months: 1, promoCode: "MONTH" });
+    expect(again).toMatchObject({ status: 400, json: { code: "promo" } });
+    expect((again.json as { message: string }).message).toMatch(/уже использовали/);
+  });
+
+  it("ждущий оплаты заказ держит лимит час, счёт — пока не оплачен или не отменён", async () => {
+    const t = setup();
+    t.companies.set(2, { id: 2, name: "Бар", plan: null, planUntil: null } as never);
+    await addPromo(t, { code: "ONE", maxUses: 1 });
+    expect((await checkout(t.deps, { plan: "team", months: 1, promoCode: "ONE" })).status).toBe(200);
+    const other = () => createCheckout(t.deps, { companyId: 2, user: admin, body: { plan: "team", months: 1, promoCode: "ONE" }, ip: null, userAgent: null });
+    expect((await other()).status).toBe(400);
+    t.clock.now = NOW + 2 * 3600;
+    expect((await other()).status).toBe(200);
+  });
+});
+
+describe("оплата по счёту", () => {
+  const invoiceFor = (t: ReturnType<typeof setup>, body: unknown) => createInvoice(t.deps, { companyId: 1, user: admin, body });
+
+  it("без реквизитов исполнителя или компании счёт не выставить", async () => {
+    const t = setup();
+    expect((await invoiceFor(t, { plan: "team", months: 1 })).status).toBe(503);
+    withDocs(t);
+    expect(await invoiceFor(t, { plan: "team", months: 1 })).toMatchObject({ status: 400, json: { code: "requisites" } });
+  });
+
+  it("счёт: заказ без кассы на 7 дней; повтор — тот же счёт, другие условия — новый, старый отменён", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: { ...BUYER, email: "buh@cafe.ru" } });
+    const first = await invoiceFor(t, { plan: "team", months: 1 });
+    expect(first.status).toBe(200);
+    const order = (first.json as { order: { id: number } }).order;
+    expect(t.orders.get(order.id)).toMatchObject({ paymentMethod: "invoice", status: "pending", isTest: false, email: "buh@cafe.ru", invoiceDueAt: NOW + 7 * DAY });
+    await flush();
+    expect(t.owner.at(-1)).toMatch(/Счёт №\d+ — «Кафе».*ИНН 7707083893.*Отметить оплату/);
+    expect(t.fetchMock).not.toHaveBeenCalled();
+
+    const again = await invoiceFor(t, { plan: "team", months: 1 });
+    expect(again.json).toMatchObject({ existing: true, order: { id: order.id } });
+    const other = await invoiceFor(t, { plan: "team", months: 12 });
+    expect((other.json as { existing: boolean }).existing).toBe(false);
+    expect(t.orders.get(order.id)!.status).toBe("cancelled");
+
+    // Счёт не «протухает» через 3 дня и не сверяется с кассой.
+    t.clock.now = NOW + 4 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.orders.get((other.json as { order: { id: number } }).order.id)!.status).toBe("pending");
+    expect(t.fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("root отмечает оплату — тариф продлевается, как по кассе; оплаченный отменённый счёт — тоже", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const id = ((await invoiceFor(t, { plan: "team", months: 1 })).json as { order: { id: number } }).order.id;
+    expect((await markInvoicePaid(t.deps, id, { userId: 9 })).status).toBe(200);
+    expect(t.orders.get(id)).toMatchObject({ status: "paid", planUntilAfter: addMonths(NOW, 1) });
+    expect(t.companies.get(1)).toMatchObject({ plan: "team", planUntil: addMonths(NOW, 1) });
+    expect((await markInvoicePaid(t.deps, id, { userId: 9 })).status).toBe(409);
+    await flush();
+    expect(t.notices.at(-1)!.notice.paragraphs.join(" ")).toMatch(/по счёту.*УПД/s);
+    // Возврат по счёту — не через кассу.
+    expect((await refundOrder(t.deps, id)).status).toBe(409);
+
+    const late = ((await invoiceFor(t, { plan: "team", months: 12 })).json as { order: { id: number } }).order.id;
+    expect((await cancelInvoiceOrder(t.deps, late)).status).toBe(200);
+    expect((await markInvoicePaid(t.deps, late, { userId: 9 })).status).toBe(200);
+    expect(t.orders.get(late)!.status).toBe("paid");
+  });
+
+  it("промокод на счёт; промокод на всю сумму — счёт не нужен", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    await addPromo(t, { code: "FIX", kind: "fixed", value: 190 });
+    await addPromo(t, { code: "FREE", value: 100 });
+    const r = await invoiceFor(t, { plan: "team", months: 1, promoCode: "FIX", expectedRub: 800 });
+    expect(r.json).toMatchObject({ order: { amountRub: 800, promoCode: "FIX", discountRub: 190 } });
+    expect(await invoiceFor(t, { plan: "team", months: 1, promoCode: "FREE" })).toMatchObject({ status: 400, json: { code: "free" } });
+  });
+});
+
+describe("закрывающие документы (УПД)", () => {
+  async function paidOrder(t: ReturnType<typeof setup>) {
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    t.clock.now = NOW + 3600;
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    return t.orders.get(invId)!;
+  }
+
+  it("снимок на дату оплаты: номер — номер заказа, период — оплаченный, повтор — тот же документ", async () => {
+    const t = withDocs(setup());
+    const order = await paidOrder(t);
+    const doc = (await ensureClosingDocument(t.deps, order))!;
+    expect(doc).toMatchObject({ orderId: order.id, number: String(order.id), issuedAt: NOW + 3600, totalRub: 990, status: "issued" });
+    const lines = JSON.parse(doc.lines);
+    expect(lines[0].title).toContain(`период ${formatRuDate(addMonths(order.planUntilAfter!, -1))} — ${formatRuDate(order.planUntilAfter!)}`);
+    expect(JSON.parse(doc.seller)).toMatchObject({ name: "ИП Петров Пётр Петрович", inn: "500100732259", site: "tasksflow.ru" });
+    // Без реквизитов покупателя — только название; заполнили — документ дополнится.
+    expect(JSON.parse(doc.buyer)).toMatchObject({ name: "Кафе", inn: null });
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const refreshed = (await ensureClosingDocument(t.deps, order))!;
+    expect(JSON.parse(refreshed.buyer)).toMatchObject({ name: "ООО «Кафе»", inn: "7707083893", kpp: "773601001", head: { post: "Директор", name: "Сидорова А. Б." } });
+    expect(t.documents.size).toBe(1);
+    checkPdf(closingPdf(refreshed));
+  });
+
+  it("нет документа: не оплачен, тестовый, без денег или реквизиты исполнителя не заполнены", async () => {
+    const plain = setup();
+    expect(await ensureClosingDocument(plain.deps, await paidOrder(plain))).toBeNull();
+    const t = withDocs(setup());
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    expect(await ensureClosingDocument(t.deps, t.orders.get(invId)!)).toBeNull();
+    const test = withDocs(setup({ isTest: true }));
+    const { invId: testId } = (await checkout(test.deps, { plan: "team", months: 1 })).json as { invId: number };
+    await handleResult(test.deps, resultFor({ id: testId, amountRub: 990 }, "t2"));
+    expect(await ensureClosingDocument(test.deps, test.orders.get(testId)!)).toBeNull();
+  });
+
+  it("возврат денег аннулирует УПД", async () => {
+    const t = withDocs(setup());
+    const box = cashbox(t);
+    const order = await paidOrder(t);
+    await ensureClosingDocument(t.deps, order);
+    box.states.set(order.id, 100);
+    box.refundLabel = "finished";
+    await refundOrder(t.deps, order.id);
+    await runBillingTick(t.deps);
+    expect(t.documents.get(order.id)).toMatchObject({ status: "voided" });
+  });
+
+  it("счёт PDF — по текущим реквизитам; документы скачивает админ своей компании или root", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const invoiceId = ((await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 1 } })).json as { order: { id: number } }).order.id;
+    const pdf = (await invoicePdf(t.deps, t.orders.get(invoiceId)!))!;
+    checkPdf(pdf);
+    expect(pdf.length).toBeLessThan(150_000);
+    const card = await paidOrder(t);
+    expect(await invoicePdf(t.deps, card)).toBeNull();
+  });
+});
+
+describe("УПД на дату оплаты и сверка только по карте", () => {
+  it("УПД выпускается сразу после оплаты: реквизиты исполнителя — на дату оплаты, не скачивания", async () => {
+    const t = withDocs(setup());
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    await flush();
+    await flush();
+    expect(t.documents.get(invId)).toBeTruthy();
+    t.deps.seller = () => ({ ...SELLER, bank: { ...SELLER.bank, account: "40802810999999999999" } });
+    const doc = (await ensureClosingDocument(t.deps, t.orders.get(invId)!))!;
+    expect(JSON.parse(doc.seller).bank.account).toBe(SELLER.bank.account);
+  });
+
+  it("идёт возврат — новый УПД не выпускается", async () => {
+    const t = withDocs(setup());
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 990 }));
+    t.documents.clear();
+    Object.assign(t.orders.get(invId)!, { refundStatus: "pending" });
+    expect(await ensureClosingDocument(t.deps, t.orders.get(invId)!)).toBeNull();
+  });
+
+  it("опрос статуса счёта не спрашивает кассу", async () => {
+    const t = withDocs(setup());
+    cashbox(t);
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const id = ((await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 1 } })).json as { order: { id: number } }).order.id;
+    t.clock.now = NOW + 600;
+    checkWhilePolling(t.deps, t.orders.get(id)!);
+    await flush();
+    expect(t.fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("PDF: шрифт и генератор", () => {
+  const font = documentFont();
+
+  it("DejaVu Sans: кириллица и ₽ есть, подмножество в разы меньше и с теми же глифами", () => {
+    expect(font.unitsPerEm).toBe(2048);
+    for (const ch of "ЖёЁ№₽«»—") expect(font.glyph(ch.codePointAt(0)!)).toBeGreaterThan(0);
+    const gids = Array.from("Счёт на оплату").map((ch) => font.glyph(ch.codePointAt(0)!));
+    const subset = subsetTrueType(font, gids);
+    expect(subset.length).toBeLessThan(font.data.length / 4);
+    const again = parseTrueType(subset);
+    expect(again.numGlyphs).toBe(font.numGlyphs);
+    for (const gid of gids) expect(again.advance(gid)).toBe(font.advance(gid));
+  });
+
+  it("перенос по ширине, таблица переходит на новую страницу с шапкой", () => {
+    const doc = new PdfDocument(font);
+    const lines = doc.wrap("Доступ к сервису TasksFlow, тариф «Команда», период 24.10.2026 — 24.11.2026.", 40, 9);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) expect(doc.textWidth(line, 9)).toBeLessThanOrEqual(40);
+    drawTable(doc, {
+      x: 10,
+      y: 10,
+      columns: [{ width: 20 }, { width: 100 }],
+      head: [["№", "Строка"]],
+      body: Array.from({ length: 80 }, (_, i) => [String(i + 1), "Строка таблицы"]),
+      size: 9,
+      bottom: 287,
+      top: 10,
+    });
+    expect(doc.pageCount).toBeGreaterThan(1);
+    checkPdf(doc.output());
+  });
+
+  it("символ без глифа рисуется пробелом и в ToUnicode остаётся пробелом", () => {
+    const doc = new PdfDocument(font);
+    doc.text("中Кафе Ромашка", 10, 10);
+    const pdf = doc.output().toString("latin1");
+    const space = font.glyph(0x20).toString(16).padStart(4, "0").toUpperCase();
+    // ToUnicode сжат; распаковываем все потоки и ищем запись для пробела.
+    const streams = Array.from(pdf.matchAll(/stream\n([\s\S]*?)\nendstream/g)).map((m) => {
+      try {
+        return inflateSync(Buffer.from(m[1], "latin1")).toString("latin1");
+      } catch {
+        return "";
+      }
+    });
+    const cmap = streams.find((x) => x.includes("beginbfchar"))!;
+    expect(cmap).toContain(`<${space}> <0020>`);
+    expect(cmap).not.toContain("<4E2D>");
+  });
+
+  it("сумма прописью и формат денег", () => {
+    expect(amountInWords(2490)).toBe("Две тысячи четыреста девяносто рублей 00 копеек");
+    expect(amountInWords(1)).toBe("Один рубль 00 копеек");
+    expect(amountInWords(21.5)).toBe("Двадцать один рубль 50 копеек");
+    expect(amountInWords(1_000_001)).toBe("Один миллион один рубль 00 копеек");
+    expect(money(1990)).toBe("1 990,00");
+  });
+});
+
+describe("маршруты: промокод, реквизиты, счёт, документы", () => {
+  async function buildApp(t: ReturnType<typeof setup>, role: "admin" | "root" | "other" = "admin") {
+    const { registerBillingRoutes, __resetCheckoutLimit } = await import("../server/billing-routes");
+    __resetCheckoutLimit();
+    storageMock.getUserById.mockResolvedValue({ id: 5, email: "boss@cafe.ru", companyId: role === "other" ? 2 : 1, isAdmin: role !== "root", isRoot: role === "root" });
+    const app = express();
+    app.use(express.json());
+    app.use((req: any, _res, next) => {
+      req.session = { userId: 5 };
+      next();
+    });
+    const requireAdmin = (_req: any, _res: any, next: any) => next();
+    const requireRoot = (_req: any, res: any, next: any) => (role === "root" ? next() : res.status(403).json({ message: "Доступ только для root" }));
+    registerBillingRoutes(app, { requireAdmin, requireRoot, getCompanyIdFromReq: async () => (role === "other" ? 2 : 1), billing: t.deps });
+    return app;
+  }
+
+  it("промокод: проверка, лимит попыток; реквизиты: ошибка поля", async () => {
+    const t = setup();
+    await addPromo(t);
+    const app = await buildApp(t);
+    expect((await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "start" })).body).toEqual({
+      ok: true,
+      code: "START",
+      label: "−20 %",
+      baseRub: 990,
+      discountRub: 198,
+      amountRub: 792,
+    });
+    expect((await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "NOPE" })).body).toEqual({ ok: false, message: "Такого промокода нет" });
+    for (let i = 0; i < 18; i++) await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "X" + i });
+    expect((await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "START" })).status).toBe(429);
+    const bad = await request(app).put("/api/billing/requisites").send({ ...BUYER, inn: "7707083894" });
+    expect(bad.status).toBe(400);
+    expect(bad.body.code).toBe("inn");
+  });
+
+  it("УПД и счёт скачивает админ своей компании и root, чужой — 404; в /api/billing видно, что есть", async () => {
+    const t = withDocs(setup());
+    const app = await buildApp(t);
+    await request(app).put("/api/billing/requisites").send(BUYER).expect(200);
+    const inv = await request(app).post("/api/billing/invoice").send({ plan: "team", months: 1 });
+    expect(inv.status).toBe(200);
+    expect(inv.body.pdfUrl).toBe(`/api/billing/orders/${inv.body.order.id}/invoice.pdf`);
+    const pdf = await request(app).get(inv.body.pdfUrl).buffer(true).parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (c: Buffer) => chunks.push(c));
+      res.on("end", () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers["content-type"]).toBe("application/pdf");
+    expect(pdf.headers["content-disposition"]).toContain(`filename*=UTF-8''${encodeURIComponent(`Счёт-${inv.body.order.id}`)}`);
+    checkPdf(pdf.body as Buffer);
+    expect((await request(app).get(`/api/billing/orders/${inv.body.order.id}/upd.pdf`)).status).toBe(404);
+
+    expect((await request(await buildApp(t, "other")).get(inv.body.pdfUrl)).status).toBe(404);
+    expect((await request(await buildApp(t, "root")).get(inv.body.pdfUrl)).status).toBe(200);
+    expect((await request(await buildApp(t, "root")).post(`/api/root/billing/orders/${inv.body.order.id}/invoice-paid`)).status).toBe(200);
+    expect((await request(app).get(`/api/billing/orders/${inv.body.order.id}/upd.pdf`)).status).toBe(200);
+    const info = await request(app).get("/api/billing");
+    expect(info.body).toMatchObject({ invoiceAvailable: true, requisites: { inn: "7707083893" } });
+    expect(info.body.orders[0]).toMatchObject({ method: "invoice", hasInvoice: true, hasUpd: true, status: "paid" });
+    // Из приложения счёт не выставить.
+    const fromApp = await request(app).post("/api/billing/invoice").set("User-Agent", "TasksFlowApp/1.0").send({ plan: "team", months: 1 });
+    expect(fromApp.status).toBe(403);
+  });
+
+  it("root: промокоды — создать (код в верхнем регистре, дубль — 409), выключить", async () => {
+    const t = setup();
+    const app = await buildApp(t, "root");
+    expect((await request(await buildApp(t)).post("/api/root/billing/promo-codes").send({ code: "A1B", kind: "percent", value: 10 })).status).toBe(403);
+    const created = await request(app).post("/api/root/billing/promo-codes").send({ code: "spring-26", kind: "percent", value: 15, maxUses: 50 });
+    expect(created.status).toBe(200);
+    expect(created.body.promo).toMatchObject({ code: "SPRING-26", kind: "percent", value: 15, maxUses: 50, active: true, paidUses: 0 });
+    expect((await request(app).post("/api/root/billing/promo-codes").send({ code: "SPRING-26", kind: "fixed", value: 100 })).status).toBe(409);
+    expect((await request(app).post("/api/root/billing/promo-codes").send({ code: "BIG", kind: "percent", value: 150 })).status).toBe(400);
+    expect((await request(app).post("/api/root/billing/promo-codes").send({ code: "Ж!", kind: "percent", value: 10 })).status).toBe(400);
+    const off = await request(app).patch(`/api/root/billing/promo-codes/${created.body.promo.id}`).send({ active: false });
+    expect(off.body.promo.active).toBe(false);
+    expect(((await checkout(t.deps, { plan: "team", months: 1, promoCode: "SPRING-26" })).json as { message: string }).message).toBe("Промокод отключён");
+    expect((await request(app).get("/api/root/billing/promo-codes")).body.promos).toHaveLength(1);
+  });
 });
