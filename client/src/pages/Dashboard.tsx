@@ -25,11 +25,7 @@ import {
   isToVerify,
   isVerifierTask,
 } from "@/lib/task-classification";
-import {
-  feedbackTaskComplete,
-  isFeedbackEnabled,
-  setFeedbackEnabled,
-} from "@/lib/feedback";
+import { feedbackTaskComplete } from "@/lib/feedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskViewDialog } from "@/components/TaskViewDialog";
 // Журнальная форма WeSetup и «Дублировать» нужны редко — отдельными чанками.
@@ -38,6 +34,9 @@ const DuplicateTaskDialog = lazy(() => import("@/components/DuplicateTaskDialog"
 import { GroupedTaskList } from "@/components/GroupedTaskList";
 import { VerificationBanner } from "@/components/VerificationBanner";
 import { AppNudge } from "@/components/AppNudge";
+import { usePermissions } from "@/hooks/use-permissions";
+import { FeedbackToggle } from "@/components/FeedbackToggle";
+import { cabinetNav } from "@/lib/cabinet-nav";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { StreakAchievement } from "@/components/StreakAchievement";
@@ -60,16 +59,13 @@ import {
   Edit2,
   Trash2,
   Plus,
-  ShieldCheck,
   Inbox,
   Calendar,
   CalendarDays,
   Copy,
   Coins,
   Tag,
-  Home,
   HelpCircle,
-  Settings,
   LogOut,
   ChevronRight,
   ChevronDown,
@@ -81,17 +77,12 @@ import {
   User,
   Search,
   Palette,
-  QrCode,
-  UserCog,
-  BarChart3,
   MapPin,
   Gift,
   CalendarCheck,
   MessageCircle,
-  Bell,
   SlidersHorizontal,
   LayoutTemplate,
-  CreditCard,
 } from "lucide-react";
 import {
   Select,
@@ -182,9 +173,6 @@ export default function Dashboard() {
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
-  // VerificationBanner — react-query кэш переиспользуется.
-  const { data: pendingVerifyTasks = [] } = useAwaitingVerification();
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
   // На телефоне фильтры живут в шторке, на экране — только кнопка.
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -201,13 +189,6 @@ export default function Dashboard() {
   // Ref на search input для keyboard shortcut «/». Передаётся через
   // ref-callback в Input.
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  // Toggle для звука/вибрации — состояние отражает localStorage. Меняется
-  // через переключатель в меню. Ре-синхронизируется при открытии меню
-  // на случай если пользователь поменял настройку на другом устройстве.
-  const [feedbackOn, setFeedbackOn] = useState(true);
-  useEffect(() => {
-    if (isMenuOpen) setFeedbackOn(isFeedbackEnabled());
-  }, [isMenuOpen]);
 
   // Tier-3 модель прав:
   //   • admin (isAdmin=true) — полный доступ, видит всё
@@ -218,20 +199,12 @@ export default function Dashboard() {
   // managedWorkerIds лежит в user-record в TasksFlow и пушится с
   // WeSetup из ManagerScope (см. /settings/staff-hierarchy на
   // WeSetup-стороне).
-  const hasManagedWorkers = (() => {
-    if (!user) return false;
-    const raw = (user as { managedWorkerIds?: string | null })
-      .managedWorkerIds;
-    if (!raw) return false;
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed);
-    } catch {
-      return false;
-    }
-  })();
-  const isManager = Boolean(user && !user.isAdmin && hasManagedWorkers);
-  const canManageTasks = Boolean(user?.isAdmin) || isManager;
+  const permissions = usePermissions();
+  const { canManageTasks } = permissions;
+  // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
+  // VerificationBanner — react-query кэш переиспользуется. Сотруднику
+  // пункта нет — и запроса с опросом раз в 30 с тоже.
+  const { data: pendingVerifyTasks = [] } = useAwaitingVerification(canManageTasks);
 
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
@@ -431,20 +404,12 @@ export default function Dashboard() {
 
   // Streak — для воркера. Считаем по «есть ли хоть одна закрытая лично
   // тобой задача сегодня». Локально в localStorage (см. use-streak.ts).
-  // Keyboard shortcuts: /, n, ?, g h. Дёшево — глобальный listener.
+  // Keyboard shortcuts: /, ?, g h. Дёшево — глобальный listener.
+  // N (новая задача) — во всём кабинете, в CabinetFrame.
   useKeyboardShortcuts({
     onFocusSearch: () => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
-    },
-    onNewTask: () => {
-      // Кнопка «новая задача» доступна только админу/руководителю,
-      // воркеру эту команду игнорируем (canManageTasks ниже считается
-      // от user'а — но переменная в этом scope ещё не объявлена,
-      // делаем прямую проверку через user).
-      if (user?.isAdmin) {
-        setLocation("/tasks/new");
-      }
     },
     onHelp: () => setLocation("/help"),
     onDashboard: () => setLocation("/dashboard"),
@@ -722,7 +687,7 @@ export default function Dashboard() {
             {/* Menu button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="header-button"
+                className="header-button header-menu-button"
                 aria-label="Меню"
                 aria-expanded={isMenuOpen}
               >
@@ -784,20 +749,8 @@ export default function Dashboard() {
             анимирует вход (180ms fade+slide), exit мгновенный — UX
             небольшая потеря ради надёжности. */}
           <DashboardMenu mobile={isMobile} open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-            <button
-              type="button"
-              className="dropdown-item w-full"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setLocation("/dashboard");
-              }}
-            >
-              <Home className="w-5 h-5 text-primary" />
-              <span className="font-medium">Главная</span>
-            </button>
-            {/* «Создать задачу» — admin + manager (руководитель
-                может создавать задачи своим подчинённым). Серверный
-                scope-check валидирует workerId на POST. */}
+            {/* Разделы — та же модель, что у меню слева на ПК и быстрого
+                перехода (lib/cabinet-nav.ts): кто что видит, решают роли. */}
             {canManageTasks && (
               <button
                 type="button"
@@ -811,178 +764,34 @@ export default function Dashboard() {
                 <span className="font-medium">Создать задачу</span>
               </button>
             )}
-            {/* «На проверке» — для всех управленцев (admin + manager).
-                Виден если есть pending verification > 0 либо если юзер
-                сам verifier (canManageTasks). Бэйдж справа с числом
-                для быстрого скана. */}
-            {canManageTasks && (
-              <button
-                type="button"
-                className="dropdown-item w-full"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setLocation("/admin/verification");
-                }}
-              >
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                <span className="font-medium flex-1 text-left">
-                  На проверке
-                </span>
-                {pendingVerifyTasks.length > 0 ? (
-                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-primary text-white font-bold">
-                    {pendingVerifyTasks.length}
+            {cabinetNav(permissions).map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  className="dropdown-item w-full"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setLocation(item.href);
+                  }}
+                  data-testid={item.testId}
+                >
+                  <Icon className="w-5 h-5 text-primary" />
+                  <span className="font-medium flex-1 text-left">
+                    {item.group === "root" ? `Root: ${item.label.toLowerCase()}` : item.label}
                   </span>
-                ) : null}
-              </button>
-            )}
-            {/* «Мой аккаунт» — ВСЕМ, включая воркеров: там привязка
-                Telegram, а закрывать задачи из бота нужно как раз им.
-                Раньше страница существовала, но ссылки на неё не было
-                нигде — попасть можно было только вбив /account руками. */}
-            <button
-              type="button"
-              className="dropdown-item w-full"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setLocation("/account");
-              }}
-              data-testid="menu-account"
-            >
-              <UserCog className="w-5 h-5 text-primary" />
-              <span className="font-medium">Мой аккаунт</span>
-            </button>
-            {/* История — всем: сотрудник видит свои дни и премии, руководитель
-                и админ — журнал смены с фото и сводку по людям. */}
-            <button
-              type="button"
-              className="dropdown-item w-full"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setLocation("/reports");
-              }}
-              data-testid="menu-reports"
-            >
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <span className="font-medium">{user.isAdmin ? "История и отчёты" : "История"}</span>
-            </button>
-            {/* «Сотрудники» и «Настройки компании» — только админ.
-                Руководителю эти страницы не нужны: списком своих
-                подчинённых он управляет на стороне WeSetup
-                (/settings/staff-hierarchy). */}
-            {user.isAdmin && (
-              <>
-                <button
-                  type="button"
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/users");
-                  }}
-                >
-                  <User className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Сотрудники</span>
+                  {item.badge === "verification" && pendingVerifyTasks.length > 0 ? (
+                    <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-primary text-white font-bold">
+                      {pendingVerifyTasks.length}
+                    </span>
+                  ) : null}
                 </button>
-                <button
-                  type="button"
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/invitations");
-                  }}
-                >
-                  <QrCode className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Приглашения</span>
-                </button>
-                <button
-                  type="button"
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/settings");
-                  }}
-                >
-                  <Settings className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Настройки</span>
-                </button>
-                <button
-                  type="button"
-                  className="dropdown-item w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setLocation("/admin/billing");
-                  }}
-                  data-testid="menu-billing"
-                >
-                  <CreditCard className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Тариф и оплата</span>
-                </button>
-              </>
-            )}
-            {/* Root-раздел — только для владельца сайта (users.is_root).
-                Регистрацией не получить, обычный админ компании не видит. */}
-            {(user as any).isRoot && (
-              <button
-                type="button"
-                className="dropdown-item w-full"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setLocation("/admin/banners");
-                }}
-              >
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                <span className="font-medium">Root: промо-баннеры</span>
-              </button>
-            )}
-            {(user as any).isRoot && (
-              <button
-                type="button"
-                className="dropdown-item w-full"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setLocation("/admin/companies");
-                }}
-              >
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                <span className="font-medium">Root: компании и тарифы</span>
-              </button>
-            )}
-            {/* Помощь — доступна ВСЕМ. Особенно нужна сотрудникам в
-                возрасте: понятные пошаговые инструкции и FAQ. */}
-            <button
-              type="button"
-              className="dropdown-item w-full"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setLocation("/help");
-              }}
-            >
-              <HelpCircle className="w-5 h-5 text-primary" />
-              <span className="font-medium">Помощь</span>
-            </button>
+              );
+            })}
             <div className="dropdown-divider" />
             <MotionToggle />
-            {/* Звук+вибро при «Готово». Дефолт — вкл, чтобы воркер
-                сразу получил physical-confirmation. Можно выключить
-                на ночной смене / open-space если раздражает. */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={feedbackOn}
-              aria-label="Звук и вибрация"
-              className="dropdown-item w-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                const next = !feedbackOn;
-                setFeedbackEnabled(next);
-                setFeedbackOn(next);
-              }}
-            >
-              <Bell className="w-5 h-5 text-primary" />
-              <span className="font-medium flex-1 text-left">
-                Звук + вибро
-              </span>
-              <span className="motion-toggle" data-checked={feedbackOn} aria-hidden="true"><span /></span>
-            </button>
+            <FeedbackToggle />
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой
                 воркер мог переключить под себя. */}

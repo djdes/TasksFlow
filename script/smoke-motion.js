@@ -31,6 +31,7 @@ async (page) => {
     else if (path === '/api/workers/1') data = {id:1,name:admin.name,companyId:1};
     else if (path === '/api/companies/me') data = {id:1,name:'Тестовая компания',email:'smoke@example.test',wesetupBaseUrl:null,wesetupApiKey:null};
     else if (path === '/api/me/telegram') data = {connected:false,botConfigured:false};
+    else if (path === '/api/app/info') data = {android:{apk:null,playUrl:null,rustoreUrl:null},ios:{appStoreUrl:null,testflightUrl:null}};
     else if (path.includes('/wesetup/')) data = {enabled:false,ok:false,configured:false,message:'Интеграция не подключена'};
     else if (path.includes('webhook-queue')) data = {stats:{pending:0,delivered:0,failed:0,cancelled:0},recentFailed:[]};
     else if (path.includes('/invitations/by-token/')) data = {valid:true,companyName:'Тестовая компания',position:'Кассир'};
@@ -50,17 +51,20 @@ async (page) => {
   check(await page.locator('[data-page-skeleton]').count() === 0,'Skeleton stayed after data loaded');
   await page.screenshot({path:'output/playwright/desktop-dashboard.png'});
   delay = 100;
-  await page.getByRole('button',{name:'Меню',exact:true}).click();
+  // На ПК меню — панель слева, переключатель анимаций — в «Моём аккаунте».
+  const sidebar = page.getByRole('complementary',{name:'Меню кабинета'});
+  check(await page.getByRole('button',{name:'Меню',exact:true}).isHidden(),'Burger menu is visible on desktop next to the sidebar');
+  await sidebar.getByRole('link',{name:/Мой аккаунт/}).click();
   await page.getByRole('switch',{name:'Анимации интерфейса'}).waitFor();
   check(await page.getByRole('switch',{name:'Анимации интерфейса'}).getAttribute('aria-checked')==='true','Motion is not enabled by default');
   await page.getByRole('switch',{name:'Анимации интерфейса'}).click();
   check(await page.locator('html').getAttribute('data-motion')==='reduced','Toggle did not disable CSS motion');
   await page.reload();
-  await page.getByRole('heading',{name:'Задачи',exact:true}).waitFor();
+  await page.getByRole('switch',{name:'Анимации интерфейса'}).waitFor();
   check(await page.locator('html').getAttribute('data-motion')==='reduced','Motion preference did not survive reload');
-  await page.getByRole('button',{name:'Меню',exact:true}).click();
   await page.getByRole('switch',{name:'Анимации интерфейса'}).click();
-  await page.getByRole('button',{name:'Приглашения',exact:true}).click();
+  check(await page.getByText('Что-то пошло не так').count() === 0,'Account page crashed');
+  await sidebar.getByRole('link',{name:'Приглашения',exact:true}).click();
   await page.getByRole('heading',{name:'Приглашения',exact:true}).waitFor();
   await page.getByRole('button',{name:'Сгенерировать QR'}).click();
   let dialog = page.getByRole('dialog');

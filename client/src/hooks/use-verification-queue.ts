@@ -12,10 +12,12 @@ const QUERY_KEY = ["awaiting-verification"] as const;
  *
  * Polling: автоматический refetch раз в 30с — verifier видит новые
  * submit'ы без F5. Tabs/active-only fetching уже включён в react-query.
+ * enabled=false — для тех, кому проверка не положена (сотрудник): запроса нет.
  */
-export function useAwaitingVerification() {
+export function useAwaitingVerification(enabled = true) {
   return useQuery<Task[]>({
     queryKey: QUERY_KEY,
+    enabled,
     queryFn: async ({ signal }) => {
       const res = await fetchOrFriendlyError("/api/tasks/awaiting-verification", {
         credentials: "include",

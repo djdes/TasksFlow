@@ -44,9 +44,10 @@ export function getUserInitials(user: DisplayUser | null | undefined): string {
   if (!user) return "?";
   const name = (user.name || user.phone || user.email || "").trim();
   if (!name) return "?";
-  const parts = name.split(/\s+/);
-  if (parts.length >= 2 && parts[0].length > 0 && parts[1].length > 0) {
+  // По символам, а не UTF-16 единицам: эмодзи в начале не режется пополам.
+  const parts = name.split(/\s+/).map((part) => Array.from(part));
+  if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase();
+  return parts[0].slice(0, 2).join("").toUpperCase();
 }

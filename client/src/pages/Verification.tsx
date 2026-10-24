@@ -219,7 +219,7 @@ export default function VerificationPage() {
         <Button
           variant="ghost"
           onClick={() => setLocation("/dashboard")}
-          className="page-back"
+          data-home-back className="page-back"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Назад

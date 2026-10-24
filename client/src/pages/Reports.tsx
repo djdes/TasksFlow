@@ -104,7 +104,7 @@ export default function Reports() {
   return (
     <div className="page-screen reports-page">
       <div className="page-container">
-        <button type="button" onClick={() => setLocation("/dashboard")} className="page-back group">
+        <button type="button" onClick={() => setLocation("/dashboard")} data-home-back className="page-back group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           К задачам
         </button>

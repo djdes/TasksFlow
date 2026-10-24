@@ -263,7 +263,7 @@ export default function CompanySettings() {
         <div className="page-header">
           <button
             onClick={() => setLocation("/dashboard")}
-            className="page-back group"
+            data-home-back className="page-back group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад

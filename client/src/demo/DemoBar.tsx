@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, X } from "lucide-react";
 import { demoRole, resetDemo, setDemoRole } from "./demo-api";
@@ -11,6 +11,20 @@ import { exitDemo } from "./demo-mode";
 export function DemoBar() {
   const queryClient = useQueryClient();
   const [role, setRole] = useState(demoRole());
+  const bar = useRef<HTMLDivElement>(null);
+
+  // Меню кабинета на ПК встаёт под полосу — ему нужна её настоящая высота.
+  useEffect(() => {
+    const el = bar.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--demo-bar-h", `${el.offsetHeight}px`));
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--demo-bar-h");
+    };
+  }, []);
 
   const switchRole = (next: "admin" | "worker") => {
     if (next === role) return;
@@ -20,7 +34,7 @@ export function DemoBar() {
   };
 
   return (
-    <div className="demo-bar" role="region" aria-label="Демо-кабинет">
+    <div ref={bar} className="demo-bar" role="region" aria-label="Демо-кабинет">
       <Sparkles className="w-4 h-4 shrink-0" aria-hidden="true" />
       <span className="demo-bar-text">
         <span className="demo-bar-long">Демо: всё понарошку, данные не сохраняются</span>

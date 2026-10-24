@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TelegramSection } from "@/components/TelegramSection";
 import { MotionToggle } from "@/components/MotionToggle";
+import { FeedbackToggle } from "@/components/FeedbackToggle";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { plural } from "@/lib/i18n";
 import { ArrowLeft, Mail, KeyRound, Palette, TriangleAlert, UserRound } from "lucide-react";
@@ -126,7 +127,7 @@ export default function Account() {
         <button
           type="button"
           onClick={() => setLocation("/dashboard")}
-          className="page-back group"
+          data-home-back className="page-back group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           В кабинет
@@ -155,6 +156,7 @@ export default function Account() {
             <div className="account-appearance">
               <ThemeSwitcher />
               <MotionToggle />
+              <FeedbackToggle />
             </div>
           </section>
 

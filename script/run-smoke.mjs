@@ -34,6 +34,8 @@ const SESSIONS = [
   ['script/smoke-pwa.js'],
   // Тариф и оплата: форма, Робокасса (подменена), возврат, автопродление, root «Цены».
   ['script/smoke-billing.js'],
+  // Меню слева на ПК и быстрый переход Ctrl+K.
+  ['script/smoke-sidebar.js'],
 ];
 
 // SMOKE_ONLY=billing — только сессии, где есть такой сценарий (для отладки).

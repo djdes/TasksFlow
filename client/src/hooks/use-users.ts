@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
-export function useUsers() {
+/** enabled=false — не запрашивать, пока список не нужен (быстрый переход закрыт). */
+export function useUsers(enabled = true) {
   return useQuery({
     queryKey: [api.users.list.path],
+    enabled,
     queryFn: async ({ signal }) => {
       const res = await fetchOrFriendlyError(api.users.list.path, {
         credentials: "include",

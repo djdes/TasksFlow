@@ -30,7 +30,7 @@ export default function Instructions() {
   return (
     <div className="page-screen">
       <div className="page-container page-container--narrow">
-        <Link href={user ? "/dashboard" : "/"} className="page-back group">
+        <Link href={user ? "/dashboard" : "/"} data-home-back className="page-back group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Назад
         </Link>

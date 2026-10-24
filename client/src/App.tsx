@@ -10,6 +10,7 @@ import { PageSkeleton } from "@/components/PageSkeleton";
 import { QueryError } from "@/components/QueryError";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CabinetFrame } from "@/components/CabinetFrame";
 import { useLiveUpdates } from "@/hooks/use-live-updates";
 import { isDemo } from "@/demo/demo-mode";
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +132,7 @@ function Router() {
   return (
     <>
       <ScrollToTop />
+      <CabinetFrame>
       <div key={location} className="route-shell">
         <Suspense fallback={<PageSkeleton />}>
           <SessionReady>
@@ -167,6 +169,7 @@ function Router() {
           </SessionReady>
         </Suspense>
       </div>
+      </CabinetFrame>
     </>
   );
 }

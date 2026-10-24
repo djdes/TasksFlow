@@ -6,22 +6,21 @@ import { useEffect } from "react";
  *
  * Биндинги:
  *   `/`  — фокус в поиск
- *   `n`  — новая задача (admin/manager)
  *   `?`  — открыть /help
  *   `g h` — go home (/dashboard)
  *
+ * `N` (новая задача) и Ctrl+K — во всём кабинете, см. CabinetFrame.
  * Esc обрабатывается отдельно — закрывает меню/диалоги стандартно
  * через Radix `onOpenChange`, дублировать не надо.
  */
 
 type Handlers = {
   onFocusSearch?: () => void;
-  onNewTask?: () => void;
   onHelp?: () => void;
   onDashboard?: () => void;
 };
 
-function isTypingTarget(target: EventTarget | null): boolean {
+export function isTypingTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
@@ -42,13 +41,6 @@ export function useKeyboardShortcuts(handlers: Handlers): void {
           if (handlers.onFocusSearch) {
             e.preventDefault();
             handlers.onFocusSearch();
-          }
-          return;
-        case "n":
-        case "т": // Cyrillic raw layout — буква на той же клавише
-          if (handlers.onNewTask) {
-            e.preventDefault();
-            handlers.onNewTask();
           }
           return;
         case "?":
@@ -77,7 +69,6 @@ export function useKeyboardShortcuts(handlers: Handlers): void {
     return () => window.removeEventListener("keydown", onKey);
   }, [
     handlers.onFocusSearch,
-    handlers.onNewTask,
     handlers.onHelp,
     handlers.onDashboard,
   ]);

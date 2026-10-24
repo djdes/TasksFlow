@@ -326,7 +326,7 @@ async (page) => {
     try {
       await tab.goto(base + '/admin/billing');
       await tab.getByRole('heading', { name: '«Старт»' }).waitFor();
-      check(await tab.getByRole('radio').count() === 0, 'plans shown in app');
+      check(await tab.locator('.cabinet-main').getByRole('radio').count() === 0, 'plans shown in app');
       check(await tab.getByRole('button', { name: /Перейти к оплате/ }).count() === 0, 'pay button in app');
       check(await tab.getByText(/Робокасс/).count() === 0, 'payment text in app');
       check(errors.length === 0, `app errors: ${errors.join('; ')}`);

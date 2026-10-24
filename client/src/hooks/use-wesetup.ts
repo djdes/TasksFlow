@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { DEFAULT_PHOTO_SETTINGS, type PhotoSettings } from "@shared/photo-settings";
+import type { PlanId } from "@shared/plans";
 
 /**
  * Настроена ли у компании интеграция с WeSetup (свои baseUrl+apiKey).
@@ -8,7 +9,13 @@ import { DEFAULT_PHOTO_SETTINGS, type PhotoSettings } from "@shared/photo-settin
  * Глобальный env WESETUP_* не учитывается на сервере — это осознанно,
  * чтобы публичный TasksFlow не показывал WeSetup всем подряд.
  */
-type CompanyPublic = { name?: string; wesetupConfigured?: boolean; photo?: PhotoSettings } | null;
+type CompanyPublic = {
+  name?: string;
+  wesetupConfigured?: boolean;
+  photo?: PhotoSettings;
+  /** Действующий тариф (истёкший — «Старт») и срок оплаченного. */
+  planInfo?: { id: PlanId; name: string; until: number | null };
+} | null;
 
 export function useWesetupConfiguration() {
   return useQuery<CompanyPublic>({
