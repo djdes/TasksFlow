@@ -6,9 +6,11 @@ import {
   type CheckoutInput,
   type CheckoutResult,
   type CompanyRequisites,
+  type InnLookupResult,
   type InvoiceInput,
   type InvoiceResult,
   type PromoQuote,
+  type TopupResult,
 } from "@shared/billing";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "./queryClient";
 
@@ -35,7 +37,9 @@ export async function fetchOrder(id: number): Promise<BillingOrder | null> {
   return res.json();
 }
 
-export async function startCheckout(input: Omit<CheckoutInput, "recurringConsent"> & { recurringConsent: boolean }): Promise<CheckoutResult> {
+export async function startCheckout(
+  input: Omit<CheckoutInput, "recurringConsent" | "usePoints"> & { recurringConsent: boolean; usePoints: boolean },
+): Promise<CheckoutResult> {
   const res = await apiRequest("POST", "/api/billing/checkout", input);
   return res.json();
 }
@@ -60,6 +64,18 @@ export async function createInvoice(input: InvoiceInput): Promise<InvoiceResult>
   return res.json();
 }
 
+/** Пополнить баланс: картой (окно Робокассы) или счётом. */
+export async function startTopup(input: { amountRub: number; method: "card" | "invoice"; email?: string }): Promise<TopupResult> {
+  const res = await apiRequest("POST", "/api/billing/topup", input);
+  return res.json();
+}
+
+/** Реквизиты по ИНН (DaData). Ошибка сети или лимит — исключение с понятным текстом. */
+export async function lookupRequisites(inn: string): Promise<InnLookupResult> {
+  const res = await apiRequest("POST", "/api/billing/requisites/lookup", { inn }, 15_000);
+  return res.json();
+}
+
 export const invoicePdfUrl = (orderId: number) => `/api/billing/orders/${orderId}/invoice.pdf`;
 export const updPdfUrl = (orderId: number) => `/api/billing/orders/${orderId}/upd.pdf`;
 
@@ -71,6 +87,11 @@ export function useRobokassaScript(enabled: boolean): boolean {
   const [ready, setReady] = useState(() => typeof window !== "undefined" && !!window.Robokassa);
   useEffect(() => {
     if (!enabled || ready) return;
+    // Скрипт уже загрузил другой блок страницы: его load прошёл, ждать нечего.
+    if (window.Robokassa) {
+      setReady(true);
+      return;
+    }
     let cancelled = false;
     const markReady = () => {
       if (!cancelled && window.Robokassa) setReady(true);

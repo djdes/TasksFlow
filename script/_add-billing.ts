@@ -13,6 +13,9 @@ import { sql } from "drizzle-orm";
  *   promo_codes       — промокоды (root).
  *   company_requisites — реквизиты компании для счёта и УПД.
  *   closing_documents — закрывающие документы: снимок на дату оплаты.
+ *   price_promotions  — акции по расписанию (root).
+ *   company_discounts — постоянные скидки компаний (по строке на код).
+ *   balance_transactions — журнал баланса в баллах.
  *
  * Только CREATE TABLE, ADD COLUMN / ADD INDEX к этим же таблицам и одна строка цены в
  * новой таблице; остальные таблицы и строки не трогает. Идемпотентно:
@@ -141,6 +144,57 @@ const TABLES: Array<[string, string]> = [
       KEY idx_closing_documents_company (company_id, issued_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   ],
+  [
+    "price_promotions",
+    `CREATE TABLE price_promotions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(120) NOT NULL,
+      discount_percent INT NOT NULL,
+      starts_at INT NOT NULL,
+      ends_at INT NOT NULL,
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      note VARCHAR(255) NULL,
+      created_at INT NOT NULL DEFAULT 0,
+      updated_at INT NOT NULL DEFAULT 0,
+      KEY idx_price_promotions_window (active, ends_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
+  [
+    "company_discounts",
+    `CREATE TABLE company_discounts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      company_id INT NOT NULL,
+      promo_code_id INT NOT NULL,
+      code VARCHAR(32) NOT NULL,
+      kind VARCHAR(8) NOT NULL,
+      value INT NOT NULL,
+      order_id INT NULL,
+      bound_at INT NOT NULL,
+      expires_at INT NULL,
+      revoked_at INT NULL,
+      revoked_by INT NULL,
+      updated_at INT NOT NULL DEFAULT 0,
+      UNIQUE KEY uq_company_discounts_code (company_id, promo_code_id),
+      KEY idx_company_discounts_order (order_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
+  [
+    "balance_transactions",
+    `CREATE TABLE balance_transactions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      company_id INT NOT NULL,
+      amount_rub INT NOT NULL,
+      balance_after INT NOT NULL,
+      kind VARCHAR(24) NOT NULL,
+      description VARCHAR(255) NOT NULL,
+      order_id INT NULL,
+      actor_user_id INT NULL,
+      dedupe_key VARCHAR(64) NULL,
+      created_at INT NOT NULL DEFAULT 0,
+      UNIQUE KEY uq_balance_transactions_dedupe (dedupe_key),
+      KEY idx_balance_transactions_company (company_id, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ],
 ];
 
 // Колонки, добавленные после первой выкладки (11.2026): откат тарифа при
@@ -161,6 +215,17 @@ const COLUMNS: Array<[string, string, string]> = [
   ["payment_orders", "discount_rub", "INT NOT NULL DEFAULT 0"],
   ["payment_orders", "promo_code", "VARCHAR(32) NULL"],
   ["payment_orders", "invoice_due_at", "INT NULL"],
+  // Баланс, акции, постоянные скидки.
+  ["payment_orders", "order_kind", "VARCHAR(8) NOT NULL DEFAULT 'plan'"],
+  ["payment_orders", "promotion_id", "INT NULL"],
+  ["payment_orders", "promotion_percent", "INT NULL"],
+  ["payment_orders", "promotion_discount_rub", "INT NOT NULL DEFAULT 0"],
+  ["payment_orders", "discount_source", "VARCHAR(8) NULL"],
+  ["payment_orders", "points_rub", "INT NOT NULL DEFAULT 0"],
+  ["payment_orders", "points_state", "VARCHAR(12) NULL"],
+  ["promo_codes", "lifetime", "TINYINT(1) NOT NULL DEFAULT 0"],
+  ["promo_codes", "duration_months", "INT NULL"],
+  ["company_billing", "balance_rub", "INT NOT NULL DEFAULT 0"],
 ];
 
 // Индексы к колонкам выше: использования промокода считаются по заказам.

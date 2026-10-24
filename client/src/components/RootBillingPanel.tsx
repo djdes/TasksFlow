@@ -5,6 +5,7 @@ import { PLANS } from "@shared/plans";
 import {
   BILLING_MONTHS,
   formatRub,
+  LIFETIME_MAX_PERCENT,
   ORDER_STATUS_LABEL,
   PAID_PLAN_IDS,
   periodLabel,
@@ -25,6 +26,7 @@ import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { invoicePdfUrl, updPdfUrl } from "@/lib/billing-api";
+import { BalancesPanel, LifetimeDiscountsPanel, PromotionsPanel } from "@/components/RootBillingExtras";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 
 type RootBilling = { prices: PlanPrice[]; orders: RootBillingOrder[] };
@@ -71,7 +73,10 @@ export function RootBillingPanel() {
         </div>
         {query.isLoading ? <ListSkeleton rows={2} /> : query.isError || !query.data ? <QueryError onRetry={() => void query.refetch()} /> : <PricesEditor prices={query.data.prices} />}
       </section>
+      <PromotionsPanel />
       <PromoCodesPanel />
+      <LifetimeDiscountsPanel />
+      <BalancesPanel />
       <section className="content-panel" aria-labelledby="root-payments-title">
         <div className="section-title">
           <CreditCard className="w-5 h-5 text-primary" />
@@ -89,11 +94,19 @@ export function RootBillingPanel() {
               <li key={o.id} className="billing-order">
                 <div className="min-w-0">
                   <p className="billing-order-title">
-                    {o.companyName ?? `Компания #${o.companyId}`} · {PLANS[o.plan].name} на {periodLabel(o.months)}
+                    {o.companyName ?? `Компания #${o.companyId}`} · {o.kind === "topup" ? "пополнение баланса" : `${PLANS[o.plan].name} на ${periodLabel(o.months)}`}
                     {o.automatic && <span className="billing-chip is-muted">автопродление</span>}
                     {o.method === "invoice" && <span className="billing-chip is-muted">по счёту</span>}
-                    {o.method === "promo" && <span className="billing-chip is-muted">промокод на всю сумму</span>}
-                    {o.promoCode && o.method !== "promo" && <span className="billing-chip is-muted">{o.promoCode} −{formatRub(o.discountRub)}</span>}
+                    {o.method === "promo" && <span className="billing-chip is-muted">скидка на всю сумму</span>}
+                    {o.method === "balance" && <span className="billing-chip is-muted">баллами</span>}
+                    {o.promotionDiscountRub > 0 && <span className="billing-chip is-muted">акция −{formatRub(o.promotionDiscountRub)}</span>}
+                    {o.promoCode && o.discountRub > 0 && (
+                      <span className="billing-chip is-muted">
+                        {o.discountSource === "lifetime" ? "постоянная " : ""}
+                        {o.promoCode} −{formatRub(o.discountRub)}
+                      </span>
+                    )}
+                    {o.pointsRub > 0 && o.method !== "balance" && <span className="billing-chip is-muted">баллами {formatRub(o.pointsRub)}</span>}
                     {o.isTest && <span className="billing-chip is-warn">тест</span>}
                     {o.refundStatus && o.status !== "refunded" && (
                       <span className={`billing-chip ${o.refundStatus === "uncertain" || o.refundStatus === "canceled" ? "is-warn" : "is-muted"}`}>
@@ -120,10 +133,10 @@ export function RootBillingPanel() {
                       )}
                     </p>
                   )}
-                  {o.method === "invoice" ? <InvoiceActions order={o} /> : o.method === "card" ? <OrderActions order={o} /> : null}
+                  {o.method === "invoice" ? <InvoiceActions order={o} /> : o.method === "card" || o.method === "balance" ? <OrderActions order={o} /> : null}
                 </div>
                 <div className="billing-order-side">
-                  <b>{formatRub(o.amountRub)}</b>
+                  <b>{o.method === "balance" ? `${formatRub(o.pointsRub)} баллами` : formatRub(o.amountRub)}</b>
                   <span className={`billing-chip ${o.status === "paid" ? "is-ok" : o.status === "pending" ? "is-warn" : "is-muted"}`}>{ORDER_STATUS_LABEL[o.status]}</span>
                 </div>
               </li>
@@ -192,6 +205,7 @@ function CashboxBody({ diag, result, checking, onCheck }: { diag: BillingDiagnos
     { ok: s.password3, label: "Пароль #3", hint: "возвраты кнопкой отсюда; без него — в кабинете кассы", optional: true },
     { ok: diag.recurring, label: "Автопродление", hint: "рекуррентные платежи включает Робокасса по заявке", optional: true },
     { ok: diag.receipt, label: "Чеки", hint: diag.receipt ? `54-ФЗ, НДС: ${diag.tax}${diag.sno ? `, СНО: ${diag.sno}` : ""}` : "54-ФЗ: Робочеки или своя касса", optional: true },
+    { ok: diag.dadata, label: "Реквизиты по ИНН", hint: "DADATA_API_KEY — кнопка «Заполнить по ИНН» у реквизитов", optional: true },
   ];
   const st = diag.stats;
   const n = (status: string) => st.byStatus[status] ?? 0;
@@ -320,8 +334,10 @@ function OrderActions({ order }: { order: RootBillingOrder }) {
     },
   });
 
+  const points = order.method === "balance";
   const canRefund = order.status === "paid" && !order.isTest && (order.refundStatus === null || order.refundStatus === "canceled" || retry);
-  const canCheck = order.status !== "refunded";
+  // Оплату баллами касса не видела — сверять нечего.
+  const canCheck = order.status !== "refunded" && !points;
   if (!canRefund && !canCheck) return null;
 
   return (
@@ -341,15 +357,21 @@ function OrderActions({ order }: { order: RootBillingOrder }) {
             setConfirm(true);
           }}
         >
-          <Undo2 /> {retry ? "Повторить возврат" : "Вернуть деньги"}
+          <Undo2 /> {retry ? "Повторить возврат" : points ? "Отменить оплату" : "Вернуть деньги"}
         </Button>
       )}
       <ConfirmDialog
         open={confirm}
         onOpenChange={setConfirm}
-        title={retry ? `Повторить возврат ${formatRub(order.amountRub)}?` : `Вернуть ${formatRub(order.amountRub)}?`}
+        title={
+          retry ? `Повторить возврат ${formatRub(order.amountRub)}?` : points ? `Отменить оплату баллами (${formatRub(order.pointsRub)})?` : `Вернуть ${formatRub(order.amountRub)}?`
+        }
         description={
-          retry ? (
+          points ? (
+            <p>
+              Заказ №{order.id}, «{order.companyName ?? `компания #${order.companyId}`}». Баллы вернутся на баланс, срок тарифа — к тому, что был до оплаты (если после неё его не меняли).
+            </p>
+          ) : retry ? (
             <>
               <p>
                 Касса не подтвердила прошлый возврат по заказу №{order.id}. Повторяйте, только если в кабинете Робокассы видно, что деньги не вернулись: иначе вернёте дважды.
@@ -361,11 +383,18 @@ function OrderActions({ order }: { order: RootBillingOrder }) {
               <p>
                 Заказ №{order.id}, «{order.companyName ?? `компания #${order.companyId}`}». Касса вернёт всю сумму на карту плательщика — отменить возврат нельзя.
               </p>
-              <p>Если это последняя оплата компании, тариф и срок вернутся к тем, что были до неё. Автопродление этой серии выключится.</p>
+              {order.kind === "topup" ? (
+                <p>Сначала с баланса компании спишутся {formatRub(order.amountRub)} баллов; если часть уже потрачена — возврат не отправим.</p>
+              ) : (
+                <p>
+                  Если это последняя оплата компании, тариф и срок вернутся к тем, что были до неё. Автопродление этой серии выключится.
+                  {order.pointsRub > 0 ? ` Баллы заказа (${formatRub(order.pointsRub)}) вернутся на баланс.` : ""}
+                </p>
+              )}
             </>
           )
         }
-        confirmLabel={retry ? "Повторить возврат" : "Вернуть деньги"}
+        confirmLabel={retry ? "Повторить возврат" : points ? "Отменить оплату" : "Вернуть деньги"}
         confirmWord={retry ? "ВЕРНУТЬ" : undefined}
         destructive
         busy={refund.isPending}
@@ -414,7 +443,9 @@ function InvoiceActions({ order }: { order: RootBillingOrder }) {
         description={
           dialog === "paid" ? (
             <p>
-              Отмечайте, только когда деньги по счёту №{order.id} пришли на расчётный счёт. Тариф «{PLANS[order.plan].name}» продлится на {periodLabel(order.months)}, админы «{order.companyName ?? `компании #${order.companyId}`}» получат уведомление, появится УПД.
+              Отмечайте, только когда деньги по счёту №{order.id} пришли на расчётный счёт.{" "}
+              {order.kind === "topup" ? `На баланс начислится ${formatRub(order.amountRub)} баллов` : `Тариф «${PLANS[order.plan].name}» продлится на ${periodLabel(order.months)}`}, админы «
+              {order.companyName ?? `компании #${order.companyId}`}» получат уведомление, появится УПД.
             </p>
           ) : (
             <p>Счёт станет «Отменён». Если его всё же оплатят, оплату можно будет отметить и после отмены.</p>
@@ -432,8 +463,30 @@ function InvoiceActions({ order }: { order: RootBillingOrder }) {
 
 // --- Промокоды -------------------------------------------------------------------------
 
-type PromoDraft = { code: string; kind: PromoKind; value: string; endsAt: string; maxUses: string; newClientsOnly: boolean; companyId: string; note: string };
-const EMPTY_PROMO: PromoDraft = { code: "", kind: "percent", value: "", endsAt: "", maxUses: "", newClientsOnly: false, companyId: "", note: "" };
+type PromoDraft = {
+  code: string;
+  kind: PromoKind;
+  value: string;
+  endsAt: string;
+  maxUses: string;
+  newClientsOnly: boolean;
+  companyId: string;
+  note: string;
+  lifetime: boolean;
+  durationMonths: string;
+};
+const EMPTY_PROMO: PromoDraft = {
+  code: "",
+  kind: "percent",
+  value: "",
+  endsAt: "",
+  maxUses: "",
+  newClientsOnly: false,
+  companyId: "",
+  note: "",
+  lifetime: false,
+  durationMonths: "",
+};
 
 /** Конец дня по Москве для даты из <input type="date">. */
 const endOfDay = (date: string) => Math.floor(new Date(`${date}T23:59:59+03:00`).getTime() / 1000);
@@ -469,6 +522,8 @@ function PromoCodesPanel() {
         newClientsOnly: draft.newClientsOnly,
         companyId: draft.companyId ? Math.round(Number(draft.companyId)) : null,
         note: draft.note || undefined,
+        lifetime: draft.lifetime,
+        durationMonths: draft.lifetime && draft.durationMonths ? Math.round(Number(draft.durationMonths)) : null,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: PROMO_KEY });
@@ -505,7 +560,8 @@ function PromoCodesPanel() {
         <h2 id="root-promo-title">Промокоды</h2>
       </div>
       <p className="text-sm text-muted-foreground">
-        Скидка — на одну оплату картой или по счёту; автопродление дальше списывает полную цену. Промокод на 100 % включает тариф без оплаты.
+        Обычный код — скидка на одну оплату картой или по счёту, автопродление дальше идёт по полной цене. «Постоянная скидка» после оплаты закрепляется за
+        компанией и действует на все следующие оплаты и автопродление (до {LIFETIME_MAX_PERCENT} %). Промокод на 100 % включает тариф без оплаты.
       </p>
       {query.isLoading ? (
         <ListSkeleton rows={2} />
@@ -525,6 +581,7 @@ function PromoCodesPanel() {
                   <p className="billing-order-title">
                     <code className="root-promo-code">{p.code}</code> {promoLabel(p.kind, p.value)}
                     <span className={`billing-chip ${state === "действует" ? "is-ok" : "is-muted"}`}>{state}</span>
+                    {p.lifetime && <span className="billing-chip is-muted">постоянная{p.durationMonths ? ` · ${periodLabel(p.durationMonths)}` : ""}</span>}
                   </p>
                   <p className="billing-order-meta">
                     оплат: {p.paidUses}
@@ -591,6 +648,29 @@ function PromoCodesPanel() {
             <input type="checkbox" checked={draft.newClientsOnly} onChange={(e) => set("newClientsOnly", e.target.checked)} />
             <span>Только для первой оплаты компании</span>
           </label>
+          <label className="billing-consent root-promo-check">
+            <input type="checkbox" checked={draft.lifetime} onChange={(e) => set("lifetime", e.target.checked)} />
+            <span>
+              Постоянная скидка
+              <small>После первой оплаты с кодом скидка закрепится за компанией и будет применяться сама — к оплатам и автопродлению.</small>
+            </span>
+          </label>
+          {draft.lifetime && (
+            <label className="billing-field">
+              <span>Сколько месяцев действует</span>
+              <input
+                className="root-price-input"
+                type="number"
+                min={1}
+                max={120}
+                step={1}
+                inputMode="numeric"
+                value={draft.durationMonths}
+                onChange={(e) => set("durationMonths", e.target.value)}
+                placeholder="без срока"
+              />
+            </label>
+          )}
           {formError && (
             <p className="billing-error root-promo-wide" role="alert">
               {formError}

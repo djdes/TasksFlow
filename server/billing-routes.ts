@@ -1,7 +1,18 @@
 import type { Express, Request, RequestHandler, Response } from "express";
 import { pricesSchema } from "@shared/billing";
 import { documentFilename } from "./billing/documents";
-import { cancelInvoiceOrder, closingPdf, createInvoice, ensureClosingDocument, invoicePdf, markInvoicePaid, saveCompanyRequisites } from "./billing/invoices";
+import { adjustBalance, createTopup, listRootBalances, rootCompanyBalance } from "./billing/balance";
+import {
+  cancelInvoiceOrder,
+  closingPdf,
+  createInvoice,
+  ensureClosingDocument,
+  invoicePdf,
+  lookupRequisites,
+  markInvoicePaid,
+  saveCompanyRequisites,
+} from "./billing/invoices";
+import { createRootPromotion, listRootDiscounts, listRootPromotions, revokeRootDiscount, updateRootPromotion } from "./billing/promotions";
 import { createRootPromo, listRootPromos, updateRootPromo } from "./billing/root-promo";
 import { logger } from "./logger";
 import { storage } from "./storage";
@@ -39,6 +50,11 @@ import {
  *   GET    /api/billing/orders/:id/invoice.pdf, /upd.pdf — счёт и УПД (админ компании или root)
  *   GET/POST /api/root/billing/promo-codes, PATCH /api/root/billing/promo-codes/:id — промокоды (root)
  *   POST   /api/root/billing/orders/:id/invoice-paid, /invoice-cancel — оплата по счёту (root)
+ *   POST   /api/billing/topup           — пополнить баланс картой или по счёту (админ)
+ *   POST   /api/billing/requisites/lookup — реквизиты по ИНН через DaData (админ)
+ *   GET/POST /api/root/billing/promotions, PATCH …/:id — акции по расписанию (root)
+ *   GET    /api/root/billing/discounts, POST …/:id/revoke — постоянные скидки (root)
+ *   GET    /api/root/billing/balances[/:companyId], POST …/:companyId/adjust — баланс компаний (root)
  *   GET    /api/root/billing/diagnostics — что задано в env, адреса для кассы (root)
  *   POST   /api/root/billing/check       — проверить логин и Пароль #2 без денег (root)
  *   POST   /api/root/billing/orders/:id/reconcile — сверить заказ с кассой (root)
@@ -74,23 +90,29 @@ function checkoutAllowed(companyId: number, nowMs = Date.now()): boolean {
 export function __resetCheckoutLimit(): void {
   checkoutHits.clear();
   promoHits.clear();
+  lookupHits.clear();
 }
 
 /** Проверок промокода за 10 минут на компанию: перебор кодов не пройдёт. */
 const PROMO_LIMIT = 20;
 const promoHits = new Map<number, number[]>();
+/** Запросов «Заполнить по ИНН» за 10 минут: у DaData дневной лимит на ключ. */
+const LOOKUP_LIMIT = 20;
+const lookupHits = new Map<number, number[]>();
 
-function promoAllowed(companyId: number, nowMs = Date.now()): boolean {
-  const recent = (promoHits.get(companyId) ?? []).filter((t) => nowMs - t < CHECKOUT_WINDOW_MS);
-  if (recent.length >= PROMO_LIMIT) {
-    promoHits.set(companyId, recent);
+function hitAllowed(hits: Map<number, number[]>, limit: number, companyId: number, nowMs = Date.now()): boolean {
+  const recent = (hits.get(companyId) ?? []).filter((t) => nowMs - t < CHECKOUT_WINDOW_MS);
+  if (recent.length >= limit) {
+    hits.set(companyId, recent);
     return false;
   }
   recent.push(nowMs);
-  promoHits.set(companyId, recent);
-  if (promoHits.size > 10_000) promoHits.clear();
+  hits.set(companyId, recent);
+  if (hits.size > 10_000) hits.clear();
   return true;
 }
+
+const promoAllowed = (companyId: number) => hitAllowed(promoHits, PROMO_LIMIT, companyId);
 
 /** Заголовки PDF: кириллическое имя файла — в filename*, ASCII — для старых браузеров. */
 function sendPdf(res: Response, pdf: Buffer, name: { ascii: string; utf8: string }) {
@@ -204,6 +226,40 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
     } catch (err) {
       logger.error({ err }, "[billing] реквизиты компании");
       res.status(500).json({ message: "Не удалось сохранить реквизиты. Попробуйте ещё раз." });
+    }
+  });
+
+  app.post("/api/billing/requisites/lookup", deps.requireAdmin, async (req, res) => {
+    try {
+      const ctx = await adminContext(req, res);
+      if (!ctx) return;
+      if (!hitAllowed(lookupHits, LOOKUP_LIMIT, ctx.companyId)) {
+        return res.status(429).json({ message: "Слишком много запросов — подождите несколько минут или заполните вручную" });
+      }
+      const reply = await lookupRequisites(billing, req.body);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[billing] реквизиты по ИНН");
+      res.status(500).json({ message: "Не удалось найти реквизиты — заполните вручную" });
+    }
+  });
+
+  app.post("/api/billing/topup", deps.requireAdmin, async (req, res) => {
+    try {
+      // Баллы — тоже покупка внутри сервиса: в приложениях её нет (App Store 3.1.1).
+      if (isAppUserAgent(req.headers["user-agent"])) {
+        return res.status(403).json({ message: "Оплата в приложении недоступна", code: "app_payment" });
+      }
+      const ctx = await adminContext(req, res);
+      if (!ctx) return;
+      if (!checkoutAllowed(ctx.companyId)) {
+        return res.status(429).json({ message: "Слишком много попыток. Попробуйте через несколько минут." });
+      }
+      const reply = await createTopup(billing, { ...ctx, body: req.body });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[billing] пополнение баланса");
+      res.status(500).json({ message: "Не удалось начать пополнение. Попробуйте ещё раз." });
     }
   });
 
@@ -404,6 +460,91 @@ export function registerBillingRoutes(app: Express, deps: Deps): void {
     } catch (err) {
       logger.error({ err, id }, "[root] промокод");
       res.status(500).json({ message: "Не удалось сохранить промокод" });
+    }
+  });
+
+  app.get("/api/root/billing/promotions", deps.requireRoot, async (_req, res) => {
+    try {
+      res.set("Cache-Control", "no-store").json({ promotions: await listRootPromotions(billing) });
+    } catch (err) {
+      logger.error({ err }, "[root] акции");
+      res.status(500).json({ message: "Не удалось загрузить акции" });
+    }
+  });
+
+  app.post("/api/root/billing/promotions", deps.requireRoot, async (req, res) => {
+    try {
+      const reply = await createRootPromotion(billing, req.body);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err }, "[root] новая акция");
+      res.status(500).json({ message: "Не удалось создать акцию" });
+    }
+  });
+
+  app.patch("/api/root/billing/promotions/:id", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Акция не найдена" });
+    try {
+      const reply = await updateRootPromotion(billing, id, req.body);
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] акция");
+      res.status(500).json({ message: "Не удалось сохранить акцию" });
+    }
+  });
+
+  app.get("/api/root/billing/discounts", deps.requireRoot, async (_req, res) => {
+    try {
+      res.set("Cache-Control", "no-store").json({ discounts: await listRootDiscounts(billing) });
+    } catch (err) {
+      logger.error({ err }, "[root] постоянные скидки");
+      res.status(500).json({ message: "Не удалось загрузить постоянные скидки" });
+    }
+  });
+
+  app.post("/api/root/billing/discounts/:id/revoke", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Скидка не найдена" });
+    try {
+      const reply = await revokeRootDiscount(billing, id, { userId: req.session.userId ?? 0 });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] снятие постоянной скидки");
+      res.status(500).json({ message: "Не удалось снять скидку" });
+    }
+  });
+
+  app.get("/api/root/billing/balances", deps.requireRoot, async (_req, res) => {
+    try {
+      res.set("Cache-Control", "no-store").json({ balances: await listRootBalances(billing) });
+    } catch (err) {
+      logger.error({ err }, "[root] балансы");
+      res.status(500).json({ message: "Не удалось загрузить балансы" });
+    }
+  });
+
+  app.get("/api/root/billing/balances/:id", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Компании с таким номером нет" });
+    try {
+      const reply = await rootCompanyBalance(billing, id);
+      res.status(reply.status).set("Cache-Control", "no-store").json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] баланс компании");
+      res.status(500).json({ message: "Не удалось загрузить баланс" });
+    }
+  });
+
+  app.post("/api/root/billing/balances/:id/adjust", deps.requireRoot, async (req, res) => {
+    const id = orderId(req);
+    if (!id) return res.status(404).json({ message: "Компании с таким номером нет" });
+    try {
+      const reply = await adjustBalance(billing, id, req.body, { userId: req.session.userId ?? 0 });
+      res.status(reply.status).json(reply.json);
+    } catch (err) {
+      logger.error({ err, id }, "[root] корректировка баланса");
+      res.status(500).json({ message: "Не удалось изменить баланс. Проверьте историю перед повтором." });
     }
   });
 

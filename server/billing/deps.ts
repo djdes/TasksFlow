@@ -1,5 +1,6 @@
 import { getPublicTasksflowBaseUrl } from "../public-urls";
 import { storage } from "../storage";
+import { dadataApiKey } from "./dadata";
 import { billingNotifier } from "./notify";
 import { robokassaConfig } from "./robokassa";
 import type { BillingDeps } from "./service";
@@ -14,5 +15,6 @@ export function defaultBillingDeps(): BillingDeps {
     getCompany: (id) => storage.getCompanyById(id),
     countUsers: (companyId) => storage.countCompanyUsers(companyId),
     baseUrl: () => getPublicTasksflowBaseUrl(),
+    dadata: () => dadataApiKey(),
   };
 }

@@ -22,6 +22,7 @@
  */
 import { effectivePlan, PLANS } from "@shared/plans";
 import {
+  addMonths,
   chargeAt,
   checkoutSchema,
   daysLabel,
@@ -37,7 +38,17 @@ import {
   RECURRING_MAX_ATTEMPTS,
   RECURRING_NOTICE_DAYS,
   PAYMENT_METHODS,
+  pickPromotion,
+  priceBreakdown,
+  promoLabel,
+  promotionDiscountRub,
   type BillingCheckResult,
+  type DiscountRule,
+  type DiscountSource,
+  type LifetimeDiscount,
+  type PriceBreakdown,
+  type PromoKind,
+  normalizePromoCode,
   type BillingDiagnostics,
   type CompanyRequisites,
   type PaidPlanId,
@@ -54,7 +65,7 @@ import {
   type RefundStatus,
   type RootBillingOrder,
 } from "@shared/billing";
-import type { Company, CompanyRequisitesRow, PaymentOrderRow, User } from "@shared/schema";
+import type { Company, CompanyDiscountRow, PaymentOrderRow, User } from "@shared/schema";
 import { logger } from "../logger";
 import {
   buildPaymentParams,
@@ -74,6 +85,7 @@ import {
 import { issueClosingDocument } from "./closing";
 import { sellerMissing, type SellerRequisites } from "./legal";
 import { documentsReady, requisitesOf, sellerOf } from "./parties";
+import { isTopup, signedRub, toBalanceEntry } from "./ledger";
 import { applyPromo, PROMO_HOLD_SEC, RESERVATION_MESSAGES, type PromoApplied } from "./promo";
 import type { BillingStore, DueRecurring, ExpiringPlan, NewOrder, SettleContext, SettlePatch } from "./store";
 
@@ -110,6 +122,8 @@ export type BillingDeps = {
   baseUrl?: () => string;
   /** Реквизиты Исполнителя для счетов и УПД; по умолчанию — из env LEGAL_*. */
   seller?: () => SellerRequisites;
+  /** Ключ DaData для «Заполнить по ИНН»; null — кнопки нет. */
+  dadata?: () => string | null;
 };
 
 export { documentsReady, requisitesOf, sellerOf } from "./parties";
@@ -121,6 +135,28 @@ export function formatDay(sec: number): string {
 }
 
 const planName = (id: string) => (isPaidPlan(id) ? PLANS[id].name : id);
+
+/** «тариф «Команда» на 1 месяц» или «пополнение баланса» — для писем. */
+const orderWhat = (order: Pick<PaymentOrderRow, "orderKind" | "plan" | "months">) =>
+  isTopup(order) ? "пополнение баланса" : `тариф «${planName(order.plan)}» на ${periodLabel(order.months)}`;
+
+type LifetimeRule = DiscountRule & { row: CompanyDiscountRow };
+
+/** Действующие постоянные скидки компании (не сняты и не истекли). */
+export function activeLifetimes(rows: readonly CompanyDiscountRow[], now: number): LifetimeRule[] {
+  return rows
+    .filter((row) => row.revokedAt === null && (row.expiresAt === null || row.expiresAt > now))
+    .map((row) => ({ code: row.code, kind: row.kind === "fixed" ? "fixed" : "percent", value: row.value, row }));
+}
+
+export function toLifetimeDiscount(rule: LifetimeRule): LifetimeDiscount {
+  return { code: rule.code, kind: rule.kind, value: rule.value, label: promoLabel(rule.kind, rule.value), boundAt: rule.row.boundAt, expiresAt: rule.row.expiresAt };
+}
+
+/** Действующая акция: из включённых — по pickPromotion. */
+export async function currentPromotion(deps: BillingDeps, now: number) {
+  return pickPromotion(await deps.store.activePromotions(), now);
+}
 
 const ORDER_STATUSES: readonly OrderStatus[] = ["pending", "paid", "expired", "refunded", "cancelled"];
 const REFUND_STATUSES: readonly RefundStatus[] = ["sending", "pending", "uncertain", "finished", "canceled"];
@@ -136,6 +172,7 @@ export function toBillingOrder(row: PaymentOrderRow, opts: { docs?: boolean } = 
   const docs = opts.docs === true;
   return {
     id: row.id,
+    kind: isTopup(row) ? "topup" : "plan",
     plan: isPaidPlan(row.plan) ? row.plan : "team",
     months: row.months,
     amountRub: row.amountRub,
@@ -150,6 +187,9 @@ export function toBillingOrder(row: PaymentOrderRow, opts: { docs?: boolean } = 
     method,
     promoCode: row.promoCode,
     discountRub: row.discountRub,
+    discountSource: row.discountSource === "lifetime" ? "lifetime" : row.promoCode ? "code" : null,
+    promotionDiscountRub: row.promotionDiscountRub,
+    pointsRub: row.pointsRub,
     invoiceDueAt: row.invoiceDueAt,
     hasInvoice: docs && method === "invoice",
     hasUpd: docs && status === "paid" && !row.isTest && row.amountRub > 0,
@@ -166,12 +206,16 @@ export async function billingInfo(
   if (!company) return null;
   const cfg = deps.config();
   const now = nowOf(deps);
-  const [prices, billing, orders, usersCount, requisites] = await Promise.all([
+  const [prices, billing, orders, usersCount, requisites, promotion, discounts, history, heldRub] = await Promise.all([
     deps.store.getPrices(),
     deps.store.getCompanyBilling(ctx.companyId),
     deps.store.listOrders(ctx.companyId, 20),
     deps.countUsers(ctx.companyId),
     deps.store.getRequisites(ctx.companyId),
+    currentPromotion(deps, now),
+    deps.store.getCompanyDiscounts(ctx.companyId),
+    deps.store.listBalanceEntries(ctx.companyId, 20),
+    deps.store.getPointsHeld(ctx.companyId),
   ]);
   const docs = documentsReady(deps);
   const plan = effectivePlan(company.plan, company.planUntil, now);
@@ -199,36 +243,93 @@ export async function billingInfo(
     now,
     requisites: requisites ? requisitesOf(requisites) : null,
     invoiceAvailable: docs,
+    promotion,
+    lifetimeDiscounts: activeLifetimes(discounts, now).map(toLifetimeDiscount),
+    balance: { amountRub: (billing?.balanceRub ?? 0) + heldRub, heldRub, history: history.map(toBalanceEntry) },
+    innLookup: !!deps.dadata?.(),
+  };
+}
+
+/** Правило введённого кода — для страницы (POST /api/billing/promo). */
+export type CodeRule = { code: string; kind: PromoKind; value: number; lifetime: boolean; durationMonths: number | null };
+
+export type Quote = {
+  ok: true;
+  breakdown: PriceBreakdown;
+  /** Введённый код — если скидка по нему (а не постоянная). */
+  promo: PromoApplied | null;
+  /** Правило введённого кода; если код — уже действующая постоянная скидка, её снимок. */
+  codeRule: CodeRule | null;
+};
+
+/**
+ * Сумма заказа тарифа: цена → акция → промокод или постоянная скидка →
+ * баллы (priceBreakdown — та же функция, что на странице). Ошибка — готовый
+ * ответ: нет цены, код не подошёл или сумма на странице устарела.
+ */
+export async function quoteOrder(
+  deps: BillingDeps,
+  input: { companyId: number; plan: PaidPlanId; months: number; promoCode?: string; expectedRub?: number; usePoints?: boolean; now: number },
+): Promise<Quote | { ok: false; reply: Reply<never> }> {
+  const [prices, promotion, discounts, balance] = await Promise.all([
+    deps.store.getPrices(),
+    currentPromotion(deps, input.now),
+    deps.store.getCompanyDiscounts(input.companyId),
+    // Баллы брошенных заказов тоже доступны: новый заказ их освобождает.
+    input.usePoints
+      ? Promise.all([deps.store.getBalance(input.companyId), deps.store.getPointsHeld(input.companyId)]).then(([b, h]) => b + h)
+      : Promise.resolve(0),
+  ]);
+  const listRub = priceFor(prices, input.plan, input.months);
+  if (listRub === null) return { ok: false, reply: { status: 400, json: { message: "Этот тариф сейчас нельзя оплатить онлайн — напишите нам, подключим." } } };
+  const lifetimes = activeLifetimes(discounts, input.now);
+  let promo: PromoApplied | null = null;
+  let codeRule: CodeRule | null = null;
+  if (input.promoCode) {
+    const own = lifetimes.find((l) => l.code === normalizePromoCode(input.promoCode!));
+    if (own) {
+      // Код уже работает постоянной скидкой — проверять его как новый не нужно.
+      codeRule = { code: own.code, kind: own.kind, value: own.value, lifetime: true, durationMonths: null };
+    } else {
+      const base = listRub - (promotion ? promotionDiscountRub(listRub, promotion.percent) : 0);
+      const applied = await applyPromo(deps.store, { code: input.promoCode, companyId: input.companyId, baseRub: base, now: input.now });
+      if (!applied.ok) return { ok: false, reply: { status: 400, json: { message: applied.message, code: "promo" } } };
+      promo = applied.applied;
+      codeRule = { code: promo.code, kind: promo.kind, value: promo.value, lifetime: promo.lifetime, durationMonths: promo.durationMonths };
+    }
+  }
+  const breakdown = priceBreakdown({ listRub, promotion, code: codeRule, lifetimes, pointsAvailable: balance });
+  if (breakdown.discount?.source !== "code") promo = null;
+  if (input.expectedRub !== undefined && input.expectedRub !== breakdown.amountRub) {
+    return {
+      ok: false,
+      reply: { status: 409, json: { message: "Сумма изменилась — проверьте её и нажмите ещё раз.", code: "price_changed", priceRub: breakdown.amountRub } },
+    };
+  }
+  return { ok: true, breakdown, promo, codeRule };
+}
+
+/** Поля заказа по расчёту: цена, акция, скидка, баллы. */
+export function breakdownFields(b: PriceBreakdown): Pick<
+  NewOrder,
+  "baseRub" | "promotionId" | "promotionPercent" | "promotionDiscountRub" | "discountRub" | "discountSource" | "promoCode" | "pointsRub"
+> {
+  return {
+    baseRub: b.listRub,
+    promotionId: b.promotion?.id ?? null,
+    promotionPercent: b.promotion?.percent ?? null,
+    promotionDiscountRub: b.promotion?.discountRub ?? 0,
+    discountRub: b.discount?.discountRub ?? 0,
+    discountSource: (b.discount?.source ?? null) satisfies DiscountSource | null,
+    promoCode: b.discount?.code ?? null,
+    pointsRub: b.pointsRub,
   };
 }
 
 /**
- * Цена тарифа и срока с промокодом. Ошибка — готовый ответ: нет цены,
- * код не подошёл или сумма на странице устарела.
- */
-export async function quoteOrder(
-  deps: BillingDeps,
-  input: { companyId: number; plan: PaidPlanId; months: number; promoCode?: string; expectedRub?: number; now: number },
-): Promise<{ ok: true; baseRub: number; amountRub: number; promo: PromoApplied | null } | { ok: false; reply: Reply<never> }> {
-  const prices = await deps.store.getPrices();
-  const base = priceFor(prices, input.plan, input.months);
-  if (base === null) return { ok: false, reply: { status: 400, json: { message: "Этот тариф сейчас нельзя оплатить онлайн — напишите нам, подключим." } } };
-  let promo: PromoApplied | null = null;
-  if (input.promoCode) {
-    const applied = await applyPromo(deps.store, { code: input.promoCode, companyId: input.companyId, baseRub: base, now: input.now });
-    if (!applied.ok) return { ok: false, reply: { status: 400, json: { message: applied.message, code: "promo" } } };
-    promo = applied.applied;
-  }
-  const amount = promo ? promo.amountRub : base;
-  if (input.expectedRub !== undefined && input.expectedRub !== amount) {
-    return { ok: false, reply: { status: 409, json: { message: "Цена изменилась — проверьте сумму и нажмите ещё раз.", code: "price_changed", priceRub: amount } } };
-  }
-  return { ok: true, baseRub: base, amountRub: amount, promo };
-}
-
-/**
- * Создать заказ: с промокодом — атомарным резервом (лимит, «один раз на
- * компанию», «только первая оплата» под блокировкой кода), без — как обычно.
+ * Создать заказ из кабинета: резерв промокода (лимит, «один раз на
+ * компанию», «только первая оплата» под блокировкой кода) и баллы — в одной
+ * транзакции с заказом.
  */
 export async function placeOrder(
   deps: BillingDeps,
@@ -236,10 +337,13 @@ export async function placeOrder(
   promo: PromoApplied | null,
   now: number,
 ): Promise<{ ok: true; order: PaymentOrderRow } | { ok: false; reply: Reply<never> }> {
-  if (!promo) return { ok: true, order: await deps.store.createOrder(order) };
-  const placed = await deps.store.createOrderWithPromo(order, { code: promo.code, companyId: order.companyId, free: order.amountRub === 0, reservedSince: now - PROMO_HOLD_SEC });
-  if (!placed.ok) return { ok: false, reply: { status: 400, json: { message: RESERVATION_MESSAGES[placed.reason], code: "promo" } } };
-  return placed;
+  const reservation = promo ? { code: promo.code, companyId: order.companyId, free: order.amountRub === 0, reservedSince: now - PROMO_HOLD_SEC } : null;
+  const placed = await deps.store.placeOrder(order, reservation);
+  if (placed.ok) return placed;
+  if (placed.reason === "balance") {
+    return { ok: false, reply: { status: 409, json: { message: "Баллов на балансе стало меньше — проверьте сумму и нажмите ещё раз.", code: "price_changed" } } };
+  }
+  return { ok: false, reply: { status: 400, json: { message: RESERVATION_MESSAGES[placed.reason], code: "promo" } } };
 }
 
 /** POST /api/billing/promo: что даст код на выбранный тариф и срок. */
@@ -248,8 +352,10 @@ export async function quotePromo(deps: BillingDeps, ctx: { companyId: number; bo
   if (!parsed.success || !parsed.data.promoCode) return { ok: false, message: "Введите промокод" };
   const quote = await quoteOrder(deps, { companyId: ctx.companyId, ...parsed.data, now: nowOf(deps) });
   if (!quote.ok) return { ok: false, message: (quote.reply.json as { message: string }).message };
-  const promo = quote.promo!;
-  return { ok: true, code: promo.code, label: promo.label, baseRub: quote.baseRub, discountRub: promo.discountRub, amountRub: quote.amountRub };
+  // Правило кода отдаём, даже если выгоднее постоянная скидка: страница
+  // посчитает сумму сама (priceBreakdown) и покажет, что применена постоянная.
+  const rule = quote.codeRule!;
+  return { ok: true, ...rule, label: promoLabel(rule.kind, rule.value) };
 }
 
 // --- Заказ ---------------------------------------------------------------------
@@ -265,65 +371,51 @@ export async function createCheckout(
   const input = parsed.data;
   const cfg = deps.config();
   const now = nowOf(deps);
-  const quote = await quoteOrder(deps, { companyId: ctx.companyId, ...input, now });
+  // В тестовом режиме кассы баллы не списываются: настоящие баллы ушли бы
+  // за тестовую оплату без денег.
+  const quote = await quoteOrder(deps, { companyId: ctx.companyId, ...input, usePoints: input.usePoints && !cfg.isTest, now });
   if (!quote.ok) return quote.reply;
-  // Промокод на всю сумму работает и без кассы: денег нет, касса не нужна.
-  if (quote.amountRub > 0 && !isConfigured(cfg)) {
+  const b = quote.breakdown;
+  // Промокод или баллы на всю сумму работают и без кассы: денег нет, касса не нужна.
+  if (b.amountRub > 0 && !isConfigured(cfg)) {
     return {
       status: 503,
       json: { message: "Онлайн-оплата пока не подключена. Напишите на support@tasksflow.ru — подключим тариф по счёту.", code: "not_configured" },
     };
   }
-  const price = quote.amountRub;
-  const promo = quote.promo;
   const company = await deps.getCompany(ctx.companyId);
   if (!company) return { status: 404, json: { message: "Компания не найдена" } };
   if (isPaidPlan(company.plan) && company.planUntil == null) {
     return { status: 409, json: { message: "Тариф подключён бессрочно — оплачивать его не нужно. Сменить тариф поможет поддержка.", code: "perpetual" } };
   }
 
-  const discount = promo ? { baseRub: quote.baseRub, discountRub: promo.discountRub, promoCode: promo.code } : {};
-  if (price === 0) {
-    // Промокод на всю сумму: тариф включается сразу, автопродления нет —
-    // карту никто не вводил.
-    const placed = await placeOrder(deps, {
-      companyId: ctx.companyId,
-      userId: ctx.user.id,
-      email: input.email ?? ctx.user.email ?? null,
-      plan: input.plan,
-      months: input.months,
-      amountRub: 0,
-      description: orderDescription(input.plan, input.months),
-      isTest: false,
-      recurringConsent: false,
-      recurringChargeOf: null,
-      createdAt: now,
-      paymentMethod: "promo",
-      ...discount,
-    }, promo, now);
-    if (!placed.ok) return placed.reply;
-    const order = placed.order;
-    await settleOrder(deps, order.id, JSON.stringify({ source: "promo", code: promo!.code }), "promo");
-    const paid = await deps.store.getOrder(order.id);
-    logger.info({ orderId: order.id, companyId: ctx.companyId, promo: promo!.code }, "[billing] тариф включён промокодом");
-    return { status: 200, json: { invId: order.id, amountRub: 0, params: {}, paymentUrl: "", free: true, order: paid ? toBillingOrder(paid, { docs: documentsReady(deps) }) : undefined } };
-  }
-
-  const recurring = input.recurringConsent && cfg.recurring;
-  const placed = await placeOrder(deps, {
+  const base = {
     companyId: ctx.companyId,
     userId: ctx.user.id,
     email: input.email ?? ctx.user.email ?? null,
     plan: input.plan,
     months: input.months,
-    amountRub: price,
+    amountRub: b.amountRub,
     description: orderDescription(input.plan, input.months),
-    isTest: cfg.isTest,
-    recurringConsent: recurring,
     recurringChargeOf: null,
     createdAt: now,
-    ...discount,
-  }, promo, now);
+    ...breakdownFields(b),
+  };
+  if (b.amountRub === 0) {
+    // Скидка или баллы на всю сумму: тариф включается сразу, автопродления
+    // нет — карту никто не вводил.
+    const method = b.pointsRub > 0 ? "balance" : "promo";
+    const placed = await placeOrder(deps, { ...base, isTest: false, recurringConsent: false, paymentMethod: method }, quote.promo, now);
+    if (!placed.ok) return placed.reply;
+    const order = placed.order;
+    await settleOrder(deps, order.id, JSON.stringify({ source: method, code: b.discount?.code ?? null, points: b.pointsRub }), method);
+    const paid = await deps.store.getOrder(order.id);
+    logger.info({ orderId: order.id, companyId: ctx.companyId, method, points: b.pointsRub, code: b.discount?.code ?? null }, "[billing] тариф включён без оплаты деньгами");
+    return { status: 200, json: { invId: order.id, amountRub: 0, params: {}, paymentUrl: "", free: true, order: paid ? toBillingOrder(paid, { docs: documentsReady(deps) }) : undefined } };
+  }
+
+  const recurring = input.recurringConsent && cfg.recurring;
+  const placed = await placeOrder(deps, { ...base, isTest: cfg.isTest, recurringConsent: recurring }, quote.promo, now);
   if (!placed.ok) return placed.reply;
   const order = placed.order;
   if (recurring) {
@@ -334,8 +426,7 @@ export async function createCheckout(
       userId: ctx.user.id,
       orderId: order.id,
       granted: true,
-      // Серия списывает полную цену: скидка промокода — только на этот платёж.
-      statementText: recurringStatement(quote.baseRub, input.months) + (promo ? ` Первый платёж — ${formatRub(price)} по промокоду ${promo.code}.` : ""),
+      statementText: recurringStatement(b.listRub, input.months) + consentNotes(b),
       offerRevision: OFFER_REVISION,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
@@ -344,14 +435,39 @@ export async function createCheckout(
   }
   const params = buildPaymentParams(cfg, {
     id: order.id,
-    amountRub: price,
+    amountRub: b.amountRub,
     description: order.description,
     email: order.email,
     isTest: order.isTest,
     recurring,
   });
-  logger.info({ orderId: order.id, companyId: ctx.companyId, plan: input.plan, months: input.months, amountRub: price, promo: promo?.code ?? null, recurring, isTest: order.isTest }, "[billing] заказ создан");
-  return { status: 200, json: { invId: order.id, amountRub: price, params, paymentUrl: buildPaymentUrl(params) } };
+  logger.info(
+    { orderId: order.id, companyId: ctx.companyId, plan: input.plan, months: input.months, amountRub: b.amountRub, discount: b.discount, promotion: b.promotion?.id ?? null, points: b.pointsRub, recurring, isTest: order.isTest },
+    "[billing] заказ создан",
+  );
+  return { status: 200, json: { invId: order.id, amountRub: b.amountRub, params, paymentUrl: buildPaymentUrl(params) } };
+}
+
+/**
+ * Что в согласии на автосписания сказать про этот платёж: серия списывает
+ * полную цену (с постоянной скидкой, пока она действует), а акция, промокод
+ * и баллы — только на первый платёж.
+ */
+export function consentNotes(b: PriceBreakdown): string {
+  const notes: string[] = [];
+  if (b.discount?.source === "lifetime") notes.push(`Пока действует постоянная скидка ${b.discount.label}, каждое списание меньше на неё.`);
+  if (b.amountRub !== b.listRub) {
+    const why = [
+      b.promotion && "по акции",
+      b.discount?.source === "code" && `по промокоду ${b.discount.code}`,
+      b.discount?.source === "lifetime" && "с постоянной скидкой",
+      b.pointsRub > 0 && "с баллами",
+    ]
+      .filter(Boolean)
+      .join(", ");
+    notes.push(`Первый платёж — ${formatRub(b.amountRub)}${why ? ` (${why})` : ""}.`);
+  }
+  return notes.length ? ` ${notes.join(" ")}` : "";
 }
 
 // --- Подтверждение оплаты ------------------------------------------------------
@@ -373,11 +489,13 @@ export function isLateCharge(ctx: SettleContext): boolean {
  *     ничего не менять, деньги вернуть;
  *   • первый платёж с галочкой — новая серия автопродления;
  *   • разовая оплата другого тарифа или срока — старая серия выключается,
- *     иначе следующее автосписание вернуло бы прежний тариф.
+ *     иначе следующее автосписание вернуло бы прежний тариф;
+ *   • оплата с «постоянным» промокодом — постоянная скидка компании (новая
+ *     заменяет прежнюю: код применили, только если он выгоднее).
  */
 export function decideSettlement(ctx: SettleContext, prices: readonly PlanPrice[], now: number): SettlePatch {
   const { order, company, billing } = ctx;
-  if (!isPaidPlan(order.plan) || isLateCharge(ctx)) return { plan: null, billing: null };
+  if (isTopup(order) || !isPaidPlan(order.plan) || isLateCharge(ctx)) return { plan: null, billing: null };
   const perpetual = isPaidPlan(company.plan) && company.planUntil == null;
   const current = effectivePlan(company.plan, company.planUntil, now);
   const plan = perpetual
@@ -409,7 +527,19 @@ export function decideSettlement(ctx: SettleContext, prices: readonly PlanPrice[
         ? { recurringActive: false, recurringDisabledAt: now, recurringAttempts: 0 }
         : { recurringAttempts: 0, recurringNoticeFor: null };
   }
-  return { plan, billing: patch };
+  const promo = ctx.promo;
+  // Тестовый платёж (без денег) постоянную скидку не закрепляет.
+  const lifetime =
+    promo?.lifetime && !order.isTest && order.discountSource !== "lifetime" && order.promoCode === promo.code
+      ? {
+          promoCodeId: promo.id,
+          code: promo.code,
+          kind: promo.kind,
+          value: promo.value,
+          expiresAt: promo.durationMonths ? addMonths(now, promo.durationMonths) : null,
+        }
+      : null;
+  return { plan, billing: patch, lifetime };
 }
 
 const ok = (invId: string) => ({ status: 200, body: `OK${invId}` });
@@ -449,14 +579,25 @@ export async function handleResult(deps: BillingDeps, params: Record<string, str
  * Засчитать оплату заказа: по уведомлению ResultURL или по сверке с кассой.
  * true — засчитали сейчас; false — уже был оплачен (или возвращён).
  */
-export type SettleVia = "result" | "check" | "invoice" | "promo";
+export type SettleVia = "result" | "check" | "invoice" | "promo" | "balance";
 
 export async function settleOrder(deps: BillingDeps, invId: number, raw: string, via: SettleVia): Promise<boolean> {
   const now = nowOf(deps);
   const prices = await deps.store.getPrices();
   const result = await deps.store.settle(invId, raw, now, (ctx) => decideSettlement(ctx, prices, now));
   if (!result.claimed) return false;
-  logger.info({ invId, companyId: result.order.companyId, planUntil: result.patch.plan?.until ?? null, via }, "[billing] оплата получена");
+  logger.info(
+    { invId, companyId: result.order.companyId, planUntil: result.patch.plan?.until ?? null, via, points: result.points, lifetime: result.patch.lifetime?.code ?? null },
+    "[billing] оплата получена",
+  );
+  if (result.points.short) {
+    void deps.notify
+      .owner(
+        `⚠️ Заказ №${invId} оплачен после того, как его баллы (${formatRub(result.order.pointsRub)}) вернулись на баланс, а там их уже нет. ` +
+          `Тариф продлён, но ${formatRub(result.order.pointsRub)} не оплачены — разберитесь с компанией #${result.order.companyId}.`,
+      )
+      .catch((err) => logger.warn({ err, invId }, "[billing] владелец не узнал о недостаче баллов"));
+  }
   void afterPaid(deps, result.context, result.patch, via).catch((err) => logger.warn({ err, invId }, "[billing] уведомления об оплате не ушли"));
   // УПД — снимком на дату оплаты (best-effort: не вышло — выпустится при скачивании).
   void issueClosingDocument(deps, invId).catch((err) => logger.warn({ err, invId }, "[billing] УПД не выпущен"));
@@ -466,6 +607,37 @@ export async function settleOrder(deps: BillingDeps, invId: number, raw: string,
 async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePatch, via: SettleVia = "result"): Promise<void> {
   const { order, company, billing } = ctx;
   deps.notify.live(company.id);
+  const docsLine = order.amountRub > 0 && !order.isTest && documentsReady(deps) ? "Закрывающий документ (УПД) — в кабинете: «Тариф и оплата» → «Платежи»." : null;
+  if (isTopup(order) && order.isTest) {
+    await deps.notify.admins(company.id, {
+      title: "Тестовое пополнение прошло",
+      body: "Касса в тестовом режиме: денег не было, баллы не начислены.",
+      paragraphs: [`Тестовый платёж на ${formatRub(order.amountRub)} прошёл. В тестовом режиме кассы баллы не начисляются — денег не было.`],
+    });
+    await deps.notify.owner(`🧪 Тестовое пополнение ${formatRub(order.amountRub)} — «${company.name}» (#${company.id}), заказ №${order.id}. Баллы не начислены.`);
+    return;
+  }
+  if (isTopup(order)) {
+    const balance = await deps.store.getBalance(company.id).catch(() => null);
+    await deps.notify.admins(
+      company.id,
+      {
+        title: "Баланс пополнен",
+        body: `+${formatRub(order.amountRub)} баллами${balance !== null ? ` · на балансе ${formatRub(balance)}` : ""}`,
+        paragraphs: [
+          `Получили ${formatRub(order.amountRub)}${via === "invoice" ? " по счёту" : ""} — на баланс начислено ${formatRub(order.amountRub)} баллами (1 балл = 1 ₽).`,
+          "Баллами можно оплатить тариф целиком или частично: галочка «Списать баллы» в «Тариф и оплата».",
+          ...(docsLine ? [docsLine] : []),
+        ],
+      },
+      [order.email],
+    );
+    await deps.notify.owner(
+      `💰 Пополнение баланса ${formatRub(order.amountRub)} — «${company.name}» (#${company.id})${via === "invoice" ? ", по счёту" : ""}${order.isTest ? " [ТЕСТ]" : ""}. Заказ №${order.id}` +
+        (via === "check" ? ". ⚠️ Уведомление на ResultURL не пришло — оплату нашла сверка с кассой." : ""),
+    );
+    return;
+  }
   const name = planName(order.plan);
   const automatic = order.recurringChargeOf !== null;
   if (isLateCharge(ctx)) {
@@ -508,22 +680,37 @@ async function afterPaid(deps: BillingDeps, ctx: SettleContext, patch: SettlePat
   if (patch.billing?.recurringActive === false && billing?.recurringActive) {
     lines.push("Автопродление прежнего тарифа выключено. Включить его для нового тарифа можно при следующей оплате.");
   }
-  if (order.amountRub > 0 && !order.isTest && documentsReady(deps)) {
-    lines.push("Закрывающий документ (УПД) — в кабинете: «Тариф и оплата» → «Платежи».");
+  if (patch.lifetime) {
+    const label = promoLabel(patch.lifetime.kind === "fixed" ? "fixed" : "percent", patch.lifetime.value);
+    lines.push(
+      `Постоянная скидка ${label} по коду ${patch.lifetime.code} закреплена за компанией${patch.lifetime.expiresAt ? ` до ${formatDay(patch.lifetime.expiresAt)}` : ""}: она применится к следующим оплатам и автопродлению сама.`,
+    );
   }
-  const what = via === "promo" ? `Тариф «${name}» на ${periodLabel(order.months)} включён по промокоду ${order.promoCode ?? ""}.` : `Получили ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)}${via === "invoice" ? " по счёту" : ""}.`;
+  if (docsLine) lines.push(docsLine);
+  const extras = [
+    order.promotionDiscountRub > 0 && `акция −${formatRub(order.promotionDiscountRub)}`,
+    order.discountRub > 0 && `${order.discountSource === "lifetime" ? "постоянная скидка" : `промокод ${order.promoCode ?? ""}`} −${formatRub(order.discountRub)}`,
+    order.pointsRub > 0 && `баллами ${formatRub(order.pointsRub)}`,
+  ].filter(Boolean) as string[];
+  const free = via === "promo" || via === "balance";
+  const what = free
+    ? `Тариф «${name}» на ${periodLabel(order.months)} включён${via === "balance" ? ` — оплачено баллами (${formatRub(order.pointsRub)})` : order.promoCode ? ` по промокоду ${order.promoCode}` : ""}.`
+    : `Получили ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)}${via === "invoice" ? " по счёту" : ""}${extras.length ? ` (${extras.join(", ")})` : ""}.`;
   await deps.notify.admins(
     company.id,
     {
-      title: automatic ? "Тариф продлён" : via === "promo" ? "Тариф включён" : "Оплата получена",
-      body: `${via === "promo" ? "Промокод" : formatRub(order.amountRub)} · «${name}» ${untilText}`,
+      title: automatic ? "Тариф продлён" : free ? "Тариф включён" : "Оплата получена",
+      body: `${via === "balance" ? "Баллами" : via === "promo" ? "Промокод" : formatRub(order.amountRub)} · «${name}» ${untilText}`,
       paragraphs: [what, ...lines],
     },
     [order.email],
   );
+  const ownerHead =
+    via === "balance" ? `🪙 Оплата баллами ${formatRub(order.pointsRub)}` : via === "promo" ? "🎟 Промокод на всю сумму" : `💳 Оплата ${formatRub(order.amountRub)}`;
   await deps.notify.owner(
-    `${via === "promo" ? "🎟 Промокод на всю сумму" : `💳 Оплата ${formatRub(order.amountRub)}`} — «${company.name}» (#${company.id}), «${name}» на ${periodLabel(order.months)}` +
-      `${via === "invoice" ? ", по счёту" : ""}${order.promoCode ? `, промокод ${order.promoCode} (−${formatRub(order.discountRub)})` : ""}` +
+    `${ownerHead} — «${company.name}» (#${company.id}), «${name}» на ${periodLabel(order.months)}` +
+      `${via === "invoice" ? ", по счёту" : ""}${extras.length ? `, ${extras.join(", ")}` : ""}` +
+      `${patch.lifetime ? `, закреплена постоянная скидка ${patch.lifetime.code}` : ""}` +
       `${automatic ? ", автопродление" : order.recurringConsent ? ", с автопродлением" : ""}${order.isTest ? " [ТЕСТ]" : ""}` +
       `${patch.plan ? `, до ${formatDay(patch.plan.until)}` : ". Тариф бессрочный — срок не менялся, разберите вручную"}. Заказ №${order.id}` +
       (via === "check"
@@ -567,7 +754,7 @@ export async function disableRecurring(
  */
 export async function runBillingTick(deps: BillingDeps): Promise<void> {
   const now = nowOf(deps);
-  const expired = await deps.store.expirePending(now - PENDING_TTL_SEC);
+  const expired = await deps.store.expirePending(now - PENDING_TTL_SEC, now);
   if (expired > 0) logger.info({ expired }, "[billing] неоплаченные заказы закрыты");
   await step("сверка заказов", () => reconcilePending(deps, now));
   await step("статусы возвратов", () => pollRefunds(deps));
@@ -613,15 +800,27 @@ function seriesTerms(row: DueRecurring) {
   return plan && months > 0 && amount > 0 ? { plan, months, amount } : null;
 }
 
+/**
+ * Сумма автосписания: сумма серии минус постоянная скидка, если она
+ * действует на день списания. Акции и промокоды на серию не действуют.
+ */
+export async function seriesCharge(deps: BillingDeps, companyId: number, seriesRub: number, now: number) {
+  const lifetimes = activeLifetimes(await deps.store.getCompanyDiscounts(companyId), now);
+  const b = priceBreakdown({ listRub: seriesRub, promotion: null, code: null, lifetimes, pointsAvailable: 0 });
+  return { amountRub: b.amountRub, discount: b.discount };
+}
+
 async function sendUpcomingNotice(deps: BillingDeps, row: DueRecurring, now: number): Promise<void> {
   const terms = seriesTerms(row);
   if (!terms || !row.planUntil) return;
   const day = formatDay(chargeAt(row.planUntil));
+  const charge = await seriesCharge(deps, row.companyId, terms.amount, chargeAt(row.planUntil));
+  const discountNote = charge.discount ? ` (с постоянной скидкой ${charge.discount.label})` : "";
   await deps.notify.admins(row.companyId, {
     title: "Скоро продление тарифа",
-    body: `${day} спишем ${formatRub(terms.amount)} за «${planName(terms.plan)}». Отключить — в «Тариф и оплата».`,
+    body: `${day} спишем ${formatRub(charge.amountRub)} за «${planName(terms.plan)}». Отключить — в «Тариф и оплата».`,
     paragraphs: [
-      `Тариф «${planName(terms.plan)}» оплачен до ${formatDay(row.planUntil)}. ${day} спишем ${formatRub(terms.amount)} с карты, которой вы платили, и продлим тариф на ${periodLabel(terms.months)}.`,
+      `Тариф «${planName(terms.plan)}» оплачен до ${formatDay(row.planUntil)}. ${day} спишем ${formatRub(charge.amountRub)}${discountNote} с карты, которой вы платили, и продлим тариф на ${periodLabel(terms.months)}.`,
       "Если продлевать не нужно, отключите автопродление в кабинете: «Тариф и оплата» → «Отключить автопродление». Оплаченный срок сохранится.",
     ],
   });
@@ -646,22 +845,32 @@ async function chargeSeries(deps: BillingDeps, row: DueRecurring, now: number): 
   // (перезапуск при деплое) или повторный тик в те же сутки её не получат,
   // и карта не спишется дважды.
   if (!(await deps.store.claimAttempt(row.companyId, now, RECURRING_MAX_ATTEMPTS))) return;
+  const charge = await seriesCharge(deps, row.companyId, terms.amount, now);
   const order = await deps.store.createOrder({
     companyId: row.companyId,
     userId: null,
     email: parent.email,
     plan: terms.plan,
     months: terms.months,
-    amountRub: terms.amount,
+    amountRub: charge.amountRub,
     description: `${orderDescription(terms.plan, terms.months)}, автопродление`,
     isTest: parent.isTest,
     recurringConsent: false,
     recurringChargeOf: parent.id,
     createdAt: now,
+    ...(charge.discount
+      ? { baseRub: terms.amount, discountRub: charge.discount.discountRub, discountSource: "lifetime", promoCode: charge.discount.code }
+      : {}),
+    ...(charge.amountRub === 0 ? { paymentMethod: "promo" } : {}),
   });
+  if (charge.amountRub === 0) {
+    // Постоянная скидка закрывает всю сумму: продлеваем без кассы.
+    await settleOrder(deps, order.id, JSON.stringify({ source: "lifetime", code: charge.discount?.code ?? null }), "promo");
+    return;
+  }
   const result = await chargeRecurring(
     cfg,
-    { invId: order.id, previousInvId: parent.id, amountRub: terms.amount, description: order.description, isTest: parent.isTest },
+    { invId: order.id, previousInvId: parent.id, amountRub: charge.amountRub, description: order.description, isTest: parent.isTest },
     deps.fetch,
   );
   if (result.accepted) {
@@ -678,7 +887,7 @@ async function chargeSeries(deps: BillingDeps, row: DueRecurring, now: number): 
     );
     return;
   }
-  await deps.store.expireOrder(order.id);
+  await deps.store.expireOrder(order.id, now);
   logger.warn(
     { companyId: row.companyId, orderId: order.id, attempt: row.recurringAttempts + 1, response: result.response },
     "[billing] касса не приняла автосписание",
@@ -775,7 +984,7 @@ export async function reconcileOrder(deps: BillingDeps, order: PaymentOrderRow):
       return settled ? { status: "paid", message: "Оплата найдена в кассе и засчитана" } : { status: "already", message: "Уже засчитан" };
     }
     case OP_STATE.cancelled:
-      if (order.status === "pending") await deps.store.expireOrder(order.id);
+      if (order.status === "pending") await deps.store.expireOrder(order.id, nowOf(deps));
       return { status: "cancelled", message: "Касса: операция отменена, денег нет" };
     case OP_STATE.refunded:
       if (order.status === "paid") {
@@ -857,41 +1066,61 @@ async function stopSeriesForRefund(deps: BillingDeps, order: PaymentOrderRow): P
   deps.notify.live(order.companyId);
 }
 
-/** Деньги вернулись: заказ «возвращён», тариф откатывается, админам — уведомление. */
+/** Деньги вернулись: заказ «возвращён», тариф откатывается, баллы — назад, админам — уведомление. */
 async function completeRefund(deps: BillingDeps, orderId: number): Promise<void> {
   const finished = await deps.store.finishRefund(orderId, nowOf(deps));
   if (!finished) return;
   // Деньги вернулись — УПД по этой оплате аннулируется.
   await deps.store.voidClosingDocument(orderId, nowOf(deps)).catch((err) => logger.warn({ err, orderId }, "[billing] УПД не аннулирован"));
-  const { order, rolledBack } = finished;
-  const name = planName(order.plan);
-  logger.info({ invId: order.id, companyId: order.companyId, rolledBack }, "[billing] возврат завершён");
+  const { order, rolledBack, points } = finished;
+  logger.info({ invId: order.id, companyId: order.companyId, rolledBack, points, discountRevoked: finished.discountRevoked }, "[billing] возврат завершён");
   deps.notify.live(order.companyId);
   const company = await deps.getCompany(order.companyId);
-  const planText = rolledBack
-    ? isPaidPlan(rolledBack.plan) && (rolledBack.until === null || rolledBack.until > nowOf(deps))
-      ? `Тариф «${planName(rolledBack.plan)}» действует ${rolledBack.until ? `до ${formatDay(rolledBack.until)}` : "бессрочно"}, как до этой оплаты.`
-      : `Срок, оплаченный этим платежом, снят: кабинет на тарифе «${PLANS.start.name}».`
-    : "Срок тарифа не меняли.";
+  const money = order.paymentMethod === "balance" ? `${formatRub(order.pointsRub)} баллами` : formatRub(order.amountRub);
+  const paragraphs: string[] = [];
+  if (isTopup(order)) {
+    paragraphs.push(
+      `Вернули ${formatRub(order.amountRub)} за пополнение баланса (заказ №${order.id}). Деньги придут на карту, которой платили; срок зачисления зависит от банка.`,
+      points.postedRub < 0 ? `С баланса списано ${formatRub(-points.postedRub)} баллов.` : "Баллы этого пополнения уже списаны с баланса.",
+    );
+  } else {
+    paragraphs.push(
+      order.paymentMethod === "balance"
+        ? `Оплату тарифа «${planName(order.plan)}» на ${periodLabel(order.months)} баллами отменили (заказ №${order.id}).`
+        : `Вернули ${formatRub(order.amountRub)} за тариф «${planName(order.plan)}» на ${periodLabel(order.months)} (заказ №${order.id}). Деньги придут на карту, которой платили; срок зачисления зависит от банка.`,
+      rolledBack
+        ? isPaidPlan(rolledBack.plan) && (rolledBack.until === null || rolledBack.until > nowOf(deps))
+          ? `Тариф «${planName(rolledBack.plan)}» действует ${rolledBack.until ? `до ${formatDay(rolledBack.until)}` : "бессрочно"}, как до этой оплаты.`
+          : `Срок, оплаченный этим платежом, снят: кабинет на тарифе «${PLANS.start.name}».`
+        : "Срок тарифа не меняли.",
+    );
+    if (points.postedRub > 0) paragraphs.push(`${formatRub(points.postedRub)} баллов вернулись на баланс.`);
+    if (finished.discountRevoked) paragraphs.push("Постоянная скидка, которую дала эта оплата, снята.");
+  }
   await deps.notify
     .admins(
       order.companyId,
       {
-        title: "Деньги возвращены",
-        body: `Вернули ${formatRub(order.amountRub)} за «${name}», заказ №${order.id}.`,
-        paragraphs: [
-          `Вернули ${formatRub(order.amountRub)} за тариф «${name}» на ${periodLabel(order.months)} (заказ №${order.id}). Деньги придут на карту, которой платили; срок зачисления зависит от банка.`,
-          planText,
-        ],
+        title: order.paymentMethod === "balance" ? "Оплата баллами отменена" : "Деньги возвращены",
+        body:
+          order.paymentMethod === "balance"
+            ? `Отменили оплату баллами за ${orderWhat(order)}: ${formatRub(order.pointsRub)} вернулись на баланс, заказ №${order.id}.`
+            : `Вернули ${money} за ${orderWhat(order)}, заказ №${order.id}.`,
+        paragraphs,
       },
       [order.email],
     )
     .catch((err) => logger.warn({ err, invId: order.id }, "[billing] уведомление о возврате не ушло"));
   await deps.notify.owner(
-    `↩️ Возврат ${formatRub(order.amountRub)} завершён — «${company?.name ?? `#${order.companyId}`}», заказ №${order.id}. ` +
-      (rolledBack
-        ? "Тариф откачен к состоянию до оплаты."
-        : "Тариф не откатывали: после оплаты он менялся или оплата старше снимка «до оплаты». Поправьте срок вручную, если нужно."),
+    `↩️ Возврат ${money} завершён — «${company?.name ?? `#${order.companyId}`}», заказ №${order.id} (${orderWhat(order)}). ` +
+      (isTopup(order)
+        ? points.short > 0
+          ? `⚠️ На балансе не хватило ${formatRub(points.short)}: пополнение уже потратили — разберитесь с компанией.`
+          : "Баллы пополнения списаны с баланса."
+        : (rolledBack
+            ? "Тариф откачен к состоянию до оплаты."
+            : "Тариф не откатывали: после оплаты он менялся или оплата старше снимка «до оплаты». Поправьте срок вручную, если нужно.") +
+          (points.postedRub > 0 ? ` Баллы ${signedRub(points.postedRub)} вернулись на баланс.` : "")),
   );
 }
 
@@ -914,13 +1143,15 @@ export async function refundOrder(deps: BillingDeps, orderId: number, opts: { fo
   if (!order) return { status: 404, json: { message: "Заказ не найден" } };
   if (order.status !== "paid") return { status: 409, json: { message: "Вернуть можно только оплаченный заказ" } };
   if (order.isTest) return { status: 409, json: { message: "Тестовый платёж: денег не было, возвращать нечего" } };
+  if (order.paymentMethod === "balance") return refundPointsOrder(deps, order);
   if (order.paymentMethod !== "card") {
     return {
       status: 409,
       json: {
         message:
           order.paymentMethod === "invoice"
-            ? "Счёт оплачен переводом — касса его не вернёт. Верните деньги переводом по реквизитам плательщика."
+            ? "Счёт оплачен переводом — касса его не вернёт. Верните деньги переводом по реквизитам плательщика" +
+              (isTopup(order) ? ", а баллы спишите корректировкой баланса." : ".")
             : "Тариф включён промокодом — денег не было, возвращать нечего.",
       },
     };
@@ -948,10 +1179,33 @@ export async function refundOrder(deps: BillingDeps, orderId: number, opts: { fo
   if (!(await deps.store.claimRefund(order.id, nowOf(deps), { allowUncertain: retryUncertain }))) {
     return { status: 409, json: { message: "Возврат по этому заказу уже отправлен" } };
   }
+  // Пополнение: сначала списываем баллы — вернуть деньги за потраченные баллы
+  // нельзя. Повтор после «касса не ответила» баллы уже держит — не трогаем.
+  const holdsNow = isTopup(order) && order.pointsState === "credited";
+  if (holdsNow) {
+    const hold = await deps.store.holdTopupRefund(order.id, nowOf(deps));
+    if (!hold.ok) {
+      await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+      return {
+        status: 409,
+        json: {
+          message:
+            hold.reason === "balance"
+              ? `На балансе ${formatRub(hold.balanceRub ?? 0)} — меньше пополнения: часть баллов уже потрачена. Верните разницу вручную или спишите баллы корректировкой.`
+              : "Пополнение уже возвращается",
+        },
+      };
+    }
+  }
+  /** Возврат не ушёл в кассу — статус как был, баллы пополнения (если их списала эта попытка) назад. */
+  const undo = async () => {
+    await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+    if (holdsNow) await deps.store.releaseTopupRefund(order.id, nowOf(deps));
+  };
 
   const state = await opState(cfg, order.id, deps.fetch);
   if (!state.ok || state.resultCode !== OP_RESULT.ok || !state.opKey) {
-    await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+    await undo();
     const reason = !state.ok ? state.error : state.resultCode !== OP_RESULT.ok ? opResultMessage(state) : "касса не вернула ключ операции";
     return { status: 502, json: { message: `Не удалось найти операцию в кассе: ${reason}` } };
   }
@@ -977,8 +1231,21 @@ export async function refundOrder(deps: BillingDeps, orderId: number, opts: { fo
     await deps.notify.owner(`⚠️ Робокасса не ответила на возврат по заказу №${order.id}: ${created.error}. Проверьте операцию в кабинете кассы и не повторяйте возврат.`);
     return { status: 202, json: { message: "Касса не ответила. Не повторяйте возврат: проверьте операцию в кабинете Робокассы — статус обновится сам.", order: await rootOrder(deps, order.id) } };
   }
-  await deps.store.setRefund(order.id, { refundStatus: order.refundStatus });
+  await undo();
   return { status: 502, json: { message: `Касса отклонила возврат: ${created.error}` } };
+}
+
+/**
+ * Тариф оплачен баллами: «вернуть» — значит отменить оплату: срок назад,
+ * баллы на баланс. Касса не участвует.
+ */
+async function refundPointsOrder(deps: BillingDeps, order: PaymentOrderRow): Promise<Reply<RefundResult>> {
+  if (order.refundStatus && order.refundStatus !== "canceled") return { status: 409, json: { message: "Возврат по этому заказу уже идёт" } };
+  if (!(await deps.store.claimRefund(order.id, nowOf(deps)))) return { status: 409, json: { message: "Возврат по этому заказу уже идёт" } };
+  await deps.store.setRefund(order.id, { refundStatus: "pending" });
+  await stopSeriesForRefund(deps, order);
+  await completeRefund(deps, order.id);
+  return { status: 200, json: { message: "Оплата баллами отменена: баллы на балансе, срок тарифа — как до оплаты.", order: await rootOrder(deps, order.id) } };
 }
 
 /** Сколько минут «отправляется» считается нормальным: два запроса к кассе — меньше минуты. */
@@ -997,6 +1264,11 @@ async function pollRefunds(deps: BillingDeps): Promise<void> {
   const cfg = deps.config();
   for (const order of rows) {
     await deps.store.markChecked(order.id, now);
+    // Отмена оплаты баллами без кассы: если прошлый раз прервался — доводим здесь.
+    if (order.paymentMethod === "balance") {
+      if (order.refundStatus === "pending") await completeRefund(deps, order.id);
+      continue;
+    }
     if (order.refundStatus === "sending") {
       await deps.store.setRefund(order.id, { refundStatus: "uncertain" });
       await deps.notify.owner(`⚠️ Возврат по заказу №${order.id} завис на отправке. Проверьте операцию в кабинете Робокассы: если денег не вернули — повторите возврат в root.`);
@@ -1007,6 +1279,7 @@ async function pollRefunds(deps: BillingDeps): Promise<void> {
       if (state.label === "finished") await completeRefund(deps, order.id);
       else if (state.label === "canceled") {
         await deps.store.setRefund(order.id, { refundStatus: "canceled" });
+        if (isTopup(order)) await deps.store.releaseTopupRefund(order.id, now);
         await deps.notify.owner(
           `⚠️ Робокасса отменила возврат по заказу №${order.id} (${formatRub(order.amountRub)}). Его можно отправить ещё раз. ` +
             "Если это была оплата серии, автопродление выключилось при отправке возврата — включить его можно только новой оплатой с галочкой.",
@@ -1085,6 +1358,7 @@ export async function billingDiagnostics(deps: BillingDeps): Promise<BillingDiag
     urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
     stats: await deps.store.stats(),
     documents: { ready: documentsReady(deps), missing: sellerMissing(sellerOf(deps)) },
+    dadata: !!deps.dadata?.(),
   };
 }
 

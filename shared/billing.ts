@@ -58,6 +58,8 @@ export const checkoutSchema = z.object({
   expectedRub: z.number().int().optional(),
   /** Промокод. Скидку считает только сервер. */
   promoCode: z.string().trim().max(40).optional(),
+  /** Списать баллы баланса (сколько — считает сервер: не больше суммы и остатка). */
+  usePoints: z.boolean().optional().default(false),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
@@ -177,6 +179,11 @@ export function orderDescription(plan: PaidPlanId, months: number): string {
   return `TasksFlow, тариф «${PLANS[plan].name}» на ${periodLabel(months)}`;
 }
 
+/** Название пополнения баланса — тоже в Робокассу и в чек. */
+export function topupDescription(amountRub: number): string {
+  return `TasksFlow, пополнение баланса на ${formatRub(amountRub)}`;
+}
+
 /** Окно оплаты Робокассы поверх страницы (Robokassa.StartPayment). */
 export const ROBOKASSA_IFRAME_SCRIPT_URL = "https://auth.robokassa.ru/Merchant/bundle/robokassa_iframe.js";
 
@@ -185,7 +192,8 @@ export const ROBOKASSA_IFRAME_SCRIPT_URL = "https://auth.robokassa.ru/Merchant/b
 export const OFFER_PATH = "/offer";
 /** Редакция оферты — пишется в историю согласий вместе с текстом. */
 // .2 — промокоды, оплата по счёту, закрывающие документы (24.10.2026).
-export const OFFER_REVISION = "2026-10-24.2";
+// .3 — баланс и баллы, акции, постоянные скидки (24.10.2026).
+export const OFFER_REVISION = "2026-10-24.3";
 /** Раздел оферты об автопродлении (id заголовка «Автопродление»). */
 export const RECURRING_OFFER_HREF = `${OFFER_PATH}#avtoprodlenie`;
 
@@ -267,9 +275,15 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "Отменён",
 };
 
-/** Как оплачен заказ: картой/СБП через кассу, по счёту или промокодом на всю сумму. */
-export type PaymentMethod = "card" | "invoice" | "promo";
-export const PAYMENT_METHODS: readonly PaymentMethod[] = ["card", "invoice", "promo"];
+/**
+ * Как оплачен заказ: картой/СБП через кассу, по счёту, промокодом на всю
+ * сумму или баллами баланса на всю (оставшуюся после скидок) сумму.
+ */
+export type PaymentMethod = "card" | "invoice" | "promo" | "balance";
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ["card", "invoice", "promo", "balance"];
+
+/** Что оплачивают: тариф или пополнение баланса. */
+export type OrderKind = "plan" | "topup";
 
 /** Возврат через API Робокассы. */
 export type RefundStatus = "sending" | "pending" | "uncertain" | "finished" | "canceled";
@@ -285,6 +299,8 @@ export const REFUND_STATUS_LABEL: Record<RefundStatus, string> = {
 /** Заказ в истории платежей кабинета. */
 export type BillingOrder = {
   id: number;
+  kind: OrderKind;
+  /** У пополнения — "team" для совместимости; смотрите kind. */
   plan: PaidPlanId;
   months: number;
   amountRub: number;
@@ -299,9 +315,14 @@ export type BillingOrder = {
   planUntil: number | null;
   refundStatus: RefundStatus | null;
   method: PaymentMethod;
-  /** Промокод заказа и скидка по нему, ₽. */
+  /** Промокод заказа и скидка по нему, ₽ (или постоянная скидка — discountSource). */
   promoCode: string | null;
   discountRub: number;
+  discountSource: DiscountSource | null;
+  /** Скидка по акции, ₽ (0 — без акции). */
+  promotionDiscountRub: number;
+  /** Сколько оплачено баллами (кроме amountRub — это деньги). */
+  pointsRub: number;
   /** Счёт: оплатить до (unix sec). */
   invoiceDueAt: number | null;
   /** Можно скачать счёт (PDF). */
@@ -335,6 +356,18 @@ export type BillingInfo = {
   requisites: CompanyRequisites | null;
   /** Оплата по счёту открыта: реквизиты исполнителя заполнены. */
   invoiceAvailable: boolean;
+  /** Действующая акция (скидка на все тарифы); null — нет. */
+  promotion: PricePromotion | null;
+  /** Действующие постоянные скидки компании (применяется выгоднейшая). */
+  lifetimeDiscounts: LifetimeDiscount[];
+  /**
+   * Баланс в баллах (1 балл = 1 ₽) и последние операции. amountRub — с
+   * баллами, которые держат неоплаченные заказы (heldRub): новый заказ
+   * их освобождает, поэтому они доступны.
+   */
+  balance: { amountRub: number; heldRub: number; history: BalanceEntry[] };
+  /** Работает «Заполнить по ИНН» (задан ключ DaData). */
+  innLookup: boolean;
 };
 
 /** Заказ в списке root: с компанией и почтой плательщика. */
@@ -373,6 +406,8 @@ export type BillingDiagnostics = {
   stats: BillingStats;
   /** Реквизиты исполнителя для счетов и УПД (LEGAL_*): чего не хватает. */
   documents: { ready: boolean; missing: string[] };
+  /** Ключ DaData для «Заполнить по ИНН» задан. */
+  dadata: boolean;
 };
 
 /** POST /api/root/billing/check — ответ кассы на проверочный запрос. */
@@ -409,6 +444,9 @@ export type InvoiceResult = {
 // --- Промокоды -------------------------------------------------------------------
 
 export const PROMO_KINDS = ["percent", "fixed"] as const;
+
+/** Постоянная скидка в процентах — не больше: иначе тариф навсегда почти даром. */
+export const LIFETIME_MAX_PERCENT = 50;
 export type PromoKind = (typeof PROMO_KINDS)[number];
 
 /** Код хранится и сравнивается в верхнем регистре без пробелов. */
@@ -446,8 +484,16 @@ export const promoCodeCreateSchema = z
     /** Персональный код: только для этой компании. */
     companyId: z.number().int().positive().nullable().optional(),
     note: z.string().trim().max(255).optional(),
+    /** Постоянная скидка: после первой оплаты с кодом действует на все следующие. */
+    lifetime: z.boolean().optional().default(false),
+    /** Сколько месяцев действует постоянная скидка; пусто — без срока. */
+    durationMonths: z.number().int().min(1, "Срок — от 1 месяца").max(120, "Срок — до 120 месяцев").nullable().optional(),
   })
   .refine((v) => v.kind !== "percent" || v.value <= 100, { message: "Процент — не больше 100", path: ["value"] })
+  .refine((v) => v.kind !== "percent" || !v.lifetime || v.value <= LIFETIME_MAX_PERCENT, {
+    message: `Постоянная скидка — не больше ${LIFETIME_MAX_PERCENT} %`,
+    path: ["value"],
+  })
   .refine((v) => !v.startsAt || !v.endsAt || v.startsAt < v.endsAt, { message: "Конец раньше начала", path: ["endsAt"] });
 export type PromoCodeCreate = z.infer<typeof promoCodeCreateSchema>;
 
@@ -472,14 +518,20 @@ export type RootPromoCode = {
   companyId: number | null;
   companyName: string | null;
   note: string | null;
+  /** Постоянная скидка и её срок в месяцах (null — без срока). */
+  lifetime: boolean;
+  durationMonths: number | null;
   /** Оплаченных заказов с кодом. */
   paidUses: number;
   createdAt: number;
 };
 
-/** Ответ POST /api/billing/promo — что даст код на выбранный тариф и срок. */
+/**
+ * Ответ POST /api/billing/promo: код подходит — его правило; сумму с акцией,
+ * постоянной скидкой и баллами страница считает priceBreakdown, как сервер.
+ */
 export type PromoQuote =
-  | { ok: true; code: string; label: string; baseRub: number; discountRub: number; amountRub: number }
+  | { ok: true; code: string; kind: PromoKind; value: number; label: string; lifetime: boolean; durationMonths: number | null }
   | { ok: false; message: string };
 
 // --- Реквизиты компании (счёт и УПД) -----------------------------------------------
@@ -548,3 +600,199 @@ export type CompanyRequisites = z.infer<typeof requisitesSchema>;
 
 /** Счёт действует столько дней; оплатить можно и позже — тогда root отметит оплату вручную. */
 export const INVOICE_VALID_DAYS = 7;
+
+// --- Акции по расписанию ------------------------------------------------------------
+
+/** Акция: скидка в процентах на все тарифы и сроки в окне [startsAt, endsAt). */
+export type PricePromotion = { id: number; title: string; percent: number; startsAt: number; endsAt: number };
+
+/** Больше — уже не акция, а раздача: цена не опускается ниже 10 %. */
+export const PROMOTION_MAX_PERCENT = 90;
+
+/**
+ * Действующая акция: самая большая скидка; при равной — та, что идёт
+ * дольше, затем созданная раньше. Список — только включённые акции.
+ */
+export function pickPromotion<T extends PricePromotion>(list: readonly T[], now: number): T | null {
+  let best: T | null = null;
+  for (const p of list) {
+    if (!(p.startsAt <= now && now < p.endsAt)) continue;
+    if (!best || p.percent > best.percent || (p.percent === best.percent && (p.endsAt > best.endsAt || (p.endsAt === best.endsAt && p.id < best.id)))) {
+      best = p;
+    }
+  }
+  return best;
+}
+
+export function promotionDiscountRub(priceRub: number, percent: number): number {
+  return promoDiscountRub("percent", Math.min(PROMOTION_MAX_PERCENT, Math.max(0, percent)), priceRub);
+}
+
+export const promotionCreateSchema = z
+  .object({
+    title: z.string().trim().min(3, "Название — от 3 символов").max(120),
+    percent: z
+      .number()
+      .int()
+      .min(1, "Скидка — от 1 %")
+      .max(PROMOTION_MAX_PERCENT, `Скидка — не больше ${PROMOTION_MAX_PERCENT} %`),
+    startsAt: z.number().int().positive("Укажите начало"),
+    endsAt: z.number().int().positive("Укажите конец"),
+    note: z.string().trim().max(255).optional(),
+  })
+  .refine((v) => v.startsAt < v.endsAt, { message: "Конец раньше начала", path: ["endsAt"] });
+
+/** Скидку и начало акции не меняем: их уже видели на сайте. */
+export const promotionPatchSchema = z.object({
+  active: z.boolean().optional(),
+  endsAt: z.number().int().positive().optional(),
+  note: z.string().trim().max(255).optional(),
+});
+
+export type RootPromotion = PricePromotion & {
+  active: boolean;
+  note: string | null;
+  createdAt: number;
+  /** Оплаченных заказов по акции. */
+  paidOrders: number;
+};
+
+// --- Постоянные скидки ------------------------------------------------------------------
+
+/**
+ * Постоянная скидка компании: появляется после оплаты с «постоянным»
+ * промокодом и дальше применяется сама — к оплатам и к автопродлению.
+ */
+export type LifetimeDiscount = { code: string; kind: PromoKind; value: number; label: string; boundAt: number; expiresAt: number | null };
+
+export type RootLifetimeDiscount = LifetimeDiscount & {
+  id: number;
+  companyId: number;
+  companyName: string | null;
+  orderId: number | null;
+  revokedAt: number | null;
+};
+
+// --- Сумма к оплате -----------------------------------------------------------------------
+
+/** Откуда скидка заказа: введённый промокод или постоянная скидка компании. */
+export type DiscountSource = "code" | "lifetime";
+
+export type DiscountRule = { code: string; kind: PromoKind; value: number };
+
+export type PriceBreakdown = {
+  /** Цена тарифа и срока. */
+  listRub: number;
+  promotion: { id: number; title: string; percent: number; discountRub: number } | null;
+  discount: { source: DiscountSource; code: string; label: string; discountRub: number } | null;
+  /** Введённый код не применён: постоянная скидка не хуже. */
+  codeOutdone: boolean;
+  /** Баллы, которые спишутся. */
+  pointsRub: number;
+  /** К оплате деньгами. */
+  amountRub: number;
+};
+
+/**
+ * Сумма заказа — одна функция для страницы и сервера:
+ *   цена → акция (процент от цены) → промокод или постоянная скидка (от цены
+ *   с акцией; выгоднейшая из всех, не вместе; при равных — постоянная, она
+ *   не тратит использование кода) → баллы (не больше остатка).
+ */
+export function priceBreakdown(input: {
+  listRub: number;
+  promotion: PricePromotion | null;
+  code: DiscountRule | null;
+  /** Действующие постоянные скидки компании. */
+  lifetimes: readonly DiscountRule[];
+  pointsAvailable: number;
+}): PriceBreakdown {
+  const listRub = Math.max(0, Math.round(input.listRub));
+  const promotion = input.promotion
+    ? { id: input.promotion.id, title: input.promotion.title, percent: input.promotion.percent, discountRub: promotionDiscountRub(listRub, input.promotion.percent) }
+    : null;
+  const afterPromotion = listRub - (promotion?.discountRub ?? 0);
+  const codeRub = input.code ? promoDiscountRub(input.code.kind, input.code.value, afterPromotion) : -1;
+  let lifetime: DiscountRule | null = null;
+  let lifetimeRub = -1;
+  for (const rule of input.lifetimes) {
+    const rub = promoDiscountRub(rule.kind, rule.value, afterPromotion);
+    if (rub > lifetimeRub) [lifetime, lifetimeRub] = [rule, rub];
+  }
+  let discount: PriceBreakdown["discount"] = null;
+  if (lifetime && lifetimeRub >= codeRub) {
+    discount = { source: "lifetime", code: lifetime.code, label: promoLabel(lifetime.kind, lifetime.value), discountRub: lifetimeRub };
+  } else if (input.code) {
+    discount = { source: "code", code: input.code.code, label: promoLabel(input.code.kind, input.code.value), discountRub: codeRub };
+  }
+  const afterDiscount = afterPromotion - (discount?.discountRub ?? 0);
+  const pointsRub = Math.min(Math.max(0, Math.floor(input.pointsAvailable)), afterDiscount);
+  return {
+    listRub,
+    promotion,
+    discount,
+    codeOutdone: !!input.code && discount?.source === "lifetime",
+    pointsRub,
+    amountRub: afterDiscount - pointsRub,
+  };
+}
+
+// --- Баланс и баллы ---------------------------------------------------------------------
+
+/** Пополнение баланса: 1 ₽ = 1 балл. */
+export const TOPUP_MIN_RUB = 500;
+export const TOPUP_MAX_RUB = 300_000;
+
+export const topupSchema = z.object({
+  amountRub: z
+    .number()
+    .int("Сумма — целыми рублями")
+    .min(TOPUP_MIN_RUB, `Пополнение — от ${formatRub(TOPUP_MIN_RUB)}`)
+    .max(TOPUP_MAX_RUB, `Пополнение — до ${formatRub(TOPUP_MAX_RUB)}`),
+  method: z.enum(["card", "invoice"]).optional().default("card"),
+  email: checkoutSchema.shape.email,
+});
+export type TopupInput = z.infer<typeof topupSchema>;
+
+export type BalanceEntryKind = "topup" | "order_spend" | "order_release" | "order_refund" | "adjust" | "topup_refund" | "topup_refund_back";
+
+/** Операция баланса: + начисление, − списание. */
+export type BalanceEntry = {
+  id: number;
+  amountRub: number;
+  balanceAfter: number;
+  kind: BalanceEntryKind;
+  description: string;
+  orderId: number | null;
+  createdAt: number;
+};
+
+export const balanceAdjustSchema = z.object({
+  amountRub: z
+    .number()
+    .int()
+    .min(-1_000_000)
+    .max(1_000_000)
+    .refine((v) => v !== 0, "Укажите сумму: плюс — начислить, минус — списать"),
+  reason: z.string().trim().min(3, "Напишите причину — её увидит компания").max(200),
+});
+
+export type RootBalance = { companyId: number; companyName: string | null; balanceRub: number; updatedAt: number };
+
+/** POST /api/billing/topup. */
+export type TopupResult =
+  | (CheckoutResult & { method: "card" })
+  | (InvoiceResult & { method: "invoice" });
+
+// --- Реквизиты по ИНН (DaData) -------------------------------------------------------------
+
+export const innLookupSchema = z.object({ inn: z.string().trim().transform((v) => v.replace(/\s+/g, "")) });
+
+export type InnLookupResult =
+  | {
+      ok: true;
+      requisites: Pick<CompanyRequisites, "kind" | "name" | "inn" | "kpp" | "ogrn" | "address" | "headPost" | "headName">;
+      /** Организация ликвидируется или ликвидирована — показать предупреждение. */
+      warning: string | null;
+    }
+  | { ok: false; message: string };

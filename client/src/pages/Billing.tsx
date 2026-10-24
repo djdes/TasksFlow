@@ -1,7 +1,24 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Building2, Check, CircleAlert, CreditCard, Download, FileText, Loader2, ReceiptText, RefreshCw, ShieldCheck, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  CircleAlert,
+  Coins,
+  CreditCard,
+  Download,
+  FileText,
+  Loader2,
+  ReceiptText,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Ticket,
+} from "lucide-react";
 import { PLAN_FEATURES, PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import {
   daysLabel,
@@ -14,18 +31,25 @@ import {
   ORDER_STATUS_LABEL,
   periodLabel,
   planAfterPayment,
+  priceBreakdown,
   priceFor,
+  promotionDiscountRub,
   RECURRING_CONSENT_TEXT,
   RECURRING_NOTICE_DAYS,
   RECURRING_OFFER_HREF,
   recurringTerms,
   requisitesSchema,
+  TOPUP_MAX_RUB,
+  TOPUP_MIN_RUB,
+  type BalanceEntry,
   type BillingInfo,
   type BillingMonths,
   type BillingOrder,
   type CompanyRequisites,
+  type DiscountRule,
   type InvoiceResult,
   type PaidPlanId,
+  type PricePromotion,
   type PromoQuote,
 } from "@shared/billing";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,8 +67,10 @@ import {
   fetchBilling,
   fetchOrder,
   invoicePdfUrl,
+  lookupRequisites,
   saveRequisites,
   startCheckout,
+  startTopup,
   updPdfUrl,
   useRobokassaScript,
 } from "@/lib/billing-api";
@@ -60,6 +86,49 @@ const longDate = (sec: number) =>
   new Date(sec * 1000).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }).replace(/\s?г\.$/, "");
 const shortDate = (sec: number) => new Date(sec * 1000).toLocaleDateString("ru-RU");
 const nowSec = () => Math.floor(Date.now() / 1000);
+/** Конец акции включительно: окно [начало, конец). */
+const promotionUntil = (p: PricePromotion) => longDate(p.endsAt - 1);
+/** «+500 ₽» / «−990 ₽». */
+const signedRub = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${formatRub(Math.abs(n))}`;
+
+/**
+ * Ждём подтверждения оплаты в окне Робокассы: возврат на SuccessURL
+ * происходит внутри окна, а эта страница о нём не узнает. Опрос — 15 минут.
+ */
+function useOrderWatch(onPaid: (order: BillingOrder) => void) {
+  const [watch, setWatch] = useState<number | null>(null);
+  const onPaidRef = useRef(onPaid);
+  onPaidRef.current = onPaid;
+  useEffect(() => {
+    if (!watch) return;
+    let stopped = false;
+    let timer: number | undefined;
+    const started = Date.now();
+    const tick = async () => {
+      try {
+        const order = await fetchOrder(watch);
+        if (order?.status === "paid") {
+          if (stopped) return;
+          setWatch(null);
+          onPaidRef.current(order);
+          return;
+        }
+      } catch {
+        // сеть моргнула — спросим ещё раз
+      }
+      if (!stopped && Date.now() - started < 15 * 60_000) timer = window.setTimeout(tick, 3000);
+    };
+    timer = window.setTimeout(tick, 3000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [watch]);
+  return [watch, setWatch] as const;
+}
+
+/** Постоянные скидки компании — правилами для priceBreakdown (применяется выгоднейшая). */
+const lifetimeRules = (info: BillingInfo): DiscountRule[] => info.lifetimeDiscounts.map(({ code, kind, value }) => ({ code, kind, value }));
 
 type Mode = "checkout" | "success" | "fail";
 
@@ -149,6 +218,7 @@ export default function Billing() {
             <>
               <CurrentPlan info={info} inApp={inApp} />
               {!inApp && <Checkout info={info} defaultRecurring={search.get("recurring") === "1"} initialPromo={initialPromo} />}
+              {(!inApp || info.balance.amountRub > 0 || info.balance.history.length > 0) && <Balance info={info} inApp={inApp} />}
               <Orders orders={info.orders} inApp={inApp} />
               {!inApp && info.invoiceAvailable && (
                 <section className="content-panel" aria-labelledby="billing-requisites-title">
@@ -157,7 +227,7 @@ export default function Billing() {
                     <h2 id="billing-requisites-title">Реквизиты для документов</h2>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">Попадут в счёт и в закрывающий документ (УПД) по каждой оплате.</p>
-                  <RequisitesCard requisites={info.requisites} purpose="documents" />
+                  <RequisitesCard requisites={info.requisites} purpose="documents" innLookup={info.innLookup} />
                 </section>
               )}
             </>
@@ -182,6 +252,11 @@ function CurrentPlan({ info, inApp }: { info: BillingInfo; inApp: boolean }) {
   const status = info.plan.id === "start" ? "Бесплатный" : info.plan.perpetual ? "Бессрочно" : info.plan.until ? `до ${longDate(info.plan.until)}` : "";
   const ending = left !== null && left <= 7 && !info.recurring.active;
   const { recurring } = info;
+  // Постоянная скидка уменьшает и автосписание — показываем сумму с ней.
+  const nextCharge =
+    recurring.amountRub !== null
+      ? priceBreakdown({ listRub: recurring.amountRub, promotion: null, code: null, lifetimes: lifetimeRules(info), pointsAvailable: 0 }).amountRub
+      : null;
 
   const disable = async () => {
     setBusy(true);
@@ -210,6 +285,13 @@ function CurrentPlan({ info, inApp }: { info: BillingInfo; inApp: boolean }) {
             {status}
             {ending && left !== null ? ` · осталось ${daysLabel(Math.max(left, 0))}` : ""}
           </p>
+          {info.lifetimeDiscounts.map((d) => (
+            <p key={d.code} className="billing-lifetime">
+              <Ticket aria-hidden />
+              Постоянная скидка {d.label}
+              {d.expiresAt ? ` до ${longDate(d.expiresAt)}` : ""} · код {d.code}
+            </p>
+          ))}
         </div>
         <div className="billing-seats">
           <p className="billing-seats-label">
@@ -232,8 +314,8 @@ function CurrentPlan({ info, inApp }: { info: BillingInfo; inApp: boolean }) {
               Автопродление <span className={`billing-chip ${recurring.active ? "is-ok" : "is-muted"}`}>{recurring.active ? "включено" : "выключено"}</span>
             </p>
             <p className="billing-recurring-text">
-              {recurring.active && recurring.nextChargeAt && recurring.amountRub && recurring.months
-                ? `${longDate(recurring.nextChargeAt)} спишем ${formatRub(recurring.amountRub)} — тариф продлится на ${periodLabel(recurring.months)}. Предупредим за ${daysLabel(RECURRING_NOTICE_DAYS)}. Отключить можно в любой момент, оплаченный срок сохранится.`
+              {recurring.active && recurring.nextChargeAt && nextCharge !== null && recurring.months
+                ? `${longDate(recurring.nextChargeAt)} спишем ${formatRub(nextCharge)}${nextCharge !== recurring.amountRub ? " с постоянной скидкой" : ""} — тариф продлится на ${periodLabel(recurring.months)}. Предупредим за ${daysLabel(RECURRING_NOTICE_DAYS)}. Отключить можно в любой момент, оплаченный срок сохранится.`
                 : inApp
                   ? "Тариф продлевается вручную."
                   : "Оплата разовая. Чтобы тариф продлевался сам, поставьте галочку автосписаний при оплате."}
@@ -284,9 +366,12 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   const [method, setMethod] = useState<"card" | "invoice">("card");
   const [email, setEmail] = useState(info.email ?? "");
   const [consent, setConsent] = useState(defaultRecurring && info.recurringAvailable);
+  // Баллы — сразу в дело: человек пополнял баланс, чтобы ими платить. В
+  // тестовом режиме кассы баллы не списываются (оплата без денег).
+  const pointsUsable = info.balance.amountRub > 0 && !info.testMode;
+  const [usePoints, setUsePoints] = useState(pointsUsable);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [watch, setWatch] = useState<number | null>(null);
   const [paid, setPaid] = useState<BillingOrder | null>(null);
   const [invoice, setInvoice] = useState<InvoiceResult | null>(null);
   const [promoOpen, setPromoOpen] = useState(!!initialPromo);
@@ -297,11 +382,20 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
   const scriptReady = useRobokassaScript(info.configured);
+  const [watch, setWatch] = useOrderWatch((order) => {
+    setPaid(order);
+    void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+  });
 
   // Выбранного срока у нового тарифа может не быть — берём ближайший.
   useEffect(() => {
     if (plan && months && !available.includes(months)) setMonths(available[0] ?? null);
   }, [plan, months, available]);
+
+  // Баллы появились (пополнили) — галочку ставим; закончились — снимаем.
+  useEffect(() => {
+    setUsePoints(pointsUsable);
+  }, [pointsUsable]);
 
   useEffect(() => {
     if (!plan || !months || !promoCode) {
@@ -337,38 +431,21 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
     };
   }, [plan, months, promoCode]);
 
-  // Пока человек платит в окне Робокассы, ждём подтверждения здесь: возврат
-  // на SuccessURL происходит внутри окна, а эта страница о нём не узнает.
-  useEffect(() => {
-    if (!watch) return;
-    let stopped = false;
-    let timer: number | undefined;
-    const started = Date.now();
-    const tick = async () => {
-      try {
-        const order = await fetchOrder(watch);
-        if (order?.status === "paid") {
-          if (stopped) return;
-          setPaid(order);
-          setWatch(null);
-          void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
-          return;
-        }
-      } catch {
-        // сеть моргнула — спросим ещё раз
-      }
-      if (!stopped && Date.now() - started < 15 * 60_000) timer = window.setTimeout(tick, 3000);
-    };
-    timer = window.setTimeout(tick, 3000);
-    return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-    };
-  }, [watch, queryClient]);
-
   const price = plan && months ? priceFor(info.prices, plan, months) : null;
-  // Сумма к оплате — со скидкой; серия автопродления списывает полную цену.
-  const amount = price !== null && promo ? promo.amountRub : price;
+  const invoiceMode = method === "invoice" && info.invoiceAvailable;
+  // Сумма — той же функцией, что на сервере: акция → промокод или постоянная
+  // скидка → баллы. По счёту баллы не списываются.
+  const breakdown =
+    price !== null
+      ? priceBreakdown({
+          listRub: price,
+          promotion: info.promotion,
+          code: promo ? { code: promo.code, kind: promo.kind, value: promo.value } : null,
+          lifetimes: lifetimeRules(info),
+          pointsAvailable: usePoints && pointsUsable && !invoiceMode ? info.balance.amountRub : 0,
+        })
+      : null;
+  const amount = breakdown ? breakdown.amountRub : null;
   const preview = plan && months && price !== null
     ? planAfterPayment({ currentPlan: info.plan.id, currentUntil: info.plan.until, plan, months, now: nowSec(), prices: info.prices })
     : null;
@@ -376,7 +453,8 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   const seriesOther =
     info.recurring.active && plan && months && (info.recurring.plan !== plan || info.recurring.months !== months) && !consent;
   const free = amount === 0;
-  const byInvoice = method === "invoice" && info.invoiceAvailable && !free;
+  const byInvoice = invoiceMode && !free;
+  const sameAsLifetime = !!promo && info.lifetimeDiscounts.some((d) => d.code === promo.code);
 
   // Выставленный счёт — на прежние условия: сменили тариф, срок, промокод
   // или способ — показываем кнопку для нового счёта.
@@ -414,7 +492,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   };
 
   const pay = async () => {
-    if (!plan || !months || amount === null) return;
+    if (!plan || !months || amount === null || !breakdown) return;
     setBusy(true);
     setError(null);
     try {
@@ -424,7 +502,9 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
         recurringConsent: consent && info.recurringAvailable && !free,
         email: email.trim() || undefined,
         expectedRub: amount,
-        promoCode: promo?.code,
+        // Код, который проиграл постоянной скидке, не отправляем: он не применится.
+        promoCode: breakdown.discount?.source === "code" ? breakdown.discount.code : undefined,
+        usePoints: breakdown.pointsRub > 0,
       });
       if (data.free) {
         setPaid(data.order ?? null);
@@ -445,11 +525,11 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   };
 
   const issueInvoice = async () => {
-    if (!plan || !months || amount === null) return;
+    if (!plan || !months || amount === null || !breakdown) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await createInvoice({ plan, months, expectedRub: amount, promoCode: promo?.code });
+      const result = await createInvoice({ plan, months, expectedRub: amount, promoCode: breakdown.discount?.source === "code" ? breakdown.discount.code : undefined });
       setInvoice(result);
       setBusy(false);
       void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
@@ -459,7 +539,12 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   };
 
   useEffect(() => {
-    if (paid) toast({ title: paid.method === "promo" ? "Тариф включён" : "Оплата получена", description: paid.planUntil ? `Тариф действует до ${longDate(paid.planUntil)}.` : undefined });
+    if (paid) {
+      toast({
+        title: paid.method === "balance" ? "Оплачено баллами" : paid.method === "promo" ? "Тариф включён" : "Оплата получена",
+        description: paid.planUntil ? `Тариф действует до ${longDate(paid.planUntil)}.` : undefined,
+      });
+    }
   }, [paid, toast]);
 
   if (info.plan.perpetual) {
@@ -477,6 +562,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
   }
 
   const canPay = info.configured || free;
+  const withPromotion = (rub: number) => (info.promotion ? rub - promotionDiscountRub(rub, info.promotion.percent) : rub);
 
   return (
     <section className="content-panel" aria-labelledby="billing-checkout-title">
@@ -486,12 +572,22 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
         {info.testMode && <span className="billing-chip is-warn">Тестовый режим — деньги не списываются</span>}
       </div>
 
+      {info.promotion && (
+        <p className="billing-promotion" role="note">
+          <Sparkles aria-hidden />
+          <span>
+            {info.promotion.title}: <b>−{info.promotion.percent} %</b> на все тарифы и сроки до {promotionUntil(info.promotion)}
+          </span>
+        </p>
+      )}
+
       <div className="billing-plans" role="radiogroup" aria-label="Тариф">
         {PLAN_IDS.map((id) => {
           const rate = isPaidPlan(id) ? monthlyRate(info.prices, id) : 0;
           const selectable = isPaidPlan(id) && purchasable.includes(id);
           const selected = selectable && plan === id;
           const current = info.plan.id === id;
+          const month = id !== "start" && rate !== null ? Math.round(rate) : null;
           const body = (
             <>
               <span className="billing-plan-top">
@@ -499,8 +595,9 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
                 {current && <span className="billing-chip is-ok">сейчас</span>}
               </span>
               <span className="billing-plan-price">
-                {id === "start" ? "0 ₽" : rate !== null ? formatRub(Math.round(rate)) : "по запросу"}
-                {id !== "start" && rate !== null && <small> / мес</small>}
+                {month !== null && info.promotion && <s className="billing-old-price">{formatRub(month)}</s>}
+                {id === "start" ? "0 ₽" : month !== null ? formatRub(withPromotion(month)) : "по запросу"}
+                {month !== null && <small> / мес</small>}
               </span>
               <ul className="billing-plan-features">
                 {PLAN_FEATURES[id].map((f) => (
@@ -547,7 +644,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
           </p>
           <div className="billing-periods" role="radiogroup" aria-labelledby="billing-period-label">
             {available.map((m) => {
-              const p = priceFor(info.prices, plan, m)!;
+              const p = withPromotion(priceFor(info.prices, plan, m)!);
               return (
                 <button key={m} type="button" role="radio" aria-checked={months === m} className="billing-period" onClick={() => setMonths(m)}>
                   <span>{periodLabel(m)}</span>
@@ -593,9 +690,16 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
                   )}
                 </span>
               </label>
-              {promo && (
-                <p className="billing-promo-ok" role="status">
-                  <Check aria-hidden /> {promo.code}: скидка {promo.label} — {formatRub(promo.discountRub)}
+              {promo && breakdown && (
+                <p className={breakdown.codeOutdone ? "billing-promo-note" : "billing-promo-ok"} role="status">
+                  {breakdown.codeOutdone ? <CircleAlert aria-hidden /> : <Check aria-hidden />}{" "}
+                  {sameAsLifetime
+                    ? `${promo.code} уже действует как ваша постоянная скидка.`
+                    : breakdown.codeOutdone
+                      ? `Ваша постоянная скидка ${breakdown.discount!.label} не меньше — оставили её, код ${promo.code} не потратится.`
+                      : `${promo.code}: скидка ${promo.label} — ${formatRub(breakdown.discount!.discountRub)}${
+                          promo.lifetime ? `. Постоянная: после оплаты будет действовать${promo.durationMonths ? ` ${periodLabel(promo.durationMonths)}` : ""} на все оплаты и автопродление` : ""
+                        }`}
                 </p>
               )}
               {promoError && (
@@ -612,12 +716,42 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
         </div>
       )}
 
-      {plan && months && price !== null && amount !== null && preview && (
+      {plan && months && price !== null && !invoiceMode && pointsUsable && breakdown && (
+        <label className="billing-points">
+          <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+          <span>
+            Списать баллы <small>на балансе {formatRub(info.balance.amountRub)}</small>
+          </span>
+          {usePoints && breakdown.pointsRub > 0 && <b>−{formatRub(breakdown.pointsRub)}</b>}
+        </label>
+      )}
+
+      {plan && months && price !== null && amount !== null && breakdown && preview && (
         <div className="billing-summary" aria-live="polite">
-          {promo && (
+          {(breakdown.promotion || breakdown.discount || breakdown.pointsRub > 0) && (
             <div className="billing-summary-row">
-              <span>Цена {formatRub(price)} · скидка по промокоду</span>
-              <span className="billing-summary-discount">−{formatRub(promo.discountRub)}</span>
+              <span>Цена</span>
+              <span>{formatRub(breakdown.listRub)}</span>
+            </div>
+          )}
+          {breakdown.promotion && (
+            <div className="billing-summary-row">
+              <span>
+                Акция «{breakdown.promotion.title}» −{breakdown.promotion.percent} %
+              </span>
+              <span className="billing-summary-discount">−{formatRub(breakdown.promotion.discountRub)}</span>
+            </div>
+          )}
+          {breakdown.discount && (
+            <div className="billing-summary-row">
+              <span>{breakdown.discount.source === "lifetime" ? `Постоянная скидка ${breakdown.discount.label}` : `Промокод ${breakdown.discount.code}`}</span>
+              <span className="billing-summary-discount">−{formatRub(breakdown.discount.discountRub)}</span>
+            </div>
+          )}
+          {breakdown.pointsRub > 0 && (
+            <div className="billing-summary-row">
+              <span>Баллами</span>
+              <span className="billing-summary-discount">−{formatRub(breakdown.pointsRub)}</span>
             </div>
           )}
           <div className="billing-summary-row">
@@ -632,6 +766,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
               : preview.carriedSec > 0
                 ? " Срок прибавится к оставшемуся."
                 : ""}
+            {invoiceMode && info.balance.amountRub > 0 ? " Баллы по счёту не списываются." : ""}
           </p>
           {seriesOther && info.recurringAvailable && !byInvoice && (
             <p className="billing-summary-warn">
@@ -663,28 +798,14 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
 
       {plan && months && price !== null && amount !== null && byInvoice && (
         <div className="billing-form">
-          <RequisitesCard requisites={info.requisites} purpose="invoice" />
+          <RequisitesCard requisites={info.requisites} purpose="invoice" innLookup={info.innLookup} />
           {error && (
             <p className="billing-error" role="alert">
               {error}
             </p>
           )}
           {invoice ? (
-            <div className="billing-invoice" role="status">
-              <FileText className="billing-invoice-icon" aria-hidden />
-              <div className="min-w-0">
-                <p className="billing-invoice-title">
-                  Счёт №{invoice.order.id} на {formatRub(invoice.order.amountRub)}
-                </p>
-                <p className="billing-invoice-text">
-                  {invoice.existing ? "Счёт на эти условия уже выставлен. " : ""}
-                  Оплатите до {invoice.order.invoiceDueAt ? longDate(invoice.order.invoiceDueAt) : "конца недели"}. Тариф включится, когда деньги поступят, — пришлём уведомление. УПД появится в истории платежей.
-                </p>
-                <a className="billing-doc-link" href={invoice.pdfUrl} download>
-                  <Download aria-hidden /> Скачать счёт (PDF)
-                </a>
-              </div>
-            </div>
+            <InvoiceIssued invoice={invoice} note="Тариф включится, когда деньги поступят, — пришлём уведомление. УПД появится в истории платежей." />
           ) : (
             <button
               type="button"
@@ -703,20 +824,11 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
               )}
             </button>
           )}
-          <p className="billing-legal">
-            <ShieldCheck aria-hidden />
-            <span>
-              Выставляя счёт, вы принимаете{" "}
-              <a href={OFFER_PATH} target="_blank" rel="noopener">
-                оферту
-              </a>
-              . Счёт действует {daysLabel(INVOICE_VALID_DAYS)}; оплатить его может только организация или ИП из реквизитов.
-            </span>
-          </p>
+          <InvoiceLegal />
         </div>
       )}
 
-      {plan && months && price !== null && amount !== null && !byInvoice && (
+      {plan && months && price !== null && amount !== null && breakdown && !byInvoice && (
         <form
           className="billing-form"
           onSubmit={(e) => {
@@ -745,7 +857,10 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
                 ).
                 <small>
                   {recurringTerms(price, months)}
-                  {promo ? ` Скидка по промокоду — только на этот платёж (${formatRub(amount)}).` : ""}
+                  {breakdown.discount?.source === "lifetime" ? ` Пока действует постоянная скидка ${breakdown.discount.label}, каждое списание меньше на неё.` : ""}
+                  {breakdown.promotion || breakdown.discount?.source === "code" || breakdown.pointsRub > 0
+                    ? ` Акция, промокод и баллы — только на этот платёж (${formatRub(amount)}).`
+                    : ""}
                 </small>
                 <small className="billing-consent-hint">Без галочки — разовый платёж, автосписаний не будет.</small>
               </span>
@@ -760,7 +875,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
 
           {paid ? (
             <p className="billing-paid" role="status">
-              <Check aria-hidden /> {paid.method === "promo" ? "Тариф включён" : "Оплата получена"}
+              <Check aria-hidden /> {paid.method === "balance" ? "Оплачено баллами" : paid.method === "promo" ? "Тариф включён" : "Оплата получена"}
               {paid.planUntil ? ` — тариф до ${longDate(paid.planUntil)}` : ""}.
             </p>
           ) : canPay ? (
@@ -771,7 +886,8 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
                 </>
               ) : free ? (
                 <>
-                  Включить тариф по промокоду <ArrowRight className="w-5 h-5" aria-hidden />
+                  {breakdown.pointsRub > 0 ? `Оплатить баллами · ${formatRub(breakdown.pointsRub)}` : breakdown.discount?.source === "lifetime" ? "Включить тариф" : "Включить тариф по промокоду"}{" "}
+                  <ArrowRight className="w-5 h-5" aria-hidden />
                 </>
               ) : (
                 <>
@@ -794,7 +910,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
           <p className="billing-legal">
             <ShieldCheck aria-hidden />
             <span>
-              {free ? "Нажимая «Включить тариф», вы принимаете " : "Оплата проходит на стороне Робокассы: данные карты нам не передаются. Нажимая «Перейти к оплате», вы принимаете "}
+              {free ? "Нажимая «" + (breakdown.pointsRub > 0 ? "Оплатить баллами" : "Включить тариф") + "», вы принимаете " : "Оплата проходит на стороне Робокассы: данные карты нам не передаются. Нажимая «Перейти к оплате», вы принимаете "}
               <a href={OFFER_PATH} target="_blank" rel="noopener">
                 оферту
               </a>{" "}
@@ -814,6 +930,234 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
         </p>
       )}
     </section>
+  );
+}
+
+/** Выставленный счёт: номер, срок и PDF. */
+function InvoiceIssued({ invoice, note }: { invoice: InvoiceResult; note: string }) {
+  return (
+    <div className="billing-invoice" role="status">
+      <FileText className="billing-invoice-icon" aria-hidden />
+      <div className="min-w-0">
+        <p className="billing-invoice-title">
+          Счёт №{invoice.order.id} на {formatRub(invoice.order.amountRub)}
+        </p>
+        <p className="billing-invoice-text">
+          {invoice.existing ? "Счёт на эти условия уже выставлен. " : ""}
+          Оплатите до {invoice.order.invoiceDueAt ? longDate(invoice.order.invoiceDueAt) : "конца недели"}. {note}
+        </p>
+        <a className="billing-doc-link" href={invoice.pdfUrl} download>
+          <Download aria-hidden /> Скачать счёт (PDF)
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceLegal() {
+  return (
+    <p className="billing-legal">
+      <ShieldCheck aria-hidden />
+      <span>
+        Выставляя счёт, вы принимаете{" "}
+        <a href={OFFER_PATH} target="_blank" rel="noopener">
+          оферту
+        </a>
+        . Счёт действует {daysLabel(INVOICE_VALID_DAYS)}; оплатить его может только организация или ИП из реквизитов.
+      </span>
+    </p>
+  );
+}
+
+// --- Баланс ---------------------------------------------------------------------------
+
+const TOPUP_PRESETS = [1000, 3000, 5000, 10000];
+
+/**
+ * Баланс в баллах (1 балл = 1 ₽): пополнение картой через Робокассу или по
+ * счёту и история операций. Баллами платят за тариф — галочкой в оплате.
+ */
+function Balance({ info, inApp }: { info: BillingInfo; inApp: boolean }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [amountText, setAmountText] = useState(String(TOPUP_PRESETS[0]));
+  const [method, setMethod] = useState<"card" | "invoice">("card");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceResult | null>(null);
+  const [open, setOpen] = useState(false);
+  const scriptReady = useRobokassaScript(info.configured && open);
+  const [watch, setWatch] = useOrderWatch((order) => {
+    toast(
+      order.isTest
+        ? { title: "Тестовое пополнение прошло", description: "Касса в тестовом режиме: денег не было, баллы не начислены." }
+        : { title: "Баланс пополнен", description: `+${formatRub(order.amountRub)} баллами.` },
+    );
+    void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+  });
+  const amount = Number(amountText.replace(/\s+/g, ""));
+  const valid = Number.isInteger(amount) && amount >= TOPUP_MIN_RUB && amount <= TOPUP_MAX_RUB;
+  // Касса не подключена — пополнить можно только по счёту.
+  const invoiceMode = info.invoiceAvailable && (method === "invoice" || !info.configured);
+  const canTopup = info.configured || info.invoiceAvailable;
+
+  useEffect(() => {
+    setInvoice(null);
+  }, [amount, method]);
+
+  const submit = async () => {
+    if (!valid) {
+      setError(`Сумма — от ${formatRub(TOPUP_MIN_RUB)} до ${formatRub(TOPUP_MAX_RUB)}, целыми рублями`);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await startTopup({ amountRub: amount, method: invoiceMode ? "invoice" : "card", email: info.email ?? undefined });
+      if (result.method === "invoice") {
+        setInvoice(result);
+        void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] });
+      } else if (scriptReady && window.Robokassa) {
+        window.Robokassa.StartPayment(result.params);
+        setWatch(result.invId);
+      } else {
+        window.location.href = result.paymentUrl;
+        return;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось начать пополнение");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="content-panel" aria-labelledby="billing-balance-title">
+      <div className="billing-balance-head">
+        <div className="section-title !mb-0">
+          <Coins className="w-5 h-5 text-primary" />
+          <h2 id="billing-balance-title">Баланс</h2>
+        </div>
+        <p className="billing-balance-sum">
+          <b>{formatRub(info.balance.amountRub)}</b>
+          <small>баллами · 1 балл = 1 ₽</small>
+        </p>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {inApp ? "Баллами оплачивают тариф в веб-версии кабинета." : "Пополните баланс заранее — баллами можно оплатить тариф целиком или частично."}
+        {info.balance.heldRub > 0 &&
+          ` ${formatRub(info.balance.heldRub)} из них заняты неоплаченным заказом: перейдут в новую оплату или вернутся, если заказ не оплатить.`}
+      </p>
+
+      {!inApp && canTopup && !open && (
+        <Button type="button" variant="outline" className="mt-3" onClick={() => setOpen(true)}>
+          <Coins className="w-4 h-4" aria-hidden /> Пополнить баланс
+        </Button>
+      )}
+
+      {!inApp && canTopup && open && (
+        <form
+          className="billing-form billing-topup"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="billing-topup-presets" role="group" aria-label="Сумма пополнения">
+            {TOPUP_PRESETS.map((preset) => (
+              <button key={preset} type="button" className="billing-period" aria-pressed={amount === preset} onClick={() => setAmountText(String(preset))}>
+                <span>{formatRub(preset)}</span>
+              </button>
+            ))}
+          </div>
+          <label className="billing-field">
+            <span>Сумма, ₽</span>
+            <Input inputMode="numeric" value={amountText} onChange={(e) => setAmountText(e.target.value.replace(/[^\d\s]/g, ""))} aria-invalid={(!valid && amountText !== "") || undefined} />
+            <small>
+              От {formatRub(TOPUP_MIN_RUB)} до {formatRub(TOPUP_MAX_RUB)}. Неиспользованные баллы вернём деньгами по заявке — условия в оферте.
+              {info.testMode && !invoiceMode ? " Касса в тестовом режиме: оплата пройдёт без денег, баллы не начислятся." : ""}
+            </small>
+          </label>
+          {info.invoiceAvailable && info.configured && (
+            <div className="billing-methods" role="radiogroup" aria-label="Способ пополнения">
+              <button type="button" role="radio" aria-checked={method === "card"} className="billing-method" onClick={() => setMethod("card")}>
+                <CreditCard aria-hidden />
+                <span>
+                  <b>Картой или СБП</b>
+                  <small>Сразу, через Робокассу</small>
+                </span>
+              </button>
+              <button type="button" role="radio" aria-checked={method === "invoice"} className="billing-method" onClick={() => setMethod("invoice")}>
+                <FileText aria-hidden />
+                <span>
+                  <b>Счёт для юрлица или ИП</b>
+                  <small>Баллы — когда деньги поступят</small>
+                </span>
+              </button>
+            </div>
+          )}
+          {invoiceMode && <RequisitesCard requisites={info.requisites} purpose="invoice" innLookup={info.innLookup} />}
+          {error && (
+            <p className="billing-error" role="alert">
+              {error}
+            </p>
+          )}
+          {invoice ? (
+            <InvoiceIssued invoice={invoice} note="Баллы начислятся, когда деньги поступят, — пришлём уведомление." />
+          ) : (
+            <button type="submit" className="page-cta billing-pay" disabled={busy || !!watch || (invoiceMode && !info.requisites)}>
+              {busy ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> {invoiceMode ? "Выставляем счёт…" : "Открываем оплату…"}
+                </>
+              ) : (
+                <>
+                  {invoiceMode ? "Выставить счёт" : "Пополнить"} · {valid ? formatRub(amount) : "—"} <ArrowRight className="w-5 h-5" aria-hidden />
+                </>
+              )}
+            </button>
+          )}
+          {watch && (
+            <p className="billing-wait" role="status">
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> Ждём подтверждение оплаты — баланс обновится сам.
+            </p>
+          )}
+          {invoiceMode ? (
+            <InvoiceLegal />
+          ) : (
+            <p className="billing-legal">
+              <ShieldCheck aria-hidden />
+              <span>
+                Оплата — на стороне Робокассы. Нажимая «Пополнить», вы принимаете{" "}
+                <a href={OFFER_PATH} target="_blank" rel="noopener">
+                  оферту
+                </a>
+                .
+              </span>
+            </p>
+          )}
+        </form>
+      )}
+
+      {info.balance.history.length > 0 && <BalanceHistory history={info.balance.history} />}
+    </section>
+  );
+}
+
+function BalanceHistory({ history }: { history: BalanceEntry[] }) {
+  return (
+    <ul className="billing-ledger" aria-label="История баланса">
+      {history.map((e) => (
+        <li key={e.id} className="billing-ledger-row">
+          <div className="min-w-0">
+            <p className="billing-ledger-text">{e.description}</p>
+            <p className="billing-order-meta">
+              {shortDate(e.createdAt)} · остаток {formatRub(e.balanceAfter)}
+            </p>
+          </div>
+          <b className={e.amountRub > 0 ? "billing-ledger-plus" : "billing-ledger-minus"}>{signedRub(e.amountRub)}</b>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -847,13 +1191,15 @@ const toDraft = (r: CompanyRequisites | null): RequisitesDraft => ({
  * Реквизиты компании: для счёта и для закрывающих документов (УПД). ИНН и
  * ОГРН проверяются по контрольным цифрам ещё до отправки.
  */
-function RequisitesCard({ requisites, purpose }: { requisites: CompanyRequisites | null; purpose: "invoice" | "documents" }) {
+function RequisitesCard({ requisites, purpose, innLookup = false }: { requisites: CompanyRequisites | null; purpose: "invoice" | "documents"; innLookup?: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editing, setEditing] = useState(!requisites && purpose === "invoice");
   const [draft, setDraft] = useState<RequisitesDraft>(() => toDraft(requisites));
   const [errors, setErrors] = useState<Partial<Record<keyof RequisitesDraft, string>>>({});
   const [busy, setBusy] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [found, setFound] = useState<{ text: string; warn: boolean } | null>(null);
   const formId = useId();
 
   useEffect(() => {
@@ -863,6 +1209,42 @@ function RequisitesCard({ requisites, purpose }: { requisites: CompanyRequisites
   const set = (key: keyof RequisitesDraft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
+  };
+
+  // «Заполнить по ИНН»: подставляем найденное, почту не трогаем; дальше человек проверяет и сохраняет.
+  const findByInn = async () => {
+    const inn = draft.inn.replace(/\s+/g, "");
+    if (!/^\d{10}(\d{2})?$/.test(inn)) {
+      setErrors((e) => ({ ...e, inn: "Введите ИНН: 10 цифр у организации, 12 — у ИП" }));
+      return;
+    }
+    setFinding(true);
+    setFound(null);
+    try {
+      const result = await lookupRequisites(inn);
+      if (!result.ok) {
+        setErrors((e) => ({ ...e, inn: result.message }));
+        return;
+      }
+      const r = result.requisites;
+      setDraft((d) => ({
+        ...d,
+        kind: r.kind,
+        name: r.name,
+        inn: r.inn,
+        kpp: r.kpp ?? "",
+        ogrn: r.ogrn ?? "",
+        address: r.address || d.address,
+        headPost: r.headPost ?? "",
+        headName: r.headName ?? "",
+      }));
+      setErrors({});
+      setFound(result.warning ? { text: result.warning, warn: true } : { text: "Нашли по ИНН — проверьте и сохраните.", warn: false });
+    } catch (err) {
+      setErrors((e) => ({ ...e, inn: err instanceof Error ? err.message : "Не нашли — заполните вручную" }));
+    } finally {
+      setFinding(false);
+    }
   };
 
   const save = async () => {
@@ -958,9 +1340,22 @@ function RequisitesCard({ requisites, purpose }: { requisites: CompanyRequisites
           </button>
         ))}
       </div>
+      {innLookup && (
+        <div className="billing-inn-lookup">
+          {field("inn", "ИНН", { inputMode: "numeric", placeholder: "10 или 12 цифр", maxLength: 14 }, "Заполним остальное по данным ФНС")}
+          <Button type="button" variant="outline" onClick={() => void findByInn()} loading={finding} loadingLabel="Ищем…">
+            <Search className="w-4 h-4" aria-hidden /> Заполнить по ИНН
+          </Button>
+        </div>
+      )}
+      {found && (
+        <p className={found.warn ? "billing-promo-error" : "billing-promo-ok"} role="status">
+          {found.warn ? <CircleAlert aria-hidden /> : <Check aria-hidden />} {found.text}
+        </p>
+      )}
       <div className="billing-requisites-grid">
         {field("name", draft.kind === "org" ? "Название организации" : "ФИО предпринимателя", { placeholder: draft.kind === "org" ? "ООО «Ромашка»" : "ИП Иванов Иван Иванович", autoComplete: "organization" })}
-        {field("inn", "ИНН", { inputMode: "numeric", placeholder: draft.kind === "org" ? "10 цифр" : "12 цифр", maxLength: 14 })}
+        {!innLookup && field("inn", "ИНН", { inputMode: "numeric", placeholder: draft.kind === "org" ? "10 цифр" : "12 цифр", maxLength: 14 })}
         {draft.kind === "org" && field("kpp", "КПП", { inputMode: "numeric", placeholder: "9 цифр", maxLength: 11 })}
         {field("ogrn", draft.kind === "org" ? "ОГРН" : "ОГРНИП", { inputMode: "numeric", maxLength: 17 }, "Необязательно")}
         <div className="billing-requisites-wide">{field("address", "Юридический адрес", { autoComplete: "street-address" })}</div>
@@ -1092,11 +1487,15 @@ function Orders({ orders, inApp }: { orders: BillingOrder[]; inApp: boolean }) {
             <li key={o.id} className="billing-order">
               <div className="min-w-0">
                 <p className="billing-order-title">
-                  {PLANS[o.plan].name} на {periodLabel(o.months)}
+                  {o.kind === "topup" ? "Пополнение баланса" : `${PLANS[o.plan].name} на ${periodLabel(o.months)}`}
                   {o.automatic && <span className="billing-chip is-muted">автопродление</span>}
                   {o.isTest && <span className="billing-chip is-warn">тест</span>}
                   {o.method === "invoice" && <span className="billing-chip is-muted">по счёту</span>}
-                  {o.promoCode && <span className="billing-chip is-muted">промокод {o.promoCode}</span>}
+                  {o.promotionDiscountRub > 0 && <span className="billing-chip is-muted">акция</span>}
+                  {o.promoCode && (
+                    <span className="billing-chip is-muted">{o.discountSource === "lifetime" ? "постоянная скидка" : `промокод ${o.promoCode}`}</span>
+                  )}
+                  {o.pointsRub > 0 && <span className="billing-chip is-muted">баллами {formatRub(o.pointsRub)}</span>}
                   {o.status === "paid" && (o.refundStatus === "sending" || o.refundStatus === "pending" || o.refundStatus === "uncertain") && (
                     <span className="billing-chip is-muted">возврат в обработке</span>
                   )}

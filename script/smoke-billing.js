@@ -5,7 +5,9 @@
 // ?promo=, и на всю сумму), счёт для юрлица с реквизитами, ссылки на счёт
 // и УПД, root «Касса» (секреты, адреса, проверка подключения, счета и
 // УПД), «Цены», «Промокоды», сверка и возврат платежа, отметка оплаты по
-// счёту, 390px и тёмная тема. API и Робокасса подменены — сервер, БД и касса не участвуют.
+// счёту, акция, постоянная скидка и баллы в сумме, пополнение баланса,
+// «Заполнить по ИНН», root «Акции», «Постоянные скидки» и «Балансы компаний»,
+// 390px и тёмная тема. API и Робокасса подменены — сервер, БД и касса не участвуют.
 async (page) => {
   const base = new URL(page.url()).origin;
   const browser = page.context().browser();
@@ -32,7 +34,13 @@ async (page) => {
     now,
     requisites: null,
     invoiceAvailable: false,
+    promotion: null,
+    lifetimeDiscounts: [],
+    balance: { amountRub: 0, heldRub: 0, history: [] },
+    innLookup: false,
   });
+  // Поля заказа, которых нет в старых подменах: тариф, без акции и баллов.
+  const ord = (o) => ({ kind: 'plan', discountSource: null, promotionDiscountRub: 0, pointsRub: 0, ...o });
 
   async function open({ ua, info, rkScript, orders = {} } = {}) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block', ...(ua ? { userAgent: ua } : {}) });
@@ -45,10 +53,19 @@ async (page) => {
       info: info ?? baseInfo(),
       orderPolls: {},
       rootOrders: [
-        { id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: true, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' },
-        { id: 71, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 3600, paidAt: null, planUntil: null, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: false, companyId: 3, companyName: 'Бар', email: null },
-        { id: 72, plan: 'team', months: 12, amountRub: 7920, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 7200, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: 'START', discountRub: 1980, invoiceDueAt: now + 6 * DAY, hasInvoice: true, hasUpd: false, companyId: 4, companyName: 'ООО Столовая', email: 'buh@st.ru' },
+        ord({ id: 70, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'paid', isTest: false, automatic: true, createdAt: now - DAY, paidAt: now - DAY, planUntil: now + 29 * DAY, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: true, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' }),
+        ord({ id: 71, plan: 'team', months: 1, amountRub: 990, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 3600, paidAt: null, planUntil: null, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: false, companyId: 3, companyName: 'Бар', email: null }),
+        ord({ id: 72, plan: 'team', months: 12, amountRub: 7920, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now - 7200, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: 'START', discountRub: 1980, invoiceDueAt: now + 6 * DAY, hasInvoice: true, hasUpd: false, companyId: 4, companyName: 'ООО Столовая', email: 'buh@st.ru' }),
+        ord({ id: 73, kind: 'topup', plan: 'team', months: 0, amountRub: 3000, description: 'x', status: 'paid', isTest: false, automatic: false, createdAt: now - 3 * DAY, paidAt: now - 3 * DAY, planUntil: null, refundStatus: null, method: 'card', promoCode: null, discountRub: 0, invoiceDueAt: null, hasInvoice: false, hasUpd: true, companyId: 2, companyName: 'Пекарня', email: 'b@b.ru' }),
       ],
+      promotions: [
+        { id: 1, title: 'Весна', percent: 15, startsAt: now - 40 * DAY, endsAt: now - 30 * DAY, active: true, note: null, createdAt: now - 41 * DAY, paidOrders: 12 },
+      ],
+      discounts: [
+        { id: 5, companyId: 2, companyName: 'Пекарня', code: 'VIP', kind: 'percent', value: 10, label: '−10 %', boundAt: now - 5 * DAY, expiresAt: null, orderId: 70, revokedAt: null },
+      ],
+      balances: [{ companyId: 2, companyName: 'Пекарня', balanceRub: 1200, updatedAt: now - DAY }],
+      ledger: [{ id: 1, amountRub: 1200, balanceAfter: 1200, kind: 'topup', description: 'Пополнение баланса, заказ №73', orderId: 73, createdAt: now - 3 * DAY }],
       promos: [
         { id: 1, code: 'START', kind: 'percent', value: 20, active: true, startsAt: null, endsAt: now + 30 * DAY, maxUses: 100, newClientsOnly: true, companyId: null, companyName: null, note: 'рассылка', paidUses: 3, createdAt: now - DAY },
       ],
@@ -71,13 +88,32 @@ async (page) => {
       if (p === '/api/billing/promo') {
         const price = prices.find((x) => x.plan === body.plan && x.months === body.months).priceRub;
         const code = String(body.promoCode || '').toUpperCase();
-        if (code === 'START') return route.fulfill({ json: { ok: true, code, label: '−20 %', baseRub: price, discountRub: Math.round(price * 0.2), amountRub: price - Math.round(price * 0.2) } });
-        if (code === 'FREE') return route.fulfill({ json: { ok: true, code, label: '−100 %', baseRub: price, discountRub: price, amountRub: 0 } });
+        if (code === 'START') return route.fulfill({ json: { ok: true, code, kind: 'percent', value: 20, label: '−20 %', lifetime: false, durationMonths: null } });
+        if (code === 'FREE') return route.fulfill({ json: { ok: true, code, kind: 'percent', value: 100, label: '−100 %', lifetime: false, durationMonths: null } });
+        if (code === 'FIVE') return route.fulfill({ json: { ok: true, code, kind: 'percent', value: 5, label: '−5 %', lifetime: false, durationMonths: null } });
         return route.fulfill({ json: { ok: false, message: 'Такого промокода нет' } });
       }
       if (p === '/api/billing/requisites' && req.method() === 'PUT') {
         state.info = { ...state.info, requisites: { ...body, kpp: body.kind === 'org' ? body.kpp : null } };
         return route.fulfill({ json: { requisites: state.info.requisites } });
+      }
+      if (p === '/api/billing/requisites/lookup') {
+        if (body.inn !== '7707083893') return route.fulfill({ json: { ok: false, message: 'По этому ИНН ничего не нашли — проверьте его или заполните вручную' } });
+        return route.fulfill({
+          json: {
+            ok: true,
+            requisites: { kind: 'org', name: 'ПАО «СБЕРБАНК»', inn: '7707083893', kpp: '773601001', ogrn: '1027700132195', address: '117312, г Москва, ул Вавилова, д 19', headPost: 'Президент', headName: 'Греф Герман Оскарович' },
+            warning: null,
+          },
+        });
+      }
+      if (p === '/api/billing/topup' && body.method === 'invoice') {
+        const order = ord({ id: 91, kind: 'topup', plan: 'team', months: 0, amountRub: body.amountRub, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: null, discountRub: 0, invoiceDueAt: now + 7 * DAY, hasInvoice: true, hasUpd: false });
+        return route.fulfill({ json: { method: 'invoice', order, existing: false, pdfUrl: '/api/billing/orders/91/invoice.pdf' } });
+      }
+      if (p === '/api/billing/topup') {
+        const params = { MerchantLogin: 'shop', OutSum: `${body.amountRub}.00`, InvId: '88', Description: 'TasksFlow, пополнение баланса', SignatureValue: 'abc', Culture: 'ru' };
+        return route.fulfill({ json: { method: 'card', invId: 88, amountRub: body.amountRub, params, paymentUrl: `${base}/billing/success?InvId=88` } });
       }
       if (p === '/api/billing/invoice') {
         const order = { id: 90, plan: body.plan, months: body.months, amountRub: body.expectedRub, description: 'x', status: 'pending', isTest: false, automatic: false, createdAt: now, paidAt: null, planUntil: null, refundStatus: null, method: 'invoice', promoCode: body.promoCode ?? null, discountRub: 0, invoiceDueAt: now + 7 * DAY, hasInvoice: true, hasUpd: false };
@@ -115,6 +151,7 @@ async (page) => {
             urls: { result: `${base}/api/billing/robokassa/result`, success: `${base}/billing/success`, fail: `${base}/billing/fail` },
             stats: { tables: true, byStatus: { paid: 1, pending: 1 }, lastPaidAt: now - DAY, activeSeries: 1 },
             documents: { ready: false, missing: ['LEGAL_BANK_BIK — БИК, 9 цифр'] },
+            dadata: true,
           },
         });
       }
@@ -146,6 +183,37 @@ async (page) => {
         const id = Number(invoiceAction[1]);
         state.rootOrders = state.rootOrders.map((o) => (o.id === id ? { ...o, status: invoiceAction[2] === 'paid' ? 'paid' : 'cancelled', paidAt: now, hasUpd: invoiceAction[2] === 'paid' } : o));
         return route.fulfill({ json: { message: invoiceAction[2] === 'paid' ? 'Оплата отмечена: тариф продлён, админы получили уведомление.' : 'Счёт отменён' } });
+      }
+      if (p === '/api/root/billing/promotions' && req.method() === 'GET') return route.fulfill({ json: { promotions: state.promotions } });
+      if (p === '/api/root/billing/promotions' && req.method() === 'POST') {
+        const promotion = { id: state.promotions.length + 1, title: body.title, percent: body.percent, startsAt: body.startsAt, endsAt: body.endsAt, active: true, note: body.note ?? null, createdAt: now, paidOrders: 0 };
+        state.promotions = [promotion, ...state.promotions];
+        return route.fulfill({ json: { promotion } });
+      }
+      const promotionPatch = p.match(/^\/api\/root\/billing\/promotions\/(\d+)$/);
+      if (promotionPatch) {
+        state.promotions = state.promotions.map((x) => (x.id === Number(promotionPatch[1]) ? { ...x, ...body } : x));
+        return route.fulfill({ json: { promotion: state.promotions.find((x) => x.id === Number(promotionPatch[1])) } });
+      }
+      if (p === '/api/root/billing/discounts') return route.fulfill({ json: { discounts: state.discounts } });
+      const revoke = p.match(/^\/api\/root\/billing\/discounts\/(\d+)\/revoke$/);
+      if (revoke) {
+        state.discounts = state.discounts.map((d) => (d.id === Number(revoke[1]) ? { ...d, revokedAt: now } : d));
+        return route.fulfill({ json: { message: 'Скидка VIP снята' } });
+      }
+      if (p === '/api/root/billing/balances') return route.fulfill({ json: { balances: state.balances } });
+      const balance = p.match(/^\/api\/root\/billing\/balances\/(\d+)(\/adjust)?$/);
+      if (balance) {
+        const id = Number(balance[1]);
+        const row = state.balances.find((b) => b.companyId === id);
+        if (!row) return route.fulfill({ status: 404, json: { message: 'Компании с таким номером нет' } });
+        if (balance[2]) {
+          if (row.balanceRub + body.amountRub < 0) return route.fulfill({ status: 409, json: { message: `Нельзя списать больше, чем на балансе (${row.balanceRub} ₽)` } });
+          row.balanceRub += body.amountRub;
+          state.ledger = [{ id: state.ledger.length + 1, amountRub: body.amountRub, balanceAfter: row.balanceRub, kind: 'adjust', description: `Корректировка: ${body.reason}`, orderId: null, createdAt: now }, ...state.ledger];
+          return route.fulfill({ json: { balanceRub: row.balanceRub, message: `Готово: на балансе ${row.balanceRub} ₽` } });
+        }
+        return route.fulfill({ json: { companyId: id, companyName: row.companyName, balanceRub: row.balanceRub, history: state.ledger } });
       }
       if (p === '/api/root/companies') return route.fulfill({ json: { enforced: false, companies: [] } });
       return route.fulfill({ json: [] });
@@ -340,6 +408,99 @@ async (page) => {
     }
   }
 
+  // 5г. Акция, постоянная скидка и баллы в сумме; баланс с историей; пополнение картой в окне кассы.
+  {
+    const info = {
+      ...baseInfo(),
+      promotion: { id: 3, title: 'Осень', percent: 20, startsAt: now - DAY, endsAt: now + 5 * DAY },
+      lifetimeDiscounts: [{ code: 'VIP', kind: 'percent', value: 10, label: '−10 %', boundAt: now - 9 * DAY, expiresAt: null }],
+      balance: { amountRub: 300, heldRub: 0, history: [{ id: 1, amountRub: 300, balanceAfter: 300, kind: 'adjust', description: 'Корректировка: бонус за отзыв', orderId: null, createdAt: now - DAY }] },
+    };
+    const { context, tab, errors, calls } = await open({ info, rkScript: true, orders: { 88: { paidAfter: 1, amount: 3000 } } });
+    try {
+      await tab.goto(base + '/admin/billing');
+      await tab.locator('.billing-promotion').getByText(/Осень: −20 % на все тарифы/).waitFor();
+      await tab.locator('.billing-lifetime').getByText(/Постоянная скидка −10 %/).waitFor();
+      const team = tab.getByRole('radio', { name: /Команда/ });
+      await team.locator('s').getByText('990 ₽').waitFor();
+      await team.getByText('792 ₽').waitFor();
+      const summary = tab.locator('.billing-summary');
+      await summary.getByText('Акция «Осень» −20 %').waitFor();
+      await summary.getByText('−198 ₽').waitFor();
+      await summary.getByText('Постоянная скидка −10 %').waitFor();
+      await summary.getByText('−79 ₽').waitFor();
+      check(await tab.getByRole('checkbox', { name: /Списать баллы/ }).isChecked(), 'points not checked by default');
+      await summary.getByText('413 ₽', { exact: true }).waitFor();
+      // Код хуже постоянной скидки — остаётся постоянная.
+      await tab.getByRole('button', { name: 'Есть промокод?' }).click();
+      await tab.getByRole('textbox', { name: 'Промокод' }).fill('five');
+      await tab.getByRole('button', { name: 'Применить' }).click();
+      await tab.getByText(/Ваша постоянная скидка −10 % не меньше/).waitFor();
+      await tab.getByRole('checkbox', { name: /Списать баллы/ }).uncheck();
+      await summary.getByText('713 ₽', { exact: true }).waitFor();
+      await tab.getByRole('checkbox', { name: /Списать баллы/ }).check();
+      await tab.getByRole('button', { name: /Перейти к оплате · 413\s₽/ }).click();
+      const sent = calls.find((c) => c.p === '/api/billing/checkout');
+      check(sent?.body?.usePoints === true && sent.body.expectedRub === 413 && sent.body.promoCode === undefined, `points checkout ${JSON.stringify(sent?.body)}`);
+
+      const balance = tab.locator('section', { has: tab.getByRole('heading', { name: 'Баланс' }) });
+      await balance.getByText('Корректировка: бонус за отзыв').waitFor();
+      await balance.getByRole('button', { name: 'Пополнить баланс' }).click();
+      await balance.getByRole('textbox', { name: 'Сумма, ₽' }).fill('100');
+      await balance.getByRole('button', { name: /Пополнить ·/ }).click();
+      await balance.getByText(/Сумма — от 500/).waitFor();
+      await balance.getByRole('button', { name: '3 000 ₽' }).click();
+      await balance.getByRole('button', { name: /Пополнить · 3\s000\s₽/ }).click();
+      await balance.getByText(/Ждём подтверждение оплаты — баланс обновится сам/).waitFor();
+      check(await tab.evaluate(() => window.__rk?.InvId) === '88', 'topup StartPayment params');
+      const topup = calls.find((c) => c.p === '/api/billing/topup');
+      check(topup?.body?.amountRub === 3000 && topup.body.method === 'card', `topup body ${JSON.stringify(topup?.body)}`);
+      await tab.getByText('Баланс пополнен').first().waitFor({ timeout: 15000 });
+      await tab.screenshot({ path: 'output/playwright/billing-balance.png', fullPage: true });
+      await tab.setViewportSize({ width: 360, height: 800 });
+      await tab.waitForTimeout(200);
+      check(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'balance overflows at 360');
+      await tab.screenshot({ path: 'output/playwright/billing-balance-360.png', fullPage: true });
+      check(errors.length === 0, `balance errors: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
+  // 5д. «Заполнить по ИНН»: реквизиты подставляются, ошибка — у поля ИНН.
+  //     Касса не подключена — пополнение только счётом.
+  {
+    const { context, tab, errors, calls } = await open({ info: { ...baseInfo(), configured: false, invoiceAvailable: true, innLookup: true } });
+    try {
+      await tab.goto(base + '/admin/billing');
+      const panel = tab.locator('section', { has: tab.getByRole('heading', { name: 'Реквизиты для документов' }) });
+      await panel.getByRole('button', { name: 'Заполнить' }).click();
+      const form = panel.getByRole('form', { name: 'Реквизиты компании' });
+      await form.getByRole('textbox', { name: 'ИНН' }).fill('7707083894');
+      await form.getByRole('button', { name: 'Заполнить по ИНН' }).click();
+      await form.getByText(/ничего не нашли/).waitFor();
+      await form.getByRole('textbox', { name: 'ИНН' }).fill('7707083893');
+      await form.getByRole('button', { name: 'Заполнить по ИНН' }).click();
+      await form.getByText('Нашли по ИНН — проверьте и сохраните.').waitFor();
+      check(await form.getByRole('textbox', { name: 'Название организации' }).inputValue() === 'ПАО «СБЕРБАНК»', 'name not filled');
+      check(await form.getByRole('textbox', { name: 'КПП' }).inputValue() === '773601001', 'kpp not filled');
+      await form.getByRole('button', { name: 'Сохранить реквизиты' }).click();
+      await panel.locator('.billing-requisites-summary').getByText('ПАО «СБЕРБАНК»').waitFor();
+      const saved = calls.find((c) => c.p === '/api/billing/requisites' && c.method === 'PUT');
+      check(saved?.body?.inn === '7707083893' && saved.body.headName === 'Греф Герман Оскарович', `requisites body ${JSON.stringify(saved?.body)}`);
+      const balance = tab.locator('section', { has: tab.getByRole('heading', { name: 'Баланс' }) });
+      await balance.getByRole('button', { name: 'Пополнить баланс' }).click();
+      check(await balance.getByRole('radio', { name: /Картой/ }).count() === 0, 'card topup offered without cashbox');
+      await balance.getByRole('button', { name: /Выставить счёт · 1\s000\s₽/ }).click();
+      await balance.getByText(/Счёт №91 на 1\s000/).waitFor();
+      const topup = calls.find((c) => c.p === '/api/billing/topup');
+      check(topup?.body?.method === 'invoice' && topup.body.amountRub === 1000, `invoice topup body ${JSON.stringify(topup?.body)}`);
+      check(errors.length === 0, `inn errors: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
   // 6. Root: касса, цены и платежи (сверка и возврат).
   {
     const { context, tab, errors, calls } = await open();
@@ -348,7 +509,7 @@ async (page) => {
       await tab.getByRole('heading', { name: 'Касса' }).waitFor();
       const cashbox = tab.locator('section', { has: tab.getByRole('heading', { name: 'Касса' }) });
       await cashbox.getByText('принимает оплату').waitFor();
-      check(await cashbox.locator('.root-cashbox-list .is-ok').count() === 4, 'cashbox: 4 settings set (login, #1, #2, recurring)');
+      check(await cashbox.locator('.root-cashbox-list .is-ok').count() === 5, 'cashbox: 5 settings set (login, #1, #2, recurring, DaData)');
       check(await cashbox.getByText(/Пароль #3/).count() === 1, 'cashbox: no password #3 row');
       check(await cashbox.getByText(/Тестовый пароль/).count() === 0, 'cashbox: test passwords shown in live mode');
       await cashbox.getByText(`${base}/api/billing/robokassa/result`).waitFor();
@@ -372,7 +533,7 @@ async (page) => {
       await bar.getByText('Оплачен').waitFor();
 
       // Возврат — только через подтверждение; после — «возврат в обработке», кнопки нет.
-      const bakery = tab.locator('.billing-order', { hasText: 'Пекарня' });
+      const bakery = tab.locator('.billing-order', { hasText: '№70' });
       await bakery.getByRole('button', { name: 'Вернуть деньги' }).click();
       const dialog = tab.getByRole('dialog');
       await dialog.getByText(/отменить возврат нельзя/).waitFor();
@@ -409,6 +570,45 @@ async (page) => {
       check(createdPromo?.body?.code === 'AUTUMN' && createdPromo.body.kind === 'fixed' && createdPromo.body.value === 500, `promo body ${JSON.stringify(createdPromo?.body)}`);
       await promos.locator('.billing-order', { hasText: 'START' }).getByRole('button', { name: 'Выключить' }).click();
       await promos.locator('.billing-order', { hasText: 'START' }).getByText('выключен').waitFor();
+      // Акции: прошлая — «закончилась»; новая — с датами по Москве.
+      const promotions = tab.locator('section', { has: tab.getByRole('heading', { name: 'Акции' }) });
+      await promotions.getByText('закончилась').waitFor();
+      await promotions.getByRole('button', { name: 'Новая акция' }).click();
+      await promotions.getByRole('textbox', { name: /Название/ }).fill('Осень');
+      await promotions.getByRole('spinbutton', { name: 'Скидка, %' }).fill('20');
+      await promotions.getByLabel('По (включительно)').fill('2030-11-30');
+      await promotions.getByRole('button', { name: 'Создать акцию' }).click();
+      await promotions.locator('.billing-order', { hasText: 'Осень' }).getByText('идёт').waitFor();
+      const createdPromotion = calls.find((c) => c.p === '/api/root/billing/promotions' && c.method === 'POST');
+      check(
+        createdPromotion?.body?.percent === 20 && createdPromotion.body.endsAt === Math.floor(Date.parse('2030-12-01T00:00:00+03:00') / 1000),
+        `promotion body ${JSON.stringify(createdPromotion?.body)}`,
+      );
+
+      // Постоянные скидки: снять — через подтверждение.
+      const discounts = tab.locator('section', { has: tab.getByRole('heading', { name: 'Постоянные скидки' }) });
+      await discounts.getByText(/Пекарня · −10 %/).waitFor();
+      await discounts.getByRole('button', { name: 'Снять' }).click();
+      await tab.getByRole('dialog').getByRole('button', { name: 'Снять скидку' }).click();
+      await discounts.getByText('снята').waitFor();
+      check(calls.some((c) => c.p === '/api/root/billing/discounts/5/revoke'), 'revoke by discount id');
+
+      // Балансы: история и корректировка; в минус — понятная ошибка.
+      const balances = tab.locator('section', { has: tab.getByRole('heading', { name: 'Балансы компаний' }) });
+      await balances.getByRole('button', { name: /Пекарня/ }).click();
+      await balances.getByText('Пополнение баланса, заказ №73').waitFor();
+      await balances.getByRole('spinbutton', { name: /Сумма/ }).fill('-5000');
+      await balances.getByRole('textbox', { name: /Причина/ }).fill('ошибка');
+      await balances.getByRole('button', { name: 'Изменить баланс' }).click();
+      await balances.getByText(/Нельзя списать больше/).waitFor();
+      await balances.getByRole('spinbutton', { name: /Сумма/ }).fill('300');
+      await balances.getByRole('textbox', { name: /Причина/ }).fill('компенсация');
+      await balances.getByRole('button', { name: 'Изменить баланс' }).click();
+      await balances.getByText('Корректировка: компенсация').waitFor();
+      await tab.locator('.billing-order', { hasText: 'Пекарня · пополнение баланса' }).getByRole('link', { name: 'УПД' }).waitFor();
+      await promotions.screenshot({ path: 'output/playwright/billing-root-promotions.png' });
+      await discounts.screenshot({ path: 'output/playwright/billing-root-discounts.png' });
+      await balances.screenshot({ path: 'output/playwright/billing-root-balances.png' });
       await tab.screenshot({ path: 'output/playwright/billing-root-cashbox.png', fullPage: true });
 
       // 390px: адреса переносятся, страница не шире экрана.
@@ -427,5 +627,5 @@ async (page) => {
   }
 
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, promo + ?promo + free, invoice + requisites + docs 390, root cashbox + check + docs + prices + promo codes + reconcile + refund confirm + invoice paid + 390', failures };
+  return { checks: 'form + defaults, consent unchecked, 12m + consent + email body, fallback redirect + success, fail page, iframe StartPayment + inline paid, recurring disable, carry-over text, not configured, 390 + dark, iOS app without payment, promo + ?promo + free, invoice + requisites + docs 390, promotion + lifetime + points + topup 360, inn lookup, root cashbox + check + docs + prices + promotions + promo codes + lifetime revoke + balances adjust + reconcile + refund confirm + invoice paid + 390', failures };
 }

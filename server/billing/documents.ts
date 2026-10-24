@@ -36,6 +36,12 @@ export type OrderForDocument = {
   promoCode: string | null;
   discountRub: number;
   invoiceDueAt: number | null;
+  /** plan | topup; нет — plan. */
+  orderKind?: string;
+  promotionPercent?: number | null;
+  promotionDiscountRub?: number;
+  discountSource?: string | null;
+  pointsRub?: number;
 };
 
 export type InvoiceDraft = {
@@ -135,8 +141,24 @@ export function amountInWords(value: number): string {
 // --- Сборка ---------------------------------------------------------------------------
 
 const planTitle = (plan: string) => (isPaidPlan(plan) ? PLANS[plan].name : plan);
-const promoNote = (order: OrderForDocument) =>
-  order.promoCode && order.discountRub > 0 ? ` Скидка по промокоду ${order.promoCode}: ${money(order.discountRub)} ₽.` : "";
+const isTopupOrder = (order: OrderForDocument) => order.orderKind === "topup";
+
+/** Скидки и баллы — пояснением в строке: сумма строки — то, что оплачено деньгами. */
+const promoNote = (order: OrderForDocument) => {
+  const notes: string[] = [];
+  if ((order.promotionDiscountRub ?? 0) > 0) {
+    notes.push(`Скидка по акции${order.promotionPercent ? ` ${order.promotionPercent} %` : ""}: ${money(order.promotionDiscountRub!)} ₽.`);
+  }
+  if (order.discountRub > 0 && order.promoCode) {
+    notes.push(
+      order.discountSource === "lifetime"
+        ? `Постоянная скидка (код ${order.promoCode}): ${money(order.discountRub)} ₽.`
+        : `Скидка по промокоду ${order.promoCode}: ${money(order.discountRub)} ₽.`,
+    );
+  }
+  if ((order.pointsRub ?? 0) > 0) notes.push(`Оплачено баллами баланса: ${money(order.pointsRub!)} ₽ — в сумму документа не входит.`);
+  return notes.length ? ` ${notes.join(" ")}` : "";
+};
 
 /**
  * Счёт: услуга «с даты оплаты» — период начнётся, когда придут деньги,
@@ -153,7 +175,9 @@ export function buildInvoiceDraft(input: { order: OrderForDocument; seller: Sell
     buyer: input.buyer,
     lines: [
       {
-        title: `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${periodLabel(order.months)} (срок — с даты оплаты).${promoNote(order)}`,
+        title: isTopupOrder(order)
+          ? "Пополнение баланса сервиса TasksFlow — предоплата за доступ к сервису (1 балл = 1 ₽)."
+          : `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${periodLabel(order.months)} (срок — с даты оплаты).${promoNote(order)}`,
         unit: "усл. ед.",
         unitCode: "876",
         qty: 1,
@@ -193,7 +217,9 @@ export function buildClosingDraft(input: {
     buyer: input.buyer,
     lines: [
       {
-        title: `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${period}.${promoNote(order)}`,
+        title: isTopupOrder(order)
+          ? "Предоплата за доступ к сервису TasksFlow: пополнение баланса (1 балл = 1 ₽)."
+          : `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${period}.${promoNote(order)}`,
         unit: "усл. ед.",
         unitCode: "876",
         qty: 1,

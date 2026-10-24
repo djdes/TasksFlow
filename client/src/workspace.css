@@ -1112,6 +1112,47 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .billing-promo-error, .billing-field-error { font-size: 12.5px; font-weight: 500; color: hsl(var(--destructive)); }
 .billing-summary-discount { font-weight: 600; color: hsl(152 62% 30%); font-variant-numeric: tabular-nums; }
 .dark .billing-summary-discount { color: hsl(152 60% 70%); }
+.billing-promo-note { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.billing-promo-note svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+
+/* Акция, постоянная скидка, баллы */
+.billing-promotion { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; background: hsl(var(--primary) / .08); font-size: 13.5px; line-height: 1.45; color: hsl(var(--foreground)); }
+.billing-promotion svg { flex: none; width: 18px; height: 18px; color: hsl(var(--primary)); }
+.billing-old-price { display: block; font-size: 13px; font-weight: 500; letter-spacing: 0; color: hsl(var(--muted-foreground)); }
+.billing-lifetime { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; color: hsl(152 62% 30%); }
+.billing-lifetime svg { flex: none; width: 15px; height: 15px; }
+.dark .billing-lifetime { color: hsl(152 60% 70%); }
+.billing-points { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); cursor: pointer; }
+.billing-points input { flex: none; width: 18px; height: 18px; accent-color: hsl(var(--primary)); cursor: pointer; }
+.billing-points input:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.billing-points span { flex: 1 1 auto; min-width: 0; }
+.billing-points small { display: block; font-size: 12.5px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.billing-points b { font-variant-numeric: tabular-nums; color: hsl(152 62% 30%); }
+.dark .billing-points b { color: hsl(152 60% 70%); }
+
+/* Баланс */
+.billing-balance-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 6px; }
+.billing-balance-sum { display: grid; justify-items: end; }
+.billing-balance-sum b { font-family: 'Onest', 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.billing-balance-sum small { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.billing-topup { margin-top: 14px; }
+.billing-topup-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.billing-topup-presets .billing-period { min-width: 96px; min-height: 40px; align-content: center; }
+.billing-topup-presets .billing-period[aria-pressed="true"] { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .05); box-shadow: 0 0 0 3px hsl(var(--primary) / .14); }
+.billing-ledger { display: grid; margin-top: 14px; border-top: 1px solid hsl(var(--border)); }
+.billing-ledger-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.billing-ledger-row + .billing-ledger-row { border-top: 1px solid hsl(var(--border)); }
+.billing-ledger-text { font-size: 13.5px; font-weight: 550; overflow-wrap: anywhere; }
+.billing-ledger-row > b { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.billing-ledger-plus { color: hsl(152 62% 30%); }
+.billing-ledger-minus { color: hsl(var(--foreground)); }
+.dark .billing-ledger-plus { color: hsl(152 60% 70%); }
+
+/* Реквизиты по ИНН */
+.billing-inn-lookup { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 10px; }
+.billing-inn-lookup .billing-field { flex: 1 1 200px; }
+.billing-inn-lookup .billing-field input { max-width: none; }
+.billing-inn-lookup > button { margin-top: 22px; }
 
 /* Способ оплаты и тип плательщика */
 .billing-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
@@ -1203,6 +1244,14 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .root-promo-value { display: flex; gap: 6px; }
 .root-promo-value .reports-select { width: 76px; flex: none; }
 .root-promo-note, .root-promo-check, .root-promo-wide { grid-column: 1 / -1; }
+.root-balance-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 40px; padding: 4px 6px; border-radius: 10px; text-align: left; font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); }
+.root-balance-row b { flex: none; font-variant-numeric: tabular-nums; }
+.root-balance-row:hover { background: hsl(var(--muted)); }
+.root-balance-row:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.root-balance-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 14px; }
+.root-balance-find .billing-field { width: 160px; }
+.root-balance-detail { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; }
+.root-balance-detail .root-promo-form { margin-top: 0; padding: 0; border: 0; }
 
 @media (max-width: 760px) {
   .billing-seats { flex: 1 1 100%; }
@@ -1223,4 +1272,6 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
   .root-cashbox-url-label { grid-column: 1 / -1; }
   .billing-period { flex: 1 1 calc(50% - 4px); min-width: 0; }
   .billing-order { align-items: flex-start; }
+  .billing-inn-lookup > button { width: 100%; margin-top: 0; }
+  .billing-balance-sum { justify-items: start; }
 }

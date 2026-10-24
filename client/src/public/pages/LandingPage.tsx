@@ -14,7 +14,7 @@ import { FeatureBento } from "../landing/FeatureBento";
 import { CompareSlider } from "../landing/CompareSlider";
 import type { LandingData } from "../types";
 import { PLAN_FEATURES, PLANS, type PlanId } from "@shared/plans";
-import { DEFAULT_PRICES, formatRub, monthlyRate, type PlanPrice } from "@shared/billing";
+import { DEFAULT_PRICES, formatRub, monthlyRate, promotionDiscountRub, type PlanPrice, type PricePromotion } from "@shared/billing";
 
 const BEFORE = [
   "Задачи теряются в чатах и на словах",
@@ -33,6 +33,8 @@ type PricingCard = {
   id: PlanId;
   name: string;
   price: string;
+  /** Цена без акции — зачёркнутой рядом. */
+  oldPrice: string | null;
   note: string;
   features: readonly string[];
   cta: string;
@@ -45,13 +47,16 @@ type PricingCard = {
  * Карточки тарифов. Цены — те же, что на странице оплаты (root правит их
  * в «Компании → Цены»); у тарифа без цены — «по запросу» и письмо нам.
  */
-function pricingCards(prices: readonly PlanPrice[]): PricingCard[] {
+function pricingCards(prices: readonly PlanPrice[], promotion: PricePromotion | null): PricingCard[] {
   const paid = (id: "team" | "business", fallbackNote: string, highlight: boolean): PricingCard => {
     const rate = monthlyRate(prices, id);
+    const month = rate !== null ? Math.round(rate) : null;
+    const sale = month !== null && promotion ? month - promotionDiscountRub(month, promotion.percent) : null;
     return {
       id,
       name: PLANS[id].name,
-      price: rate !== null ? formatRub(Math.round(rate)) : "по запросу",
+      price: sale !== null ? formatRub(sale) : month !== null ? formatRub(month) : "по запросу",
+      oldPrice: sale !== null && month !== null ? formatRub(month) : null,
       note: rate !== null ? "в месяц" : fallbackNote,
       features: PLAN_FEATURES[id],
       cta: rate !== null ? "Попробовать" : "Обсудить",
@@ -60,17 +65,22 @@ function pricingCards(prices: readonly PlanPrice[]): PricingCard[] {
     };
   };
   return [
-    { id: "start", name: PLANS.start.name, price: "0 ₽", note: "навсегда", features: PLAN_FEATURES.start, cta: "Начать бесплатно", action: "start", highlight: false },
+    { id: "start", name: PLANS.start.name, price: "0 ₽", oldPrice: null, note: "навсегда", features: PLAN_FEATURES.start, cta: "Начать бесплатно", action: "start", highlight: false },
     paid("team", "для команды до 30 человек", true),
     paid("business", "для сети точек", false),
   ];
 }
 
+/** «до 31 октября» — по Москве, одинаково на сервере и в браузере. */
+const promotionUntil = (p: PricePromotion) =>
+  new Date((p.endsAt - 1) * 1000).toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long" });
+
 /** «Сколько стоит?» с настоящей ценой: «от 990 ₽ в месяц». */
-function priceAnswer(prices: readonly PlanPrice[]): string {
+function priceAnswer(prices: readonly PlanPrice[], promotion: PricePromotion | null): string {
   const rates = (["team", "business"] as const).map((id) => monthlyRate(prices, id)).filter((r): r is number => r !== null);
   const from = rates.length ? ` — от ${formatRub(Math.round(Math.min(...rates)))} в месяц` : "";
-  return `Тариф «Старт» бесплатный: до 5 сотрудников, без срока. Платные тарифы${from}, оплата картой или СБП прямо в кабинете, условия — в публичной оферте.`;
+  const sale = promotion ? ` Сейчас акция: −${promotion.percent} % на все тарифы до ${promotionUntil(promotion)}.` : "";
+  return `Тариф «Старт» бесплатный: до 5 сотрудников, без срока. Платные тарифы${from}, оплата картой или СБП прямо в кабинете, условия — в публичной оферте.${sale}`;
 }
 
 const BUSINESS_SUBJECT = "TasksFlow Бизнес: подключение сети точек";
@@ -96,10 +106,11 @@ export function LandingPage({ data }: { data: LandingData | null }) {
   const featured = data?.featuredPosts ?? [];
   const { contactEmail } = useSite();
   const prices = data?.prices ?? DEFAULT_PRICES;
-  const pricing = pricingCards(prices);
+  const promotion = data?.promotion ?? null;
+  const pricing = pricingCards(prices, promotion);
   const faq = [
     ...FAQ,
-    { q: "Сколько стоит?", a: priceAnswer(prices) },
+    { q: "Сколько стоит?", a: priceAnswer(prices, promotion) },
     { q: "Как с вами связаться?", a: `Напишите на ${contactEmail} — поможем с запуском и ответим на вопросы.` },
   ];
   // Пришли по ссылке «Попробовать бесплатно» с другой страницы (/#start).
@@ -203,12 +214,23 @@ export function LandingPage({ data }: { data: LandingData | null }) {
       {/* ===== Тарифы ===== */}
       <section id="pricing" className="max-w-6xl mx-auto px-4 py-20 sm:py-24">
         <SectionHead eyebrow="Тарифы" title="Простые тарифы" lead="Начните бесплатно. Платите, когда вырастете." />
+        {promotion && (
+          <p data-reveal className="plan-promo">
+            <Sparkles className="w-4 h-4" aria-hidden="true" />
+            <span>
+              {promotion.title}: <b>−{promotion.percent} %</b> на все платные тарифы до {promotionUntil(promotion)}
+            </span>
+          </p>
+        )}
         <div className="grid md:grid-cols-3 gap-5 items-stretch">
           {pricing.map((p, i) => (
             <div key={p.name} data-reveal style={{ transitionDelay: `${i * 80}ms` }} className={`plan-card ${p.highlight ? "is-hot" : ""}`}>
               {p.highlight && <div className="plan-badge"><Sparkles className="w-3.5 h-3.5" /> Популярный</div>}
               <h3 className="plan-name">{p.name}</h3>
-              <div className="plan-value">{p.price}</div>
+              <div className="plan-value">
+                {p.oldPrice && <s className="plan-old" aria-label={`Без акции ${p.oldPrice}`}>{p.oldPrice}</s>}
+                {p.price}
+              </div>
               <div className="plan-note">{p.note}</div>
               <ul className="plan-features">
                 {p.features.map((f) => (

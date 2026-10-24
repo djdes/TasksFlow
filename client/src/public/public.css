@@ -984,6 +984,13 @@ html[data-motion="reduced"] .marquee { -webkit-mask-image: none; mask-image: non
 .plan-name { font-family: var(--tf-display); font-size: 1.15rem; font-weight: 700; }
 .plan-value { margin-top: 14px; font-family: var(--tf-display); font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; }
 .plan-note { margin-top: 6px; color: hsl(var(--muted-foreground)); font-size: 14px; }
+.plan-old { display: block; margin-bottom: 4px; font-size: 1rem; font-weight: 600; letter-spacing: 0; color: hsl(var(--muted-foreground)); }
+.plan-promo {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; max-width: 100%;
+  margin: -12px auto 28px; padding: 8px 16px; border-radius: 999px;
+  background: hsl(var(--primary) / 0.1); color: hsl(var(--foreground)); font-size: 14.5px; text-align: center;
+}
+.plan-promo svg { flex-shrink: 0; color: hsl(var(--primary)); }
 .plan-features { flex: 1; display: grid; align-content: start; gap: 12px; margin: 24px 0 28px; font-size: 14.5px; }
 .plan-features li { display: flex; gap: 10px; }
 .plan-features svg { color: hsl(var(--primary)); }

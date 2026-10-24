@@ -31,6 +31,8 @@ export function toRootPromo(row: PromoCodeListRow): RootPromoCode {
     companyId: row.companyId,
     companyName: row.companyName,
     note: row.note,
+    lifetime: row.lifetime,
+    durationMonths: row.durationMonths,
     paidUses: row.paidUses,
     createdAt: row.createdAt,
   };
@@ -64,11 +66,13 @@ export async function createRootPromo(deps: BillingDeps, body: unknown): Promise
     newClientsOnly: data.newClientsOnly,
     companyId: data.companyId ?? null,
     note: data.note || null,
+    lifetime: data.lifetime,
+    durationMonths: data.lifetime ? data.durationMonths ?? null : null,
     createdAt: now,
     updatedAt: now,
   });
   if (!row) return { status: 409, json: { message: "Такой код уже есть" } };
-  logger.info({ code, kind: data.kind, value: data.value }, "[billing] промокод создан");
+  logger.info({ code, kind: data.kind, value: data.value, lifetime: data.lifetime }, "[billing] промокод создан");
   return { status: 200, json: { promo: toRootPromo({ ...row, paidUses: 0, companyName }) } };
 }
 

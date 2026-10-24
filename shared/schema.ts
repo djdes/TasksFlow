@@ -789,6 +789,20 @@ export const paymentOrders = mysqlTable("payment_orders", {
   promoCode: varchar("promo_code", { length: 32 }),
   // Счёт: оплатить до.
   invoiceDueAt: int("invoice_due_at"),
+  // plan — тариф, topup — пополнение баланса (plan = 'topup', months = 0).
+  orderKind: varchar("order_kind", { length: 8 }).notNull().default("plan"),
+  // Скидка по акции: снимок на момент заказа.
+  promotionId: int("promotion_id"),
+  promotionPercent: int("promotion_percent"),
+  promotionDiscountRub: int("promotion_discount_rub").notNull().default(0),
+  // Откуда discount_rub: code — введённый промокод, lifetime — постоянная
+  // скидка компании (такой заказ не тратит использования кода). NULL — code.
+  discountSource: varchar("discount_source", { length: 8 }),
+  // Оплачено баллами (amount_rub — только деньги).
+  pointsRub: int("points_rub").notNull().default(0),
+  // Баллы заказа: held → spent | released (→ spent | short при поздней
+  // оплате) → returned (возврат). Пополнение: credited ⇄ refund_hold → refunded.
+  pointsState: varchar("points_state", { length: 12 }),
 });
 
 // Промокоды (root): скидка в процентах или рублях на оплату тарифа.
@@ -809,8 +823,64 @@ export const promoCodes = mysqlTable("promo_codes", {
   // Персональный код: только для этой компании.
   companyId: int("company_id"),
   note: varchar("note", { length: 255 }),
+  // Постоянная скидка: после оплаты с кодом действует на следующие оплаты
+  // компании; duration_months — сколько (NULL — без срока).
+  lifetime: boolean("lifetime").notNull().default(false),
+  durationMonths: int("duration_months"),
   createdAt: int("created_at").notNull().default(0),
   updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Акции по расписанию (root): скидка в процентах на все тарифы в окне
+// [starts_at, ends_at). Действует самая большая.
+export const pricePromotions = mysqlTable("price_promotions", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 120 }).notNull(),
+  discountPercent: int("discount_percent").notNull(),
+  startsAt: int("starts_at").notNull(),
+  endsAt: int("ends_at").notNull(),
+  active: boolean("active").notNull().default(true),
+  note: varchar("note", { length: 255 }),
+  createdAt: int("created_at").notNull().default(0),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Постоянные скидки компании: снимок правила кода на момент оплаты, по
+// строке на код (UNIQUE company_id + promo_code_id). Действует выгоднейшая.
+export const companyDiscounts = mysqlTable("company_discounts", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  promoCodeId: int("promo_code_id").notNull(),
+  code: varchar("code", { length: 32 }).notNull(),
+  // percent | fixed
+  kind: varchar("kind", { length: 8 }).notNull(),
+  value: int("value").notNull(),
+  // Заказ, после оплаты которого скидка появилась: его возврат её снимает.
+  orderId: int("order_id"),
+  boundAt: int("bound_at").notNull(),
+  // NULL — без срока.
+  expiresAt: int("expires_at"),
+  revokedAt: int("revoked_at"),
+  revokedBy: int("revoked_by"),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+// Журнал баланса (баллы, 1 балл = 1 ₽): каждое изменение company_billing.balance_rub —
+// строкой здесь, в той же транзакции. dedupe_key не даёт провести операцию дважды.
+export const balanceTransactions = mysqlTable("balance_transactions", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  // + начисление, − списание.
+  amountRub: int("amount_rub").notNull(),
+  balanceAfter: int("balance_after").notNull(),
+  // topup | order_spend | order_release | order_refund | adjust | topup_refund | topup_refund_back
+  kind: varchar("kind", { length: 24 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  orderId: int("order_id"),
+  // Кто сделал корректировку (root).
+  actorUserId: int("actor_user_id"),
+  dedupeKey: varchar("dedupe_key", { length: 64 }).unique(),
+  createdAt: int("created_at").notNull().default(0),
 });
 
 // Реквизиты компании-заказчика: для счёта и закрывающих документов.
@@ -885,10 +955,16 @@ export const companyBilling = mysqlTable("company_billing", {
   // (без автопродления).
   expiryNoticeFor: int("expiry_notice_for"),
   expiredNoticeFor: int("expired_notice_for"),
+  // Баланс в баллах. Меняется только вместе со строкой balance_transactions
+  // и никогда не уходит в минус (условное списание).
+  balanceRub: int("balance_rub").notNull().default(0),
   updatedAt: int("updated_at").notNull().default(0),
 });
 
 export type PaymentOrderRow = typeof paymentOrders.$inferSelect;
+export type PricePromotionRow = typeof pricePromotions.$inferSelect;
+export type CompanyDiscountRow = typeof companyDiscounts.$inferSelect;
+export type BalanceTransactionRow = typeof balanceTransactions.$inferSelect;
 export type CompanyBillingRow = typeof companyBilling.$inferSelect;
 export type PromoCodeRow = typeof promoCodes.$inferSelect;
 export type CompanyRequisitesRow = typeof companyRequisites.$inferSelect;

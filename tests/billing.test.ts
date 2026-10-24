@@ -20,6 +20,8 @@ import {
   isValidOgrn,
   normalizePromoCode,
   OFFER_REVISION,
+  pickPromotion,
+  priceBreakdown,
   promoDiscountRub,
   promoLabel,
   recurringAction,
@@ -27,7 +29,17 @@ import {
   requisitesSchema,
   type PlanPrice,
 } from "../shared/billing";
-import type { ClosingDocumentRow, CompanyBillingRow, CompanyRequisitesRow, PaymentOrderRow, PromoCodeRow } from "../shared/schema";
+import type {
+  BalanceTransactionRow,
+  ClosingDocumentRow,
+  CompanyBillingRow,
+  CompanyDiscountRow,
+  CompanyRequisitesRow,
+  PaymentOrderRow,
+  PricePromotionRow,
+  PromoCodeRow,
+} from "../shared/schema";
+import { refundLedger, releaseEntry, settleLedger, spendEntry, topupRefundBackEntry, topupRefundHoldEntry, type LedgerEntry } from "../server/billing/ledger";
 import {
   buildPaymentParams,
   buildPaymentUrl,
@@ -73,6 +85,9 @@ import { cancelInvoiceOrder, closingPdf, createInvoice, ensureClosingDocument, i
 import { sellerMissing, sellerRequisites } from "../server/billing/legal";
 import { drawTable, PdfDocument } from "../server/billing/pdf/pdf";
 import { parseTrueType, subsetTrueType } from "../server/billing/pdf/ttf";
+import { adjustBalance, createTopup } from "../server/billing/balance";
+import { createRootPromotion, revokeRootDiscount, updateRootPromotion } from "../server/billing/promotions";
+import { DADATA_PARTY_URL, lookupInn, mapParty } from "../server/billing/dadata";
 
 const storageMock = { getUserById: vi.fn() };
 vi.mock("../server/storage", () => ({ storage: storageMock }));
@@ -290,6 +305,9 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
   const promos = new Map<string, PromoCodeRow>();
   const requisites = new Map<number, CompanyRequisitesRow>();
   const documents = new Map<number, ClosingDocumentRow>();
+  const promotions = new Map<number, PricePromotionRow>();
+  const discounts: CompanyDiscountRow[] = [];
+  const ledger: BalanceTransactionRow[] = [];
   let nextId = 15;
   let nextPromo = 1;
   const emptyBilling = (companyId: number): CompanyBillingRow => ({
@@ -305,8 +323,32 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     recurringDisabledAt: null,
     expiryNoticeFor: null,
     expiredNoticeFor: null,
+    balanceRub: 0,
     updatedAt: 0,
   });
+  /** Как post() в MySQL: ключ повтора, без минуса, строка журнала. */
+  const post = (e: LedgerEntry, now: number) => {
+    if (e.dedupeKey && ledger.some((r) => r.dedupeKey === e.dedupeKey)) return { ok: false as const, reason: "duplicate" as const };
+    const b = billing.get(e.companyId) ?? emptyBilling(e.companyId);
+    const after = b.balanceRub + e.amountRub;
+    if (after < 0) return { ok: false as const, reason: "insufficient" as const };
+    billing.set(e.companyId, { ...b, balanceRub: after });
+    ledger.push({ id: ledger.length + 1, ...e, balanceAfter: after, createdAt: now });
+    return { ok: true as const, balanceRub: after };
+  };
+  const balanceOf = (companyId: number) => billing.get(companyId)?.balanceRub ?? 0;
+  const codeUse = (o: PaymentOrderRow) => o.discountSource !== "lifetime";
+  const expireOne = (id: number, now: number) => {
+    const o = orders.get(id);
+    if (!o || o.status !== "pending") return false;
+    o.status = "expired";
+    const back = releaseEntry(o);
+    if (back) {
+      post(back, now);
+      o.pointsState = "released";
+    }
+    return true;
+  };
   const store: BillingStore = {
     getPrices: async () => prices,
     setPrices: async (next) => {
@@ -332,22 +374,54 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
         discountRub: o.discountRub ?? 0,
         promoCode: o.promoCode ?? null,
         invoiceDueAt: o.invoiceDueAt ?? null,
+        orderKind: o.orderKind ?? "plan",
+        promotionId: o.promotionId ?? null,
+        promotionPercent: o.promotionPercent ?? null,
+        promotionDiscountRub: o.promotionDiscountRub ?? 0,
+        discountSource: o.discountSource ?? null,
+        pointsRub: 0,
+        pointsState: null,
       };
       orders.set(row.id, row);
       return { ...row };
     },
-    createOrderWithPromo: async (o, r) => {
-      // Как транзакция под блокировкой кода в MySQL: проверка и вставка без await между ними.
-      const promo = promos.get(r.code);
-      if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
-      const held = (x: PaymentOrderRow) => x.status === "paid" || (x.status === "pending" && (x.paymentMethod === "invoice" || x.createdAt >= r.reservedSince));
-      const withCode = Array.from(orders.values()).filter((x) => x.promoCode === r.code);
-      if (promo.maxUses !== null && withCode.filter(held).length >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
-      if (withCode.some((x) => x.companyId === r.companyId && (r.free ? held(x) : x.status === "paid"))) return { ok: false as const, reason: "used" as const };
-      if (promo.newClientsOnly && Array.from(orders.values()).some((x) => x.companyId === r.companyId && (x.status === "paid" || x.status === "refunded"))) {
-        return { ok: false as const, reason: "newClientsOnly" as const };
+    placeOrder: async (o, r) => {
+      // Как транзакция в MySQL: проверки и вставка без await между ними.
+      if (r) {
+        const promo = promos.get(r.code);
+        if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
+        const held = (x: PaymentOrderRow) => x.status === "paid" || (x.status === "pending" && (x.paymentMethod === "invoice" || x.createdAt >= r.reservedSince));
+        const withCode = Array.from(orders.values()).filter((x) => x.promoCode === r.code && codeUse(x));
+        if (promo.maxUses !== null && withCode.filter(held).length >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
+        if (withCode.some((x) => x.companyId === r.companyId && (r.free ? held(x) : x.status === "paid"))) return { ok: false as const, reason: "used" as const };
+        if (
+          promo.newClientsOnly &&
+          Array.from(orders.values()).some((x) => x.companyId === r.companyId && x.orderKind === "plan" && (x.status === "paid" || x.status === "refunded"))
+        ) {
+          return { ok: false as const, reason: "newClientsOnly" as const };
+        }
       }
-      return { ok: true as const, order: await store.createOrder(o) };
+      const points = Math.max(0, o.pointsRub ?? 0);
+      // Как в MySQL: только заказ с баллами забирает баллы брошенных оплат
+      // картой, и только если их хватит — иначе брошенный заказ не трогаем.
+      const abandoned = (points > 0 ? Array.from(orders.values()) : []).filter(
+        (x) => x.companyId === o.companyId && x.status === "pending" && x.pointsState === "held" && x.paymentMethod === "card",
+      );
+      if (points > 0 && balanceOf(o.companyId) + abandoned.reduce((sum, x) => sum + x.pointsRub, 0) < points) {
+        return { ok: false as const, reason: "balance" as const };
+      }
+      for (const old of abandoned) {
+        const back = releaseEntry(old);
+        if (back) post(back, o.createdAt);
+        old.pointsState = "released";
+      }
+      const row = orders.get((await store.createOrder(o)).id)!;
+      if (points > 0) {
+        Object.assign(row, { pointsRub: points, pointsState: "held" });
+        const posted = post(spendEntry(row), o.createdAt);
+        if (!posted.ok) throw new Error("points were not held");
+      }
+      return { ok: true as const, order: { ...row } };
     },
     getOrder: async (id) => (orders.has(id) ? { ...orders.get(id)! } : null),
     listOrders: async (companyId) => Array.from(orders.values()).filter((o) => o.companyId === companyId).reverse(),
@@ -356,21 +430,39 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
       const order = orders.get(orderId);
       if (!order || !["pending", "expired", "cancelled"].includes(order.status)) return { claimed: false as const, order: order ?? null };
       const company = companies.get(order.companyId)!;
-      const context: SettleContext = { order: { ...order }, company: { ...company }, billing: billing.has(company.id) ? { ...billing.get(company.id)! } : null };
+      const promo = order.promoCode && order.discountSource !== "lifetime" ? promos.get(order.promoCode) ?? null : null;
+      const context: SettleContext = {
+        order: { ...order },
+        company: { ...company },
+        billing: billing.has(company.id) ? { ...billing.get(company.id)! } : null,
+        promo: promo ? { ...promo } : null,
+      };
       const patch = decide(context);
       const before = patch.plan ? { planBefore: company.plan ?? "", planUntilBefore: company.planUntil } : {};
+      const wasState = order.pointsState;
       Object.assign(order, { status: "paid", paidAt: now, rawResult: raw, planUntilAfter: patch.plan?.until ?? null, ...before });
       if (patch.plan) Object.assign(company, { plan: patch.plan.id, planUntil: patch.plan.until });
       if (patch.billing) billing.set(company.id, { ...(billing.get(company.id) ?? emptyBilling(company.id)), ...patch.billing, updatedAt: now });
-      return { claimed: true as const, order: { ...order }, context, patch };
+      if (patch.lifetime) {
+        const bind = { ...patch.lifetime, orderId: order.id, boundAt: now, revokedAt: null, revokedBy: null, updatedAt: now };
+        const same = discounts.find((d) => d.companyId === company.id && d.promoCodeId === patch.lifetime!.promoCodeId);
+        if (same) Object.assign(same, bind);
+        else discounts.push({ id: discounts.length + 1, companyId: company.id, ...bind });
+      }
+      const l = settleLedger({ ...order, pointsState: wasState }, balanceOf(company.id));
+      let postedRub = 0;
+      if (l.entry && post(l.entry, now).ok) postedRub = l.entry.amountRub;
+      if (l.pointsState) order.pointsState = l.pointsState;
+      return { claimed: true as const, order: { ...order }, context, patch, points: { postedRub, short: l.short } };
     },
-    expireOrder: async (id) => {
-      const o = orders.get(id);
-      if (o && o.status === "pending") o.status = "expired";
+    expireOrder: async (id, now) => {
+      expireOne(id, now);
     },
-    expirePending: async (before) => {
+    expirePending: async (before, now) => {
       let n = 0;
-      for (const o of Array.from(orders.values())) if (o.status === "pending" && o.paymentMethod === "card" && o.createdAt <= before) (o.status = "expired"), n++;
+      for (const o of Array.from(orders.values())) {
+        if (o.status === "pending" && (o.paymentMethod === "card" || o.paymentMethod === "balance") && o.createdAt <= before && expireOne(o.id, now)) n++;
+      }
       return n;
     },
     addConsent: async (c) => {
@@ -447,8 +539,14 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
         rolledBack = target;
         Object.assign(company, { plan: target.plan, planUntil: target.until });
       }
-      Object.assign(o, { status: "refunded", refundStatus: "finished", refundedAt: now });
-      return { order: { ...o }, rolledBack };
+      const l = refundLedger(o, balanceOf(o.companyId));
+      let postedRub = 0;
+      if (l.entry && post(l.entry, now).ok) postedRub = l.entry.amountRub;
+      Object.assign(o, { status: "refunded", refundStatus: "finished", refundedAt: now, pointsState: l.pointsState ?? o.pointsState });
+      const bound = discounts.filter((d) => d.companyId === o.companyId && d.orderId === o.id && d.revokedAt === null);
+      for (const d of bound) d.revokedAt = now;
+      const discountRevoked = bound.length > 0;
+      return { order: { ...o }, rolledBack, points: { postedRub, short: l.short }, discountRevoked };
     },
     listExpiringPlans: async (from, to) =>
       Array.from(companies.values())
@@ -479,7 +577,7 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
     listPromos: async () =>
       Array.from(promos.values()).map((p) => ({
         ...p,
-        paidUses: Array.from(orders.values()).filter((o) => o.promoCode === p.code && o.status === "paid").length,
+        paidUses: Array.from(orders.values()).filter((o) => o.promoCode === p.code && codeUse(o) && o.status === "paid").length,
         companyName: p.companyId ? companies.get(p.companyId)?.name ?? null : null,
       })),
     createPromo: async (row) => {
@@ -494,9 +592,11 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
       Object.assign(row, patch, { updatedAt: now });
       return { ...row };
     },
-    promoPaidUses: async (code) => Array.from(orders.values()).filter((o) => o.promoCode === code && o.status === "paid").length,
-    promoPaidByCompany: async (code, companyId) => Array.from(orders.values()).some((o) => o.promoCode === code && o.companyId === companyId && o.status === "paid"),
-    hasPaidOrders: async (companyId) => Array.from(orders.values()).some((o) => o.companyId === companyId && (o.status === "paid" || o.status === "refunded")),
+    promoPaidUses: async (code) => Array.from(orders.values()).filter((o) => o.promoCode === code && codeUse(o) && o.status === "paid").length,
+    promoPaidByCompany: async (code, companyId) =>
+      Array.from(orders.values()).some((o) => o.promoCode === code && codeUse(o) && o.companyId === companyId && o.status === "paid"),
+    hasPaidOrders: async (companyId) =>
+      Array.from(orders.values()).some((o) => o.companyId === companyId && o.orderKind === "plan" && (o.status === "paid" || o.status === "refunded")),
     getRequisites: async (companyId) => (requisites.has(companyId) ? { ...requisites.get(companyId)! } : null),
     saveRequisites: async (companyId, r, now) => {
       requisites.set(companyId, { companyId, ...r, updatedAt: now });
@@ -524,8 +624,70 @@ function memoryStore(prices: PlanPrice[] = PRICES) {
       const d = documents.get(orderId);
       if (d && d.status === "issued") Object.assign(d, { status: "voided", voidedAt: now });
     },
+    activePromotions: async () =>
+      Array.from(promotions.values())
+        .filter((p) => p.active)
+        .map((p) => ({ id: p.id, title: p.title, percent: p.discountPercent, startsAt: p.startsAt, endsAt: p.endsAt })),
+    listPromotions: async () =>
+      Array.from(promotions.values())
+        .reverse()
+        .map((p) => ({ ...p, paidOrders: Array.from(orders.values()).filter((o) => o.promotionId === p.id && o.status === "paid").length })),
+    getPromotion: async (id) => {
+      const p = promotions.get(id);
+      return p ? { ...p, paidOrders: Array.from(orders.values()).filter((o) => o.promotionId === id && o.status === "paid").length } : null;
+    },
+    createPromotion: async (row) => {
+      const created = { ...row, id: promotions.size + 1 };
+      promotions.set(created.id, created);
+      return { ...created };
+    },
+    updatePromotion: async (id, patch, now) => {
+      const row = promotions.get(id);
+      if (!row) return null;
+      Object.assign(row, patch, { updatedAt: now });
+      return { ...row };
+    },
+    getCompanyDiscounts: async (companyId) => discounts.filter((d) => d.companyId === companyId).map((d) => ({ ...d })),
+    listCompanyDiscounts: async () => discounts.map((d) => ({ ...d, companyName: companies.get(d.companyId)?.name ?? null })),
+    revokeCompanyDiscount: async (id, now, by) => {
+      const d = discounts.find((x) => x.id === id);
+      if (!d || d.revokedAt !== null) return null;
+      Object.assign(d, { revokedAt: now, revokedBy: by });
+      return { ...d };
+    },
+    getBalance: async (companyId) => balanceOf(companyId),
+    getPointsHeld: async (companyId) =>
+      Array.from(orders.values())
+        .filter((o) => o.companyId === companyId && o.status === "pending" && o.pointsState === "held" && o.paymentMethod === "card")
+        .reduce((sum, o) => sum + o.pointsRub, 0),
+    listBalanceEntries: async (companyId, limit) =>
+      ledger
+        .filter((r) => r.companyId === companyId)
+        .reverse()
+        .slice(0, limit)
+        .map((r) => ({ ...r })),
+    listBalances: async () =>
+      Array.from(billing.values())
+        .filter((b) => b.balanceRub !== 0)
+        .map((b) => ({ companyId: b.companyId, companyName: companies.get(b.companyId)?.name ?? null, balanceRub: b.balanceRub, updatedAt: b.updatedAt })),
+    postLedger: async (entry, now) => post(entry, now),
+    holdTopupRefund: async (id, now) => {
+      const o = orders.get(id);
+      const hold = o && o.status === "paid" ? topupRefundHoldEntry(o) : null;
+      if (!o || !hold) return { ok: false as const, reason: "state" as const };
+      if (!post(hold, now).ok) return { ok: false as const, reason: "balance" as const, balanceRub: balanceOf(o.companyId) };
+      o.pointsState = "refund_hold";
+      return { ok: true as const };
+    },
+    releaseTopupRefund: async (id, now) => {
+      const o = orders.get(id);
+      const back = o && o.status === "paid" ? topupRefundBackEntry(o) : null;
+      if (!o || !back) return;
+      post(back, now);
+      o.pointsState = "credited";
+    },
   };
-  return { store, orders, billing, companies, consents, promos, requisites, documents };
+  return { store, orders, billing, companies, consents, promos, requisites, documents, promotions, discounts, ledger };
 }
 
 function setup(over: Partial<RobokassaConfig> = {}) {
@@ -1494,6 +1656,8 @@ async function addPromo(t: ReturnType<typeof setup>, over: Partial<PromoCodeRow>
     newClientsOnly: false,
     companyId: null,
     note: null,
+    lifetime: false,
+    durationMonths: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...over,
@@ -1568,7 +1732,7 @@ describe("промокоды", () => {
     expect(amountRub).toBe(792);
     expect(params.OutSum).toBe("792.00");
     expect(t.orders.get(invId)).toMatchObject({ amountRub: 792, baseRub: 990, discountRub: 198, promoCode: "START", paymentMethod: "card" });
-    expect(t.consents.at(-1)!.statementText).toMatch(/Спишем 990\s₽.*Первый платёж — 792\s₽ по промокоду START/);
+    expect(t.consents.at(-1)!.statementText).toMatch(/Спишем 990\s₽.*Первый платёж — 792\s₽ \(по промокоду START\)/);
     await handleResult(t.deps, resultFor({ id: invId, amountRub: 792 }));
     expect(t.billing.get(1)).toMatchObject({ recurringActive: true, recurringAmountRub: 990 });
   });
@@ -1892,10 +2056,11 @@ describe("маршруты: промокод, реквизиты, счёт, до
     expect((await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "start" })).body).toEqual({
       ok: true,
       code: "START",
+      kind: "percent",
+      value: 20,
       label: "−20 %",
-      baseRub: 990,
-      discountRub: 198,
-      amountRub: 792,
+      lifetime: false,
+      durationMonths: null,
     });
     expect((await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "NOPE" })).body).toEqual({ ok: false, message: "Такого промокода нет" });
     for (let i = 0; i < 18; i++) await request(app).post("/api/billing/promo").send({ plan: "team", months: 1, promoCode: "X" + i });
@@ -1949,5 +2114,621 @@ describe("маршруты: промокод, реквизиты, счёт, до
     expect(off.body.promo.active).toBe(false);
     expect(((await checkout(t.deps, { plan: "team", months: 1, promoCode: "SPRING-26" })).json as { message: string }).message).toBe("Промокод отключён");
     expect((await request(app).get("/api/root/billing/promo-codes")).body.promos).toHaveLength(1);
+  });
+});
+
+// --- Акции, постоянные скидки, баланс, реквизиты по ИНН ------------------------------------
+
+describe("сумма заказа: акция, промокод или постоянная скидка, баллы", () => {
+  it("действует самая большая акция; при равной — та, что дольше; окно [начало, конец)", () => {
+    const a = { id: 1, title: "A", percent: 10, startsAt: NOW - DAY, endsAt: NOW + DAY };
+    const b = { id: 2, title: "B", percent: 20, startsAt: NOW - DAY, endsAt: NOW + DAY };
+    const c = { id: 3, title: "C", percent: 20, startsAt: NOW - DAY, endsAt: NOW + 5 * DAY };
+    expect(pickPromotion([a, b, c], NOW)?.id).toBe(3);
+    expect(pickPromotion([a, b], NOW + DAY)).toBeNull();
+    expect(pickPromotion([{ ...a, startsAt: NOW }], NOW)?.id).toBe(1);
+  });
+
+  it("код — от цены с акцией; постоянная скидка не суммируется с кодом, при равных — постоянная; баллы — не больше суммы", () => {
+    const promotion = { id: 1, title: "Осень", percent: 20, startsAt: 0, endsAt: NOW * 2 };
+    const code = { code: "TEN", kind: "percent" as const, value: 10 };
+    const b = priceBreakdown({ listRub: 990, promotion, code, lifetimes: [], pointsAvailable: 0 });
+    expect(b).toMatchObject({ listRub: 990, promotion: { discountRub: 198 }, discount: { source: "code", discountRub: 79 }, amountRub: 713 });
+    const lifetime = { code: "VIP", kind: "percent" as const, value: 15 };
+    expect(priceBreakdown({ listRub: 990, promotion, code, lifetimes: [lifetime], pointsAvailable: 0 })).toMatchObject({
+      discount: { source: "lifetime", code: "VIP", discountRub: 119 },
+      codeOutdone: true,
+      amountRub: 673,
+    });
+    expect(priceBreakdown({ listRub: 990, promotion: null, code, lifetimes: [{ ...lifetime, value: 10 }], pointsAvailable: 0 }).discount?.source).toBe("lifetime");
+    // Несколько постоянных — выгоднейшая на эту сумму: −300 ₽ лучше −20 % от 990, но не от 9 900.
+    const two = [{ code: "PCT", kind: "percent" as const, value: 20 }, { code: "FIX", kind: "fixed" as const, value: 300 }];
+    expect(priceBreakdown({ listRub: 990, promotion: null, code: null, lifetimes: two, pointsAvailable: 0 }).discount?.code).toBe("FIX");
+    expect(priceBreakdown({ listRub: 9900, promotion: null, code: null, lifetimes: two, pointsAvailable: 0 }).discount?.code).toBe("PCT");
+    expect(priceBreakdown({ listRub: 990, promotion: null, code: null, lifetimes: [], pointsAvailable: 5000 })).toMatchObject({ pointsRub: 990, amountRub: 0 });
+    expect(priceBreakdown({ listRub: 990, promotion: null, code: null, lifetimes: [], pointsAvailable: 300 })).toMatchObject({ pointsRub: 300, amountRub: 690 });
+  });
+});
+
+describe("акции по расписанию", () => {
+  it("root создаёт акцию; цена в заказе — с ней, серия автопродления — по полной цене; кончилась — старая сумма не пройдёт", async () => {
+    const t = setup();
+    expect((await createRootPromotion(t.deps, { title: "Много", percent: 95, startsAt: NOW - DAY, endsAt: NOW + DAY })).status).toBe(400);
+    expect((await createRootPromotion(t.deps, { title: "Прошлая", percent: 20, startsAt: NOW - 9 * DAY, endsAt: NOW - DAY })).status).toBe(400);
+    const created = await createRootPromotion(t.deps, { title: "Осень", percent: 20, startsAt: NOW - DAY, endsAt: NOW + 7 * DAY });
+    expect(created.status).toBe(200);
+    const info = await billingInfo(t.deps, { companyId: 1, user: admin });
+    expect(info!.promotion).toMatchObject({ title: "Осень", percent: 20 });
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 990 })).status).toBe(409);
+    const r = await checkout(t.deps, { plan: "team", months: 1, expectedRub: 792, recurringConsent: true });
+    expect(r.status).toBe(200);
+    const { invId } = r.json as { invId: number };
+    expect(t.orders.get(invId)).toMatchObject({ amountRub: 792, baseRub: 990, promotionId: 1, promotionPercent: 20, promotionDiscountRub: 198, discountRub: 0 });
+    expect(t.consents.at(-1)!.statementText).toMatch(/Спишем 990\s₽.*Первый платёж — 792\s₽ \(по акции\)/);
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 792 }));
+    expect(t.billing.get(1)).toMatchObject({ recurringActive: true, recurringAmountRub: 990 });
+
+    t.clock.now = NOW + 8 * DAY;
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 792 })).status).toBe(409);
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 990 })).status).toBe(200);
+  });
+
+  it("выключенная акция не действует; конец раньше начала — нельзя", async () => {
+    const t = setup();
+    await createRootPromotion(t.deps, { title: "Осень", percent: 30, startsAt: NOW - DAY, endsAt: NOW + DAY });
+    expect((await updateRootPromotion(t.deps, 1, { endsAt: NOW - 2 * DAY })).status).toBe(400);
+    expect((await updateRootPromotion(t.deps, 1, { active: false })).status).toBe(200);
+    expect((await billingInfo(t.deps, { companyId: 1, user: admin }))!.promotion).toBeNull();
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 990 })).status).toBe(200);
+  });
+});
+
+describe("постоянные скидки", () => {
+  async function bindVip(t: ReturnType<typeof setup>) {
+    await addPromo(t, { code: "VIP", value: 10, lifetime: true, durationMonths: 12 });
+    const r = await checkout(t.deps, { plan: "team", months: 1, promoCode: "vip", expectedRub: 891, recurringConsent: true });
+    const { invId } = r.json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 891 }));
+    await flush();
+    return invId;
+  }
+
+  it("оплата с «постоянным» кодом закрепляет скидку; дальше она применяется сама и не тратит код", async () => {
+    const t = setup();
+    const first = await bindVip(t);
+    expect(t.discounts).toEqual([expect.objectContaining({ companyId: 1, code: "VIP", kind: "percent", value: 10, orderId: first, boundAt: NOW, expiresAt: addMonths(NOW, 12), revokedAt: null })]);
+    expect(t.notices.at(-1)!.notice.paragraphs.join(" ")).toMatch(/Постоянная скидка −10 % по коду VIP закреплена/);
+    const info = await billingInfo(t.deps, { companyId: 1, user: admin });
+    expect(info!.lifetimeDiscounts).toEqual([expect.objectContaining({ code: "VIP", label: "−10 %", expiresAt: addMonths(NOW, 12) })]);
+
+    const r = await checkout(t.deps, { plan: "team", months: 1, expectedRub: 891 });
+    expect(r.status).toBe(200);
+    const second = (r.json as { invId: number }).invId;
+    expect(t.orders.get(second)).toMatchObject({ discountSource: "lifetime", promoCode: "VIP", discountRub: 99, amountRub: 891 });
+    await handleResult(t.deps, resultFor({ id: second, amountRub: 891 }));
+    expect(await t.store.promoPaidUses("VIP")).toBe(1);
+  });
+
+  it("код хуже постоянной скидки — применяется постоянная, код не тратится; тот же код — «уже действует»", async () => {
+    const t = setup();
+    await bindVip(t);
+    await addPromo(t, { code: "FIVE", value: 5 });
+    const quote = await quotePromoFor(t, "FIVE");
+    expect(quote).toMatchObject({ ok: true, code: "FIVE", value: 5 });
+    const r = await checkout(t.deps, { plan: "team", months: 1, promoCode: "FIVE", expectedRub: 891 });
+    const order = t.orders.get((r.json as { invId: number }).invId)!;
+    expect(order).toMatchObject({ discountSource: "lifetime", promoCode: "VIP" });
+    expect(await quotePromoFor(t, "VIP")).toMatchObject({ ok: true, code: "VIP", lifetime: true });
+  });
+
+  it("автопродление — со скидкой: в предупреждении и в списании", async () => {
+    const t = setup();
+    await bindVip(t);
+    t.notices.length = 0;
+    const until = t.companies.get(1)!.planUntil!;
+    t.clock.now = until - 3 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.notices.at(-1)!.notice.body).toMatch(/спишем 891\s₽/);
+    t.fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => "OK" });
+    t.clock.now = until - 3600;
+    await runBillingTick(t.deps);
+    const child = Array.from(t.orders.values()).find((o) => o.recurringChargeOf !== null)!;
+    expect(child).toMatchObject({ amountRub: 891, baseRub: 990, discountRub: 99, discountSource: "lifetime", promoCode: "VIP" });
+    expect(String(t.fetchMock.mock.calls.at(-1)![1]?.body ?? t.fetchMock.mock.calls.at(-1)![0])).toMatch(/OutSum=891\.00/);
+  });
+
+  it("возврат оплаты, которая дала скидку, снимает её; root может снять скидку сам", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const first = await bindVip(t);
+    box.states.set(first, 100);
+    expect((await refundOrder(t.deps, first)).status).toBe(200);
+    box.refundLabel = "finished";
+    await runBillingTick(t.deps);
+    expect(t.discounts[0].revokedAt).toBe(NOW);
+    expect((await billingInfo(t.deps, { companyId: 1, user: admin }))!.lifetimeDiscounts).toEqual([]);
+
+    const t2 = setup();
+    await bindVip(t2);
+    expect((await revokeRootDiscount(t2.deps, 1, { userId: 9 })).status).toBe(200);
+    expect((await revokeRootDiscount(t2.deps, 1, { userId: 9 })).status).toBe(404);
+    expect((await checkout(t2.deps, { plan: "team", months: 1, expectedRub: 990 })).status).toBe(200);
+    expect(t2.notices.at(-1)!.notice.title).toBe("Постоянная скидка снята");
+  });
+
+  it("скидка с истёкшим сроком не применяется", async () => {
+    const t = setup();
+    await bindVip(t);
+    t.clock.now = addMonths(NOW, 12) + 1;
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 990 })).status).toBe(200);
+  });
+});
+
+async function quotePromoFor(t: ReturnType<typeof setup>, code: string) {
+  const { quotePromo } = await import("../server/billing/service");
+  return quotePromo(t.deps, { companyId: 1, body: { plan: "team", months: 1, promoCode: code } });
+}
+
+describe("баланс и баллы", () => {
+  const adjust = (t: ReturnType<typeof setup>, amountRub: number, reason = "бонус за отзыв") => adjustBalance(t.deps, 1, { amountRub, reason }, { userId: 9 });
+
+  it("корректировка root: журнал, уведомление; в минус — нельзя", async () => {
+    const t = setup();
+    expect((await adjust(t, 500)).json).toMatchObject({ balanceRub: 500 });
+    expect((await adjust(t, -600)).status).toBe(409);
+    expect((await adjust(t, -200, "ошибка")).json).toMatchObject({ balanceRub: 300 });
+    expect(t.ledger.map((r) => [r.kind, r.amountRub, r.balanceAfter])).toEqual([
+      ["adjust", 500, 500],
+      ["adjust", -200, 300],
+    ]);
+    expect(t.ledger[0]).toMatchObject({ description: "Корректировка: бонус за отзыв", actorUserId: 9 });
+    await flush();
+    expect(t.notices.at(-1)!.notice.title).toBe("Баллы списаны");
+    expect((await adjust(t, 0)).status).toBe(400);
+  });
+
+  it("пополнение картой: аванс в чеке, баллы — по уведомлению кассы, один раз", async () => {
+    const t = setup({ receipt: true });
+    expect((await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 100 } })).status).toBe(400);
+    const r = await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1500 } });
+    expect(r.status).toBe(200);
+    const { invId, params } = r.json as { invId: number; params: Record<string, string> };
+    expect(JSON.parse(decodeURIComponent(params.Receipt)).items[0]).toMatchObject({ payment_method: "advance", payment_object: "payment", sum: 1500 });
+    expect(t.orders.get(invId)).toMatchObject({ orderKind: "topup", plan: "topup", months: 0, amountRub: 1500, paymentMethod: "card" });
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 1500 }));
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 1500 }));
+    expect(t.billing.get(1)!.balanceRub).toBe(1500);
+    expect(t.ledger).toHaveLength(1);
+    expect(t.ledger[0]).toMatchObject({ kind: "topup", amountRub: 1500, dedupeKey: `topup:${invId}` });
+    expect(t.companies.get(1)!.plan).toBeNull();
+    await flush();
+    expect(t.notices.at(-1)!.notice.title).toBe("Баланс пополнен");
+    const info = await billingInfo(t.deps, { companyId: 1, user: admin });
+    expect(info!.balance.amountRub).toBe(1500);
+    expect(info!.orders[0]).toMatchObject({ kind: "topup" });
+  });
+
+  it("часть суммы баллами: баллы заняты заказом; не оплачен — вернулись; новый заказ освобождает брошенный", async () => {
+    const t = setup();
+    await adjust(t, 500);
+    // Сумма на странице без баллов — заказ не создаётся: человек видел другое.
+    expect((await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 990 })).status).toBe(409);
+    const a = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number; params: Record<string, string> };
+    expect(a.params.OutSum).toBe("490.00");
+    expect(t.orders.get(a.invId)).toMatchObject({ amountRub: 490, pointsRub: 500, pointsState: "held" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+    // На странице баллы брошенного заказа доступны: новый заказ их освободит.
+    expect((await billingInfo(t.deps, { companyId: 1, user: admin }))!.balance).toMatchObject({ amountRub: 500, heldRub: 500 });
+
+    // Брошенный заказ: новый возвращает его баллы и занимает их сам.
+    const b = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number };
+    expect(t.orders.get(a.invId)).toMatchObject({ status: "pending", pointsState: "released" });
+    expect(t.orders.get(b.invId)).toMatchObject({ pointsState: "held" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+
+    // Не оплачен за 3 дня — баллы на балансе.
+    t.clock.now = NOW + 4 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.orders.get(b.invId)).toMatchObject({ status: "expired", pointsState: "released" });
+    expect(t.billing.get(1)!.balanceRub).toBe(500);
+    expect(t.ledger.map((r) => r.kind)).toEqual(["adjust", "order_spend", "order_release", "order_spend", "order_release"]);
+  });
+
+  it("оплата брошенного заказа после возврата баллов: списываем снова, а нет баллов — владельцу", async () => {
+    const t = setup();
+    await adjust(t, 500);
+    const a = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number };
+    t.clock.now = NOW + 4 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.billing.get(1)!.balanceRub).toBe(500);
+    await handleResult(t.deps, resultFor({ id: a.invId, amountRub: 490 }));
+    expect(t.orders.get(a.invId)).toMatchObject({ status: "paid", pointsState: "spent" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+
+    const t2 = setup();
+    await adjust(t2, 500);
+    const c = (await checkout(t2.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number };
+    t2.clock.now = NOW + 4 * DAY;
+    await runBillingTick(t2.deps);
+    await adjust(t2, -400, "списали");
+    await handleResult(t2.deps, resultFor({ id: c.invId, amountRub: 490 }));
+    expect(t2.orders.get(c.invId)).toMatchObject({ status: "paid", pointsState: "short" });
+    expect(t2.billing.get(1)!.balanceRub).toBe(100);
+    await flush();
+    expect(t2.owner.some((m) => /баллы .* вернулись на баланс, а там их уже нет/.test(m))).toBe(true);
+  });
+
+  it("баллов хватает на всю сумму: тариф сразу, без кассы и автопродления; УПД нет — денег не было", async () => {
+    const t = withDocs(setup());
+    await adjust(t, 2000);
+    const r = await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 0, recurringConsent: true });
+    expect(r.status).toBe(200);
+    expect(r.json).toMatchObject({ free: true, amountRub: 0, order: { method: "balance", pointsRub: 990, status: "paid", hasUpd: false } });
+    expect(t.billing.get(1)).toMatchObject({ balanceRub: 1010, recurringActive: false });
+    expect(t.companies.get(1)!.plan).toBe("team");
+    expect(t.fetchMock).not.toHaveBeenCalled();
+    // Root «отменяет оплату баллами»: баллы назад, срок — как до оплаты.
+    const id = (r.json as { invId: number }).invId;
+    expect((await refundOrder(t.deps, id)).status).toBe(200);
+    expect(t.billing.get(1)!.balanceRub).toBe(2000);
+    expect(t.orders.get(id)).toMatchObject({ status: "refunded", pointsState: "returned" });
+    expect(t.companies.get(1)).toMatchObject({ plan: null, planUntil: null });
+  });
+
+  it("возврат денег за заказ с баллами возвращает и баллы; по счёту баллы не списываются", async () => {
+    const t = withDocs(setup());
+    const box = cashbox(t);
+    await adjust(t, 300);
+    const { invId } = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 690 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 690 }));
+    box.states.set(invId, 100);
+    expect((await refundOrder(t.deps, invId)).status).toBe(200);
+    box.refundLabel = "finished";
+    await runBillingTick(t.deps);
+    expect(t.billing.get(1)!.balanceRub).toBe(300);
+    expect(t.ledger.at(-1)).toMatchObject({ kind: "order_refund", amountRub: 300, dedupeKey: `order_refund:${invId}` });
+
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const inv = await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 1, expectedRub: 990 } });
+    expect(inv.status).toBe(200);
+    expect((inv.json as { order: { pointsRub: number; amountRub: number } }).order).toMatchObject({ pointsRub: 0, amountRub: 990 });
+  });
+
+  it("возврат пополнения: сначала баллы с баланса; потратили — нельзя; касса отменила — баллы назад", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const { invId } = (await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1000 } })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 1000 }));
+    box.states.set(invId, 100);
+    await adjust(t, -100, "потратили");
+    const refused = await refundOrder(t.deps, invId);
+    expect(refused.status).toBe(409);
+    expect((refused.json as { message: string }).message).toMatch(/На балансе 900\s₽/);
+    expect(t.orders.get(invId)!.refundStatus).toBeNull();
+
+    await adjust(t, 100, "вернули");
+    expect((await refundOrder(t.deps, invId)).status).toBe(200);
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+    expect(t.orders.get(invId)!.pointsState).toBe("refund_hold");
+    box.refundLabel = "canceled";
+    await runBillingTick(t.deps);
+    expect(t.billing.get(1)!.balanceRub).toBe(1000);
+    expect(t.orders.get(invId)).toMatchObject({ refundStatus: "canceled", pointsState: "credited" });
+
+    box.refundLabel = "finished";
+    expect((await refundOrder(t.deps, invId)).status).toBe(200);
+    await runBillingTick(t.deps);
+    expect(t.orders.get(invId)).toMatchObject({ status: "refunded", pointsState: "refunded" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+  });
+
+  it("деньги за пополнение вернули в кабинете кассы — списываем, сколько есть, недостачу — владельцу", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const { invId } = (await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1000 } })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 1000 }));
+    await adjust(t, -700, "потратили");
+    box.states.set(invId, 60);
+    await reconcileOne(t.deps, invId);
+    expect(t.orders.get(invId)).toMatchObject({ status: "refunded", pointsState: "refunded" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+    expect(t.owner.at(-1)).toMatch(/не хватило 700\s₽/);
+  });
+
+  it("пополнение по счёту: баллы — когда root отметит оплату; в УПД — предоплата", async () => {
+    const t = withDocs(setup());
+    expect((await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 5000, method: "invoice" } })).status).toBe(400);
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const r = await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 5000, method: "invoice" } });
+    expect(r.json).toMatchObject({ method: "invoice", existing: false, order: { kind: "topup", method: "invoice", amountRub: 5000 } });
+    const again = await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 5000, method: "invoice" } });
+    expect(again.json).toMatchObject({ existing: true });
+    const id = (r.json as { order: { id: number } }).order.id;
+    expect((await markInvoicePaid(t.deps, id, { userId: 9 })).status).toBe(200);
+    expect(t.billing.get(1)!.balanceRub).toBe(5000);
+    await flush();
+    const doc = await ensureClosingDocument(t.deps, t.orders.get(id)!);
+    expect(JSON.parse(doc!.lines)[0].title).toMatch(/Предоплата за доступ к сервису TasksFlow: пополнение баланса/);
+    expect(doc!.totalRub).toBe(5000);
+  });
+});
+
+describe("баллы и скидки: граничные случаи", () => {
+  const adjust = (t: ReturnType<typeof setup>, amountRub: number) => adjustBalance(t.deps, 1, { amountRub, reason: "бонус" }, { userId: 9 });
+  const placeBalanceOrder = (t: ReturnType<typeof setup>, points: number) =>
+    t.store.placeOrder(
+      { companyId: 1, userId: 5, email: null, plan: "team", months: 1, amountRub: 0, description: "x", isTest: false, recurringConsent: false, recurringChargeOf: null, createdAt: NOW, paymentMethod: "balance", pointsRub: points },
+      null,
+    );
+
+  it("двойной клик «Оплатить баллами»: второй заказ не забирает баллы первого, ещё не зачтённого", async () => {
+    const t = setup();
+    await adjust(t, 990);
+    // Первый запрос создал заказ «баллами», но ещё не успел его зачесть.
+    expect((await placeBalanceOrder(t, 990)).ok).toBe(true);
+    const second = await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 0 });
+    expect(second.status).toBe(409);
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+  });
+
+  it("заказ «баллами», который не успели зачесть, через 3 дня истекает — баллы назад", async () => {
+    const t = setup();
+    await adjust(t, 990);
+    const placed = await placeBalanceOrder(t, 990);
+    t.clock.now = NOW + 4 * DAY;
+    await runBillingTick(t.deps);
+    expect(t.orders.get(placed.ok ? placed.order.id : 0)).toMatchObject({ status: "expired", pointsState: "released" });
+    expect(t.billing.get(1)!.balanceRub).toBe(990);
+  });
+
+  it("пополнение не забирает баллы, которые держит открытая оплата тарифа", async () => {
+    const t = setup();
+    await adjust(t, 500);
+    const plan = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number };
+    expect((await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1000 } })).status).toBe(200);
+    expect(t.orders.get(plan.invId)!.pointsState).toBe("held");
+    await handleResult(t.deps, resultFor({ id: plan.invId, amountRub: 490 }));
+    expect(t.orders.get(plan.invId)).toMatchObject({ status: "paid", pointsState: "spent" });
+  });
+
+  it("счёт на пополнение и счёт за тариф друг друга не отменяют", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const plan = await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 1, expectedRub: 990 } });
+    const topup = await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 5000, method: "invoice" } });
+    const planId = (plan.json as { order: { id: number } }).order.id;
+    const topupId = (topup.json as { order: { id: number } }).order.id;
+    await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 7000, method: "invoice" } });
+    expect(t.orders.get(planId)!.status).toBe("pending");
+    expect(t.orders.get(topupId)!.status).toBe("cancelled");
+    await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 12, expectedRub: 9900 } });
+    expect(t.orders.get(planId)!.status).toBe("cancelled");
+    expect(Array.from(t.orders.values()).filter((o) => o.orderKind === "topup" && o.status === "pending")).toHaveLength(1);
+  });
+
+  it("две постоянные скидки: обе остаются, действует выгоднейшая; возврат снимает только свою", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    await addPromo(t, { code: "PCT", value: 20, lifetime: true });
+    await addPromo(t, { code: "FIX", kind: "fixed", value: 300, lifetime: true });
+    const a = (await checkout(t.deps, { plan: "team", months: 12, promoCode: "PCT", expectedRub: 7920 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: a.invId, amountRub: 7920 }));
+    // На месяц −300 ₽ выгоднее −20 %: код применяется и закрепляется второй скидкой.
+    const b = (await checkout(t.deps, { plan: "team", months: 1, promoCode: "FIX", expectedRub: 690 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: b.invId, amountRub: 690 }));
+    expect(t.discounts.map((d) => [d.code, d.revokedAt])).toEqual([
+      ["PCT", null],
+      ["FIX", null],
+    ]);
+    expect((await checkout(t.deps, { plan: "team", months: 12, expectedRub: 7920 })).status).toBe(200);
+    box.states.set(b.invId, 100);
+    await refundOrder(t.deps, b.invId);
+    box.refundLabel = "finished";
+    await runBillingTick(t.deps);
+    expect(t.discounts.map((d) => [d.code, d.revokedAt])).toEqual([
+      ["PCT", null],
+      ["FIX", NOW],
+    ]);
+    expect((await checkout(t.deps, { plan: "team", months: 1, expectedRub: 792 })).status).toBe(200);
+  });
+
+  it("тестовый режим кассы: пополнение без баллов, «постоянный» код не закрепляется", async () => {
+    const t = setup({ isTest: true });
+    const top = (await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1000 } })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: top.invId, amountRub: 1000 }, "t2"));
+    expect(t.orders.get(top.invId)!.status).toBe("paid");
+    expect(t.billing.get(1)?.balanceRub ?? 0).toBe(0);
+    await flush();
+    expect(t.notices.at(-1)!.notice.title).toBe("Тестовое пополнение прошло");
+    await addPromo(t, { code: "VIP", value: 10, lifetime: true });
+    const vip = (await checkout(t.deps, { plan: "team", months: 1, promoCode: "VIP", expectedRub: 891 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: vip.invId, amountRub: 891 }, "t2"));
+    expect(t.discounts).toEqual([]);
+  });
+
+  it("тестовый режим кассы: баллы на оплату картой не списываются", async () => {
+    const t = setup({ isTest: true });
+    await adjust(t, 500);
+    expect((await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).status).toBe(409);
+    const r = await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 990 });
+    expect(r.status).toBe(200);
+    expect(t.orders.get((r.json as { invId: number }).invId)).toMatchObject({ pointsRub: 0, pointsState: null });
+    expect(t.billing.get(1)!.balanceRub).toBe(500);
+  });
+
+  it("новому заказу не хватило баллов — брошенный заказ остаётся с баллами", async () => {
+    const t = setup();
+    await adjust(t, 500);
+    const a = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 490 })).json as { invId: number };
+    const b = await t.store.placeOrder(
+      { companyId: 1, userId: 5, email: null, plan: "team", months: 12, amountRub: 9300, description: "x", isTest: false, recurringConsent: false, recurringChargeOf: null, createdAt: NOW, pointsRub: 600 },
+      null,
+    );
+    expect(b).toEqual({ ok: false, reason: "balance" });
+    expect(t.orders.get(a.invId)!.pointsState).toBe("held");
+    expect(t.ledger.map((r) => r.kind)).toEqual(["adjust", "order_spend"]);
+  });
+
+  it("повтор «неуверенного» возврата пополнения не возвращает баллы, если касса снова не ответила", async () => {
+    const t = setup();
+    const box = cashbox(t);
+    const { invId } = (await createTopup(t.deps, { companyId: 1, user: admin, body: { amountRub: 1000 } })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: invId, amountRub: 1000 }));
+    box.states.set(invId, 100);
+    box.refund = new Error("timeout");
+    expect((await refundOrder(t.deps, invId)).status).toBe(202);
+    expect(t.orders.get(invId)).toMatchObject({ refundStatus: "uncertain", pointsState: "refund_hold" });
+    box.states.delete(invId);
+    expect((await refundOrder(t.deps, invId, { force: true })).status).toBe(502);
+    expect(t.orders.get(invId)).toMatchObject({ refundStatus: "uncertain", pointsState: "refund_hold" });
+    expect(t.billing.get(1)!.balanceRub).toBe(0);
+  });
+
+  it("отмена оплаты баллами прервалась — тик доводит её", async () => {
+    const t = setup();
+    await adjust(t, 990);
+    const r = (await checkout(t.deps, { plan: "team", months: 1, usePoints: true, expectedRub: 0 })).json as { invId: number };
+    const finish = t.store.finishRefund;
+    t.store.finishRefund = async () => {
+      throw new Error("deadlock");
+    };
+    await expect(refundOrder(t.deps, r.invId)).rejects.toThrow("deadlock");
+    expect(t.orders.get(r.invId)!.refundStatus).toBe("pending");
+    t.store.finishRefund = finish;
+    await runBillingTick(t.deps);
+    expect(t.orders.get(r.invId)).toMatchObject({ status: "refunded", pointsState: "returned" });
+    expect(t.billing.get(1)!.balanceRub).toBe(990);
+  });
+
+  it("новый счёт не выставился — прежний не отменён", async () => {
+    const t = withDocs(setup());
+    await saveCompanyRequisites(t.deps, { companyId: 1, body: BUYER });
+    const first = (await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 1, expectedRub: 990 } })).json as { order: { id: number } };
+    const place = t.store.placeOrder;
+    t.store.placeOrder = async () => ({ ok: false, reason: "gone" });
+    expect((await createInvoice(t.deps, { companyId: 1, user: admin, body: { plan: "team", months: 12, expectedRub: 9900 } })).status).toBe(400);
+    expect(t.orders.get(first.order.id)!.status).toBe("pending");
+    t.store.placeOrder = place;
+  });
+
+  it("код, который уже действует постоянной скидкой: правило — из снимка, даже если код потом выключили", async () => {
+    const t = setup();
+    await addPromo(t, { code: "VIP", value: 10, lifetime: true });
+    const vip = (await checkout(t.deps, { plan: "team", months: 1, promoCode: "VIP", expectedRub: 891 })).json as { invId: number };
+    await handleResult(t.deps, resultFor({ id: vip.invId, amountRub: 891 }));
+    await t.store.updatePromo(1, { active: false }, NOW);
+    expect(await quotePromoFor(t, "vip")).toMatchObject({ ok: true, code: "VIP", value: 10, lifetime: true });
+  });
+});
+
+describe("реквизиты по ИНН (DaData)", () => {
+  it("организация и ИП: название с кавычками-ёлочками, КПП, руководитель; ликвидирована — предупреждение", () => {
+    const org = mapParty("7707083893", {
+      value: 'ПАО "СБЕРБАНК"',
+      data: {
+        type: "LEGAL",
+        inn: "7707083893",
+        kpp: "773601001",
+        ogrn: "1027700132195",
+        name: { short_with_opf: 'ПАО "СБЕРБАНК"' },
+        management: { name: "Греф Герман Оскарович", post: "ПРЕЗИДЕНТ, ПРЕДСЕДАТЕЛЬ ПРАВЛЕНИЯ" },
+        address: { value: "г Москва, ул Вавилова, д 19", unrestricted_value: "117312, г Москва, ул Вавилова, д 19" },
+        state: { status: "ACTIVE" },
+      },
+    });
+    expect(org).toEqual({
+      ok: true,
+      requisites: {
+        kind: "org",
+        name: "ПАО «СБЕРБАНК»",
+        inn: "7707083893",
+        kpp: "773601001",
+        ogrn: "1027700132195",
+        address: "117312, г Москва, ул Вавилова, д 19",
+        headPost: "Президент, председатель правления",
+        headName: "Греф Герман Оскарович",
+      },
+      warning: null,
+    });
+    expect(requisitesSchema.safeParse({ ...(org as { requisites: object }).requisites }).success).toBe(true);
+    const ip = mapParty("500100732259", {
+      value: "ИП Иванов Иван Иванович",
+      data: { type: "INDIVIDUAL", ogrn: "304500116000157", fio: { surname: "Иванов", name: "Иван", patronymic: "Иванович" }, address: { value: "г Москва" }, state: { status: "LIQUIDATED" } },
+    });
+    expect(ip).toMatchObject({ ok: true, requisites: { kind: "ip", kpp: null, headPost: null, headName: "Иванов Иван Иванович" }, warning: expect.stringMatching(/ликвидирована/) });
+  });
+
+  it("запрос: ключ в заголовке Token, ИНН проверяется до запроса, ошибки — понятным текстом", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(http(200, JSON.stringify({ suggestions: [{ value: "ООО Ромашка", data: { type: "LEGAL", kpp: "773601001", name: {} } }] })));
+    expect(await lookupInn("key", "7707083894", fetchMock as never)).toMatchObject({ ok: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await lookupInn("key", "7707 083 893", fetchMock as never)).toMatchObject({ ok: true, requisites: { name: "ООО Ромашка", inn: "7707083893" } });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(DADATA_PARTY_URL);
+    expect(init.headers.Authorization).toBe("Token key");
+    expect(JSON.parse(init.body)).toMatchObject({ query: "7707083893", count: 1 });
+    fetchMock.mockResolvedValueOnce(http(200, JSON.stringify({ suggestions: [] })));
+    expect(await lookupInn("key", "7707083893", fetchMock as never)).toMatchObject({ ok: false, message: expect.stringMatching(/ничего не нашли/) });
+    fetchMock.mockResolvedValueOnce(http(403, "{}"));
+    expect(await lookupInn("key", "7707083893", fetchMock as never)).toMatchObject({ ok: false, message: expect.stringMatching(/недоступно/) });
+    fetchMock.mockRejectedValueOnce(new Error("timeout"));
+    expect(await lookupInn("key", "7707083893", fetchMock as never)).toMatchObject({ ok: false });
+  });
+});
+
+describe("маршруты: баланс, акции, постоянные скидки, ИНН", () => {
+  async function buildApp(t: ReturnType<typeof setup>, role: "admin" | "root" = "admin") {
+    const { registerBillingRoutes, __resetCheckoutLimit } = await import("../server/billing-routes");
+    __resetCheckoutLimit();
+    storageMock.getUserById.mockResolvedValue({ id: 5, email: "boss@cafe.ru", companyId: 1, isAdmin: true, isRoot: role === "root" });
+    const app = express();
+    app.use(express.json());
+    app.use((req: any, _res, next) => {
+      req.session = { userId: 5 };
+      next();
+    });
+    const requireAdmin = (_req: any, _res: any, next: any) => next();
+    const requireRoot = (_req: any, res: any, next: any) => (role === "root" ? next() : res.status(403).json({ message: "Доступ только для root" }));
+    registerBillingRoutes(app, { requireAdmin, requireRoot, getCompanyIdFromReq: async () => 1, billing: t.deps });
+    return app;
+  }
+
+  it("ИНН: без ключа — 503, с ключом — реквизиты; страница знает, есть ли кнопка", async () => {
+    const t = setup();
+    const app = await buildApp(t);
+    expect((await request(app).post("/api/billing/requisites/lookup").send({ inn: "7707083893" })).status).toBe(503);
+    expect((await request(app).get("/api/billing")).body.innLookup).toBe(false);
+    t.deps.dadata = () => "key";
+    t.fetchMock.mockResolvedValue(http(200, JSON.stringify({ suggestions: [{ value: "ООО Ромашка", data: { type: "LEGAL", kpp: "773601001" } }] })));
+    const res = await request(app).post("/api/billing/requisites/lookup").send({ inn: "7707083893" });
+    expect(res.body).toMatchObject({ ok: true, requisites: { kind: "org", name: "ООО Ромашка" } });
+    expect((await request(app).get("/api/billing")).body.innLookup).toBe(true);
+  });
+
+  it("пополнение из приложения — нельзя; root-разделы — только root", async () => {
+    const t = setup();
+    const app = await buildApp(t);
+    expect((await request(app).post("/api/billing/topup").set("User-Agent", "Mozilla/5.0 TasksFlowApp/1.0.0").send({ amountRub: 1000 })).status).toBe(403);
+    expect((await request(app).post("/api/billing/topup").send({ amountRub: 1000 })).body).toMatchObject({ method: "card", amountRub: 1000 });
+    for (const [method, url] of [
+      ["get", "/api/root/billing/promotions"],
+      ["post", "/api/root/billing/promotions"],
+      ["get", "/api/root/billing/discounts"],
+      ["post", "/api/root/billing/discounts/1/revoke"],
+      ["get", "/api/root/billing/balances"],
+      ["get", "/api/root/billing/balances/1"],
+      ["post", "/api/root/billing/balances/1/adjust"],
+    ] as const) {
+      expect((await request(app)[method](url)).status).toBe(403);
+    }
+    const root = await buildApp(t, "root");
+    await request(root).post("/api/root/billing/promotions").send({ title: "Осень", percent: 15, startsAt: NOW - DAY, endsAt: NOW + DAY }).expect(200);
+    expect((await request(root).get("/api/root/billing/promotions")).body.promotions).toMatchObject([{ title: "Осень", percent: 15, active: true }]);
+    await request(root).post("/api/root/billing/balances/1/adjust").send({ amountRub: 700, reason: "бонус" }).expect(200);
+    expect((await request(root).get("/api/root/billing/balances")).body.balances).toMatchObject([{ companyId: 1, balanceRub: 700 }]);
+    expect((await request(root).get("/api/root/billing/balances/1")).body).toMatchObject({ balanceRub: 700, history: [{ kind: "adjust", amountRub: 700 }] });
+    expect((await request(root).get("/api/root/billing/balances/99")).status).toBe(404);
+    const page = (await request(app).get("/api/billing")).body;
+    expect(page).toMatchObject({ promotion: { percent: 15 }, balance: { amountRub: 700 }, lifetimeDiscounts: [] });
   });
 });

@@ -13,6 +13,9 @@ export type PromoApplied = {
   kind: PromoKind;
   value: number;
   label: string;
+  /** «Постоянная скидка»: после оплаты закрепится за компанией. */
+  lifetime: boolean;
+  durationMonths: number | null;
   baseRub: number;
   discountRub: number;
   amountRub: number;
@@ -83,6 +86,8 @@ export async function applyPromo(
       kind,
       value: rule!.value,
       label: promoLabel(kind, rule!.value),
+      lifetime: rule!.lifetime,
+      durationMonths: rule!.lifetime ? rule!.durationMonths : null,
       baseRub: input.baseRub,
       discountRub,
       amountRub: input.baseRub - discountRub,

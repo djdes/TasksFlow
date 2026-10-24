@@ -34,6 +34,19 @@ describe("SSR render", () => {
     expect(r.appHtml).toContain("Войти или зарегистрироваться");
   });
 
+  it("лендинг с акцией: цена со скидкой, зачёркнутая старая, плашка с датой по Москве", () => {
+    const promotion = { id: 1, title: "Осенняя акция", percent: 20, startsAt: 0, endsAt: Date.UTC(2026, 9, 31, 21) / 1000 };
+    const r = render("/", { featuredPosts: [], totalPosts: 0, prices: [{ plan: "team", months: 1, priceRub: 990 }], promotion }, ORIGIN);
+    const html = r.appHtml.replace(/<!-- -->/g, "");
+    expect(html).toMatch(/Осенняя акция: <b>−20 %<\/b> на все платные тарифы до 31 октября/);
+    expect(html).toMatch(/<s class="plan-old"[^>]*>990\s₽<\/s>792\s₽/);
+    expect(html).toContain("Сейчас акция: −20 % на все тарифы до 31 октября.");
+    // Без акции — обычная цена.
+    const plain = render("/", { featuredPosts: [], totalPosts: 0, prices: [{ plan: "team", months: 1, priceRub: 990 }] }, ORIGIN).appHtml;
+    expect(plain).not.toContain("plan-old");
+    expect(plain).toMatch(/plan-value">990\s₽/);
+  });
+
   it("блог-индекс → заголовок + breadcrumb JSON-LD", async () => {
     const data = await loadRouteData("blog-index", {});
     const r = render("/blog", data, ORIGIN);

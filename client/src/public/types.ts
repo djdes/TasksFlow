@@ -42,6 +42,8 @@ export interface LandingData {
   totalPosts: number;
   /** Цены тарифов (как на странице оплаты); нет — цены по умолчанию. */
   prices?: import("@shared/billing").PlanPrice[];
+  /** Действующая акция: скидка на все тарифы. */
+  promotion?: import("@shared/billing").PricePromotion | null;
 }
 
 export interface BlogIndexData {

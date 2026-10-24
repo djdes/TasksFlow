@@ -122,13 +122,23 @@ export type Receipt = { raw: string; encoded: string };
  * же строке (в её примере формы value — уже закодированная строка), поэтому
  * и в подпись, и в параметр идёт `encoded`. Форма и URLSearchParams
  * кодируют его ещё раз при отправке — касса снимает этот слой сама.
+ *
+ * Пополнение баланса — аванс: услуга ещё не выбрана, поэтому признак
+ * способа расчёта «аванс», предмет расчёта — «платёж» (ФФД).
  */
-export function buildReceipt(cfg: RobokassaConfig, item: { name: string; sumRub: number }): Receipt {
+export function buildReceipt(cfg: RobokassaConfig, item: { name: string; sumRub: number; advance?: boolean }): Receipt {
   const name = item.name.replace(/['()!*~]/g, "").slice(0, 128);
   const receipt = {
     ...(cfg.sno ? { sno: cfg.sno } : {}),
     items: [
-      { name, quantity: 1, sum: Number(formatOutSum(item.sumRub)), payment_method: "full_payment", payment_object: "service", tax: cfg.tax },
+      {
+        name,
+        quantity: 1,
+        sum: Number(formatOutSum(item.sumRub)),
+        payment_method: item.advance ? "advance" : "full_payment",
+        payment_object: item.advance ? "payment" : "service",
+        tax: cfg.tax,
+      },
     ],
   };
   const raw = JSON.stringify(receipt);
@@ -141,11 +151,11 @@ export function buildReceipt(cfg: RobokassaConfig, item: { name: string; sumRub:
  */
 export function buildPaymentParams(
   cfg: RobokassaConfig,
-  order: { id: number; amountRub: number; description: string; email: string | null; isTest: boolean; recurring: boolean },
+  order: { id: number; amountRub: number; description: string; email: string | null; isTest: boolean; recurring: boolean; advance?: boolean },
 ): Record<string, string> {
   const outSum = formatOutSum(order.amountRub);
   const invId = String(order.id);
-  const receipt = cfg.receipt ? buildReceipt(cfg, { name: order.description, sumRub: order.amountRub }) : null;
+  const receipt = cfg.receipt ? buildReceipt(cfg, { name: order.description, sumRub: order.amountRub, advance: order.advance }) : null;
   const base = [cfg.login, outSum, invId, ...(receipt ? [receipt.encoded] : []), password1(cfg, order.isTest)].join(":");
   const params: Record<string, string> = {
     MerchantLogin: cfg.login,

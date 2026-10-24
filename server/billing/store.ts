@@ -3,20 +3,26 @@
  * Таблицы создаёт script/_add-billing.ts. Пока миграции нет, цены —
  * по умолчанию, история пустая, а оплата честно говорит, что недоступна.
  */
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, max, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, max, ne, or, sql } from "drizzle-orm";
 import {
+  balanceTransactions,
   billingPrices,
   closingDocuments,
   companies,
   companyBilling,
+  companyDiscounts,
   companyRequisites,
   paymentConsents,
   paymentOrders,
+  pricePromotions,
   promoCodes,
+  type BalanceTransactionRow,
   type ClosingDocumentRow,
   type CompanyBillingRow,
+  type CompanyDiscountRow,
   type CompanyRequisitesRow,
   type PaymentOrderRow,
+  type PricePromotionRow,
   type PromoCodeRow,
 } from "@shared/schema";
 import {
@@ -26,9 +32,20 @@ import {
   type BillingStats,
   type CompanyRequisites,
   type PlanPrice,
+  type PricePromotion,
+  type RootBalance,
 } from "@shared/billing";
 import { db } from "../db";
 import { logger } from "../logger";
+import {
+  refundLedger,
+  releaseEntry,
+  settleLedger,
+  spendEntry,
+  topupRefundBackEntry,
+  topupRefundHoldEntry,
+  type LedgerEntry,
+} from "./ledger";
 
 export type NewOrder = {
   companyId: number;
@@ -48,9 +65,18 @@ export type NewOrder = {
   discountRub?: number;
   promoCode?: string | null;
   invoiceDueAt?: number | null;
+  /** По умолчанию plan. */
+  orderKind?: string;
+  promotionId?: number | null;
+  promotionPercent?: number | null;
+  promotionDiscountRub?: number;
+  discountSource?: string | null;
+  /** Баллы, которые заказ занимает (списываются при создании). */
+  pointsRub?: number;
 };
 
 export type NewPromoCode = Omit<PromoCodeRow, "id">;
+export type NewPromotion = Omit<PricePromotionRow, "id">;
 
 /**
  * Заказ с промокодом: лимиты проверяются в той же транзакции, что и вставка
@@ -58,9 +84,15 @@ export type NewPromoCode = Omit<PromoCodeRow, "id">;
  * заказы, неоплаченные счета и заказы, ждущие оплаты с reservedSince.
  */
 export type PromoReservation = { code: string; companyId: number; free: boolean; reservedSince: number };
-export type PromoReservationResult =
+export type PlaceOrderResult =
   | { ok: true; order: PaymentOrderRow }
-  | { ok: false; reason: "gone" | "exhausted" | "used" | "newClientsOnly" };
+  | { ok: false; reason: "gone" | "exhausted" | "used" | "newClientsOnly" | "balance" };
+export type PromotionListRow = PricePromotionRow & { paidOrders: number };
+export type CompanyDiscountListRow = CompanyDiscountRow & { companyName: string | null };
+/** Заказ с занятыми баллами, которые новый заказ может забрать: только оплата картой (окно кассы могли бросить). */
+const releasable = (companyId: number) =>
+  and(eq(paymentOrders.companyId, companyId), eq(paymentOrders.status, "pending"), eq(paymentOrders.pointsState, "held"), eq(paymentOrders.paymentMethod, "card"));
+export type LedgerResult = { ok: true; balanceRub: number } | { ok: false; reason: "insufficient" | "duplicate" };
 export type PromoCodeListRow = PromoCodeRow & { paidUses: number; companyName: string | null };
 export type NewClosingDocument = Omit<ClosingDocumentRow, "id">;
 
@@ -78,19 +110,28 @@ export type NewConsent = {
 
 export type CompanyPlanRow = { id: number; name: string; plan: string | null; planUntil: number | null };
 
-export type SettleContext = { order: PaymentOrderRow; company: CompanyPlanRow; billing: CompanyBillingRow | null };
+/** promo — правило кода заказа (если скидка по введённому коду): нужно, чтобы закрепить постоянную скидку. */
+export type SettleContext = { order: PaymentOrderRow; company: CompanyPlanRow; billing: CompanyBillingRow | null; promo: PromoCodeRow | null };
+
+/** Постоянная скидка, которую даёт оплата с «постоянным» кодом. */
+export type LifetimeBind = Pick<CompanyDiscountRow, "promoCodeId" | "code" | "kind" | "value" | "expiresAt">;
 
 /** Что записать по оплаченному заказу (решает server/billing/service.ts). */
 export type SettlePatch = {
   /** null — тариф не трогать (например, он подключён бессрочно). */
   plan: { id: string; until: number } | null;
   /** null — автопродление не трогать. */
-  billing: Partial<Omit<CompanyBillingRow, "companyId">> | null;
+  billing: Partial<Omit<CompanyBillingRow, "companyId" | "balanceRub">> | null;
+  /** Закрепить постоянную скидку компании. */
+  lifetime?: LifetimeBind | null;
 };
+
+/** Баллы при оплате: сколько начислено или списано и не было ли недостачи. */
+export type SettlePoints = { postedRub: number; short: boolean };
 
 export type SettleResult =
   | { claimed: false; order: PaymentOrderRow | null }
-  | { claimed: true; order: PaymentOrderRow; context: SettleContext; patch: SettlePatch };
+  | { claimed: true; order: PaymentOrderRow; context: SettleContext; patch: SettlePatch; points: SettlePoints };
 
 export type DueRecurring = CompanyBillingRow & { companyName: string; plan: string | null; planUntil: number | null };
 
@@ -107,14 +148,29 @@ export type ExpiringPlan = {
   expiredNoticeFor: number | null;
 };
 
-/** Что вернули при возврате: тариф и срок до оплаты (если оплата была последней). */
-export type RefundFinish = { order: PaymentOrderRow; rolledBack: { plan: string | null; until: number | null } | null };
+/**
+ * Что вернули при возврате: тариф и срок до оплаты (если оплата была
+ * последней) и баллы (+ вернулись за заказ, − списаны за пополнение;
+ * short — сколько пополнения уже потрачено и не списалось).
+ */
+export type RefundFinish = {
+  order: PaymentOrderRow;
+  rolledBack: { plan: string | null; until: number | null } | null;
+  points: { postedRub: number; short: number };
+  /** Снята постоянная скидка, которую дала эта оплата. */
+  discountRevoked: boolean;
+};
 
 export interface BillingStore {
   getPrices(): Promise<PlanPrice[]>;
   setPrices(prices: PlanPrice[], now: number): Promise<void>;
   createOrder(order: NewOrder): Promise<PaymentOrderRow>;
-  createOrderWithPromo(order: NewOrder, reservation: PromoReservation): Promise<PromoReservationResult>;
+  /**
+   * Заказ из кабинета — одной транзакцией: резерв промокода (если есть);
+   * если заказ платит баллами — баллы брошенных оплат картой назад и баллы
+   * этого заказа списать (не хватает — reason "balance", заказа нет).
+   */
+  placeOrder(order: NewOrder, reservation: PromoReservation | null): Promise<PlaceOrderResult>;
   getOrder(id: number): Promise<PaymentOrderRow | null>;
   listOrders(companyId: number, limit: number): Promise<PaymentOrderRow[]>;
   listRecentOrders(limit: number): Promise<Array<PaymentOrderRow & { companyName: string | null }>>;
@@ -123,9 +179,9 @@ export interface BillingStore {
    * уведомление по уже оплаченному (или возвращённому) заказу вернёт claimed=false.
    */
   settle(orderId: number, raw: string, now: number, decide: (ctx: SettleContext) => SettlePatch): Promise<SettleResult>;
-  /** Не принятое кассой автосписание — сразу «не оплачен». */
-  expireOrder(id: number): Promise<void>;
-  expirePending(createdBefore: number): Promise<number>;
+  /** Не принятое кассой автосписание или отменённая операция — «не оплачен»; баллы заказа — назад. */
+  expireOrder(id: number, now: number): Promise<void>;
+  expirePending(createdBefore: number, now: number): Promise<number>;
   addConsent(consent: NewConsent): Promise<void>;
   getCompanyBilling(companyId: number): Promise<CompanyBillingRow | null>;
   /** Выключить автопродление. true — было включено. */
@@ -200,6 +256,34 @@ export interface BillingStore {
   insertClosingDocument(doc: NewClosingDocument): Promise<ClosingDocumentRow>;
   setClosingBuyer(orderId: number, buyer: string): Promise<void>;
   voidClosingDocument(orderId: number, now: number): Promise<void>;
+
+  /** Включённые акции, которые ещё не кончились (выбор — pickPromotion). */
+  activePromotions(): Promise<PricePromotion[]>;
+  listPromotions(): Promise<PromotionListRow[]>;
+  getPromotion(id: number): Promise<PromotionListRow | null>;
+  createPromotion(row: NewPromotion): Promise<PricePromotionRow>;
+  updatePromotion(id: number, patch: Partial<Pick<PricePromotionRow, "active" | "endsAt" | "note">>, now: number): Promise<PricePromotionRow | null>;
+
+  /** Постоянные скидки компании — все, и снятые (что действует, решает сервис). */
+  getCompanyDiscounts(companyId: number): Promise<CompanyDiscountRow[]>;
+  listCompanyDiscounts(): Promise<CompanyDiscountListRow[]>;
+  /** Снять постоянную скидку по id строки. null — её нет или уже снята. */
+  revokeCompanyDiscount(id: number, now: number, by: number | null): Promise<CompanyDiscountRow | null>;
+
+  getBalance(companyId: number): Promise<number>;
+  /** Баллы, которые держат брошенные оплаты картой (их освободит новый заказ с баллами). */
+  getPointsHeld(companyId: number): Promise<number>;
+  listBalanceEntries(companyId: number, limit: number): Promise<BalanceTransactionRow[]>;
+  listBalances(limit: number): Promise<RootBalance[]>;
+  /** Провести операцию баланса (корректировка root): в минус не уходит. */
+  postLedger(entry: LedgerEntry, now: number): Promise<LedgerResult>;
+  /**
+   * Возврат пополнения: сначала сумма списывается с баланса (её уже могли
+   * потратить — тогда возврат нельзя). reason state — не пополнение или уже возвращается.
+   */
+  holdTopupRefund(orderId: number, now: number): Promise<{ ok: true } | { ok: false; reason: "state" | "balance"; balanceRub?: number }>;
+  /** Касса возврат не сделала — сумма снова на балансе. */
+  releaseTopupRefund(orderId: number, now: number): Promise<void>;
 }
 
 let warnedMissingTable = false;
@@ -237,12 +321,63 @@ function insertId(result: unknown): number {
   return Number((header as { insertId?: number }).insertId);
 }
 
-/** Цены живут несколько секунд в памяти: их читают лендинг и каждая страница оплаты. */
+/** Цены и акции живут несколько секунд в памяти: их читают лендинг и каждая страница оплаты. */
 const PRICES_TTL_MS = 30_000;
 let pricesCache: { at: number; prices: PlanPrice[] } | null = null;
+let promotionsCache: { at: number; list: PricePromotion[] } | null = null;
 
 export function resetPricesCache(): void {
   pricesCache = null;
+  promotionsCache = null;
+}
+
+/** Использование промокода: заказ с постоянной скидкой код не тратит. */
+const codeUse = () => or(isNull(paymentOrders.discountSource), ne(paymentOrders.discountSource, "lifetime"));
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Строка баланса компании под блокировкой (создаётся, если её нет): остаток. */
+async function lockBalance(tx: Tx, companyId: number, now: number): Promise<number> {
+  await tx.insert(companyBilling).values({ companyId, updatedAt: now }).onDuplicateKeyUpdate({ set: { companyId } });
+  const [row] = await tx.select({ balance: companyBilling.balanceRub }).from(companyBilling).where(eq(companyBilling.companyId, companyId)).for("update");
+  return row?.balance ?? 0;
+}
+
+/**
+ * Провести операцию баланса в транзакции: под блокировкой строки баланса,
+ * без минуса, с ключом повтора. Все изменения balance_rub — только здесь.
+ */
+async function post(tx: Tx, e: LedgerEntry, now: number): Promise<LedgerResult> {
+  const balance = await lockBalance(tx, e.companyId, now);
+  if (e.dedupeKey) {
+    const [dup] = await tx.select({ id: balanceTransactions.id }).from(balanceTransactions).where(eq(balanceTransactions.dedupeKey, e.dedupeKey)).limit(1);
+    if (dup) return { ok: false, reason: "duplicate" };
+  }
+  const after = balance + e.amountRub;
+  if (after < 0) return { ok: false, reason: "insufficient" };
+  await tx.update(companyBilling).set({ balanceRub: after, updatedAt: now }).where(eq(companyBilling.companyId, e.companyId));
+  await tx.insert(balanceTransactions).values({ ...e, balanceAfter: after, createdAt: now });
+  return { ok: true, balanceRub: after };
+}
+
+/** Баллы заказа (строка уже под блокировкой) — назад на баланс, заказ «released». */
+async function releaseHeld(tx: Tx, order: PaymentOrderRow, now: number): Promise<void> {
+  const back = releaseEntry(order);
+  if (!back) return;
+  // duplicate — баллы уже вернули раньше: состояние всё равно «released».
+  await post(tx, back, now);
+  await tx.update(paymentOrders).set({ pointsState: "released" }).where(eq(paymentOrders.id, order.id));
+}
+
+/** Заказ не оплачен: статус и баллы назад — одной транзакцией. */
+async function expireOne(id: number, status: "expired" | "cancelled", now: number): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [order] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, id)).for("update");
+    if (!order || order.status !== "pending") return false;
+    await tx.update(paymentOrders).set({ status }).where(eq(paymentOrders.id, id));
+    await releaseHeld(tx, order, now);
+    return true;
+  });
 }
 
 export const billingStore: BillingStore = {
@@ -275,36 +410,63 @@ export const billingStore: BillingStore = {
     return row;
   },
 
-  async createOrderWithPromo(order, r) {
+  async placeOrder(order, r) {
     return db.transaction(async (tx) => {
-      const [promo] = await tx.select().from(promoCodes).where(eq(promoCodes.code, r.code)).for("update");
-      if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
-      const held = or(
-        eq(paymentOrders.status, "paid"),
-        and(eq(paymentOrders.status, "pending"), or(eq(paymentOrders.paymentMethod, "invoice"), gte(paymentOrders.createdAt, r.reservedSince))),
-      );
-      if (promo.maxUses !== null) {
-        const [row] = await tx.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, r.code), held));
-        if (Number(row?.n ?? 0) >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
-      }
-      // Один код — одна оплата компании. Код на всю сумму засчитывается
-      // сразу, поэтому ждущий заказ с ним — это параллельный запрос.
-      const [mine] = await tx
-        .select({ id: paymentOrders.id })
-        .from(paymentOrders)
-        .where(and(eq(paymentOrders.promoCode, r.code), eq(paymentOrders.companyId, r.companyId), r.free ? held : eq(paymentOrders.status, "paid")))
-        .limit(1);
-      if (mine) return { ok: false as const, reason: "used" as const };
-      if (promo.newClientsOnly) {
-        const [paid] = await tx
+      if (r) {
+        const [promo] = await tx.select().from(promoCodes).where(eq(promoCodes.code, r.code)).for("update");
+        if (!promo || !promo.active) return { ok: false as const, reason: "gone" as const };
+        const held = or(
+          eq(paymentOrders.status, "paid"),
+          and(eq(paymentOrders.status, "pending"), or(eq(paymentOrders.paymentMethod, "invoice"), gte(paymentOrders.createdAt, r.reservedSince))),
+        );
+        if (promo.maxUses !== null) {
+          const [row] = await tx.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, r.code), codeUse(), held));
+          if (Number(row?.n ?? 0) >= promo.maxUses) return { ok: false as const, reason: "exhausted" as const };
+        }
+        // Один код — одна оплата компании. Код на всю сумму засчитывается
+        // сразу, поэтому ждущий заказ с ним — это параллельный запрос.
+        const [mine] = await tx
           .select({ id: paymentOrders.id })
           .from(paymentOrders)
-          .where(and(eq(paymentOrders.companyId, r.companyId), inArray(paymentOrders.status, ["paid", "refunded"])))
+          .where(and(eq(paymentOrders.promoCode, r.code), codeUse(), eq(paymentOrders.companyId, r.companyId), r.free ? held : eq(paymentOrders.status, "paid")))
           .limit(1);
-        if (paid) return { ok: false as const, reason: "newClientsOnly" as const };
+        if (mine) return { ok: false as const, reason: "used" as const };
+        if (promo.newClientsOnly) {
+          const [paid] = await tx
+            .select({ id: paymentOrders.id })
+            .from(paymentOrders)
+            .where(and(eq(paymentOrders.companyId, r.companyId), eq(paymentOrders.orderKind, "plan"), inArray(paymentOrders.status, ["paid", "refunded"])))
+            .limit(1);
+          if (paid) return { ok: false as const, reason: "newClientsOnly" as const };
+        }
       }
-      const result = await tx.insert(paymentOrders).values({ ...order, status: "pending" });
-      const [row] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, insertId(result)));
+      const points = Math.max(0, order.pointsRub ?? 0);
+      // Новый заказ с баллами заменяет брошенную оплату картой — её баллы
+      // назад. Сам заказ ждёт дальше: если его всё же оплатят, баллы спишутся
+      // снова. Заказы без баллов (пополнение, счёт) чужие баллы не трогают.
+      // Блокировки — как в settle: сначала строки заказов (по ключу, без
+      // блокировки диапазона — она давала бы взаимоблокировки на вставке),
+      // потом строка баланса.
+      const candidates = points > 0 ? await tx.select({ id: paymentOrders.id }).from(paymentOrders).where(releasable(order.companyId)) : [];
+      const abandoned: PaymentOrderRow[] = [];
+      for (const { id: oldId } of candidates) {
+        const [old] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, oldId)).for("update");
+        if (old && old.status === "pending" && old.pointsState === "held") abandoned.push(old);
+      }
+      if (points > 0) {
+        // Хватит ли с баллами брошенных заказов — проверяем до того, как их
+        // трогать: не хватит — брошенный заказ остаётся как был.
+        const available = (await lockBalance(tx, order.companyId, order.createdAt)) + abandoned.reduce((sum, o) => sum + o.pointsRub, 0);
+        if (available < points) return { ok: false as const, reason: "balance" as const };
+      }
+      for (const old of abandoned) await releaseHeld(tx, old, order.createdAt);
+      const result = await tx.insert(paymentOrders).values({ ...order, pointsRub: points, pointsState: points > 0 ? "held" : null, status: "pending" });
+      const id = insertId(result);
+      if (points > 0) {
+        const posted = await post(tx, spendEntry({ id, companyId: order.companyId, plan: order.plan, months: order.months, pointsRub: points }), order.createdAt);
+        if (!posted.ok) throw new Error(`points were not held: ${posted.reason}`);
+      }
+      const [row] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, id));
       if (!row) throw new Error("payment order was not created");
       return { ok: true as const, order: row };
     });
@@ -345,7 +507,10 @@ export const billingStore: BillingStore = {
         .for("update");
       if (!company) return { claimed: false as const, order };
       const [billing] = await tx.select().from(companyBilling).where(eq(companyBilling.companyId, company.id)).for("update");
-      const context: SettleContext = { order, company, billing: billing ?? null };
+      // Правило кода — чтобы закрепить постоянную скидку (если код такой).
+      const [promo] =
+        order.promoCode && order.discountSource !== "lifetime" ? await tx.select().from(promoCodes).where(eq(promoCodes.code, order.promoCode)) : [];
+      const context: SettleContext = { order, company, billing: billing ?? null, promo: promo ?? null };
       const patch = decide(context);
 
       // "" — тарифа не было: отличаем от NULL у оплат до этой колонки.
@@ -363,25 +528,42 @@ export const billingStore: BillingStore = {
           .values({ companyId: company.id, ...patch.billing, updatedAt: now })
           .onDuplicateKeyUpdate({ set: { ...patch.billing, updatedAt: now } });
       }
-      const paid: PaymentOrderRow = { ...order, status: "paid", paidAt: now, planUntilAfter: patch.plan?.until ?? null, ...before };
-      return { claimed: true as const, order: paid, context, patch };
+      if (patch.lifetime) {
+        // По строке на код: прежние постоянные скидки остаются, действует выгоднейшая.
+        const bind = { ...patch.lifetime, orderId: order.id, boundAt: now, revokedAt: null, revokedBy: null, updatedAt: now };
+        await tx.insert(companyDiscounts).values({ companyId: company.id, ...bind }).onDuplicateKeyUpdate({ set: bind });
+      }
+      // Баллы: пополнение — начислить; заказ, чьи баллы уже вернулись, — списать снова.
+      const ledger = settleLedger(order, order.pointsState === "released" ? await lockBalance(tx, company.id, now) : 0);
+      let postedRub = 0;
+      if (ledger.entry) {
+        const posted = await post(tx, ledger.entry, now);
+        if (posted.ok) postedRub = ledger.entry.amountRub;
+      }
+      if (ledger.pointsState) await tx.update(paymentOrders).set({ pointsState: ledger.pointsState }).where(eq(paymentOrders.id, order.id));
+      const paid: PaymentOrderRow = { ...order, status: "paid", paidAt: now, planUntilAfter: patch.plan?.until ?? null, ...before, pointsState: ledger.pointsState ?? order.pointsState };
+      return { claimed: true as const, order: paid, context, patch, points: { postedRub, short: ledger.short } };
     });
   },
 
-  async expireOrder(id) {
-    await db.update(paymentOrders).set({ status: "expired" }).where(and(eq(paymentOrders.id, id), eq(paymentOrders.status, "pending")));
+  async expireOrder(id, now) {
+    await expireOne(id, "expired", now);
   },
 
-  async expirePending(createdBefore) {
-    return guard(0, async () =>
-      affected(
-        await db
-          .update(paymentOrders)
-          .set({ status: "expired" })
-          // Счёт живёт дольше кассовой ссылки: его закрывает root или новый счёт.
-          .where(and(eq(paymentOrders.status, "pending"), eq(paymentOrders.paymentMethod, "card"), lte(paymentOrders.createdAt, createdBefore))),
-      ),
-    );
+  async expirePending(createdBefore, now) {
+    return guard(0, async () => {
+      // Счёт живёт дольше кассовой ссылки: его закрывает root или новый счёт.
+      // Заказ «баллами» ждёт, только если сбой случился между заказом и
+      // зачётом, — его баллы тоже должны вернуться.
+      const stale = and(eq(paymentOrders.status, "pending"), inArray(paymentOrders.paymentMethod, ["card", "balance"]), lte(paymentOrders.createdAt, createdBefore));
+      // С баллами — по одному: баллы назад в той же транзакции.
+      const holding = await db.select({ id: paymentOrders.id }).from(paymentOrders).where(and(stale, eq(paymentOrders.pointsState, "held"))).limit(500);
+      let n = 0;
+      for (const { id } of holding) if (await expireOne(id, "expired", now)) n++;
+      // Остальные — одним запросом; заказы с занятыми баллами — только через expireOne, иначе баллы не вернутся.
+      const withoutPoints = or(isNull(paymentOrders.pointsState), ne(paymentOrders.pointsState, "held"));
+      return n + affected(await db.update(paymentOrders).set({ status: "expired" }).where(and(stale, withoutPoints)));
+    });
   },
 
   async addConsent(consent) {
@@ -554,8 +736,26 @@ export const billingStore: BillingStore = {
         rolledBack = target;
         await tx.update(companies).set({ plan: target.plan, planUntil: target.until }).where(eq(companies.id, order.companyId));
       }
-      await tx.update(paymentOrders).set({ status: "refunded", refundStatus: "finished", refundedAt: now }).where(eq(paymentOrders.id, id));
-      return { order: { ...order, status: "refunded", refundStatus: "finished", refundedAt: now }, rolledBack };
+      // Баллы: за заказ — назад; пополнение — списать, если ещё не списано.
+      const ledger = refundLedger(order, order.orderKind === "topup" && order.pointsState === "credited" ? await lockBalance(tx, order.companyId, now) : 0);
+      let postedRub = 0;
+      if (ledger.entry) {
+        const posted = await post(tx, ledger.entry, now);
+        if (posted.ok) postedRub = ledger.entry.amountRub;
+      }
+      const pointsState = ledger.pointsState ?? order.pointsState;
+      await tx.update(paymentOrders).set({ status: "refunded", refundStatus: "finished", refundedAt: now, pointsState }).where(eq(paymentOrders.id, id));
+      // Постоянную скидку дала эта оплата — деньги вернули, скидки нет (другие остаются).
+      const revoked = await tx
+        .update(companyDiscounts)
+        .set({ revokedAt: now, updatedAt: now })
+        .where(and(eq(companyDiscounts.companyId, order.companyId), eq(companyDiscounts.orderId, id), isNull(companyDiscounts.revokedAt)));
+      return {
+        order: { ...order, status: "refunded", refundStatus: "finished", refundedAt: now, pointsState },
+        rolledBack,
+        points: { postedRub, short: ledger.short },
+        discountRevoked: affected(revoked) > 0,
+      };
     });
   },
 
@@ -635,7 +835,7 @@ export const billingStore: BillingStore = {
     const uses = await db
       .select({ code: paymentOrders.promoCode, n: count() })
       .from(paymentOrders)
-      .where(and(eq(paymentOrders.status, "paid"), inArray(paymentOrders.promoCode, rows.map((r) => r.code))))
+      .where(and(eq(paymentOrders.status, "paid"), codeUse(), inArray(paymentOrders.promoCode, rows.map((r) => r.code))))
       .groupBy(paymentOrders.promoCode);
     const byCode = new Map(uses.map((u) => [u.code, Number(u.n)]));
     const ids = Array.from(new Set(rows.map((r) => r.companyId).filter((id): id is number => id !== null)));
@@ -664,7 +864,7 @@ export const billingStore: BillingStore = {
 
   async promoPaidUses(code) {
     const [row] = await guard([{ n: 0 }] as Array<{ n: number }>, () =>
-      db.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, code), eq(paymentOrders.status, "paid"))),
+      db.select({ n: count() }).from(paymentOrders).where(and(eq(paymentOrders.promoCode, code), codeUse(), eq(paymentOrders.status, "paid"))),
     );
     return Number(row?.n ?? 0);
   },
@@ -674,7 +874,7 @@ export const billingStore: BillingStore = {
       db
         .select({ id: paymentOrders.id })
         .from(paymentOrders)
-        .where(and(eq(paymentOrders.promoCode, code), eq(paymentOrders.companyId, companyId), eq(paymentOrders.status, "paid")))
+        .where(and(eq(paymentOrders.promoCode, code), codeUse(), eq(paymentOrders.companyId, companyId), eq(paymentOrders.status, "paid")))
         .limit(1),
     );
     return Boolean(row);
@@ -685,7 +885,7 @@ export const billingStore: BillingStore = {
       db
         .select({ id: paymentOrders.id })
         .from(paymentOrders)
-        .where(and(eq(paymentOrders.companyId, companyId), inArray(paymentOrders.status, ["paid", "refunded"])))
+        .where(and(eq(paymentOrders.companyId, companyId), eq(paymentOrders.orderKind, "plan"), inArray(paymentOrders.status, ["paid", "refunded"])))
         .limit(1),
     );
     return Boolean(row);
@@ -760,5 +960,139 @@ export const billingStore: BillingStore = {
         .set({ status: "voided", voidedAt: now })
         .where(and(eq(closingDocuments.orderId, orderId), eq(closingDocuments.status, "issued"))),
     );
+  },
+
+  async activePromotions() {
+    if (promotionsCache && Date.now() - promotionsCache.at < PRICES_TTL_MS) return promotionsCache.list;
+    const now = Math.floor(Date.now() / 1000);
+    const rows = await guard([] as PricePromotionRow[], () =>
+      db.select().from(pricePromotions).where(and(eq(pricePromotions.active, true), gt(pricePromotions.endsAt, now))).limit(100),
+    );
+    const list = rows.map((r) => ({ id: r.id, title: r.title, percent: r.discountPercent, startsAt: r.startsAt, endsAt: r.endsAt }));
+    promotionsCache = { at: Date.now(), list };
+    return list;
+  },
+
+  async listPromotions() {
+    const rows = await guard([] as PricePromotionRow[], () => db.select().from(pricePromotions).orderBy(desc(pricePromotions.id)).limit(200));
+    if (!rows.length) return [];
+    const uses = await db
+      .select({ id: paymentOrders.promotionId, n: count() })
+      .from(paymentOrders)
+      .where(and(eq(paymentOrders.status, "paid"), inArray(paymentOrders.promotionId, rows.map((r) => r.id))))
+      .groupBy(paymentOrders.promotionId);
+    const byId = new Map(uses.map((u) => [u.id, Number(u.n)]));
+    return rows.map((r) => ({ ...r, paidOrders: byId.get(r.id) ?? 0 }));
+  },
+
+  async getPromotion(id) {
+    const [row] = await guard([] as PricePromotionRow[], () => db.select().from(pricePromotions).where(eq(pricePromotions.id, id)));
+    if (!row) return null;
+    const [uses] = await db
+      .select({ n: count() })
+      .from(paymentOrders)
+      .where(and(eq(paymentOrders.status, "paid"), eq(paymentOrders.promotionId, id)));
+    return { ...row, paidOrders: Number(uses?.n ?? 0) };
+  },
+
+  async createPromotion(row) {
+    const result = await db.insert(pricePromotions).values(row);
+    resetPricesCache();
+    const [created] = await db.select().from(pricePromotions).where(eq(pricePromotions.id, insertId(result)));
+    if (!created) throw new Error("promotion was not created");
+    return created;
+  },
+
+  async updatePromotion(id, patch, now) {
+    await db.update(pricePromotions).set({ ...patch, updatedAt: now }).where(eq(pricePromotions.id, id));
+    resetPricesCache();
+    const [row] = await db.select().from(pricePromotions).where(eq(pricePromotions.id, id));
+    return row ?? null;
+  },
+
+  async getCompanyDiscounts(companyId) {
+    return guard([] as CompanyDiscountRow[], () =>
+      db.select().from(companyDiscounts).where(eq(companyDiscounts.companyId, companyId)).orderBy(asc(companyDiscounts.boundAt)),
+    );
+  },
+
+  async listCompanyDiscounts() {
+    const rows = await guard([] as CompanyDiscountRow[], () => db.select().from(companyDiscounts).orderBy(desc(companyDiscounts.boundAt)).limit(500));
+    const ids = Array.from(new Set(rows.map((r) => r.companyId)));
+    const names = ids.length ? await db.select({ id: companies.id, name: companies.name }).from(companies).where(inArray(companies.id, ids)) : [];
+    const byId = new Map(names.map((c) => [c.id, c.name]));
+    return rows.map((r) => ({ ...r, companyName: byId.get(r.companyId) ?? null }));
+  },
+
+  async revokeCompanyDiscount(id, now, by) {
+    const result = await db
+      .update(companyDiscounts)
+      .set({ revokedAt: now, revokedBy: by, updatedAt: now })
+      .where(and(eq(companyDiscounts.id, id), isNull(companyDiscounts.revokedAt)));
+    if (affected(result) !== 1) return null;
+    const [row] = await db.select().from(companyDiscounts).where(eq(companyDiscounts.id, id));
+    return row ?? null;
+  },
+
+  async getBalance(companyId) {
+    const [row] = await guard([] as Array<{ balance: number }>, () =>
+      db.select({ balance: companyBilling.balanceRub }).from(companyBilling).where(eq(companyBilling.companyId, companyId)),
+    );
+    return row?.balance ?? 0;
+  },
+
+  async getPointsHeld(companyId) {
+    const [row] = await guard([] as Array<{ n: string | number | null }>, () =>
+      db
+        .select({ n: sql<string | number | null>`COALESCE(SUM(${paymentOrders.pointsRub}), 0)` })
+        .from(paymentOrders)
+        .where(releasable(companyId)),
+    );
+    return Number(row?.n ?? 0);
+  },
+
+  async listBalanceEntries(companyId, limit) {
+    return guard([], () =>
+      db.select().from(balanceTransactions).where(eq(balanceTransactions.companyId, companyId)).orderBy(desc(balanceTransactions.id)).limit(limit),
+    );
+  },
+
+  async listBalances(limit) {
+    return guard([], async () => {
+      const rows = await db
+        .select({ companyId: companyBilling.companyId, balanceRub: companyBilling.balanceRub, updatedAt: companyBilling.updatedAt, companyName: companies.name })
+        .from(companyBilling)
+        .leftJoin(companies, eq(companies.id, companyBilling.companyId))
+        .where(ne(companyBilling.balanceRub, 0))
+        .orderBy(desc(companyBilling.updatedAt))
+        .limit(limit);
+      return rows.map((r) => ({ ...r, companyName: r.companyName ?? null }));
+    });
+  },
+
+  async postLedger(entry, now) {
+    return db.transaction((tx) => post(tx, entry, now));
+  },
+
+  async holdTopupRefund(orderId, now) {
+    return db.transaction(async (tx) => {
+      const [order] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).for("update");
+      const hold = order && order.status === "paid" ? topupRefundHoldEntry(order) : null;
+      if (!order || !hold) return { ok: false as const, reason: "state" as const };
+      const posted = await post(tx, hold, now);
+      if (!posted.ok) return { ok: false as const, reason: "balance" as const, balanceRub: await lockBalance(tx, order.companyId, now) };
+      await tx.update(paymentOrders).set({ pointsState: "refund_hold" }).where(eq(paymentOrders.id, orderId));
+      return { ok: true as const };
+    });
+  },
+
+  async releaseTopupRefund(orderId, now) {
+    await db.transaction(async (tx) => {
+      const [order] = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).for("update");
+      const back = order && order.status === "paid" ? topupRefundBackEntry(order) : null;
+      if (!order || !back) return;
+      await post(tx, back, now);
+      await tx.update(paymentOrders).set({ pointsState: "credited" }).where(eq(paymentOrders.id, orderId));
+    });
   },
 };
