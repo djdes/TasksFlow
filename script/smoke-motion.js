@@ -103,7 +103,7 @@ async (page) => {
   await page.getByRole('radio',{name:'Тёмная',exact:true}).click();
   check(await page.locator('html').evaluate(el => el.classList.contains('dark')),'Dark theme did not apply');
   await page.screenshot({path:'output/playwright/mobile-dark-account.png'});
-  const routes = ['/admin/users','/admin/settings','/admin/api-keys','/admin/integrations','/admin/verification','/admin/invitations','/admin/banners','/tasks/new','/tasks/1/edit','/workers/new','/workers/1/edit','/account','/help','/instructions','/join/smoke'];
+  const routes = ['/admin/users','/admin/settings','/admin/api-keys','/admin/integrations','/admin/verification','/admin/invitations','/admin/banners','/tasks/new','/tasks/1/edit','/account','/help','/instructions','/join/smoke'];
   for (const path of routes) {
     await page.goto(base+path);
     await page.locator('[data-page-skeleton]:visible').first().waitFor({state:'hidden'});
@@ -112,6 +112,12 @@ async (page) => {
     check(!overflow,'Horizontal overflow on mobile: '+path);
     check(!(await page.getByText('Что-то пошло не так',{exact:true}).count()),'Error boundary: '+path);
   }
+  // Старые адреса сотрудников — в «Сотрудники».
+  await page.goto(base+'/workers/new');
+  await page.waitForURL('**/admin/users?add=1');
+  await page.goto(base+'/workers/1/edit');
+  await page.waitForURL('**/admin/users');
+  await page.getByRole('heading',{name:'Сотрудники',exact:true}).waitFor();
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto(base+'/dashboard');
   await page.getByRole('heading',{name:'Задачи',exact:true}).waitFor();

@@ -8,7 +8,7 @@ import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { activeNavKey, cabinetNav, NAV_GROUP_LABEL, type NavGroup, type NavItem } from "@/lib/cabinet-nav";
 import { signedOutPath } from "@/lib/pwa";
-import { getUserInitials } from "@/lib/user-display";
+import { formatPhoneDisplay, getUserInitials } from "@/lib/user-display";
 
 const DAY = 86400;
 const GROUPS: readonly NavGroup[] = ["main", "company", "root", "help"];
@@ -89,14 +89,14 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <Link
             href="/account"
             className="app-sidebar-me"
-            aria-label={`Мой аккаунт: ${user.name || user.phone || ""}`}
+            aria-label={`Мой аккаунт: ${user.name || formatPhoneDisplay(user.phone)}`}
             aria-current={location === "/account" ? "page" : undefined}
           >
             <span className="app-sidebar-avatar" aria-hidden>
               {initials}
             </span>
             <span className="min-w-0">
-              <span className="app-sidebar-me-name">{user.name || user.phone || user.email}</span>
+              <span className="app-sidebar-me-name">{user.name || formatPhoneDisplay(user.phone) || user.email}</span>
               <span className="app-sidebar-me-role">{roleLabel}</span>
             </span>
           </Link>

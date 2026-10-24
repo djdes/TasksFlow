@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { activeNavKey, cabinetNav, isCabinetPath, matchesQuery } from "@/lib/cabinet-nav";
+import { activeNavKey, cabinetNav, isCabinetPath, matchesQuery, pageTitle } from "@/lib/cabinet-nav";
 
 const worker = { isAdmin: false, isRoot: false, canManageTasks: false };
 const manager = { isAdmin: false, isRoot: false, canManageTasks: true };
@@ -38,7 +38,6 @@ describe("activeNavKey", () => {
     ["/dashboard", "tasks"],
     ["/tasks/12/edit", "tasks"],
     ["/admin/users", "users"],
-    ["/workers/2/edit", "users"],
     ["/admin/api-keys", "settings"],
     ["/admin/integrations", "settings"],
     ["/billing/success", "billing"],
@@ -77,5 +76,24 @@ describe("matchesQuery", () => {
   });
   it("пустой запрос подходит всем", () => {
     expect(matchesQuery("   ", "что угодно")).toBe(true);
+  });
+});
+
+describe("pageTitle", () => {
+  const items = cabinetNav(admin);
+  it("раздел меню, подстраница — по разделу", () => {
+    expect(pageTitle(items, "/dashboard")).toBe("Задачи · TasksFlow");
+    expect(pageTitle(items, "/admin/users")).toBe("Сотрудники · TasksFlow");
+    expect(pageTitle(items, "/billing/success")).toBe("Оплата · TasksFlow");
+  });
+  it("свои заголовки вне меню", () => {
+    expect(pageTitle(items, "/tasks/new")).toBe("Новая задача · TasksFlow");
+    expect(pageTitle(items, "/tasks/7/edit")).toBe("Задача · TasksFlow");
+    expect(pageTitle(items, "/admin/api-keys")).toBe("API-ключи · TasksFlow");
+  });
+  it("ждут проверки — число впереди, неизвестный адрес — просто TasksFlow", () => {
+    expect(pageTitle(items, "/dashboard", 3)).toBe("(3) Задачи · TasksFlow");
+    expect(pageTitle(items, "/dashboard", 120)).toBe("(99+) Задачи · TasksFlow");
+    expect(pageTitle(items, "/nowhere")).toBe("TasksFlow");
   });
 });

@@ -51,3 +51,33 @@ export function getUserInitials(user: DisplayUser | null | undefined): string {
   }
   return parts[0].slice(0, 2).join("").toUpperCase();
 }
+
+/**
+ * Телефон для чтения: «+7 999 123-45-67». Не российский или неполный
+ * номер — как есть.
+ */
+export function formatPhoneDisplay(phone: string | null | undefined): string {
+  if (!phone) return "";
+  // Только российский вид: +7…, 8… или 7… без плюса. «+8…» — чужая страна.
+  const m = phone.replace(/[\s()-]/g, "").match(/^(?:\+7|8|7)(\d{10})$/);
+  if (!m) return phone;
+  const d = m[1];
+  return `+7 ${d.slice(0, 3)} ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8)}`;
+}
+
+type PersonLike = DisplayUser & { id: number; position?: string | null };
+
+/** Как назвать человека в списке и в окнах: имя, иначе телефон, иначе номер записи. */
+export function personLabel(user: PersonLike): string {
+  return user.name || formatPhoneDisplay(user.phone) || user.email || `#${user.id}`;
+}
+
+/**
+ * Текст, по которому ищут человека: имя, должность и телефон во всех
+ * видах — как хранится, как показан, одни цифры и с 8 вместо +7.
+ */
+export function personSearchText(user: PersonLike): string {
+  const digits = (user.phone ?? "").replace(/\D/g, "");
+  const local = digits.length === 11 && digits.startsWith("7") ? `8${digits.slice(1)}` : "";
+  return [user.name, user.position, user.email, user.phone, formatPhoneDisplay(user.phone), digits, local].filter(Boolean).join(" ");
+}

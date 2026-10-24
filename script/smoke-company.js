@@ -72,7 +72,7 @@ async (page) => {
     await tab.getByText('Тариф «Старт»: 3 из 5 человек.').waitFor();
     await tab.getByRole('heading', { name: 'Точки' }).waitFor();
     await tab.getByRole('textbox', { name: 'Новая точка' }).fill('Кафе у вокзала');
-    await tab.getByRole('button', { name: 'Добавить' }).click();
+    await tab.getByRole('button', { name: 'Добавить', exact: true }).click();
     await tab.locator('.locations-list').getByText('Кафе у вокзала').waitFor();
     await tab.getByRole('button', { name: 'Переименовать: Кафе на Мира' }).click();
     await tab.getByRole('textbox', { name: 'Название точки' }).fill('Кафе на Мира, 2');

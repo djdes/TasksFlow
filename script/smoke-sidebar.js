@@ -17,6 +17,8 @@ async (page) => {
     createdAt: now, completedAt: null, checklist: [], verificationStatus: null, dueDate: null, ...extra,
   });
   const tasks = [task(1, 'Открыть смену'), task(2, 'Проверить витрину')];
+  // Шестеро и больше — у списка сотрудников появляется поиск.
+  const extraPeople = ['Ольга Смирнова', 'Денис Орлов', 'Мария Ким', 'Пётр Лебедев', 'Ирина Белова'].map((name, i) => ({ ...worker, id: 10 + i, name, phone: `+7999111223${i}`, position: 'Бариста' }));
   const awaiting = [task(3, 'Фото склада', { verificationStatus: 'submitted', isCompleted: true }), task(4, 'Фото кухни', { verificationStatus: 'submitted', isCompleted: true })];
 
   async function open(user, { width = 1440, height = 900, planUntil = now + 3 * DAY } = {}) {
@@ -37,9 +39,10 @@ async (page) => {
       if (p === '/api/auth/me') data = user;
       else if (p === '/api/tasks') data = tasks;
       else if (p === '/api/tasks/awaiting-verification') data = awaiting;
-      else if (p === '/api/users') data = [admin, worker];
+      else if (p === '/api/users') data = [admin, worker, ...extraPeople];
       else if (p === '/api/workers') data = [{ id: 2, name: worker.name, companyId: 1 }];
       else if (/^\/api\/workers\/\d+$/.test(p)) data = { id: 2, name: worker.name, companyId: 1 };
+      else if (/^\/api\/tasks\/\d+$/.test(p)) data = tasks[0];
       else if (/^\/api\/users\/\d+$/.test(p)) data = worker;
       else if (p === '/api/companies/me') data = { id: 1, name: 'Кафе «Ромашка»', planInfo: { id: 'team', name: 'Команда', until: planUntil }, photo: null };
       else if (p === '/api/me/telegram') data = { connected: false, botConfigured: false };
@@ -66,6 +69,15 @@ async (page) => {
       check(JSON.stringify(names) === JSON.stringify(['Задачи', 'На проверке', 'История и отчёты', 'Сотрудники', 'Приглашения', 'Настройки', 'Тариф и оплата', 'Компании и тарифы', 'Промо-баннеры', 'Помощь']), `admin nav ${JSON.stringify(names)}`);
       check(await sidebar.getByRole('link', { name: 'Задачи', exact: true }).getAttribute('aria-current') === 'page', 'Задачи not active on /dashboard');
       await sidebar.getByLabel('2 ждут проверки').waitFor();
+      // Вкладка: раздел и число ждущих проверки — видно и в фоне.
+      check(await tab.title() === '(2) Задачи · TasksFlow', `tab title ${await tab.title()}`);
+      // Tab с начала страницы — «К содержимому», Enter — фокус на странице, мимо меню.
+      await tab.reload();
+      await tab.getByRole('heading', { name: 'Задачи', exact: true }).waitFor();
+      await tab.keyboard.press('Tab');
+      check(await tab.evaluate(() => document.activeElement?.textContent) === 'К содержимому', `skip link is not first: ${await tab.evaluate(() => document.activeElement?.outerHTML.slice(0, 160))}`);
+      await tab.keyboard.press('Enter');
+      check(await tab.evaluate(() => document.activeElement?.id) === 'cabinet-content', 'skip link did not move focus');
       check(await tab.getByRole('button', { name: 'Меню', exact: true }).isHidden(), 'burger visible on desktop');
       check(await sidebar.getByRole('link', { name: /Создать задачу/ }).count() === 1, 'create action missing');
       const box = await sidebar.boundingBox();
@@ -77,8 +89,10 @@ async (page) => {
       await tab.waitForURL('**/admin/users');
       check(await sidebar.getByRole('link', { name: 'Сотрудники', exact: true }).getAttribute('aria-current') === 'page', 'Сотрудники not active');
       check(await tab.locator('.page-back[data-home-back]').first().isHidden(), 'home back button visible next to sidebar');
-      // Подстраница раздела подсвечивает раздел.
+      check(await tab.title() === '(2) Сотрудники · TasksFlow', `users tab title ${await tab.title()}`);
+      // Старый адрес правки — в «Сотрудники», раздел подсвечен.
       await tab.goto(base + '/workers/2/edit');
+      await tab.waitForURL('**/admin/users');
       await sidebar.getByRole('link', { name: 'Сотрудники', exact: true }).and(tab.locator('[aria-current="page"]')).waitFor();
 
       // Прокрутка страницы: панель стоит на месте.
@@ -93,7 +107,7 @@ async (page) => {
       await palette.getByRole('combobox', { name: 'Быстрый переход' }).waitFor();
       await tab.keyboard.type('пин');
       const found = await palette.getByRole('option').allInnerTexts();
-      check(found.length === 2 && found[0].includes('Сотрудники') && found[1].includes('Мой аккаунт'), `palette keyword search ${JSON.stringify(found)}`);
+      check(found.length === 3 && found[0].includes('Сотрудники') && found[1].includes('Мой аккаунт') && found[2].includes('Добавить сотрудника'), `palette keyword search ${JSON.stringify(found)}`);
       await palette.evaluate((el) => Promise.allSettled(el.getAnimations().map((a) => a.finished)));
       await tab.screenshot({ path: 'output/playwright/sidebar-palette.png' });
       await tab.keyboard.press('ArrowDown');
@@ -111,13 +125,59 @@ async (page) => {
       await tab.keyboard.type('иван');
       await palette.getByRole('option', { name: /Иван Петров/ }).waitFor();
       await tab.keyboard.press('Enter');
-      await tab.waitForURL('**/workers/2/edit');
+      // Человек — в «Сотрудниках»: строка подсвечена и в фокусе.
+      await tab.waitForURL('**/admin/users?user=2');
       await palette.waitFor({ state: 'hidden' });
+      await tab.locator('[data-user-row="2"].is-highlighted').waitFor();
+      check(await tab.evaluate(() => document.activeElement?.getAttribute('data-user-row')) === '2', 'found person row not focused');
+      // Имя крупно, телефон группами; поиск по имени и по цифрам телефона.
+      const row = tab.locator('[data-user-row="2"]');
+      check((await row.innerText()).includes('+7 999 000-00-02 · Повар'), `person row text ${await row.innerText()}`);
+      const search = tab.getByRole('searchbox', { name: 'Найти сотрудника' });
+      await search.fill('орлов');
+      check(await tab.locator('[data-user-row]').count() === 1, 'search by name');
+      for (const phone of ['00002', '000-00-02', '89990000002']) {
+        await search.fill(phone);
+        check(await tab.locator('[data-user-row]').count() === 1 && await row.count() === 1, `search by phone ${phone}`);
+      }
+      await search.fill('кассир');
+      await tab.getByText('Никого не нашли', { exact: false }).waitFor();
+      await search.fill('');
+      // Удаление — через наше окно, а не confirm() браузера; «Отмена» ничего не трогает.
+      await tab.getByRole('button', { name: 'Удалить: Иван Петров' }).click();
+      const confirmBox = tab.getByRole('dialog');
+      await confirmBox.getByText('Удалить Иван Петров?').waitFor();
+      await confirmBox.getByRole('button', { name: 'Отмена' }).click();
+      await confirmBox.waitFor({ state: 'hidden' });
+      await tab.screenshot({ path: 'output/playwright/sidebar-users.png' });
+      // Поиск на странице не прячет человека, выбранного в быстром переходе.
+      await search.fill('орлов');
+      await tab.keyboard.press('Control+k');
+      await palette.getByRole('combobox', { name: 'Быстрый переход' }).waitFor();
+      await tab.keyboard.type('ирина');
+      await palette.getByRole('option', { name: /Ирина Белова/ }).waitFor();
+      await tab.keyboard.press('Enter');
+      await tab.waitForURL('**/admin/users?user=14');
+      await tab.locator('[data-user-row="14"].is-highlighted').waitFor();
+      check(await search.inputValue() === '', 'page search kept hiding the chosen person');
+      // «Добавить сотрудника» — курсор сразу в телефоне.
+      await tab.keyboard.press('Control+k');
+      await palette.getByRole('combobox', { name: 'Быстрый переход' }).waitFor();
+      await tab.keyboard.type('добавить сотр');
+      await tab.keyboard.press('Enter');
+      await tab.waitForURL('**/admin/users?add=1');
+      await tab.waitForFunction(() => document.activeElement?.getAttribute('type') === 'tel');
+      // Старый адрес создания ведёт туда же.
+      await tab.goto(base + '/workers/new');
+      await tab.waitForURL('**/admin/users?add=1');
       // На форме правки N не уводит с несохранённых изменений.
+      await tab.goto(base + '/tasks/1/edit');
+      await tab.getByRole('heading', { level: 1 }).first().waitFor();
       await tab.locator('body').click({ position: { x: 700, y: 10 } });
       await tab.keyboard.press('n');
       await tab.waitForTimeout(300);
-      check(new URL(tab.url()).pathname === '/workers/2/edit', `N left the edit form: ${tab.url()}`);
+      check(new URL(tab.url()).pathname === '/tasks/1/edit', `N left the edit form: ${tab.url()}`);
+      check(await tab.title() === '(2) Задача · TasksFlow', `edit tab title ${await tab.title()}`);
       // Пусто — понятный текст; Esc закрывает.
       await tab.keyboard.press('Control+k');
       await palette.getByRole('combobox', { name: 'Быстрый переход' }).waitFor();
@@ -190,6 +250,9 @@ async (page) => {
       check(new URL(tab.url()).pathname === '/dashboard', 'worker navigated by N');
       check(!calls.includes('/api/tasks/awaiting-verification'), 'worker requested verification queue for the sidebar');
       await tab.screenshot({ path: 'output/playwright/sidebar-worker.png' });
+      // Старый адрес «новый сотрудник» — не на «Доступ запрещён», а к своим задачам.
+      await tab.goto(base + '/workers/new');
+      await tab.waitForURL('**/dashboard');
       check(errors.length === 0, `worker errors: ${errors.join('; ')}`);
     } finally {
       await context.close();
@@ -218,5 +281,5 @@ async (page) => {
   }
 
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'admin/root nav groups + active + count + plan warn, nav click + subpage active + home back hidden, sticky on scroll, Ctrl+K keyword/person/empty/Esc, N shortcut, theme from sidebar + dark, 1024/1023, worker nav + no N + no queue, phone sheet same sections', failures };
+  return { checks: 'admin/root nav groups + active + count + plan warn, nav click + subpage active + home back hidden, sticky on scroll, Ctrl+K keyword/person/empty/Esc, N shortcut, theme from sidebar + dark, 1024/1023, worker nav + no N + no queue + legacy redirect, users page (search, highlight, confirm), tab titles, skip link, phone sheet same sections', failures };
 }

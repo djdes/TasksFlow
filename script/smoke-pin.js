@@ -102,11 +102,11 @@ async (page) => {
     check(/^\d{4}$/.test(await pin.inputValue()), 'Create form has no generated PIN');
     await p.locator('input[type="tel"]').first().fill('9997776655');
     await pin.fill('1111');
-    await p.getByRole('button', { name: 'Создать пользователя' }).click();
+    await p.getByRole('button', { name: 'Добавить сотрудника' }).click();
     await p.getByText(/одинаковые/).waitFor();
     check(created.length === 0, 'Weak PIN reached the API');
     await pin.fill('5830');
-    await p.getByRole('button', { name: 'Создать пользователя' }).click();
+    await p.getByRole('button', { name: 'Добавить сотрудника' }).click();
     await p.getByText(/сообщите его сотруднику/).waitFor();
     check(created[0]?.pin === '5830' && created[0]?.phone === '+79997776655', `Create payload ${JSON.stringify(created)}`);
     check(await p.getByText('Без PIN', { exact: true }).count() === 1, 'No "Без PIN" status');

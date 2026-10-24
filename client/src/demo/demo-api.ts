@@ -334,7 +334,17 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
   if (path.startsWith("/api/billing/orders/")) return { status: 404, json: { message: "Заказ не найден" } };
   if (path === "/api/billing/recurring") return { json: { ok: true, active: false } };
 
-  // Остальное (приглашения, ключи, интеграции): пусто, но без ошибок.
+  // Объекты, а не списки: пустой массив вместо них ронял «Мой аккаунт» и «Интеграции».
+  if (path === "/api/app/info") {
+    return { json: { android: { apk: null, playUrl: null, rustoreUrl: null }, ios: { appStoreUrl: null, testflightUrl: null } } };
+  }
+  if (path === "/api/admin/webhook-queue/stats") {
+    return { json: { stats: { pending: 0, delivered: 0, failed: 0, cancelled: 0 }, recentFailed: [] } };
+  }
+  if (path === "/api/wesetup/health") return { json: { ok: false, message: "В демо WeSetup не подключён" } };
+  if (path === "/api/wesetup/links") return { json: { links: [] } };
+
+  // Остальное (приглашения, ключи): пустые списки, без ошибок.
   return method === "GET" ? { json: [] } : { json: { ok: true } };
 }
 

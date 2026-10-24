@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { QueryError } from "@/components/QueryError";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CabinetFrame } from "@/components/CabinetFrame";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useLiveUpdates } from "@/hooks/use-live-updates";
 import { isDemo } from "@/demo/demo-mode";
 import { useToast } from "@/hooks/use-toast";
@@ -38,8 +39,6 @@ const Instructions = lazy(() => import("@/pages/Instructions"));
 const Help = lazy(() => import("@/pages/Help"));
 const CreateTask = lazy(() => import("@/pages/CreateTask"));
 const EditTask = lazy(() => import("@/pages/EditTask"));
-const CreateWorker = lazy(() => import("@/pages/CreateWorker"));
-const EditWorker = lazy(() => import("@/pages/EditWorker"));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
 const CompanySettings = lazy(() => import("@/pages/CompanySettings"));
 const ApiKeysPage = lazy(() => import("@/pages/ApiKeys"));
@@ -126,6 +125,12 @@ function ScrollToTop() {
   return null;
 }
 
+/** Старые /workers/*: админу — в «Сотрудники», остальным (раздел только для админа) — к задачам. */
+function LegacyWorkersRedirect({ add = false }: { add?: boolean }) {
+  const { isAdmin } = usePermissions();
+  return <Redirect to={isAdmin ? (add ? "/admin/users?add=1" : "/admin/users") : "/dashboard"} replace />;
+}
+
 function Router() {
   const [location] = useLocation();
 
@@ -162,8 +167,10 @@ function Router() {
             <Route path="/join/:token" component={JoinByInvite} />
             <Route path="/tasks/new" component={CreateTask} />
             <Route path="/tasks/:id/edit" component={EditTask} />
-            <Route path="/workers/new" component={CreateWorker} />
-            <Route path="/workers/:id/edit" component={EditWorker} />
+            {/* Старые адреса: сотрудники живут в «Сотрудниках» (вход по телефону и
+                PIN). Адреса остаются — на них ведут ссылки приложений. */}
+            <Route path="/workers/new">{() => <LegacyWorkersRedirect add />}</Route>
+            <Route path="/workers/:id/edit">{() => <LegacyWorkersRedirect />}</Route>
             <Route component={NotFound} />
           </Switch>
           </SessionReady>

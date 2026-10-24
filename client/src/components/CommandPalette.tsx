@@ -8,6 +8,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useUsers } from "@/hooks/use-users";
 import { cabinetNav, matchesQuery } from "@/lib/cabinet-nav";
 import { signedOutPath } from "@/lib/pwa";
+import { personLabel, personSearchText } from "@/lib/user-display";
 
 type Command = {
   id: string;
@@ -65,7 +66,7 @@ function PaletteBody({ close }: { close: () => void }) {
     if (role.canManageTasks) list.unshift({ id: "new-task", label: "Создать задачу", hint: "Действие", icon: Plus, keywords: "новая задача добавить", shortcut: "N", run: go("/tasks/new") });
     if (role.isAdmin) {
       list.push(
-        { id: "new-worker", label: "Добавить сотрудника", hint: "Действие", icon: UserPlus, keywords: "новый человек", run: go("/workers/new") },
+        { id: "new-worker", label: "Добавить сотрудника", hint: "Действие", icon: UserPlus, keywords: "новый человек пин", run: go("/admin/users?add=1") },
         { id: "invite", label: "Пригласить по QR-коду", hint: "Действие", icon: QrCode, keywords: "приглашение ссылка", run: go("/admin/invitations") },
       );
     }
@@ -95,14 +96,14 @@ function PaletteBody({ close }: { close: () => void }) {
     // Сотрудники — только по запросу: список компании может быть длинным.
     const people: Command[] = q
       ? users
-          .filter((u) => matchesQuery(q, `${u.name ?? ""} ${u.phone ?? ""} ${(u as { position?: string | null }).position ?? ""}`))
+          .filter((u) => matchesQuery(q, personSearchText(u)))
           .slice(0, MAX_PEOPLE)
           .map((u) => ({
             id: `user-${u.id}`,
-            label: u.name || u.phone || `Сотрудник #${u.id}`,
+            label: personLabel(u),
             hint: "Сотрудник",
             icon: UserRound,
-            run: () => setLocation(`/workers/${u.id}/edit`),
+            run: () => setLocation(`/admin/users?user=${u.id}`),
           }))
       : [];
     return [...found, ...people];

@@ -9,6 +9,9 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  formatPhoneDisplay,
+  personLabel,
+  personSearchText,
   getUserShortName,
   getUserInitials,
 } from "../client/src/lib/user-display";
@@ -98,5 +101,38 @@ describe("getUserInitials — fallback paths", () => {
 
   it("латиница тоже работает («John Doe» → «JD»)", () => {
     expect(getUserInitials({ name: "John Doe", phone: "+12" })).toBe("JD");
+  });
+});
+
+describe("formatPhoneDisplay", () => {
+  it("российский номер — группами", () => {
+    expect(formatPhoneDisplay("+79991234567")).toBe("+7 999 123-45-67");
+    expect(formatPhoneDisplay("89991234567")).toBe("+7 999 123-45-67");
+  });
+  it("неполный, чужой или пустой — как есть", () => {
+    expect(formatPhoneDisplay("+7999")).toBe("+7999");
+    expect(formatPhoneDisplay("+380501234567")).toBe("+380501234567");
+    expect(formatPhoneDisplay("+81234567890")).toBe("+81234567890");
+    expect(formatPhoneDisplay(null)).toBe("");
+  });
+});
+
+describe("getUserInitials — символы, а не половинки", () => {
+  it("эмодзи в начале не режется", () => {
+    expect(getUserInitials({ name: "🍕 Пицца" })).toBe("🍕П");
+  });
+});
+
+describe("personLabel и personSearchText", () => {
+  it("имя, иначе телефон, иначе номер записи", () => {
+    expect(personLabel({ id: 1, name: "Анна", phone: "+79991234567" })).toBe("Анна");
+    expect(personLabel({ id: 2, name: null, phone: "+79991234567" })).toBe("+7 999 123-45-67");
+    expect(personLabel({ id: 12, name: null, phone: null })).toBe("#12");
+  });
+  it("телефон находится в любом виде", () => {
+    const text = personSearchText({ id: 2, name: "Иван Петров", phone: "+79990000002", position: "Повар" });
+    for (const piece of ["000-00-02", "89990000", "9990000002", "повар".toLowerCase()]) {
+      expect(text.toLowerCase()).toContain(piece);
+    }
   });
 });

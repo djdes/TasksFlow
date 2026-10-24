@@ -23,7 +23,7 @@ export function PageSkeleton() {
   const [path] = useLocation();
   const dashboard = path === "/dashboard";
   const auth = path === "/" || path === "/login" || path.startsWith("/register") || path.startsWith("/join/");
-  const form = auth || path === "/account" || path.includes("settings") || path.includes("/tasks/") || path.includes("/workers/");
+  const form = auth || path === "/account" || path.includes("settings") || path.includes("/tasks/");
   return (
     <div className={dashboard ? "app-layout" : "page-screen"} data-page-skeleton="" role="status" aria-label="Загрузка страницы" aria-busy="true">
       {dashboard && <div className="skeleton-app-header" aria-hidden="true"><Skeleton className="h-9 w-9 rounded-xl" /><div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-36" /></div></div>}

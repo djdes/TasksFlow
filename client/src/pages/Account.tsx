@@ -12,6 +12,7 @@ import { MotionToggle } from "@/components/MotionToggle";
 import { FeedbackToggle } from "@/components/FeedbackToggle";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { plural } from "@/lib/i18n";
+import { formatPhoneDisplay } from "@/lib/user-display";
 import { ArrowLeft, Mail, KeyRound, Palette, TriangleAlert, UserRound } from "lucide-react";
 import { ChangePinCard } from "@/components/ChangePinCard";
 import { AppDeviceCard } from "@/components/AppDeviceCard";
@@ -119,7 +120,7 @@ export default function Account() {
     setDeleteError(null);
   };
 
-  const identity = user?.phone || user?.email || "";
+  const identity = formatPhoneDisplay(user?.phone) || user?.email || "";
 
   return (
     <div className="page-screen">

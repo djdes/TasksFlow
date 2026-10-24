@@ -63,7 +63,7 @@ export function cabinetNav(role: CabinetRole): NavItem[] {
   });
   if (role.isAdmin) {
     items.push(
-      { key: "users", label: "Сотрудники", href: "/admin/users", icon: Users, group: "company", also: ["/workers/"], keywords: "люди персонал пин" },
+      { key: "users", label: "Сотрудники", href: "/admin/users", icon: Users, group: "company", keywords: "люди персонал пин" },
       { key: "invitations", label: "Приглашения", href: "/admin/invitations", icon: QrCode, group: "company", keywords: "qr ссылка пригласить" },
       {
         key: "settings",
@@ -95,6 +95,28 @@ export function activeNavKey(items: readonly NavItem[], path: string): string | 
   const exact = items.find((item) => path === item.href || path.startsWith(`${item.href}/`));
   if (exact) return exact.key;
   return items.find((item) => item.also?.some((prefix) => path.startsWith(prefix)))?.key ?? null;
+}
+
+/** Страницы вне меню, у которых свой заголовок вкладки. */
+const OWN_TITLES: ReadonlyArray<[RegExp, string]> = [
+  [/^\/tasks\/new$/, "Новая задача"],
+  [/^\/tasks\/\d+\/edit$/, "Задача"],
+  [/^\/account$/, "Мой аккаунт"],
+  [/^\/billing\/(success|fail)$/, "Оплата"],
+  [/^\/admin\/api-keys$/, "API-ключи"],
+  [/^\/admin\/integrations$/, "Интеграции"],
+];
+
+/**
+ * Заголовок вкладки: «Раздел · TasksFlow», с числом ждущих проверки
+ * впереди — его видно и на фоновой вкладке.
+ */
+export function pageTitle(items: readonly NavItem[], path: string, pending = 0): string {
+  const own = OWN_TITLES.find(([re]) => re.test(path))?.[1];
+  const key = own ? null : activeNavKey(items, path);
+  const section = own ?? items.find((item) => item.key === key)?.label;
+  const base = section ? `${section} · TasksFlow` : "TasksFlow";
+  return pending > 0 ? `(${pending > 99 ? "99+" : pending}) ${base}` : base;
 }
 
 /** Страницы без меню кабинета: вход, регистрация, приглашение. */
