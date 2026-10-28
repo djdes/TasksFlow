@@ -3354,6 +3354,22 @@ details:not([open]) > summary .group-chevron {
   background: rgba(255, 255, 255, 0.06);
   color: var(--dk-text);
 }
+/* Правило выше (muted) объявлено позже .theme-switcher-btn.is-active и при равной
+   специфичности перебивало белый текст выбранной темы: светло-серое на фиолетовой
+   плашке почти не читалось. */
+.dark .theme-switcher-btn.is-active,
+.dark .theme-switcher-btn.is-active:hover {
+  color: #fff;
+}
+/* bg-white/60 вторичной кнопки пустого состояния в тёмной теме давал светло-серую
+   плашку с фиолетовым текстом («Мои задачи» на «На проверке») — контраст ~2:1. */
+.dark .empty-state-button-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: hsl(var(--primary));
+}
+.dark .empty-state-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* ============================================================
    ===              END DARK THEME OVERRIDES                ===
