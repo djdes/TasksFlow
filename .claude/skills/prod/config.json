@@ -1,0 +1,22 @@
+{
+  "project": "tasksflow",
+  "repo": "djdes/TasksFlow",
+  "workflow": "claude-ops.yml",
+  "ref": "main",
+  "appDir": "~/www/tasksflow.ru",
+  "pm2": [
+    "tasksflow"
+  ],
+  "health": "https://tasksflow.ru/api/health",
+  "db": {
+    "envFile": "~/www/tasksflow.ru/.env",
+    "vars": [
+      "MYSQL_HOST",
+      "MYSQL_PORT",
+      "MYSQL_USER",
+      "MYSQL_PASSWORD",
+      "MYSQL_DATABASE"
+    ],
+    "nodePath": "~/www/tasksflow.ru/node_modules"
+  }
+}

@@ -11,7 +11,12 @@ nul
 logs/
 *.log
 .deploy-deps.sha256
-.claude/
+# Claude Code: локальное состояние не коммитим, а общие скиллы — да:
+# облачные сессии видят только то, что лежит в репозитории.
+.claude/*
+!.claude/skills/
+!.claude/agents/
+!.claude/settings.json
 .dev-outbox/
 .playwright-mcp/
 .playwright-cli/
@@ -29,3 +34,6 @@ mobile/ios/build/
 *.p8
 # APK, который CI выкладывает на сервер (раздаётся как /downloads/*).
 /downloads/
+
+# Снимки, ответы мостика к проду, логи дев-стенда (.claude/skills/*)
+/output/
