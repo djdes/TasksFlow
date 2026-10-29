@@ -1,0 +1,39 @@
+{
+  "base": "http://localhost:5000",
+  "timeout": 120000,
+  "waitUntil": "load",
+  "wait": 1500,
+  "waitGone": ".skeleton",
+  "loginPath": "/login",
+  "presets": {
+    "public": [
+      { "path": "/", "name": "home" },
+      { "path": "/blog", "name": "blog" },
+      { "path": "/blog/kak-stavit-zadachi-vyezdnym-sotrudnikam", "name": "blog-post" },
+      { "path": "/offer", "name": "offer" },
+      { "path": "/login", "name": "login" },
+      { "path": "/register/company", "name": "register-company" },
+      { "path": "/net-takoy-stranicy", "name": "not-found" }
+    ],
+    "app": [
+      { "path": "/dashboard", "name": "dashboard", "login": true },
+      { "path": "/reports", "name": "reports", "login": true },
+      { "path": "/tasks/new", "name": "task-new", "login": true },
+      { "path": "/admin/users", "name": "users", "login": true },
+      { "path": "/admin/verification", "name": "verification", "login": true },
+      { "path": "/admin/settings", "name": "settings", "login": true },
+      { "path": "/admin/billing", "name": "billing", "login": true },
+      { "path": "/account", "name": "account", "login": true }
+    ],
+    "worker": [
+      { "path": "/dashboard", "name": "worker-dashboard", "login": "worker" }
+    ],
+    "admin": [
+      { "path": "/admin/companies", "name": "root-companies", "login": true },
+      { "path": "/admin/banners", "name": "root-banners", "login": true }
+    ],
+    "demo": [
+      { "path": "/demo", "name": "demo" }
+    ]
+  }
+}

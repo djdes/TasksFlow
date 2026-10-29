@@ -20,6 +20,7 @@ This file mirrors `AGENTS.md` for Claude-style agents. Keep both files aligned.
 - Не трогай чужие изменения и старые untracked-файлы без явной просьбы.
 - Коммиты пиши на русском.
 - Если пользователь просит "запуш", после успешных проверок делай commit и `git push` в текущую рабочую ветку.
+- Если в первоначальной задаче владелец просит «сразу в прод» (или так же прямо — выкатить на прод), PR после зелёных проверок мержится в `main` — ветку с автодеплоем (push запускает «Deploy to Production»), отдельного «мержи» не ждать. После мержа дождаться деплоя и проверить `https://tasksflow.ru/api/health`. Без такой просьбы PR ждёт решения владельца.
 - Никогда не используй destructive git-команды без прямого разрешения.
 
 ## Project Notes
@@ -36,6 +37,12 @@ This file mirrors `AGENTS.md` for Claude-style agents. Keep both files aligned.
 - Приложения для телефонов — оболочки над tasksflow.ru: `mobile/android` (Trusted Web Activity) и `mobile/ios` (Swift + WKWebView). Веб-изменения доходят до них сразу; пересборка нужна только при правках `mobile/`. Собираются в CI (`mobile-android.yml`, `mobile-ios.yml`), Android-эмулятор и iOS-симулятор проверяют запуск. Подробности, ключи и публикация — `docs/mobile.md`.
 - Репозиторий публичный: ключи подписи (`*.jks`, `.p8`), пароли и токены не коммитить и не печатать в логах CI. Ключ подписи Android живёт на сервере в `~/.tasksflow-deploy/android`.
 - Оплата тарифов — Робокасса: `shared/billing.ts`, `server/billing/*`, `server/billing-routes.ts`, страница `/admin/billing`, оферта `content/legal/offer.md`. Сумму считает только сервер, оплата засчитывается только по ResultURL с подписью Пароля #2 или по сверке с кассой (наш запрос OpStateExt с Паролем #2); возвраты — через API кассы с Паролем #3. Внутри приложений оплаты нет (правила App Store и Google Play). Акции, промокоды и постоянные скидки, баланс в баллах (журнал `balance_transactions` в той же транзакции, в минус не уходит; проводки — `server/billing/ledger.ts`), счёт для юрлиц, УПД и реквизиты по ИНН (DaData, `DADATA_API_KEY`) — там же; сумму страница и сервер считают одной функцией `priceBreakdown`. PDF рисует свой генератор `server/billing/pdf` (без npm-зависимостей, шрифт DejaVu в `server/billing/fonts`). Подключение магазина, секреты `ROBOKASSA_*`, `LEGAL_*` и `DADATA_API_KEY`, автопродление, сверка и возвраты — `docs/billing.md`.
+
+## Облачные сессии Claude (claude.ai/code, приложение на телефоне)
+- Контейнер облака — Ubuntu 24.04 с Node 22 и Playwright. Наружу он пускает только 80/443, SSH на сервер оттуда не открыть. Для работы есть три скилла в `.claude/skills/`. `.claude/` лежит в `.gitignore`, кроме `skills/`, `agents/` и `settings.json`.
+- `dev-stand` — дев-версия с настоящей базой. `bash .claude/skills/dev-stand/stand.sh` поднимает MariaDB 10.11 (МСК) и базу `tasksflow_dev`. Таблицы `users/companies/workers/tasks` берутся из `drizzle-kit export`, он только печатает SQL. Остальную схему накатывают скрипты `script/` в порядке `deploy.yml`. Демо создаётся через API, сервер — `npm run dev` на `localhost:5000`. Вход: `+79990000001`, PIN `4826`. `setup-db`/`db:push`/`drizzle-kit push` не используются и на стенде.
+- `visual-check` — снимки Playwright на ПК и телефоне, в светлой и тёмной теме. Ловит ошибки консоли, упавшие запросы и горизонтальную прокрутку, собирает общий лист `contact-sheet*.png`. Снимает стенд, `/demo` и прод. Это дополнение к `npm run smoke`, а не замена.
+- `prod` — сервер (`tasks@`) и боевая база через мостик `claude-ops`: `.github/workflows/claude-ops.yml` на секретах деплоя. Запрос и ответ зашифрованы: репозиторий публичный, в журнале Actions только шифротекст. Команды: `node .claude/skills/prod/ops.mjs status|logs|run|sql`, SQL по умолчанию только на чтение. Любое изменение на проде — только после явного «да» владельца.
 
 ## Quality Bar
 - Исправляй корневую причину, а не симптом.
