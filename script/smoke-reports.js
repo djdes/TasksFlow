@@ -128,11 +128,11 @@ async (page) => {
     await page.getByText('Расписание дня').waitFor();
     await page.locator('.schedule-settings select').selectOption('Asia/Vladivostok');
     await page.getByRole('checkbox', { name: /Вечером/ }).check();
-    await page.getByLabel('Время: Утром — список задач').fill('08:30');
+    await page.getByLabel('Время: Утренняя сводка').fill('07:45');
     await page.locator('.schedule-settings').screenshot({ path: `output/playwright/reports-schedule.png` });
     await page.getByRole('button', { name: 'Сохранить расписание' }).click();
     await page.waitForTimeout(400);
-    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && puts[0].notify.morning === '08:30' && puts[0].notify.evening === '18:00' && puts[0].notify.digest === '20:30' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
+    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && puts[0].notify.morning === '07:45' && puts[0].notify.evening === '18:00' && puts[0].notify.digest === '20:30' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
     check(errors.length === 0, `settings errors: ${errors.join('; ')}`);
     await context.close();
   }

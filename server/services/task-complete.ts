@@ -25,6 +25,8 @@ import {
   TaskServiceError,
   type TaskActor,
 } from "./task-actor";
+import { accessOf, accessWithApproval } from "../access";
+import { isTaskAdmin } from "@shared/roles";
 
 export type CompleteOutcome =
   /** Задача закрыта, премия начислена. */
@@ -63,16 +65,21 @@ export async function completeTaskForActor({
     throw new TaskServiceError(404, "Задача не найдена");
   }
 
-  // Проверка прав: API key имеет админские права, иначе исполнитель или session-админ.
+  // Проверка прав: API key имеет админские права, иначе исполнитель,
+  // session-админ или роль «Ставит задачи» (ведёт задачи всей компании).
   const meId = actorUserId(actor);
   let isAllowed = false;
+  // Роль исполнителя требует проверки выполненного (shared/roles.ts).
+  let roleApproval = false;
   if (actor.kind === "apiKey") {
     isAllowed = true;
-  } else if (meId === task.workerId) {
+  } else if (meId !== null && meId === task.workerId) {
     isAllowed = true;
+    const me = await storage.getUserById(meId);
+    roleApproval = !!me && (await accessWithApproval(me)).requiresApproval;
   } else if (meId !== null) {
     const currentUser = await storage.getUserById(meId);
-    if (currentUser?.isAdmin) {
+    if (currentUser?.isAdmin || (currentUser && isTaskAdmin(await accessOf(currentUser)))) {
       isAllowed = true;
     }
   }
@@ -129,12 +136,20 @@ export async function completeTaskForActor({
   //     поведение (legacy задачи без проверки). undefined может
   //     прилетать на legacy-БД где schema-self-check ещё не
   //     добавил колонки.
-  const requiresVerification =
+  //   • Роль исполнителя требует проверки (у «Сотрудника» — настройка
+  //     компании): задача уходит руководителю или админу, даже без
+  //     назначенного verifier'а. Сам себя исполнитель не принимает.
+  const byVerifier =
     actor.kind !== "apiKey" &&
     typeof task.verifierWorkerId === "number" &&
     task.verifierWorkerId !== meId;
-  if (requiresVerification) {
-    const submitted = await storage.submitForVerification(taskId);
+  // Исполнитель сам назначен проверяющим (руководитель в смене) — закрывает
+  // как раньше: принять свою работу он всё равно не может.
+  const byRole = !byVerifier && roleApproval && task.verifierWorkerId !== meId;
+  if (byVerifier || byRole) {
+    const submitted = byRole
+      ? await storage.submitForVerification(taskId, { byRole: true })
+      : await storage.submitForVerification(taskId);
     if (!submitted) {
       // Concurrent submit или статус не позволяет (approved/already
       // submitted). Отдаём текущий стейт.

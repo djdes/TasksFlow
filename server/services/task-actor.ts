@@ -59,11 +59,15 @@ export async function resolveActorCompanyId(
 }
 
 /**
- * Проверка: может ли user назначать задачи указанному workerId.
+ * Проверка без учёта своей роли компании: может ли user назначать задачи
+ * указанному workerId.
  *   • admin — всегда да
  *   • manager (managedWorkerIds set) — только если worker в scope
  *     или это он сам
  *   • обычный воркер — только себе
+ *
+ * Роуты и сервисы зовут canAssignTo(await accessOf(user), …) из
+ * shared/roles.ts — он ещё учитывает роль «Ставит задачи».
  */
 export function canAssignToWorker(
   user: { id: number; isAdmin: boolean; managedWorkerIds: string | null },

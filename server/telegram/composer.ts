@@ -70,10 +70,17 @@ export async function loadAssignableWorkers(
   if (!author.companyId) return [];
   const all = await storage.getAllUsers(author.companyId);
 
+  // Админ и роль «Ставит задачи» — все; руководитель из WeSetup — свои и
+  // он сам (shared/roles.ts taskScope).
   const managed = DatabaseStorage.parseManagedWorkerIds(author.managedWorkerIds);
-  const allowedIds = author.isAdmin
+  let allowedIds: Set<number> | null = author.isAdmin
     ? null
     : new Set([...(Array.isArray(managed) ? managed : []), author.id]);
+  if (allowedIds && typeof author.roleId === "number") {
+    const { accessOf } = await import("../access");
+    const scope = (await accessOf(author)).taskScope;
+    allowedIds = scope === null ? null : new Set(scope);
+  }
 
   return all
     .filter((u) => (allowedIds ? allowedIds.has(u.id) : true))

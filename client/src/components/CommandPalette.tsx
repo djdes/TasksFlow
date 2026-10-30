@@ -47,7 +47,7 @@ function PaletteBody({ close }: { close: () => void }) {
   const { logout } = useAuth();
   const { setPreference } = useTheme();
   const role = usePermissions();
-  const { data: users = [] } = useUsers(role.isAdmin);
+  const { data: users = [] } = useUsers(role.isAdmin || role.canManageUsers);
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const listId = useId();
@@ -64,11 +64,11 @@ function PaletteBody({ close }: { close: () => void }) {
       run: go(item.href),
     }));
     if (role.canManageTasks) list.unshift({ id: "new-task", label: "Создать задачу", hint: "Действие", icon: Plus, keywords: "новая задача добавить", shortcut: "N", run: go("/tasks/new") });
+    if (role.isAdmin || role.canManageUsers) {
+      list.push({ id: "new-worker", label: "Добавить сотрудника", hint: "Действие", icon: UserPlus, keywords: "новый человек пин", run: go("/admin/users?add=1") });
+    }
     if (role.isAdmin) {
-      list.push(
-        { id: "new-worker", label: "Добавить сотрудника", hint: "Действие", icon: UserPlus, keywords: "новый человек пин", run: go("/admin/users?add=1") },
-        { id: "invite", label: "Пригласить по QR-коду", hint: "Действие", icon: QrCode, keywords: "приглашение ссылка", run: go("/admin/invitations") },
-      );
+      list.push({ id: "invite", label: "Пригласить по QR-коду", hint: "Действие", icon: QrCode, keywords: "приглашение ссылка", run: go("/admin/invitations") });
     }
     list.push(
       { id: "theme-light", label: "Светлая тема", hint: "Оформление", icon: Sun, keywords: "тема день", run: () => setPreference("light") },
@@ -88,7 +88,7 @@ function PaletteBody({ close }: { close: () => void }) {
       },
     );
     return list;
-  }, [role.canManageTasks, role.isAdmin, role.isRoot, role.isManager, setLocation, setPreference, logout]);
+  }, [role.canManageTasks, role.canManageUsers, role.canVerify, role.canViewReports, role.isAdmin, role.isRoot, role.isManager, setLocation, setPreference, logout]);
 
   const results = useMemo(() => {
     const q = query.trim();

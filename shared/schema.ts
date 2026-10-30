@@ -31,7 +31,27 @@ export const companies = mysqlTable("companies", {
   // момента действует платный тариф; NULL — бессрочно.
   plan: varchar("plan", { length: 20 }),
   planUntil: int("plan_until"),
+  // Права встроенной роли «Сотрудник»: JSON {employeeApproval}; NULL — как
+  // раньше, без проверки (shared/roles.ts). Новым компаниям пишется явно.
+  accessSettings: text("access_settings"),
 });
+
+/**
+ * Свои роли компании (например «Руководитель»): название и набор прав
+ * JSON (shared/roles.ts). Человек получает роль через users.role_id.
+ * Удаление роли переводит её людей в «Сотрудники». Таблицу создаёт
+ * script/_add-roles-notify.ts.
+ */
+export const companyRoles = mysqlTable("company_roles", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  name: varchar("name", { length: 60 }).notNull(),
+  permissions: text("permissions").notNull(),
+  createdAt: int("created_at").notNull().default(0),
+  updatedAt: int("updated_at").notNull().default(0),
+});
+
+export type CompanyRoleRow = typeof companyRoles.$inferSelect;
 
 /**
  * Точки компании (кафе, магазины, объекты сети). Сотрудник привязан к
@@ -123,6 +143,10 @@ export const users = mysqlTable("users", {
   pdConsentAt: int("pd_consent_at"),
   // Точка, где работает сотрудник (locations.id); NULL — без точки.
   locationId: int("location_id"),
+  // Своя роль компании (company_roles.id); NULL — «Сотрудник» или админ.
+  roleId: int("role_id"),
+  // Личные настройки уведомлений JSON (shared/notify.ts); NULL — всё включено.
+  notifyPrefs: text("notify_prefs"),
 });
 
 export const workers = mysqlTable("workers", {
@@ -214,6 +238,11 @@ export const tasks = mysqlTable("tasks", {
   // по задачам. Чтение с fallback на legacy-колонку (см. server/storage.ts),
   // запись — всегда сюда + дубль первого URL в старую колонку.
   examplePhotoUrls: text("example_photo_urls"),
+  // Своё время напоминания «ЧЧ:ММ» по поясу компании: исполнителю придёт
+  // push (и сообщение в Telegram), если задача к этому времени не сделана.
+  remindAt: varchar("remind_at", { length: 5 }),
+  // Местный день, когда напоминание уже ушло, — чтобы не повторять.
+  remindSentDay: varchar("remind_sent_day", { length: 10 }),
 });
 
 // ===== Таблицы Telegram-бота =====
@@ -313,6 +342,8 @@ export const insertUserSchema = z.object({
   name: z.string().max(255, "Имя не должно превышать 255 символов").optional(),
   isAdmin: z.boolean().optional().default(false),
   position: z.string().trim().max(120).optional().nullable(),
+  // Своя роль компании; null — «Сотрудник».
+  roleId: z.number().int().positive().nullable().optional(),
 });
 
 export const updateUserSchema = z.object({
@@ -325,6 +356,9 @@ export const updateUserSchema = z.object({
   ),
   name: z.string().max(255, "Имя не должно превышать 255 символов").nullable().optional(),
   position: z.string().trim().max(120).nullable().optional(),
+  // Роль: "admin" — администратор, число — своя роль, null — «Сотрудник».
+  // Не передана — роль не меняется.
+  role: z.union([z.literal("admin"), z.number().int().positive()]).nullable().optional(),
 });
 
 export const loginSchema = z.object({
@@ -431,6 +465,12 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   // нормализация на стороне вызывающего форсит isRecurring=false при
   // заданном dueDate (иначе ежедневный сброс воскресит разовую задачу).
   dueDate: z.number().int().nullable().optional(),
+  // Своё время напоминания «ЧЧ:ММ» (пояс компании); null — без напоминания.
+  remindAt: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время напоминания в формате ЧЧ:ММ")
+    .nullable()
+    .optional(),
 });
 
 // Схема валидации для регистрации компании
@@ -618,6 +658,8 @@ export const invitations = mysqlTable("invitations", {
   // true если при генерации админ выбрал role=admin или role=manager
   // (та же логика "requestedAdmin", что в POST /api/users).
   isAdmin: boolean("is_admin").notNull().default(false),
+  // Своя роль компании, которую получит принявший приглашение.
+  roleId: int("role_id"),
   // Unix sec; NULL пока не использовали.
   usedAt: int("used_at"),
   usedByUserId: int("used_by_user_id"),

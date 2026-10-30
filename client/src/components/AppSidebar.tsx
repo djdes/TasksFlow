@@ -26,7 +26,7 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { user, logout } = useAuth();
   const role = usePermissions();
   const company = useWesetupConfiguration().data;
-  const { data: pending = [] } = useAwaitingVerification(role.canManageTasks);
+  const { data: pending = [] } = useAwaitingVerification(role.canVerify);
   if (!user) return null;
 
   // «Мой аккаунт» здесь — блок с именем внизу, отдельный пункт был бы дублем.
@@ -37,7 +37,8 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const plan = company?.planInfo;
   const now = Math.floor(Date.now() / 1000);
   const ending = plan && plan.id !== "start" && plan.until !== null && plan.until - now < 7 * DAY;
-  const roleLabel = role.isAdmin ? "Администратор" : role.isManager ? "Руководитель" : "Сотрудник";
+  // Название роли из прав сервера: «Администратор», своя роль компании, «Сотрудник».
+  const roleLabel = role.roleName;
   const initials = getUserInitials(user);
 
   return (

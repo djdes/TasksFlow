@@ -24,6 +24,17 @@ describe("cabinetNav", () => {
     expect(keys(manager)).toEqual(["tasks", "verification", "reports", "account", "help"]);
   });
 
+  it("роль «Руководитель» — сотрудники и отчёты, но без настроек, приглашений и оплаты", () => {
+    const lead = { isAdmin: false, isRoot: false, canManageTasks: true, canManageUsers: true, canVerify: true, canViewReports: true };
+    expect(keys(lead)).toEqual(["tasks", "verification", "reports", "users", "account", "help"]);
+    expect(cabinetNav(lead).find((i) => i.key === "reports")?.label).toBe("История и отчёты");
+  });
+
+  it("роль только с проверкой — очередь проверки без создания задач", () => {
+    const checker = { isAdmin: false, isRoot: false, canManageTasks: false, canVerify: true };
+    expect(keys(checker)).toEqual(["tasks", "verification", "reports", "account", "help"]);
+  });
+
   it("админу — разделы компании; root-разделы только root", () => {
     expect(keys(admin)).toEqual(["tasks", "verification", "reports", "users", "invitations", "settings", "billing", "account", "help"]);
     expect(keys(root)).toContain("companies");

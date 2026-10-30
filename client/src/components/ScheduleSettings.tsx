@@ -8,7 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 const SLOT_TEXT: Record<NotifySlot, { title: string; hint: string }> = {
-  morning: { title: "Утром — список задач", hint: "Каждому, у кого есть задачи на сегодня" },
+  morning: { title: "Утренняя сводка", hint: "Всем: сотруднику — его задачи на день, руководителю и админу — ещё сводка по команде" },
   evening: { title: "Вечером — что осталось", hint: "Только тем, у кого что-то не сделано" },
   digest: { title: "Итоги дня", hint: "Админу и руководителям — по их людям" },
 };
@@ -75,8 +75,11 @@ export function ScheduleSettings({ company }: { company: CompanyLike }) {
       </label>
 
       <fieldset>
-        <legend className="text-sm font-medium text-foreground mb-1">Напоминания в Telegram</legend>
-        <p className="text-xs text-muted-foreground mb-3">Получают те, кто привязал бота в «Моём аккаунте».</p>
+        <legend className="text-sm font-medium text-foreground mb-1">Напоминания</legend>
+        <p className="text-xs text-muted-foreground mb-3">
+          Приходят уведомлением в приложение (и на рабочий стол, если TasksFlow установлен) и в Telegram, если бот привязан
+          в «Моём аккаунте». Своё время напоминания можно поставить и отдельной задаче. Каждый может выключить лишнее у себя в «Уведомлениях».
+        </p>
         <div className="schedule-slots">
           {NOTIFY_SLOTS.map((slot) => {
             const on = notify[slot] !== null;

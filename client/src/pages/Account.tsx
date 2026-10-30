@@ -16,6 +16,7 @@ import { formatPhoneDisplay } from "@/lib/user-display";
 import { ArrowLeft, Mail, KeyRound, Palette, TriangleAlert, UserRound } from "lucide-react";
 import { ChangePinCard } from "@/components/ChangePinCard";
 import { AppDeviceCard } from "@/components/AppDeviceCard";
+import { NotifyPrefsCard } from "@/components/NotifyPrefsCard";
 
 type DeleteStep = "closed" | "confirm" | "sole_admin";
 
@@ -167,12 +168,18 @@ export default function Account() {
           {/* Установка на это устройство и push на нём */}
           <AppDeviceCard />
 
+          {/* Что присылать: новые задачи, напоминания, проверка, письма */}
+          <NotifyPrefsCard />
+
           {/* Смена email */}
-          <section className="content-panel account-section">
+          <section className="content-panel account-section" id="email">
             <div className="section-title">
               <Mail className="w-5 h-5 text-primary" />
               <h2>Email</h2>
             </div>
+            <p className="text-sm text-muted-foreground -mt-1 mb-3">
+              Для писем о новых задачах и входа без PIN по ссылке из письма.
+            </p>
             <form onSubmit={saveEmail} className="account-form">
               <Input
                 type="email"

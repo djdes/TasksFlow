@@ -7,6 +7,8 @@ import { DEFAULT_NOTIFY, parseNotifySettings } from "../shared/notify";
 import {
   digestText,
   dueSlots,
+  isTaskReminderDue,
+  teamMorningText,
   runReminders,
   type ReminderCompany,
   type ReminderSender,
@@ -67,7 +69,7 @@ const company = (extra: Partial<ReminderCompany> = {}): ReminderCompany => ({
 });
 
 describe("расписание напоминаний", () => {
-  it("по умолчанию 09:00, 18:00 и 20:30; мусор в БД — тоже по умолчанию", () => {
+  it("по умолчанию 08:30, 18:00 и 20:30; мусор в БД — тоже по умолчанию", () => {
     expect(parseNotifySettings(null)).toEqual(DEFAULT_NOTIFY);
     expect(parseNotifySettings('{"morning":"25:00"}')).toEqual(DEFAULT_NOTIFY);
     expect(parseNotifySettings('{"morning":"07:30","evening":null,"digest":"21:00"}')).toEqual({ morning: "07:30", evening: null, digest: "21:00" });
@@ -75,11 +77,12 @@ describe("расписание напоминаний", () => {
 
   it("пора, если время наступило, сегодня ещё не отправляли и опоздание меньше 3 часов", () => {
     const s = DEFAULT_NOTIFY;
-    expect(dueSlots(s, {}, "2026-10-24", 8 * 60 + 59)).toEqual([]);
-    expect(dueSlots(s, {}, "2026-10-24", 9 * 60)).toEqual(["morning"]);
-    expect(dueSlots(s, { morning: "2026-10-24" }, "2026-10-24", 9 * 60 + 5)).toEqual([]);
-    expect(dueSlots(s, { morning: "2026-10-23" }, "2026-10-24", 11 * 60 + 59)).toEqual(["morning"]);
-    expect(dueSlots(s, {}, "2026-10-24", 12 * 60)).toEqual([]);
+    expect(s.morning).toBe("08:30");
+    expect(dueSlots(s, {}, "2026-10-24", 8 * 60 + 29)).toEqual([]);
+    expect(dueSlots(s, {}, "2026-10-24", 8 * 60 + 30)).toEqual(["morning"]);
+    expect(dueSlots(s, { morning: "2026-10-24" }, "2026-10-24", 8 * 60 + 35)).toEqual([]);
+    expect(dueSlots(s, { morning: "2026-10-23" }, "2026-10-24", 11 * 60 + 29)).toEqual(["morning"]);
+    expect(dueSlots(s, {}, "2026-10-24", 11 * 60 + 30)).toEqual([]);
     expect(dueSlots({ ...s, evening: null }, {}, "2026-10-24", 18 * 60 + 10)).toEqual([]);
   });
 });
@@ -104,15 +107,22 @@ describe("итоги дня", () => {
 });
 
 describe("рассылка", () => {
-  it("утром — список тем, у кого есть задачи и привязан бот", async () => {
+  it("утром — список тем, у кого есть задачи и привязан бот; админу и руководителю — сводка по команде", async () => {
     const { store, sender } = setup([company()]);
     const runs = await runReminders(store, sender, msk(9, 1), { reportUrl: "https://tasksflow.ru/reports" });
-    expect(runs).toEqual([{ companyId: 1, slot: "morning", sent: 2 }]);
+    expect(runs).toEqual([{ companyId: 1, slot: "morning", sent: 4 }]);
     const calls = vi.mocked(sender.sendTaskList).mock.calls;
     expect(calls.map((c) => c[0])).toEqual([1010, 1011]);
     expect(calls[0][1].map((t: any) => t.id)).toEqual([1, 2]);
     expect(calls[0][2]).toContain("Доброе утро, Анна!");
     expect(calls[0][2]).toContain("Задач на сегодня: 2");
+    // Своих задач нет — сводка по команде одним сообщением со ссылкой.
+    const texts = vi.mocked(sender.sendText).mock.calls;
+    expect(texts.map((c) => c[0])).toEqual([1001, 1012]);
+    expect(texts[0][1]).toContain("Доброе утро, Ирина!");
+    expect(texts[0][1]).toContain("У команды на сегодня задач: 4");
+    expect(texts[1][1]).toContain("У команды на сегодня задач: 2");
+    expect(texts[0][2]).toEqual({ text: "📋 Открыть задачи", url: "https://tasksflow.ru/dashboard" });
   });
 
   it("повторный тик в тот же день ничего не шлёт", async () => {
@@ -157,12 +167,100 @@ describe("рассылка", () => {
     const { store, sender } = setup([company()]);
     vi.mocked(sender.sendTaskList).mockRejectedValueOnce(new Error("403 bot was blocked"));
     const runs = await runReminders(store, sender, msk(9, 1), { reportUrl: "x" });
-    expect(runs).toEqual([{ companyId: 1, slot: "morning", sent: 1 }]);
+    expect(runs).toEqual([{ companyId: 1, slot: "morning", sent: 3 }]);
   });
 
   it("время считается по поясу компании", async () => {
     // 09:01 по Москве = 16:01 во Владивостоке: там утро давно прошло (окно 3 часа).
     const { store, sender } = setup([company({ timezone: "Asia/Vladivostok" })]);
     expect(await runReminders(store, sender, msk(9, 1), { reportUrl: "x" })).toEqual([]);
+  });
+});
+
+describe("своё время напоминания у задачи", () => {
+  const due = (extra: Record<string, unknown> = {}) =>
+    task({ id: 7, workerId: 10, title: "Позвонить поставщику", remindAt: "14:00", remindSentDay: null, ...extra });
+
+  function withReminders(tasks: any[], users = [admin, anna, boris, chef, ghost]) {
+    const { store, sender } = setup([company({ notifyState: '{"morning":"2026-10-24","evening":"2026-10-24","digest":"2026-10-24"}' })], users, []);
+    const sentDays = new Map<number, string>();
+    store.listTaskReminders = vi.fn(async () => tasks);
+    store.claimTaskReminder = vi.fn(async (id: number, day: string) => {
+      if (sentDays.get(id) === day) return false;
+      sentDays.set(id, day);
+      return true;
+    });
+    return { store, sender };
+  }
+
+  it("в своё время исполнителю приходит карточка задачи, один раз за день", async () => {
+    const { store, sender } = withReminders([due()]);
+    expect(await runReminders(store, sender, msk(13, 59), { reportUrl: "x" })).toEqual([]);
+    const runs = await runReminders(store, sender, msk(14, 0), { reportUrl: "x" });
+    expect(runs).toEqual([{ companyId: 1, slot: "task", sent: 1 }]);
+    const calls = vi.mocked(sender.sendTaskList).mock.calls;
+    expect(calls[0][0]).toBe(1010);
+    expect(calls[0][1].map((t: any) => t.id)).toEqual([7]);
+    expect(calls[0][2]).toContain("Напоминание");
+    await runReminders(store, sender, msk(14, 5), { reportUrl: "x" });
+    expect(sender.sendTaskList).toHaveBeenCalledTimes(1);
+  });
+
+  it("сделанная, отправленная на проверку и не сегодняшняя задача — без напоминания", async () => {
+    const { store, sender } = withReminders([
+      due({ id: 8, verificationStatus: "submitted" }),
+      due({ id: 9, weekDays: [1] }), // 24.10.2026 — суббота
+      due({ id: 10, remindSentDay: "2026-10-24" }),
+    ]);
+    expect(await runReminders(store, sender, msk(14, 1), { reportUrl: "x" })).toEqual([]);
+  });
+
+  it("опоздание больше 3 часов — не шлём", () => {
+    expect(isTaskReminderDue({ remindAt: "14:00", remindSentDay: null }, "2026-10-24", 17 * 60)).toBe(false);
+    expect(isTaskReminderDue({ remindAt: "14:00", remindSentDay: null }, "2026-10-24", 16 * 60 + 59)).toBe(true);
+    expect(isTaskReminderDue({ remindAt: "25:00", remindSentDay: null }, "2026-10-24", 16 * 60)).toBe(false);
+  });
+
+  it("push по времени задачи — с тегом задачи", async () => {
+    const { store } = withReminders([due()]);
+    const push = vi.fn(async () => true);
+    const runs = await runReminders(store, { pushRecipients: async () => new Set([10]), push }, msk(14, 2), { reportUrl: "x" });
+    expect(runs).toEqual([{ companyId: 1, slot: "task", sent: 1 }]);
+    expect(push).toHaveBeenCalledWith(10, { title: "Напоминание · 14:00", body: "Позвонить поставщику", url: "/dashboard", tag: "remind-7" });
+  });
+});
+
+describe("личные настройки и роли", () => {
+  it("выключил напоминания — утром ничего не приходит; итоги дня — по своей настройке", async () => {
+    const quiet = user({ notifyPrefs: '{"reminders":false}' });
+    const { store, sender } = setup([company()], [quiet, boris]);
+    const runs = await runReminders(store, sender, msk(9, 1), { reportUrl: "x" });
+    expect(runs).toEqual([{ companyId: 1, slot: "morning", sent: 1 }]);
+    expect(vi.mocked(sender.sendTaskList).mock.calls.map((c) => c[0])).toEqual([1011]);
+
+    const noDigest = user({ id: 1, name: "Ирина", isAdmin: true, tgChatId: 1001, notifyPrefs: '{"digest":false}' });
+    const evening = setup([company({ notifyState: '{"morning":"2026-10-24","evening":"2026-10-24"}' })], [noDigest, anna]);
+    expect(await runReminders(evening.store, evening.sender, msk(20, 31), { reportUrl: "x" })).toEqual([
+      { companyId: 1, slot: "digest", sent: 0 },
+    ]);
+  });
+
+  it("своя роль «Руководитель» получает итоги по всей компании", async () => {
+    const lead = user({ id: 14, name: "Олег", roleId: 3, tgChatId: 1014 });
+    const { store, sender } = setup([company({ notifyState: '{"morning":"2026-10-24","evening":"2026-10-24"}' })], [lead, anna, boris]);
+    store.getRoles = vi.fn(async () => [
+      { id: 3, companyId: 1, name: "Руководитель", permissions: { manageTasks: true, manageUsers: true, verifyTasks: true, viewReports: true, requiresApproval: false } },
+    ]);
+    const runs = await runReminders(store, sender, msk(20, 31), { reportUrl: "x" });
+    expect(runs).toEqual([{ companyId: 1, slot: "digest", sent: 1 }]);
+    const [chatId, text] = vi.mocked(sender.sendText).mock.calls[0];
+    expect(chatId).toBe(1014);
+    expect(text).toContain("Сделано: <b>1 из 4</b>");
+    expect(text).not.toContain("ваши сотрудники");
+  });
+
+  it("сводка по команде считает задачи, ждущие проверки", () => {
+    expect(teamMorningText({ tasks: 5, review: 0 })).toBe("у команды на сегодня задач: 5");
+    expect(teamMorningText({ tasks: 5, review: 2 })).toBe("у команды на сегодня задач: 5 · ждут проверки: 2");
   });
 });

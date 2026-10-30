@@ -1,6 +1,7 @@
 import type { Express, Request, RequestHandler } from "express";
 import { dayInZone, daysBetween, isDay, shiftDay, zoneOrDefault } from "@shared/day";
-import { DatabaseStorage, storage } from "./storage";
+import { storage } from "./storage";
+import { accessOf } from "./access";
 import { listHistory } from "./task-history-store";
 import type { HistoryItem } from "@shared/history";
 import { buildCsv, fromHistoryRow, oneOffItems, sortItems, summarize, todayItems } from "@shared/history-report";
@@ -13,8 +14,9 @@ import { getPublicTasksflowBaseUrl } from "./public-urls";
  *   GET /api/reports/summary?from=&to=&workerId=&locationId=   — сводка по людям и дням
  *   GET /api/reports/export.csv?from=&to=&workerId=&locationId= — то же построчно для Excel
  *
- * Видимость как у задач: админ и API-ключ — вся компания, руководитель —
- * свои сотрудники и он сам, сотрудник — только он сам.
+ * Видимость: админ, API-ключ и роль «Видит историю всей компании» — вся
+ * компания, руководитель из WeSetup — свои сотрудники и он сам, сотрудник —
+ * только он сам (shared/roles.ts).
  */
 type Deps = {
   requireAuthOrApiKey: RequestHandler;
@@ -42,8 +44,9 @@ async function resolveScope(req: Request, deps: Deps): Promise<Scope> {
     const me = await storage.getUserById(req.session.userId!);
     if (!me) throw new HttpError(401, "Требуется авторизация");
     if (!me.isAdmin) {
-      const managed = DatabaseStorage.parseManagedWorkerIds(me.managedWorkerIds);
-      workerIds = managed ? Array.from(new Set([...managed, me.id])) : [me.id];
+      // Роль «Видит историю всей компании» — все; руководитель из WeSetup —
+      // свои и он сам; сотрудник — только своё (shared/roles.ts reportScope).
+      workerIds = (await accessOf(me)).reportScope;
     }
   }
   return { companyId, tz, today, workerIds };

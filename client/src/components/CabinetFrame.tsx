@@ -36,7 +36,7 @@ export function CabinetFrame({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const inCabinet = !!user && isCabinetPath(location);
   // Тот же запрос, что у счётчика в меню, — из кэша, без лишнего опроса.
-  const { data: pending = [] } = useAwaitingVerification(inCabinet && canManageTasks);
+  const { data: pending = [] } = useAwaitingVerification(inCabinet && role.canVerify);
 
   const title = inCabinet ? pageTitle(cabinetNav(role), location, pending.length) : "TasksFlow";
   useEffect(() => {

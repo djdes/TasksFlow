@@ -25,7 +25,7 @@ import {
   renderWorkerTasks,
   renderWorkerTasksMenu,
 } from "./my-tasks";
-import { canCreateTasks, escapeHtml } from "./util";
+import { canCreateTasksNow, escapeHtml } from "./util";
 import { parseMessage, matchWorker } from "./parse-message";
 import {
   bindGroupIfAbsent,
@@ -245,7 +245,7 @@ async function handleMessage(
     }
   }
 
-  if (!canCreateTasks(user)) {
+  if (!(await canCreateTasksNow(user))) {
     await runtime.client.sendMessage({
       chat_id: chatId,
       reply_to_message_id: replyTo,
@@ -305,7 +305,7 @@ async function handleGroupStart(
     });
     return;
   }
-  if (!canCreateTasks(user)) {
+  if (!(await canCreateTasksNow(user))) {
     await runtime.client.sendMessage({
       chat_id: chatId,
       reply_to_message_id: replyTo,
@@ -391,7 +391,7 @@ async function handleGroupMessage(params: {
 
   // Автор задачи: отправитель, если может; иначе владелец группы.
   const senderCanCreate =
-    sender && sender.companyId === owner.companyId && canCreateTasks(sender);
+    sender && sender.companyId === owner.companyId && (await canCreateTasksNow(sender));
   const author = senderCanCreate
     ? sender!
     : await storage.getUserById(owner.ownerUserId);
@@ -599,7 +599,7 @@ async function sendGreeting(
     reply_to_message_id: replyTo,
     text:
       `Привет, ${escapeHtml(user.name || "коллега")}! Аккаунт привязан.\n\n` +
-      (canCreateTasks(user)
+      ((await canCreateTasksNow(user))
         ? "Напиши задачу обычным текстом — например «Олегу каждую пятницу мыть холодильник, фото обязательно, 200р» — и я покажу карточку перед созданием.\n\n"
         : "") +
       "Команда /tasks — твои задачи на сегодня.",
@@ -619,7 +619,7 @@ async function sendHelp(
     text:
       "<b>Что я умею</b>\n" +
       "/tasks — задачи на сегодня, закрытие фотографией\n" +
-      (canCreateTasks(user)
+      ((await canCreateTasksNow(user))
         ? "Просто напиши текст — разберу его в задачу и покажу карточку. " +
           "Фото в том же сообщении станут примером «как надо».\n"
         : "") +

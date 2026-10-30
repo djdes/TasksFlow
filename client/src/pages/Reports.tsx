@@ -15,6 +15,7 @@ import {
 import type { HistoryItem, HistoryStatus, PersonSummary } from "@shared/history";
 import { dayOfWeek, shiftDay, TIMEZONE_OPTIONS, utcOffsetLabel } from "@shared/day";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useUsers } from "@/hooks/use-users";
 import { csvUrl, useHistoryDay, useReportSummary } from "@/lib/reports-api";
 import { getUserInitials } from "@/lib/user-display";
@@ -75,6 +76,7 @@ export default function Reports() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, isLoading: authLoading } = useAuth();
+  const permissions = usePermissions();
   const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(search).get("tab") === "summary" ? "summary" : "day"));
   const [day, setDay] = useState<string | null>(null);
   const [workerId, setWorkerId] = useState<number | null>(null);
@@ -82,7 +84,10 @@ export default function Reports() {
   const [period, setPeriod] = useState<Period>("7");
   const [viewer, setViewer] = useState<{ photos: ViewerPhoto[]; index: number } | null>(null);
 
-  const canPickPeople = !!user && (user.isAdmin || Array.isArray(safeManaged((user as { managedWorkerIds?: unknown }).managedWorkerIds)));
+  // Выбор людей — если видна не только своя история: админ, роль «Видит
+  // историю всей компании», руководитель из WeSetup (shared/roles.ts reportScope).
+  const reportScope = permissions.access?.reportScope;
+  const canPickPeople = !!user && (reportScope === null || (Array.isArray(reportScope) && reportScope.length > 1));
   const { data: users = [] } = useUsers();
   const { data: locations = [] } = useLocations(canPickPeople);
   const history = useHistoryDay(day, workerId, locationId);
@@ -263,17 +268,6 @@ export default function Reports() {
       />
     </div>
   );
-}
-
-function safeManaged(raw: unknown): number[] | null {
-  if (Array.isArray(raw)) return raw as number[];
-  if (typeof raw !== "string" || !raw) return null;
-  try {
-    const v = JSON.parse(raw);
-    return Array.isArray(v) ? v : null;
-  } catch {
-    return null;
-  }
 }
 
 type Group = { workerId: number; name: string; items: HistoryItem[]; done: number; total: number };

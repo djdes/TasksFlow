@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { forgetThisDevice } from "@/lib/push";
+import type { UserAccess } from "@shared/roles";
+import type { NotifyPrefs } from "@shared/notify";
 
 type User = {
   id: number;
@@ -17,6 +19,12 @@ type User = {
   pinLocked?: boolean;
   /** Недавний вход по email: PIN можно сменить без текущего. */
   pinResetByEmail?: boolean;
+  position?: string | null;
+  roleId?: number | null;
+  /** Права по роли — считает сервер (shared/roles.ts). */
+  access?: UserAccess;
+  /** Личные настройки уведомлений. */
+  notify?: NotifyPrefs;
 } | null;
 
 /** Ответ входа: следующий шаг (ввести или придумать PIN) либо готовая сессия. */

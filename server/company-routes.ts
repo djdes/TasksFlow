@@ -3,7 +3,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PLAN_IDS } from "@shared/plans";
 import { OFFER_REVISION } from "@shared/billing";
-import { companies, locations, users } from "@shared/schema";
+import { companies, locations, users, type User } from "@shared/schema";
 import { db } from "./db";
 import { storage } from "./storage";
 import { companyPlan, locationsProblem, planLimitsEnforced } from "./plan-limits";
@@ -19,6 +19,10 @@ type Deps = {
   requireAuth: RequestHandler;
   requireAdmin: RequestHandler;
   requireRoot: RequestHandler;
+  /** Админ или роль «Добавляет сотрудников». */
+  requireUserManager: RequestHandler;
+  /** Руководитель меняет только обычных людей (shared/roles.ts canManageUser). */
+  canTouchUser: (req: Request, target: User) => Promise<boolean>;
   getCompanyIdFromReq: (req: Request) => Promise<number | null>;
 };
 
@@ -131,7 +135,7 @@ export function registerCompanyRoutes(app: Express, deps: Deps): void {
     }
   });
 
-  app.put("/api/users/:id/location", deps.requireAuth, deps.requireAdmin, async (req, res) => {
+  app.put("/api/users/:id/location", deps.requireAuth, deps.requireUserManager, async (req, res) => {
     try {
       const companyId = await companyOr404(req);
       const userId = Number(req.params.id);
@@ -139,6 +143,9 @@ export function registerCompanyRoutes(app: Express, deps: Deps): void {
       const target = Number.isInteger(userId) ? await storage.getUserById(userId) : undefined;
       if (!companyId || !target || target.companyId !== companyId) {
         return res.status(404).json({ message: "Пользователь не найден" });
+      }
+      if (!(await deps.canTouchUser(req, target))) {
+        return res.status(403).json({ message: "Админов и других руководителей меняет только администратор" });
       }
       if (locationId !== null) {
         const [loc] = await db

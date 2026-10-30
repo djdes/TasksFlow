@@ -1,29 +1,39 @@
 /**
- * Напоминания и итоги дня в Telegram по расписанию компании.
+ * Напоминания и итоги дня по расписанию компании — в Telegram и push
+ * (приложение, PWA на рабочем столе, браузер).
  *
- *   morning — каждому, у кого есть задачи на сегодня: список с кнопками;
+ *   morning — утренняя сводка для всех (по умолчанию 08:30): сотруднику —
+ *             его задачи на день со списком; руководителю и админу — ещё
+ *             сколько задач у команды и сколько ждут проверки;
  *   evening — тем, у кого что-то осталось: что именно;
  *   digest  — админам и руководителям: сколько сделано у их людей,
  *             что не сделано и премии за день, кнопка «Открыть отчёт».
+ *   task    — своё время у задачи (tasks.remind_at): исполнителю, если
+ *             задача к этому времени не сделана.
  *
- * Получают только привязавшие бота (tgChatId + /start). Каждое напоминание
- * уходит один раз за местный день: состояние компании меняется
- * compare-and-swap, так что тик, рестарт и второй процесс не задвоят.
- * Опоздавшее больше чем на 3 часа (сервер лежал) не отправляем — утреннее
- * в обед только раздражает.
+ * Telegram получают привязавшие бота (tgChatId + /start), push — те, у кого
+ * включены уведомления на устройстве. Личные настройки (shared/notify.ts)
+ * выключают напоминания или итоги дня у конкретного человека.
+ *
+ * Каждое напоминание уходит один раз за местный день: состояние компании
+ * (и remind_sent_day задачи) меняется compare-and-swap, так что тик, рестарт
+ * и второй процесс не задвоят. Опоздавшее больше чем на 3 часа (сервер лежал)
+ * не отправляем — утреннее в обед только раздражает.
  */
 import type { Task, User } from "@shared/schema";
 import { dayInZone, dayLabelRu, minutesInZone, zoneOrDefault } from "@shared/day";
 import {
   hhmmToMinutes,
   NOTIFY_SLOTS,
+  parseNotifyPrefs,
   parseNotifySettings,
+  type NotifyPrefs,
   type NotifySettings,
   type NotifySlot,
 } from "@shared/notify";
 import type { HistoryItem } from "@shared/history";
 import { todayItems } from "@shared/history-report";
-import { DatabaseStorage } from "../storage";
+import { canReviewTask, resolveAccess, type AccessRole, type UserAccess } from "@shared/roles";
 import type { PushMessage } from "@shared/push";
 
 const LATE_WINDOW_MIN = 180;
@@ -50,13 +60,36 @@ export function dueSlots(settings: NotifySettings, state: NotifyState, day: stri
   });
 }
 
+/** Своё время задачи наступило, сегодня ещё не напоминали, опоздание меньше 3 часов. */
+export function isTaskReminderDue(task: Pick<Task, "remindAt" | "remindSentDay">, day: string, minutes: number): boolean {
+  if (!task.remindAt || task.remindSentDay === day) return false;
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(task.remindAt)) return false;
+  const start = hhmmToMinutes(task.remindAt);
+  return minutes >= start && minutes < start + LATE_WINDOW_MIN;
+}
+
 const linked = (u: User) => u.tgChatId != null && u.tgStartedAt != null;
 
+/**
+ * Чью работу человек видит в сводках: null — вся компания, массив — эти
+ * люди, undefined — только свою (обычный сотрудник).
+ */
+export function summaryScope(access: UserAccess): number[] | null | undefined {
+  if (access.isAdmin) return null;
+  if (!access.manageTasks && !access.verifyTasks && !access.viewReports) return undefined;
+  if (
+    (access.manageTasks && access.taskScope === null) ||
+    (access.verifyTasks && access.reviewScope === null) ||
+    (access.viewReports && access.reportScope === null)
+  ) {
+    return null;
+  }
+  return Array.from(new Set([...(access.taskScope ?? []), ...(access.reportScope ?? []), access.userId]));
+}
+
 /** Кому руководитель смотрит итоги: админ — всех, руководитель — своих и себя. */
-export function digestScope(viewer: User): number[] | null | undefined {
-  if (viewer.isAdmin) return null;
-  const managed = DatabaseStorage.parseManagedWorkerIds(viewer.managedWorkerIds);
-  return managed ? Array.from(new Set([...managed, viewer.id])) : undefined;
+export function digestScope(viewer: User, role: AccessRole | null = null): number[] | null | undefined {
+  return summaryScope(resolveAccess(viewer, role));
 }
 
 export function digestText(items: HistoryItem[], users: User[], day: string, opts: { scoped: boolean }): string | null {
@@ -88,6 +121,15 @@ function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Сводка по команде на утро: задачи людей на сегодня и что ждёт проверки. */
+export type TeamMorning = { tasks: number; review: number };
+
+export function teamMorningText(team: TeamMorning): string {
+  const parts = [`у команды на сегодня задач: ${team.tasks}`];
+  if (team.review > 0) parts.push(`ждут проверки: ${team.review}`);
+  return parts.join(" · ");
+}
+
 // ---------------------------------------------------------------------------
 
 export type ReminderCompany = { id: number; timezone: string | null; notifySettings: string | null; notifyState: string | null };
@@ -98,6 +140,12 @@ export interface ReminderStore {
   claimNotify(companyId: number, prev: string | null, next: string): Promise<boolean>;
   getUsers(companyId: number): Promise<User[]>;
   getTasks(companyId: number): Promise<Task[]>;
+  /** Свои роли компании — кто руководитель (shared/roles.ts). Нет — ролей нет. */
+  getRoles?(companyId: number): Promise<AccessRole[]>;
+  /** Невыполненные задачи со своим временем напоминания, по всем компаниям. */
+  listTaskReminders?(): Promise<Task[]>;
+  /** compare-and-swap remind_sent_day: false — сегодня уже отправлено. */
+  claimTaskReminder?(taskId: number, day: string): Promise<boolean>;
 }
 
 export interface ReminderSender {
@@ -110,36 +158,63 @@ export interface ReminderSender {
   push?(userId: number, message: PushMessage): Promise<boolean>;
 }
 
-export type ReminderRun = { companyId: number; slot: NotifySlot; sent: number };
+export type ReminderRun = { companyId: number; slot: NotifySlot | "task"; sent: number };
+
+type RunOpts = {
+  reportUrl: string;
+  /** Ссылка «Открыть задачи» в Telegram; по умолчанию рядом с отчётом. */
+  dashboardUrl?: string;
+  onError?: (companyId: number, err: unknown) => void;
+};
 
 export async function runReminders(
   store: ReminderStore,
   sender: ReminderSender,
   now: number,
-  opts: { reportUrl: string; onError?: (companyId: number, err: unknown) => void },
+  opts: RunOpts,
 ): Promise<ReminderRun[]> {
   const runs: ReminderRun[] = [];
+  // Задачи со своим временем — одним запросом на все компании.
+  const withReminders = store.listTaskReminders ? await store.listTaskReminders().catch(() => [] as Task[]) : [];
+  const remindersByCompany = new Map<number, Task[]>();
+  for (const t of withReminders) {
+    if (t.companyId == null) continue;
+    remindersByCompany.set(t.companyId, [...(remindersByCompany.get(t.companyId) ?? []), t]);
+  }
+
   for (const company of await store.listCompanies()) {
     const tz = zoneOrDefault(company.timezone);
     const day = dayInZone(now, tz);
+    const minutes = minutesInZone(now, tz);
     const state = parseNotifyState(company.notifyState);
-    const due = dueSlots(parseNotifySettings(company.notifySettings), state, day, minutesInZone(now, tz));
-    if (due.length === 0) continue;
-    const next = { ...state };
-    for (const slot of due) next[slot] = day;
-    if (!(await store.claimNotify(company.id, company.notifyState, JSON.stringify(next)))) continue;
+    const due = dueSlots(parseNotifySettings(company.notifySettings), state, day, minutes);
+    const dueTasks = (remindersByCompany.get(company.id) ?? []).filter((t) => isTaskReminderDue(t, day, minutes));
+    if (due.length === 0 && dueTasks.length === 0) continue;
+
+    let claimed: NotifySlot[] = [];
+    if (due.length > 0) {
+      const next = { ...state };
+      for (const slot of due) next[slot] = day;
+      if (await store.claimNotify(company.id, company.notifyState, JSON.stringify(next))) claimed = due;
+    }
+    if (claimed.length === 0 && dueTasks.length === 0) continue;
 
     try {
-      const [users, tasks] = await Promise.all([store.getUsers(company.id), store.getTasks(company.id)]);
+      const [users, tasks, roles] = await Promise.all([
+        store.getUsers(company.id),
+        claimed.length > 0 ? store.getTasks(company.id) : Promise.resolve([] as Task[]),
+        store.getRoles ? store.getRoles(company.id).catch(() => [] as AccessRole[]) : Promise.resolve([] as AccessRole[]),
+      ]);
       const pushable = sender.pushRecipients
         ? await sender.pushRecipients(users.map((u) => u.id)).catch(() => new Set<number>())
         : new Set<number>();
-      for (const slot of due) {
-        runs.push({
-          companyId: company.id,
-          slot,
-          sent: await sendSlot(slot, sender, users, tasks, tz, day, opts.reportUrl, pushable),
-        });
+      const ctx = makeContext(users, roles, sender, pushable, tz, day, opts);
+      for (const slot of claimed) {
+        runs.push({ companyId: company.id, slot, sent: await sendSlot(slot, ctx, tasks) });
+      }
+      if (dueTasks.length > 0) {
+        const sent = await sendTaskReminders(store, ctx, dueTasks);
+        if (sent > 0) runs.push({ companyId: company.id, slot: "task", sent });
       }
     } catch (err) {
       // Состояние уже записано: лучше пропустить одно напоминание, чем
@@ -150,68 +225,117 @@ export async function runReminders(
   return runs;
 }
 
-async function sendSlot(
-  slot: NotifySlot,
-  sender: ReminderSender,
+type Ctx = {
+  users: User[];
+  sender: ReminderSender;
+  pushable: Set<number>;
+  tz: string;
+  day: string;
+  reportUrl: string;
+  dashboardUrl: string;
+  access: Map<number, UserAccess>;
+  prefs: (user: User) => NotifyPrefs;
+};
+
+function makeContext(
   users: User[],
-  tasks: Task[],
+  roles: AccessRole[],
+  sender: ReminderSender,
+  pushable: Set<number>,
   tz: string,
   day: string,
-  reportUrl: string,
-  pushable: Set<number>,
-): Promise<number> {
+  opts: RunOpts,
+): Ctx {
+  const roleById = new Map(roles.map((r) => [r.id, r]));
+  const access = new Map(users.map((u) => [u.id, resolveAccess(u, typeof u.roleId === "number" ? roleById.get(u.roleId) ?? null : null)]));
+  return {
+    users,
+    sender,
+    pushable,
+    tz,
+    day,
+    reportUrl: opts.reportUrl,
+    dashboardUrl: opts.dashboardUrl ?? opts.reportUrl.replace(/\/reports\/?$/, "/dashboard"),
+    access,
+    prefs: (u) => parseNotifyPrefs(u.notifyPrefs),
+  };
+}
+
+/** Отправка одному человеку по каналам: заблокированный бот не мешает push и наоборот. */
+function channels(ctx: Ctx, user: User) {
+  const tg = linked(user) && !!ctx.sender.sendText && !!ctx.sender.sendTaskList;
+  const push = ctx.pushable.has(user.id) && !!ctx.sender.push;
+  let reached = false;
+  const via = async (run: () => Promise<unknown>) => {
+    try {
+      const ok = await run();
+      if (ok !== false) reached = true;
+    } catch {
+      // Один заблокировавший бота не должен оставить без напоминаний остальных.
+    }
+  };
+  return { tg, push, via, reached: () => reached };
+}
+
+async function sendSlot(slot: NotifySlot, ctx: Ctx, tasks: Task[]): Promise<number> {
+  const { sender, users } = ctx;
   let sent = 0;
-  const items = todayItems(tasks, tz, day, null);
+  const items = todayItems(tasks, ctx.tz, ctx.day, null);
   const byId = new Map(tasks.map((t) => [t.id, t]));
   for (const user of users) {
-    const tg = linked(user) && !!sender.sendText && !!sender.sendTaskList;
-    const push = pushable.has(user.id) && !!sender.push;
-    if (!tg && !push) continue;
-    // Каждый канал сам по себе: заблокированный бот не мешает push и наоборот.
-    let reached = false;
-    const via = async (run: () => Promise<unknown>) => {
-      try {
-        const ok = await run();
-        if (ok !== false) reached = true;
-      } catch {
-        // Один заблокировавший бота не должен оставить без напоминаний остальных.
-      }
-    };
+    const ch = channels(ctx, user);
+    if (!ch.tg && !ch.push) continue;
+    const prefs = ctx.prefs(user);
+    const access = ctx.access.get(user.id)!;
+    const scope = summaryScope(access);
     if (slot === "digest") {
-      const scope = digestScope(user);
-      if (scope === undefined) continue; // обычный сотрудник
+      if (scope === undefined || !prefs.digest) continue; // обычный сотрудник или выключил
       const scoped = scope ? items.filter((i) => i.workerId != null && scope.includes(i.workerId)) : items;
-      const text = digestText(scoped, users, day, { scoped: scope !== null });
+      const text = digestText(scoped, users, ctx.day, { scoped: scope !== null });
       if (!text) continue;
-      if (tg) await via(() => sender.sendText!(user.tgChatId!, text, { text: "📈 Открыть отчёт", url: reportUrl }));
-      if (push) await via(() => sender.push!(user.id, digestPush(scoped, day)));
-      if (reached) sent++;
+      if (ch.tg) await ch.via(() => sender.sendText!(user.tgChatId!, text, { text: "📈 Открыть отчёт", url: ctx.reportUrl }));
+      if (ch.push) await ch.via(() => sender.push!(user.id, digestPush(scoped, ctx.day)));
+      if (ch.reached()) sent++;
       continue;
     }
+    if (!prefs.reminders) continue;
     const mine = items.filter((i) => i.workerId === user.id && i.status !== "claimed");
     const open = mine.filter((i) => i.status === "pending");
-    if (slot === "morning" && mine.length > 0) {
+    if (slot === "morning") {
+      const team = scope === undefined ? null : teamMorning(ctx, tasks, items, access, scope);
+      if (mine.length === 0 && !team) continue;
       const list = mine.map((i) => byId.get(i.taskId)!).filter(Boolean);
       const first = user.name ? user.name.split(" ")[0] : "";
-      if (tg) {
+      if (ch.tg) {
         const name = first ? `, ${escape(first)}` : "";
-        await via(() => sender.sendTaskList!(user.tgChatId!, list, `☀️ <b>Доброе утро${name}!</b> Задач на сегодня: ${mine.length}`));
+        const teamLine = team ? teamMorningText(team) : "";
+        if (list.length > 0) {
+          const header = `☀️ <b>Доброе утро${name}!</b> Задач на сегодня: ${mine.length}` + (teamLine ? ` · ${teamLine}` : "");
+          await ch.via(() => sender.sendTaskList!(user.tgChatId!, list, header));
+        } else {
+          const text = `☀️ <b>Доброе утро${name}!</b> ${capitalize(teamLine)}`;
+          await ch.via(() => sender.sendText!(user.tgChatId!, text, { text: "📋 Открыть задачи", url: ctx.dashboardUrl }));
+        }
       }
-      if (push) {
-        await via(() =>
+      if (ch.push) {
+        const body =
+          list.length > 0
+            ? `Задач на сегодня: ${mine.length}. ${listBody(list.map((t) => t.title))}` + (team ? ` · ${teamMorningText(team)}` : "")
+            : capitalize(teamMorningText(team!));
+        await ch.via(() =>
           sender.push!(user.id, {
             title: first ? `Доброе утро, ${first}!` : "Доброе утро!",
-            body: `Задач на сегодня: ${mine.length}. ${listBody(list.map((t) => t.title))}`,
-            url: "/dashboard",
+            body,
+            url: team && list.length === 0 && team.review > 0 ? "/admin/verification" : "/dashboard",
             tag: "morning",
           }),
         );
       }
     } else if (slot === "evening" && open.length > 0) {
       const list = open.map((i) => byId.get(i.taskId)!).filter(Boolean);
-      if (tg) await via(() => sender.sendTaskList!(user.tgChatId!, list, `⏰ <b>Осталось сделать: ${open.length}</b>`));
-      if (push) {
-        await via(() =>
+      if (ch.tg) await ch.via(() => sender.sendTaskList!(user.tgChatId!, list, `⏰ <b>Осталось сделать: ${open.length}</b>`));
+      if (ch.push) {
+        await ch.via(() =>
           sender.push!(user.id, {
             title: `Осталось сделать: ${open.length}`,
             body: listBody(list.map((t) => t.title)),
@@ -221,7 +345,50 @@ async function sendSlot(
         );
       }
     }
-    if (reached) sent++;
+    if (ch.reached()) sent++;
+  }
+  return sent;
+}
+
+/** Утренняя сводка по команде руководителя; null — у команды пусто. */
+function teamMorning(ctx: Ctx, tasks: Task[], items: HistoryItem[], access: UserAccess, scope: number[] | null): TeamMorning | null {
+  const inScope = (workerId: number | null | undefined) =>
+    workerId != null && workerId !== access.userId && (scope === null || scope.includes(workerId));
+  const teamTasks = items.filter((i) => i.status !== "claimed" && inScope(i.workerId)).length;
+  const review = tasks.filter((t) => t.verificationStatus === "submitted" && canReviewTask(access, t)).length;
+  if (teamTasks === 0 && review === 0) return null;
+  return { tasks: teamTasks, review };
+}
+
+async function sendTaskReminders(store: ReminderStore, ctx: Ctx, dueTasks: Task[]): Promise<number> {
+  // Только то, что сегодня в расписании и ещё не сделано и не на проверке.
+  const pending = new Set(
+    todayItems(dueTasks, ctx.tz, ctx.day, null)
+      .filter((i) => i.status === "pending")
+      .map((i) => i.taskId),
+  );
+  const byId = new Map(ctx.users.map((u) => [u.id, u]));
+  let sent = 0;
+  for (const task of dueTasks) {
+    if (!pending.has(task.id) || task.workerId == null) continue;
+    const user = byId.get(task.workerId);
+    if (!user || !ctx.prefs(user).reminders) continue;
+    const ch = channels(ctx, user);
+    if (!ch.tg && !ch.push) continue;
+    // Заявка до отправки: второй процесс или повторный тик не продублируют.
+    if (store.claimTaskReminder && !(await store.claimTaskReminder(task.id, ctx.day).catch(() => false))) continue;
+    if (ch.tg) await ch.via(() => ctx.sender.sendTaskList!(user.tgChatId!, [task], `⏰ <b>Напоминание</b> · ${task.remindAt}`));
+    if (ch.push) {
+      await ch.via(() =>
+        ctx.sender.push!(user.id, {
+          title: `Напоминание · ${task.remindAt}`,
+          body: task.title.length > 120 ? `${task.title.slice(0, 119)}…` : task.title,
+          url: "/dashboard",
+          tag: `remind-${task.id}`,
+        }),
+      );
+    }
+    if (ch.reached()) sent++;
   }
   return sent;
 }
@@ -239,6 +406,8 @@ export function digestPush(items: HistoryItem[], day: string): PushMessage {
     tag: "digest",
   };
 }
+
+const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 function listBody(titles: string[]): string {
   const shown = titles.slice(0, 3).map((t) => (t.length > 50 ? `${t.slice(0, 49)}…` : t));

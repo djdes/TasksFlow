@@ -22,6 +22,7 @@ import {
   updatePasswordSchema,
   bannerInputSchema,
   type Company,
+  type User,
 } from "@shared/schema";
 import { validateEmailForAuth, normalizeEmail, isEmailFormat } from "./email-validate";
 import { hashPassword, verifyPassword, generatePassword, generateMagicToken } from "./crypto-password";
@@ -65,12 +66,24 @@ import {
   toPublicWesetupUrl,
 } from "./public-urls";
 import {
-  canAssignToWorker,
   isTaskServiceError,
   type TaskActor,
 } from "./services/task-actor";
 import { createTaskForActor } from "./services/task-create";
 import { onTaskApproved, onTaskRejected, onTaskSubmitted, safely } from "./push/events";
+import { accessOf, accessWithApproval, roleOf } from "./access";
+import {
+  canAssignTo,
+  canGrantRole,
+  canManageUser,
+  canReviewTask,
+  canSeeWorker,
+  isTaskAdmin,
+  parseAccessSettings,
+  type AccessRole,
+} from "@shared/roles";
+import { notifyPrefsSchema, parseNotifyPrefs } from "@shared/notify";
+import { registerRoleRoutes } from "./role-routes";
 import { completeTaskForActor } from "./services/task-complete";
 import {
   attachTaskPhoto,
@@ -212,17 +225,67 @@ async function requireAdminOrManagerOrApiKey(
   if (user.isAdmin) {
     return next();
   }
-  const managed = DatabaseStorage.parseManagedWorkerIds(user.managedWorkerIds);
-  if (Array.isArray(managed)) {
-    return next(); // даже пустой [] — это «руководитель», просто без подчинённых
+  // Руководитель из WeSetup (даже с пустым [] подчинённых) или своя роль
+  // с правом «Ставит задачи» — shared/roles.ts.
+  if ((await accessOf(user)).manageTasks) {
+    return next();
   }
   return res
     .status(403)
     .json({ message: "Только админ или руководитель может управлять задачами" });
 }
 
-// canAssignToWorker переехал в ./services/task-actor — им пользуются и роуты,
-// и Telegram-бот. Здесь он только импортируется, второй копии нет.
+/**
+ * Сессия с правом на людей: админ или роль «Добавляет сотрудников».
+ * Кого именно можно менять — проверяет хендлер (canManageUser).
+ */
+async function requireUserManager(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Требуется авторизация" });
+  }
+  const user = await storage.getUserById(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ message: "Пользователь не найден" });
+  }
+  if (user.isAdmin || (await accessOf(user)).manageUsers) {
+    return next();
+  }
+  return res.status(403).json({ message: "Добавлять и менять сотрудников может админ или руководитель" });
+}
+
+async function requireUserManagerOrApiKey(req: Request, res: Response, next: NextFunction) {
+  if (extractBearerKey(req)) {
+    return requireApiKey(req, res, next);
+  }
+  return requireUserManager(req, res, next);
+}
+
+/**
+ * Сессия, которая ставит задачи: админ, роль «Ставит задачи» или
+ * руководитель из WeSetup. Чью задачу можно менять — canEditTaskOf().
+ */
+async function requireTaskManager(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Требуется авторизация" });
+  }
+  const user = await storage.getUserById(req.session.userId);
+  if (user && (user.isAdmin || (await accessOf(user)).manageTasks)) {
+    return next();
+  }
+  return res.status(403).json({ message: "Требуются права администратора" });
+}
+
+/** Может править эту задачу: админ — любую, руководитель — в своём круге. */
+async function canEditTaskOf(req: Request, task: { workerId: number | null }): Promise<boolean> {
+  if (req.apiKey) return true;
+  const me = await storage.getUserById(req.session.userId!);
+  if (!me) return false;
+  if (me.isAdmin) return true;
+  return canAssignTo(await accessOf(me), task.workerId);
+}
+
+// Кому можно назначать задачи — canAssignTo из shared/roles.ts (учитывает
+// и руководителя из WeSetup, и свою роль компании).
 
 // Аутентификация: либо session (любой user), либо API key.
 async function requireAuthOrApiKey(req: Request, res: Response, next: NextFunction) {
@@ -244,6 +307,31 @@ function actorFromReq(req: Request): TaskActor {
   return { kind: "session", userId: req.session!.userId! };
 }
 
+/**
+ * Исполнитель задачи или тот, кто ведёт задачи всей компании: админ или
+ * роль с «Ставит задачи» (shared/roles.ts isTaskAdmin).
+ */
+async function canActOnTask(
+  user: User | undefined,
+  task: { workerId: number | null },
+): Promise<boolean> {
+  if (!user) return false;
+  if (task.workerId != null && task.workerId === user.id) return true;
+  if (user.isAdmin) return true;
+  return isTaskAdmin(await accessOf(user));
+}
+
+/** Роль из запроса: своя роль этой компании, null — «Сотрудник». */
+async function resolveRoleGrant(
+  companyId: number,
+  roleId: number | null | undefined,
+): Promise<{ role: AccessRole | null } | { error: string }> {
+  if (roleId == null) return { role: null };
+  const role = await storage.getCompanyRole(roleId);
+  if (!role || role.companyId !== companyId) return { error: "Роль не найдена — обновите страницу" };
+  return { role };
+}
+
 /** Хелпер: получить companyId из req либо от API key, либо от session. */
 /**
  * Компания для клиента: без служебного состояния сброса и напоминаний,
@@ -251,7 +339,7 @@ function actorFromReq(req: Request): TaskActor {
  * и интеграции по API-ключу.
  */
 function toPublicCompany(company: Company, withSecrets: boolean) {
-  const { lastResetDay: _lastResetDay, notifyState: _notifyState, notifySettings, photoSettings, ...rest } = company;
+  const { lastResetDay: _lastResetDay, notifyState: _notifyState, notifySettings, photoSettings, accessSettings, ...rest } = company;
   // wesetupConfigured — настроила ли интеграцию сама компания (свои
   // baseUrl+apiKey). По нему кабинет показывает журнальный режим;
   // глобальный env WESETUP_* специально не учитываем.
@@ -263,6 +351,8 @@ function toPublicCompany(company: Company, withSecrets: boolean) {
     photo: parsePhotoSettings(photoSettings),
     planInfo: { ...companyPlan(company), until: company.planUntil ?? null, enforced: planLimitsEnforced() },
     wesetupConfigured,
+    // Выполненное сотрудником уходит на проверку (shared/roles.ts).
+    employeeApproval: parseAccessSettings(accessSettings).employeeApproval,
   };
 }
 
@@ -514,8 +604,16 @@ export async function registerRoutes(
       }
       
       const user = await storage.getUserById(req.session.userId);
+      if (!user) return res.json(null);
       // user уже содержит isRoot (колонка) — UI показывает root-раздел по нему.
-      res.json(user ? { ...user, pinResetByEmail: canResetPinByEmail(req) } : null);
+      // access — права по роли (shared/roles.ts): кабинет строит меню и
+      // кнопки по ним, а не пересчитывает роль сам.
+      res.json({
+        ...user,
+        pinResetByEmail: canResetPinByEmail(req),
+        access: await accessWithApproval(user),
+        notify: parseNotifyPrefs(user.notifyPrefs),
+      });
     } catch (err: any) {
       console.error('Error fetching user:', err);
       res.status(500).json({ message: 'Ошибка' });
@@ -696,6 +794,23 @@ export async function registerRoutes(
       }
       console.error("Error updating account email:", err);
       res.status(500).json({ message: "Ошибка" });
+    }
+  });
+
+  // Личные настройки уведомлений: что присылать в push и Telegram и нужны
+  // ли письма о новых задачах (на email из «Моего аккаунта»).
+  app.put("/api/account/notify-prefs", requireAuth, async (req, res) => {
+    try {
+      const prefs = notifyPrefsSchema.parse(req.body);
+      const updated = await storage.setUserNotifyPrefs(req.session.userId!, JSON.stringify(prefs));
+      if (!updated) return res.status(404).json({ message: "Пользователь не найден" });
+      res.json({ notify: parseNotifyPrefs(updated.notifyPrefs) });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Неверные настройки уведомлений", field: err.errors[0].path.join(".") });
+      }
+      console.error("Error updating notify prefs:", err);
+      res.status(500).json({ message: "Не удалось сохранить уведомления" });
     }
   });
 
@@ -1369,14 +1484,10 @@ export async function registerRoutes(
       if (!me) return res.json([]);
       if (me.isAdmin) return res.json(tasks);
 
-      const managed = DatabaseStorage.parseManagedWorkerIds(me.managedWorkerIds);
-      if (managed === null) {
-        // Обычный воркер — только свои
-        return res.json(tasks.filter((t) => t.workerId === userId));
-      }
-      const allowed = new Set<number>(managed);
-      allowed.add(userId); // свои задачи руководитель тоже видит
-      res.json(tasks.filter((t) => t.workerId !== null && allowed.has(t.workerId)));
+      // Роль «Ставит задачи» — вся компания, как у админа; руководитель
+      // из WeSetup — свои люди и он сам; сотрудник — только свои.
+      const access = await accessOf(me);
+      res.json(tasks.filter((t) => canSeeWorker(access, t.workerId)));
     } catch (err: any) {
       console.error('Error fetching tasks:', err);
       res.status(500).json({ message: 'Ошибка загрузки задач' });
@@ -1411,10 +1522,14 @@ export async function registerRoutes(
       if (companyId === null) return res.json([]);
 
       const allTasks = await storage.getTasks(companyId);
+      // Админ — всё; назначенный проверяющий — свои; роль «Принимает
+      // задачи» — всю компанию; руководитель из WeSetup — работу своих
+      // людей без назначенного проверяющего (shared/roles.ts canReviewTask).
+      const access = me.isAdmin ? null : await accessOf(me);
       const filtered = allTasks.filter((t) => {
         if (t.verificationStatus !== "submitted") return false;
         if (me.isAdmin) return true;
-        return t.verifierWorkerId === userId;
+        return canReviewTask(access!, t);
       });
       res.json(filtered);
     } catch (err: any) {
@@ -1541,16 +1656,23 @@ export async function registerRoutes(
       if (!req.apiKey && req.session?.userId) {
         const me = await storage.getUserById(req.session.userId);
         if (me && !me.isAdmin) {
+          const access = await accessOf(me);
           if (
-            !canAssignToWorker(me, existing.workerId ?? null) ||
+            !canAssignTo(access, existing.workerId ?? null) ||
             (input.workerId !== undefined &&
-              !canAssignToWorker(me, input.workerId))
+              !canAssignTo(access, input.workerId))
           ) {
             return res.status(403).json({
               message: "Можно редактировать только задачи своих подчинённых",
             });
           }
         }
+      }
+
+      // То же время напоминания — не трогаем: иначе правка названия после
+      // утреннего напоминания сбросила бы «уже отправлено сегодня».
+      if (input.remindAt !== undefined && (input.remindAt ?? null) === (existing.remindAt ?? null)) {
+        delete input.remindAt;
       }
 
       const task = await storage.updateTask(Number(req.params.id), input);
@@ -1586,7 +1708,7 @@ export async function registerRoutes(
       if (!req.apiKey && req.session?.userId) {
         const me = await storage.getUserById(req.session.userId);
         if (me && !me.isAdmin) {
-          if (!canAssignToWorker(me, existing.workerId ?? null)) {
+          if (!canAssignTo(await accessOf(me), existing.workerId ?? null)) {
             return res.status(403).json({
               message: "Можно удалять только задачи своих подчинённых",
             });
@@ -1785,7 +1907,7 @@ export async function registerRoutes(
       if (currentUser?.companyId != null && task.companyId !== currentUser.companyId) {
         return res.status(404).json({ message: "Задача не найдена" });
       }
-      const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
+      const isAllowed = await canActOnTask(currentUser, task);
       if (!isAllowed) return res.status(403).json({ message: "Вы не являетесь исполнителем этой задачи" });
 
       const url = typeof req.query.url === "string" ? req.query.url : "";
@@ -1813,7 +1935,7 @@ export async function registerRoutes(
   });
 
   // Загрузка примера фото для задачи (только админ)
-  app.post("/api/tasks/:id/example-photo", requireAuth, requireAdmin, (req, res, next) => {
+  app.post("/api/tasks/:id/example-photo", requireAuth, requireTaskManager, (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
 
     upload.single("photo")(req, res, async (err: any) => {
@@ -1840,6 +1962,9 @@ export async function registerRoutes(
         const adminCompanyId = await getCompanyIdFromReq(req);
         if (adminCompanyId !== null && task.companyId !== adminCompanyId) {
           return res.status(404).json({ message: "Задача не найдена" });
+        }
+        if (!(await canEditTaskOf(req, task))) {
+          return res.status(403).json({ message: "Можно менять только задачи своих подчинённых" });
         }
 
         // Если у задачи уже был example-photo — удаляем старый файл с
@@ -1891,7 +2016,7 @@ export async function registerRoutes(
   });
 
   // Удаление примера фото задачи (только админ)
-  app.delete("/api/tasks/:id/example-photo", requireAuth, requireAdmin, async (req, res) => {
+  app.delete("/api/tasks/:id/example-photo", requireAuth, requireTaskManager, async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     try {
       const taskId = Number(req.params.id);
@@ -1904,6 +2029,9 @@ export async function registerRoutes(
       const adminCompanyId = await getCompanyIdFromReq(req);
       if (adminCompanyId !== null && task.companyId !== adminCompanyId) {
         return res.status(404).json({ message: "Задача не найдена" });
+      }
+      if (!(await canEditTaskOf(req, task))) {
+        return res.status(403).json({ message: "Можно менять только задачи своих подчинённых" });
       }
 
       if (!task.examplePhotoUrl) {
@@ -1954,8 +2082,8 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Задача не найдена" });
       }
 
-      // Проверяем права: исполнитель или админ
-      const isAllowed = currentUser?.isAdmin || task.workerId === req.session.userId;
+      // Проверяем права: исполнитель, админ или роль «Ставит задачи»
+      const isAllowed = await canActOnTask(currentUser, task);
       if (!isAllowed) {
         return res.status(403).json({ message: "Нет прав для удаления фото" });
       }
@@ -2145,7 +2273,7 @@ export async function registerRoutes(
         isAllowed = true;
       } else if (req.session?.userId) {
         const currentUser = await storage.getUserById(req.session.userId);
-        if (currentUser?.isAdmin) {
+        if (await canActOnTask(currentUser, task)) {
           isAllowed = true;
         }
       }
@@ -2303,9 +2431,11 @@ export async function registerRoutes(
         verifierUserId = task.verifierWorkerId ?? 0;
       } else if (req.session?.userId) {
         const me = await storage.getUserById(req.session.userId);
+        // Админ, назначенный проверяющий или тот, кому роль даёт «Принимает
+        // задачи» (руководитель из WeSetup — у своих людей), shared/roles.ts.
         if (
           me &&
-          (me.isAdmin || me.id === task.verifierWorkerId)
+          (me.isAdmin || me.id === task.verifierWorkerId || canReviewTask(await accessOf(me), task))
         ) {
           verifierUserId = me.id;
         }
@@ -2313,7 +2443,7 @@ export async function registerRoutes(
       if (verifierUserId === null) {
         return res.status(403).json({
           message:
-            "Только назначенный проверяющий или администратор может одобрять/отклонять задачи",
+            "Принять или вернуть задачу может проверяющий, руководитель или администратор",
         });
       }
 
@@ -2329,13 +2459,12 @@ export async function registerRoutes(
         if (task.price && task.price > 0 && task.workerId) {
           await storage.updateUserBalance(task.workerId, task.price);
         }
+        // Как в /complete (с 2026-05-09): любая журнальная задача забирает
+        // sibling'ов, а не только с премией. Иначе после проверки по роли
+        // у второго уборщика оставалась висеть та же уборка без премии.
         const journalLink = parseJournalLink(task.journalLink);
-        const hasBonus =
-          (task.price ?? 0) > 0 ||
-          (journalLink?.bonusAmountKopecks ?? 0) > 0;
         if (
           journalLink &&
-          hasBonus &&
           task.workerId &&
           !journalLink.isFreeText
         ) {
@@ -2467,14 +2596,11 @@ export async function registerRoutes(
       const me = users.find((u) => u.id === userId);
       if (!me || me.isAdmin) return res.json(users);
 
-      const managed = DatabaseStorage.parseManagedWorkerIds(me.managedWorkerIds);
-      if (managed === null) {
-        // Обычный воркер — только себя
-        return res.json(users.filter((u) => u.id === userId));
-      }
-      const allowed = new Set<number>(managed);
-      allowed.add(userId);
-      res.json(users.filter((u) => allowed.has(u.id)));
+      // Роль «Ставит задачи» или «Добавляет сотрудников» — все люди
+      // компании; руководитель из WeSetup — свои и он сам; сотрудник — себя.
+      const access = await accessOf(me);
+      if (access.manageUsers) return res.json(users);
+      res.json(users.filter((u) => canSeeWorker(access, u.id)));
     } catch (err: any) {
       console.error('Error fetching users:', err);
       res.status(500).json({ message: 'Ошибка загрузки пользователей' });
@@ -2549,7 +2675,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.users.create.path, requireAdminOrApiKey, async (req, res) => {
+  app.post(api.users.create.path, requireUserManagerOrApiKey, async (req, res) => {
     try {
       const input = api.users.create.input.parse(req.body);
       const requestedAdmin =
@@ -2579,7 +2705,30 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Company не определена" });
       }
 
+      // Кто добавляет: интеграция и админ — кого угодно; руководитель
+      // (роль «Добавляет сотрудников») — только обычных людей и роли без
+      // права на людей (shared/roles.ts canGrantRole).
+      const actor = req.apiKey ? null : await storage.getUserById(req.session.userId!);
+      const actorAccess = actor && !actor.isAdmin ? await accessOf(actor) : null;
+      if (actorAccess && requestedAdmin) {
+        return res.status(403).json({ message: "Назначить администратора может только администратор", field: "role" });
+      }
+      const grant = await resolveRoleGrant(companyId, input.roleId);
+      if ("error" in grant) {
+        return res.status(400).json({ message: grant.error, field: "roleId" });
+      }
+      if (actorAccess && !canGrantRole(actorAccess, grant.role)) {
+        return res.status(403).json({ message: "Эту роль может выдать только администратор", field: "roleId" });
+      }
+
       const existingUser = await storage.getUserByPhone(normalizedPhone);
+      if (existingUser && actorAccess) {
+        // Руководитель не повышает и не понижает существующих людей.
+        return res.status(400).json({
+          message: "Пользователь с таким номером уже существует",
+          field: "phone",
+        });
+      }
       if (existingUser) {
         // Если повторный create передал position — обновляем должность
         // на месте (idempotent merge: WeSetup может прокинуть свежее
@@ -2622,6 +2771,8 @@ export async function registerRoutes(
         isAdmin: requestedAdmin,
         companyId,
         position: input.position ?? null,
+        // Своя роль компании — только у не-админа (у админа и так всё).
+        ...(grant.role && !requestedAdmin ? { roleId: grant.role.id } : {}),
         // PIN задаёт руководитель при создании. Интеграции (WeSetup) PIN не
         // шлют — такой сотрудник придумает его при первом входе.
         ...(input.pin ? { pinHash: hashPin(input.pin) } : {}),
@@ -2645,6 +2796,7 @@ export async function registerRoutes(
   // PIN администратора меняет только он сам: иначе второй админ или
   // интеграция по API-ключу могли бы забрать его аккаунт.
   const ADMIN_PIN_OWN_ONLY = "PIN администратора меняется только в его аккаунте";
+  const NOT_YOUR_PEOPLE = "Админов и других руководителей меняет только администратор";
 
   /** Сотрудник своей компании или null — для смены PIN руководителем. */
   async function findCompanyUser(req: Request, userId: number) {
@@ -2656,13 +2808,26 @@ export async function registerRoutes(
     return target;
   }
 
+  /**
+   * Руководитель (не админ, не интеграция) может менять только обычных
+   * людей: не админов, не других руководителей и не себя.
+   */
+  async function canTouchUser(req: Request, target: User): Promise<boolean> {
+    if (req.apiKey) return true;
+    const me = await storage.getUserById(req.session.userId!);
+    if (!me) return false;
+    if (me.isAdmin) return true;
+    return canManageUser(await accessOf(me), target, await roleOf(target));
+  }
+
   // Руководитель задаёт новый PIN — это же снимает блокировку.
-  app.post("/api/users/:id/pin", requireAdminOrApiKey, async (req, res) => {
+  app.post("/api/users/:id/pin", requireUserManagerOrApiKey, async (req, res) => {
     try {
       const { pin } = z.object({ pin: newPinSchema }).parse(req.body);
       const target = await findCompanyUser(req, Number(req.params.id));
       if (!target) return res.status(404).json({ message: "Пользователь не найден" });
       if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
+      if (!(await canTouchUser(req, target))) return res.status(403).json({ message: NOT_YOUR_PEOPLE });
       const updated = await storage.setUserPin(target.id, hashPin(pin));
       void notifyPinEvent(target, "Руководитель задал вам новый PIN для входа в TasksFlow.");
       res.json(updated ?? target);
@@ -2676,11 +2841,12 @@ export async function registerRoutes(
   });
 
   // Сброс PIN: сотрудник придумает новый при следующем входе.
-  app.delete("/api/users/:id/pin", requireAdminOrApiKey, async (req, res) => {
+  app.delete("/api/users/:id/pin", requireUserManagerOrApiKey, async (req, res) => {
     try {
       const target = await findCompanyUser(req, Number(req.params.id));
       if (!target) return res.status(404).json({ message: "Пользователь не найден" });
       if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
+      if (!(await canTouchUser(req, target))) return res.status(403).json({ message: NOT_YOUR_PEOPLE });
       const updated = await storage.setUserPin(target.id, null);
       res.json(updated ?? target);
     } catch (err: any) {
@@ -2742,6 +2908,10 @@ export async function registerRoutes(
       }
 
       const isAdmin = input.role === "admin" || input.role === "manager";
+      const grant = isAdmin ? { role: null } : await resolveRoleGrant(companyId, input.roleId);
+      if ("error" in grant) {
+        return res.status(400).json({ message: grant.error, field: "roleId" });
+      }
       const token = crypto.randomBytes(32).toString("base64url");
 
       const inv = await storage.createInvitation({
@@ -2750,6 +2920,7 @@ export async function registerRoutes(
         createdByUserId: adminId,
         position: input.position ?? null,
         isAdmin,
+        roleId: grant.role?.id ?? null,
       });
 
       const baseUrl = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") ||
@@ -2879,12 +3050,15 @@ export async function registerRoutes(
       const noSeat = await seatProblem(inv.companyId);
       if (noSeat) return res.status(402).json({ message: noSeat, code: "plan_limit" });
 
+      // Роль из приглашения — если её ещё не удалили.
+      const inviteRole = inv.isAdmin ? { role: null } : await resolveRoleGrant(inv.companyId, inv.roleId);
       const user = await storage.createUser({
         phone: normalizedPhone,
         name: input.name,
         isAdmin: inv.isAdmin,
         companyId: inv.companyId,
         position: inv.position,
+        ...("role" in inviteRole && inviteRole.role ? { roleId: inviteRole.role.id } : {}),
         pinHash: hashPin(input.pin),
         pdConsentAt: nowSec(),
       });
@@ -2925,7 +3099,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.users.update.path, requireAuth, requireAdmin, async (req, res) => {
+  app.put(api.users.update.path, requireAuth, requireUserManager, async (req, res) => {
     try {
       const userId = Number(req.params.id);
       const input = api.users.update.input.parse(req.body);
@@ -2942,6 +3116,37 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Пользователь не найден" });
       }
 
+      // Руководитель меняет только обычных людей (не админов, не других
+      // руководителей и не себя) — shared/roles.ts canManageUser.
+      const currentAccess = currentUser && !currentUser.isAdmin ? await accessOf(currentUser) : null;
+      if (currentAccess && !canManageUser(currentAccess, existingUser, await roleOf(existingUser))) {
+        return res.status(403).json({ message: NOT_YOUR_PEOPLE });
+      }
+
+      // Смена роли: "admin", своя роль компании или null («Сотрудник»).
+      let roleChange: { isAdmin: boolean; roleId: number | null } | null = null;
+      if (input.role !== undefined) {
+        const companyId = existingUser.companyId ?? currentUser?.companyId ?? null;
+        if (userId === req.session.userId) {
+          return res.status(400).json({ message: "Свою роль поменять нельзя — попросите другого администратора", field: "role" });
+        }
+        if (input.role === "admin") {
+          if (currentAccess) {
+            return res.status(403).json({ message: "Назначить администратора может только администратор", field: "role" });
+          }
+          roleChange = { isAdmin: true, roleId: null };
+        } else {
+          const grant = companyId ? await resolveRoleGrant(companyId, input.role) : { error: "Компания не найдена" };
+          if ("error" in grant) {
+            return res.status(400).json({ message: grant.error, field: "role" });
+          }
+          if (currentAccess && !canGrantRole(currentAccess, grant.role)) {
+            return res.status(403).json({ message: "Эту роль может выдать только администратор", field: "role" });
+          }
+          roleChange = { isAdmin: false, roleId: grant.role?.id ?? null };
+        }
+      }
+
       // Проверяем, не занят ли номер другим пользователем
       const normalizedPhone = normalizePhone(input.phone);
       const userWithPhone = await storage.getUserByPhone(normalizedPhone);
@@ -2952,7 +3157,10 @@ export async function registerRoutes(
         });
       }
 
-      const user = await storage.updateUser(userId, input);
+      let user = await storage.updateUser(userId, input);
+      if (roleChange && (roleChange.isAdmin !== existingUser.isAdmin || roleChange.roleId !== (existingUser.roleId ?? null))) {
+        user = (await storage.setUserRole(userId, roleChange)) ?? user;
+      }
       res.json(user);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -2966,8 +3174,8 @@ export async function registerRoutes(
     }
   });
 
-  // Сброс баланса пользователя (только для админа)
-  app.post("/api/users/:id/reset-balance", requireAuth, requireAdmin, async (req, res) => {
+  // Сброс баланса пользователя (админ или руководитель — у обычных людей)
+  app.post("/api/users/:id/reset-balance", requireAuth, requireUserManager, async (req, res) => {
     try {
       const userId = Number(req.params.id);
 
@@ -2979,6 +3187,9 @@ export async function registerRoutes(
       const currentUser = await storage.getUserById(req.session.userId!);
       if (currentUser?.companyId != null && targetUser.companyId !== currentUser.companyId) {
         return res.status(404).json({ message: "Пользователь не найден" });
+      }
+      if (!(await canTouchUser(req, targetUser))) {
+        return res.status(403).json({ message: NOT_YOUR_PEOPLE });
       }
 
       const user = await storage.resetUserBalance(userId);
@@ -2992,8 +3203,8 @@ export async function registerRoutes(
     }
   });
 
-  // Удаление пользователя (только для админа)
-  app.delete("/api/users/:id", requireAuth, requireAdmin, async (req, res) => {
+  // Удаление пользователя (админ или руководитель — обычных людей)
+  app.delete("/api/users/:id", requireAuth, requireUserManager, async (req, res) => {
     try {
       const userId = Number(req.params.id);
       const currentUser = await storage.getUserById(req.session.userId!);
@@ -3027,6 +3238,9 @@ export async function registerRoutes(
         userToDelete.companyId !== currentUser.companyId
       ) {
         return res.status(404).json({ message: "Пользователь не найден" });
+      }
+      if (!(await canTouchUser(req, userToDelete))) {
+        return res.status(403).json({ message: NOT_YOUR_PEOPLE });
       }
 
       await storage.deleteUser(userId);
@@ -3903,8 +4117,7 @@ export async function registerRoutes(
       if (user?.companyId != null && task.companyId !== user.companyId) {
         return res.status(404).json({ message: "Задача не найдена" });
       }
-      const isAllowed =
-        user?.isAdmin || (task.workerId && user?.id === task.workerId);
+      const isAllowed = await canActOnTask(user ?? undefined, task);
       if (!isAllowed) {
         return res.status(403).json({
           message: "Вы не являетесь исполнителем этой задачи",
@@ -3945,11 +4158,26 @@ export async function registerRoutes(
     const taskBeforeAny = await storage.getTask(taskId);
     const desired = Boolean(isCompleted ?? true);
     const meId = req.session?.userId;
-    const requiresVerification =
+    const byVerifier =
       desired &&
-      taskBeforeAny &&
+      !!taskBeforeAny &&
       typeof taskBeforeAny.verifierWorkerId === "number" &&
       taskBeforeAny.verifierWorkerId !== meId;
+    // Как в /complete: роль исполнителя требует проверки — запись в журнал
+    // ждёт «Принять» руководителя или админа (shared/roles.ts).
+    let byRole = false;
+    if (
+      !byVerifier &&
+      desired &&
+      taskBeforeAny &&
+      meId != null &&
+      taskBeforeAny.workerId === meId &&
+      taskBeforeAny.verifierWorkerId !== meId
+    ) {
+      const me = await storage.getUserById(meId);
+      byRole = !!me && (await accessWithApproval(me)).requiresApproval;
+    }
+    const requiresVerification = byVerifier || byRole;
 
     if (requiresVerification) {
       try {
@@ -3960,7 +4188,9 @@ export async function registerRoutes(
           .update(tasks)
           .set({ submittedValues: JSON.stringify(values ?? {}) })
           .where(eq(tasks.id, taskId));
-        const submitted = await storage.submitForVerification(taskId);
+        const submitted = byRole
+          ? await storage.submitForVerification(taskId, { byRole: true })
+          : await storage.submitForVerification(taskId);
         if (!submitted) {
           // Concurrent submit или статус не позволяет (approved/already
           // submitted). Возвращаем текущий стейт — клиент рефрешит UI.
@@ -3972,8 +4202,9 @@ export async function registerRoutes(
           });
         }
         safely(() => onTaskSubmitted(taskBeforeAny!, meId ?? null));
+        publishToCompany(taskBeforeAny!.companyId, { type: "tasks", taskId });
         return res.status(200).json({
-          message: "Отправлено на проверку заведующей",
+          message: byRole ? "Отправлено на проверку руководителю" : "Отправлено на проверку заведующей",
           verificationPending: true,
         });
       } catch (err) {
@@ -4487,7 +4718,18 @@ export async function registerRoutes(
   registerHistoryRoutes(app, { requireAuthOrApiKey, getCompanyIdFromReq });
 
   // Точки, привязка к точке, root «Компании» (server/company-routes.ts).
-  registerCompanyRoutes(app, { requireAuthOrApiKey, requireAuth, requireAdmin, requireRoot, getCompanyIdFromReq });
+  registerCompanyRoutes(app, {
+    requireAuthOrApiKey,
+    requireAuth,
+    requireAdmin,
+    requireRoot,
+    requireUserManager,
+    canTouchUser,
+    getCompanyIdFromReq,
+  });
+
+  // Роли компании и настройка проверки выполненного (server/role-routes.ts).
+  registerRoleRoutes(app, { requireAuth, requireAdmin, requireUserManager, getCompanyIdFromReq });
 
   // Push-уведомления: подписки устройств (server/push-routes.ts).
   registerPushRoutes(app, { requireAuth });

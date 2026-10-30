@@ -33,3 +33,15 @@ export function canCreateTasks(user: User): boolean {
   const managed = DatabaseStorage.parseManagedWorkerIds(user.managedWorkerIds);
   return Array.isArray(managed) && managed.length > 0;
 }
+
+/**
+ * То же с учётом своей роли компании (shared/roles.ts): роль «Ставит
+ * задачи» ставит их в боте, как в кабинете. Без role_id в БД не ходим.
+ */
+export async function canCreateTasksNow(user: User): Promise<boolean> {
+  if (canCreateTasks(user)) return true;
+  if (typeof user.roleId !== "number") return false;
+  const { accessOf } = await import("../access");
+  const access = await accessOf(user);
+  return access.manageTasks && access.taskScope === null;
+}

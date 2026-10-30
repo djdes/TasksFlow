@@ -214,12 +214,15 @@ describe("GET /api/tasks/awaiting-verification — verifier scope", () => {
       makeTask(2, "submitted", 99), // другой verifier — не видит
       makeTask(3, "submitted", VERIFIER.id), // видит
       makeTask(4, "approved", VERIFIER.id), // не submitted
-      makeTask(5, "submitted", null), // null verifier — не видит
+      // Без назначенного проверяющего (на проверку отправила роль
+      // сотрудника, shared/roles.ts): видит руководитель этого человека.
+      makeTask(5, "submitted", null),
+      { ...makeTask(6, "submitted", null), workerId: 9 }, // не его человек — не видит
     ]);
 
     const r = await request(app).get("/api/tasks/awaiting-verification");
     expect(r.status).toBe(200);
-    expect(r.body.map((t: Task) => t.id).sort()).toEqual([1, 3]);
+    expect(r.body.map((t: Task) => t.id).sort()).toEqual([1, 3, 5]);
   });
 
   it("verifier без своих submitted → пустой", async () => {
@@ -254,9 +257,10 @@ describe("GET /api/tasks/awaiting-verification — regular worker", () => {
     // endpoint следует filter'у). Если такая ситуация возможна — он
     // увидит задачу. Если нет — это design decision.
     expect(r.status).toBe(200);
-    // task #1 vfw=7 == userId=7, попадает по filter'у
+    // task #1: воркер 7 и исполнитель, и проверяющий — свою работу не
+    // принимает никто, кроме админа (shared/roles.ts canReviewTask).
     // task #2 vfw=99, не попадает
-    expect(r.body.map((t: Task) => t.id)).toEqual([1]);
+    expect(r.body.map((t: Task) => t.id)).toEqual([]);
   });
 
   it("воркер у которого вообще нет verifier-task'ов → []", async () => {

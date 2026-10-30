@@ -37,6 +37,9 @@ export const reminderStore: ReminderStore = {
   },
   getUsers: (companyId) => storage.getAllUsers(companyId),
   getTasks: (companyId) => storage.getTasks(companyId),
+  getRoles: (companyId) => storage.listCompanyRoles(companyId),
+  listTaskReminders: () => storage.getTasksWithReminders(),
+  claimTaskReminder: (taskId, day) => storage.claimTaskReminder(taskId, day),
 };
 
 /** Telegram (если бот запущен) и push (если включён) — одной рассылкой. */

@@ -36,6 +36,8 @@ const SESSIONS = [
   ['script/smoke-billing.js'],
   // Меню слева на ПК и быстрый переход Ctrl+K.
   ['script/smoke-sidebar.js'],
+  // Роли и права, проверка выполненного, время напоминания, «Уведомления».
+  ['script/smoke-roles.js'],
 ];
 
 // SMOKE_ONLY=billing — только сессии, где есть такой сценарий (для отладки).

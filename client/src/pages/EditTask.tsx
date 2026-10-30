@@ -5,11 +5,12 @@ import { useParams, useLocation } from "wouter";
 import { useUpdateTask, useTask } from "@/hooks/use-tasks";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields } from "@/components/TaskScheduleFields";
+import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
 import { ArrowLeft, Edit, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
 import { parseDueDateInput, formatDueDateInput } from "@shared/task-visibility";
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,6 +50,8 @@ const formSchema = insertTaskSchema.extend({
   // Срок из <input type="date"> — строка YYYY-MM-DD, конвертируется в
   // unix-секунды локальной полуночи в onSubmit.
   dueDateInput: z.string().optional(),
+  // «Напомнить в» — «ЧЧ:ММ» или пусто.
+  remindAt: z.string().optional(),
 });
 
 type FormValues = z.input<typeof formSchema>;
@@ -57,6 +60,7 @@ export default function EditTask() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { canManageTasks } = usePermissions();
   const { data: task, isLoading, isError, refetch } = useTask(Number(id));
   const updateTask = useUpdateTask();
   const { data: users = [] } = useUsers();
@@ -84,6 +88,7 @@ export default function EditTask() {
       category: "",
       description: "",
       dueDateInput: "",
+      remindAt: "",
     },
   });
 
@@ -105,6 +110,7 @@ export default function EditTask() {
         category: (task as any).category || "",
         description: (task as any).description || "",
         dueDateInput: formatDueDateInput((task as any).dueDate),
+        remindAt: (task as any).remindAt ?? "",
       });
 
       // Устанавливаем текущее пример фото если есть
@@ -218,12 +224,12 @@ export default function EditTask() {
   };
 
   // Проверка прав администратора (после всех хуков)
-  if (!user || !user.isAdmin) {
+  if (!user || !canManageTasks) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
-          <p className="text-muted-foreground mb-4">Только администратор может редактировать задачи</p>
+          <p className="text-muted-foreground mb-4">Задачи меняют администратор и руководитель</p>
           <button
             onClick={() => setLocation("/")}
             className="text-primary hover:underline"
@@ -252,6 +258,7 @@ export default function EditTask() {
             : null,
       monthDay: dueDate !== null ? null : values.monthDay || null,
       dueDate,
+      remindAt: remindAtPayload(values.remindAt),
       isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
       price: values.price || 0,
       category: values.category || null,

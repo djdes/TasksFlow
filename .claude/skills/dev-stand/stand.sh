@@ -47,7 +47,7 @@ migrate() {
   for name in $chain $extra; do
     if ! npm run -s "$name" >>"$DS_OUT/migrate.log" 2>&1; then
       case "$name" in
-        add-pin-cols | add-company-features | add-billing) ds_die "обязательная миграция $name упала, лог: output/dev-stand/migrate.log" ;;
+        add-pin-cols | add-company-features | add-billing | add-roles-notify) ds_die "обязательная миграция $name упала, лог: output/dev-stand/migrate.log" ;;
         *) ds_log "миграция $name упала (в деплое она тоже необязательна)" ;;
       esac
     fi

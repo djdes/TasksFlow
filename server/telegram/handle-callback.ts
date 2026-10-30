@@ -32,7 +32,7 @@ import {
   renderSummaryCard,
   renderWorkerPicker,
 } from "./cards";
-import { canCreateTasks } from "./util";
+import { canCreateTasksNow } from "./util";
 import { createTasksFromDraft, loadAssignableWorkers } from "./composer";
 import { handleTaskCallback } from "./my-tasks";
 import type { NormalizedSegment } from "./normalize";
@@ -75,7 +75,7 @@ export async function handleCallback(
     return;
   }
 
-  if (!canCreateTasks(user)) {
+  if (!(await canCreateTasksNow(user))) {
     await answer("Нет прав ставить задачи", true);
     return;
   }
