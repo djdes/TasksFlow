@@ -80,16 +80,23 @@ export function RolesPanel() {
     },
     onError: fail,
   });
+  // Выбор в переключателе — сразу, в том же событии: иначе React до ответа
+  // сервера на миг возвращает галочку назад (управляемый checkbox).
+  const [approvalChoice, setApprovalChoice] = useState<boolean | null>(null);
   const approval = useMutation({
     mutationFn: async (employeeApproval: boolean) =>
       (await (await apiRequest("PUT", "/api/roles/settings", { employeeApproval })).json()) as RolesResponse,
     onSuccess: async (fresh, on) => {
       // Ответ — уже новое состояние: переключатель не мигает обратно до перезапроса.
       queryClient.setQueryData(ROLES_KEY, fresh);
+      setApprovalChoice(null);
       await queryClient.invalidateQueries({ queryKey: ["company-me"] });
       toast({ title: on ? "Выполненное сотрудниками — на проверку" : "Задачи сотрудников закрываются сразу" });
     },
-    onError: fail,
+    onError: (err: Error) => {
+      setApprovalChoice(null);
+      fail(err);
+    },
   });
 
   const submit = (e: FormEvent) => {
@@ -100,7 +107,7 @@ export function RolesPanel() {
     setDraft((d) => (d ? { ...d, permissions: { ...d.permissions, [key]: on } } : d));
 
   // Пока запрос идёт — показываем выбранное, а не старое значение.
-  const employeeApproval = approval.isPending ? !!approval.variables : data?.employeeApproval ?? false;
+  const employeeApproval = approvalChoice ?? data?.employeeApproval ?? false;
 
   return (
     <div className="content-panel roles-panel" id="roles">
@@ -141,7 +148,10 @@ export function RolesPanel() {
                 className="schedule-check"
                 checked={employeeApproval}
                 disabled={approval.isPending}
-                onChange={(e) => approval.mutate(e.target.checked)}
+                onChange={(e) => {
+                  setApprovalChoice(e.target.checked);
+                  approval.mutate(e.target.checked);
+                }}
               />
               <span>
                 <b>{PERMISSION_TEXT.requiresApproval.title}</b>
