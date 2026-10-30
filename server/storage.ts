@@ -15,6 +15,7 @@ import {
   apiKeys,
   webhookDeliveries,
   invitations,
+  companyRoles,
   type Worker,
   type InsertWorker,
   type Task,
@@ -36,6 +37,7 @@ import {
 import { db } from "./db";
 import { eq, and, desc, lte, gte, asc, isNull, or, sql } from "drizzle-orm";
 import { normalizePhone } from "./phone-normalize";
+import { NEW_COMPANY_ACCESS, parseRolePermissions, type CompanyRole, type RoleInput } from "@shared/roles";
 
 type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   email?: string | null;
@@ -44,7 +46,19 @@ type UpdateCompanyData = Omit<Partial<InsertCompany>, "email"> & {
   timezone?: string;
   notifySettings?: string;
   photoSettings?: string;
+  accessSettings?: string;
 };
+
+function toCompanyRole(row: typeof companyRoles.$inferSelect): CompanyRole {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    name: row.name,
+    permissions: parseRolePermissions(row.permissions),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
 
 /** Интерфейс хранилища данных */
 export interface IStorage {
@@ -82,6 +96,18 @@ export interface IStorage {
   resetUserBalance(id: number): Promise<User | undefined>;
   setManagedWorkers(userId: number, workerIds: number[]): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
+  /** Роль человека: админ или своя роль компании (null — «Сотрудник»). */
+  setUserRole(id: number, role: { isAdmin: boolean; roleId: number | null }): Promise<User | undefined>;
+  /** Личные настройки уведомлений (JSON shared/notify.ts). */
+  setUserNotifyPrefs(id: number, prefs: string): Promise<User | undefined>;
+
+  // ===== Роли компании (shared/roles.ts) =====
+  listCompanyRoles(companyId: number): Promise<CompanyRole[]>;
+  getCompanyRole(id: number): Promise<CompanyRole | undefined>;
+  createCompanyRole(companyId: number, input: RoleInput): Promise<CompanyRole>;
+  updateCompanyRole(id: number, input: RoleInput): Promise<CompanyRole | undefined>;
+  /** Удаляет роль; её люди и приглашения становятся «Сотрудниками». */
+  deleteCompanyRole(id: number): Promise<void>;
 
   // ===== Email-авторизация (лендинг) =====
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -160,7 +186,7 @@ export interface IStorage {
   // (вызывается когда сотрудник нажал «Готово» на задаче с
   // verifier_worker_id != NULL). Race-safe — повторные клики дают
   // affectedRows=0, balance НЕ изменяется.
-  submitForVerification(id: number): Promise<boolean>;
+  submitForVerification(id: number, opts?: { byRole?: boolean }): Promise<boolean>;
   // approveVerification: 'submitted' → 'approved' + isCompleted=true.
   // Здесь же ставим completedAt, потому что задача реально done только
   // после проверки. Возврат: row для дальнейшего credit'а balance'а.
@@ -192,6 +218,7 @@ export interface IStorage {
     createdByUserId: number;
     position: string | null;
     isAdmin: boolean;
+    roleId?: number | null;
   }): Promise<Invitation>;
   getInvitationById(id: number): Promise<Invitation | undefined>;
   getInvitationByToken(token: string): Promise<Invitation | undefined>;
@@ -224,6 +251,9 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.insert(companies).values({
       ...company,
       createdAt: Math.floor(Date.now() / 1000),
+      // Новые компании: выполненное сотрудником уходит на проверку.
+      // У старых колонка NULL — работают как раньше (shared/roles.ts).
+      accessSettings: JSON.stringify(NEW_COMPANY_ACCESS),
     });
     const insertId = (result as any).insertId;
     const [created] = await db.select().from(companies).where(eq(companies.id, insertId));
@@ -666,6 +696,67 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async setUserRole(id: number, role: { isAdmin: boolean; roleId: number | null }): Promise<User | undefined> {
+    await db
+      .update(users)
+      .set({ isAdmin: role.isAdmin, roleId: role.isAdmin ? null : role.roleId })
+      .where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async setUserNotifyPrefs(id: number, prefs: string): Promise<User | undefined> {
+    await db.update(users).set({ notifyPrefs: prefs }).where(eq(users.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  // ===================== РОЛИ КОМПАНИИ =====================
+
+  async listCompanyRoles(companyId: number): Promise<CompanyRole[]> {
+    const rows = await db
+      .select()
+      .from(companyRoles)
+      .where(eq(companyRoles.companyId, companyId))
+      .orderBy(asc(companyRoles.name));
+    return rows.map(toCompanyRole);
+  }
+
+  async getCompanyRole(id: number): Promise<CompanyRole | undefined> {
+    const [row] = await db.select().from(companyRoles).where(eq(companyRoles.id, id));
+    return row ? toCompanyRole(row) : undefined;
+  }
+
+  async createCompanyRole(companyId: number, input: RoleInput): Promise<CompanyRole> {
+    const now = Math.floor(Date.now() / 1000);
+    const [result] = await db.insert(companyRoles).values({
+      companyId,
+      name: input.name,
+      permissions: JSON.stringify(input.permissions),
+      createdAt: now,
+      updatedAt: now,
+    });
+    const created = await this.getCompanyRole((result as any).insertId);
+    if (!created) throw new Error("Failed to create role");
+    return created;
+  }
+
+  async updateCompanyRole(id: number, input: RoleInput): Promise<CompanyRole | undefined> {
+    await db
+      .update(companyRoles)
+      .set({ name: input.name, permissions: JSON.stringify(input.permissions), updatedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(companyRoles.id, id));
+    return this.getCompanyRole(id);
+  }
+
+  async deleteCompanyRole(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ roleId: null }).where(eq(users.roleId, id));
+      await tx.update(invitations).set({ roleId: null }).where(eq(invitations.roleId, id));
+      await tx.delete(companyRoles).where(eq(companyRoles.id, id));
+    });
+  }
+
   /** Удаление пользователя (сначала обнуляет workerId у связанных задач) */
   async deleteUser(id: number): Promise<void> {
     // Обнуляем workerId у всех задач этого пользователя
@@ -746,6 +837,8 @@ export class DatabaseStorage implements IStorage {
     checklist: tasks.checklist,
     dueDate: tasks.dueDate,
     examplePhotoUrls: tasks.examplePhotoUrls,
+    remindAt: tasks.remindAt,
+    remindSentDay: tasks.remindSentDay,
   } as const;
 
   /**
@@ -814,6 +907,28 @@ export class DatabaseStorage implements IStorage {
     return rows.map((task) => DatabaseStorage.parseTaskRow(task));
   }
 
+  /** Невыполненные задачи со своим временем напоминания — для планировщика. */
+  async getTasksWithReminders(): Promise<Task[]> {
+    const rows = await db
+      .select(DatabaseStorage.TASK_SELECT)
+      .from(tasks)
+      .where(and(sql`${tasks.remindAt} IS NOT NULL`, eq(tasks.isCompleted, false)));
+    return rows.map((row) => DatabaseStorage.parseTaskRow(row));
+  }
+
+  /**
+   * Заявка на напоминание задачи за день: remind_sent_day → day, только
+   * если сегодня ещё не отправляли. false — опередил другой процесс.
+   */
+  async claimTaskReminder(id: number, day: string): Promise<boolean> {
+    const result = await db
+      .update(tasks)
+      .set({ remindSentDay: day })
+      .where(and(eq(tasks.id, id), sql`(${tasks.remindSentDay} IS NULL OR ${tasks.remindSentDay} <> ${day})`));
+    const header = Array.isArray(result) ? result[0] : result;
+    return !!header && typeof header === "object" && "affectedRows" in header && (header as { affectedRows: number }).affectedRows > 0;
+  }
+
   async getTask(id: number): Promise<Task | undefined> {
     const [task] = await db
       .select(DatabaseStorage.TASK_SELECT)
@@ -860,6 +975,7 @@ export class DatabaseStorage implements IStorage {
       examplePhotoUrl:
         insertTask.examplePhotoUrl ?? insertTask.examplePhotoUrls?.[0] ?? null,
       dueDate: insertTask.dueDate ?? null,
+      remindAt: insertTask.remindAt ?? null,
       companyId: insertTask.companyId ?? null,
       journalLink: insertTask.journalLink ?? null,
       createdAt: Math.floor(Date.now() / 1000),
@@ -935,6 +1051,10 @@ export class DatabaseStorage implements IStorage {
       updateData.completedAt = updates.isCompleted
         ? Math.floor(Date.now() / 1000)
         : null;
+    }
+    // Новое время напоминания — сегодня оно ещё не отправлялось.
+    if (updates.remindAt !== undefined) {
+      updateData.remindSentDay = null;
     }
     // Удаляем undefined поля
     Object.keys(updateData).forEach(key => {
@@ -1123,12 +1243,36 @@ export class DatabaseStorage implements IStorage {
 
   // ===================== TWO-STAGE VERIFICATION =====================
 
-  async submitForVerification(id: number): Promise<boolean> {
+  async submitForVerification(id: number, opts: { byRole?: boolean } = {}): Promise<boolean> {
     // Условный переход: только если verifier_worker_id задан и
     // status в одном из «можно отправлять» состояний (NULL для
     // legacy задач которые получили verifier'а на лету, 'pending'
     // для свежих, 'rejected' — re-submit после исправления).
     // Запрещаем повторное submitted/approved.
+    //
+    // byRole — проверку требует роль исполнителя (shared/roles.ts), а не
+    // назначенный проверяющий: verifier не нужен, принимают руководитель
+    // или админ. Принятую задачу, которую потом открыли заново, можно
+    // отправить снова.
+    if (opts.byRole) {
+      const result = await db
+        .update(tasks)
+        .set({ verificationStatus: "submitted", isCompleted: false, completedAt: null, rejectReason: null })
+        .where(
+          and(
+            eq(tasks.id, id),
+            eq(tasks.isCompleted, false),
+            or(
+              isNull(tasks.verificationStatus),
+              eq(tasks.verificationStatus, "pending"),
+              eq(tasks.verificationStatus, "rejected"),
+              eq(tasks.verificationStatus, "approved"),
+            ),
+          ),
+        );
+      const header = Array.isArray(result) ? result[0] : result;
+      return !!header && typeof header === "object" && "affectedRows" in header && (header as { affectedRows: number }).affectedRows > 0;
+    }
     const result = await db
       .update(tasks)
       .set({
@@ -1330,6 +1474,7 @@ export class DatabaseStorage implements IStorage {
     createdByUserId: number;
     position: string | null;
     isAdmin: boolean;
+    roleId?: number | null;
   }): Promise<Invitation> {
     const now = Math.floor(Date.now() / 1000);
     const [result] = await db.insert(invitations).values({
@@ -1338,6 +1483,7 @@ export class DatabaseStorage implements IStorage {
       createdByUserId: data.createdByUserId,
       position: data.position,
       isAdmin: data.isAdmin,
+      roleId: data.isAdmin ? null : data.roleId ?? null,
       createdAt: now,
     });
     const insertId = (result as any).insertId;

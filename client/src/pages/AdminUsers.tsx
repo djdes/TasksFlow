@@ -32,6 +32,10 @@ import { generatePin, newPinSchema } from "@shared/pin";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { matchesQuery } from "@/lib/cabinet-nav";
 import { formatPhoneDisplay, getUserInitials, personLabel, personSearchText } from "@/lib/user-display";
+import { RolesPanel } from "@/components/RolesPanel";
+import { useRoles } from "@/hooks/use-roles";
+import { usePermissions } from "@/hooks/use-permissions";
+import { canGrantRole, canManageUser, type CompanyRole } from "@shared/roles";
 
 /** Поиск по списку — когда людей больше, чем видно на экране. */
 const SEARCH_FROM = 6;
@@ -46,23 +50,73 @@ type ListUser = {
   locationId?: number | null;
   hasPin?: boolean;
   pinLocked?: boolean;
+  roleId?: number | null;
+  /** Руководитель из WeSetup — его, как и админа, меняет только админ. */
+  managedWorkerIds?: string | null;
 };
 
+/**
+ * Роль в селекте: "employee" — «Сотрудник», "admin" — администратор,
+ * "role-<id>" — своя роль компании.
+ */
+const roleValueOf = (u: { isAdmin: boolean; roleId?: number | null }): string =>
+  u.isAdmin ? "admin" : u.roleId ? `role-${u.roleId}` : "employee";
+const roleIdOf = (value: string): number | null => (value.startsWith("role-") ? Number(value.slice(5)) : null);
+
 // PIN задаёт руководитель: сотрудник войдёт по номеру и этому PIN.
-const formSchema = insertUserSchema.pick({ phone: true, name: true }).extend({ pin: newPinSchema });
+const formSchema = insertUserSchema
+  .pick({ phone: true, name: true, position: true })
+  .extend({ pin: newPinSchema, role: z.string() });
 const editFormSchema = updateUserSchema;
 
 type FormValues = z.infer<typeof formSchema>;
 type EditFormValues = z.infer<typeof editFormSchema>;
+
+/** Выбор роли: админу — все, руководителю — без права на людей и без админа. */
+function RoleSelect({
+  value,
+  onChange,
+  roles,
+  canGrant,
+  id,
+  className = "location-select",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  roles: CompanyRole[];
+  canGrant: (grant: "admin" | CompanyRole | null) => boolean;
+  id?: string;
+  className?: string;
+}) {
+  return (
+    <select id={id} className={className} value={value} onChange={(e) => onChange(e.target.value)} aria-label="Роль">
+      <option value="employee">Сотрудник</option>
+      {roles.filter((r) => canGrant(r) || value === `role-${r.id}`).map((r) => (
+        <option key={r.id} value={`role-${r.id}`} disabled={!canGrant(r)}>
+          {r.name}
+        </option>
+      ))}
+      {(canGrant("admin") || value === "admin") && (
+        <option value="admin" disabled={!canGrant("admin")}>
+          Администратор
+        </option>
+      )}
+    </select>
+  );
+}
 
 export default function AdminUsers() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const permissions = usePermissions();
+  const canOpen = permissions.isAdmin || permissions.canManageUsers;
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [editName, setEditName] = useState("");
+  const [editPosition, setEditPosition] = useState("");
+  const [editRole, setEditRole] = useState("employee");
   const [pinUserId, setPinUserId] = useState<number | null>(null);
   const [created, setCreated] = useState<{ phone: string; pin: string } | null>(null);
   const [query, setQuery] = useState("");
@@ -74,8 +128,15 @@ export default function AdminUsers() {
   const wantsAdd = params.get("add") === "1";
   const [highlightId, setHighlightId] = useState<number | null>(null);
   const phoneFieldRef = useRef<HTMLDivElement>(null);
-  const { data: locations = [] } = useLocations(!!user?.isAdmin);
+  const { data: locations = [] } = useLocations(canOpen);
+  const { data: rolesData } = useRoles(canOpen);
+  const roles = rolesData?.roles ?? [];
+  const roleById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const planInfo = (useWesetupConfiguration().data as { planInfo?: { name: string; maxUsers: number | null; enforced: boolean } } | null)?.planInfo;
+  const access = permissions.access;
+  const canGrant = (grant: "admin" | CompanyRole | null) => !!access && canGrantRole(access, grant);
+  /** Руководитель меняет только обычных людей (не админов, не руководителей, не себя). */
+  const canEditUser = (u: ListUser) => !!access && canManageUser(access, u, u.roleId ? roleById.get(u.roleId) : null);
 
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading, isError, refetch } = useQuery<ListUser[]>({
@@ -90,17 +151,22 @@ export default function AdminUsers() {
       }
       return response.json();
     },
-    enabled: !!user?.isAdmin,
+    enabled: canOpen,
   });
 
   // Мутация для создания пользователя
   const createUserMutation = useMutation({
-    mutationFn: async (data: FormValues) => {
+    mutationFn: async ({ role, position, ...data }: FormValues) => {
+      const body = {
+        ...data,
+        position: position?.trim() ? position.trim() : null,
+        ...(role === "admin" ? { role: "admin" } : roleIdOf(role) ? { roleId: roleIdOf(role) } : {}),
+      };
       const response = await fetchOrFriendlyError(api.users.create.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
@@ -112,7 +178,7 @@ export default function AdminUsers() {
     onSuccess: async (_user, data) => {
       await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       setCreated({ phone: data.phone, pin: data.pin });
-      form.reset({ phone: "+7", name: "", pin: generatePin() });
+      form.reset({ phone: "+7", name: "", position: "", role: "employee", pin: generatePin() });
       toast({ title: "Сотрудник добавлен" });
     },
     onError: (error: Error) => {
@@ -199,6 +265,8 @@ export default function AdminUsers() {
     defaultValues: {
       phone: "+7",
       name: "",
+      position: "",
+      role: "employee",
       pin: generatePin(),
     },
   });
@@ -220,7 +288,7 @@ export default function AdminUsers() {
   const shownFor = useRef<number | null>(null);
   useEffect(() => {
     if (wantsAdd) phoneFieldRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-  }, [wantsAdd, user?.isAdmin]);
+  }, [wantsAdd, canOpen]);
   useEffect(() => {
     // Нужного человека не должен прятать старый поиск.
     shownFor.current = null;
@@ -244,13 +312,13 @@ export default function AdminUsers() {
   // Проверка загрузки авторизации
   if (authLoading) return <PageSkeleton />;
 
-  // Проверка прав администратора
-  if (!user || !user.isAdmin) {
+  // Раздел — админу и роли «Добавляет сотрудников»
+  if (!user || !canOpen) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
-          <p className="text-muted-foreground mb-4">Требуются права администратора</p>
+          <p className="text-muted-foreground mb-4">Сотрудников добавляет администратор или руководитель</p>
           <Button onClick={() => setLocation("/")}>На главную</Button>
         </div>
       </div>
@@ -262,21 +330,35 @@ export default function AdminUsers() {
     setEditingUserId(u.id);
     setEditPhone(u.phone ?? "+7");
     setEditName(u.name || "");
+    setEditPosition(u.position || "");
+    setEditRole(roleValueOf(u));
   };
 
   const cancelEditing = () => {
     setEditingUserId(null);
     setEditPhone("");
     setEditName("");
+    setEditPosition("");
   };
 
   const saveEditing = () => {
     if (editingUserId === null) return;
+    const before = users.find((u) => u.id === editingUserId);
+    const roleChanged = !!before && roleValueOf(before) !== editRole;
     updateUserMutation.mutate({
       id: editingUserId,
-      data: { phone: editPhone, name: editName || null },
+      data: {
+        phone: editPhone,
+        name: editName || null,
+        position: editPosition.trim() || null,
+        // Роль отправляем, только если её поменяли: сервер проверит, можно ли.
+        ...(roleChanged ? { role: editRole === "admin" ? "admin" : roleIdOf(editRole) } : {}),
+      },
     });
   };
+
+  const roleLabelOf = (u: ListUser): string | null =>
+    u.isAdmin ? "Админ" : u.roleId ? roleById.get(u.roleId)?.name ?? null : null;
 
   return (
     <div className="page-screen">
@@ -295,7 +377,11 @@ export default function AdminUsers() {
             </div>
             <h1 className="page-title">Сотрудники</h1>
           </div>
-          <p className="page-subtitle sm:ml-[60px]">Кто работает в компании: добавляйте людей, задавайте PIN для входа и точки</p>
+          <p className="page-subtitle sm:ml-[60px]">
+            {permissions.isAdmin
+              ? "Кто работает в компании: добавляйте людей, задавайте PIN, должность, роль и точки"
+              : "Добавляйте людей и задавайте им PIN и должность. Админов и других руководителей меняет администратор"}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -305,11 +391,18 @@ export default function AdminUsers() {
               <UserPlus className="w-5 h-5 text-primary" />
               Добавить сотрудника
             </h2>
-            {planInfo?.enforced && planInfo.maxUsers !== null && (
+            {planInfo?.enforced && planInfo.maxUsers !== null && (permissions.isAdmin || users.length >= planInfo.maxUsers) && (
               <p className={`mb-5 rounded-xl px-3 py-2 text-sm ${users.length >= planInfo.maxUsers ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "bg-muted text-muted-foreground"}`}>
-                Тариф «{planInfo.name}»: {users.length} из {planInfo.maxUsers} человек.
-                {users.length >= planInfo.maxUsers && (
-                  <> Чтобы добавить ещё, <Link className="font-medium underline" href="/admin/billing">смените тариф</Link>.</>
+                {permissions.isAdmin ? (
+                  <>
+                    Тариф «{planInfo.name}»: {users.length} из {planInfo.maxUsers} человек.
+                    {users.length >= planInfo.maxUsers && (
+                      <> Чтобы добавить ещё, <Link className="font-medium underline" href="/admin/billing">смените тариф</Link>.</>
+                    )}
+                  </>
+                ) : (
+                  // Оплату руководитель не видит — только что упёрлись в лимит.
+                  <>Мест в компании больше нет. Попросите администратора сменить тариф.</>
                 )}
               </p>
             )}
@@ -350,6 +443,52 @@ export default function AdminUsers() {
                     </FormItem>
                   )}
                 />
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Должность</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Например, Повар"
+                            className="things-input"
+                            maxLength={120}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel htmlFor="new-user-role">Роль</FormLabel>
+                        <RoleSelect
+                          id="new-user-role"
+                          value={field.value}
+                          onChange={field.onChange}
+                          roles={roles}
+                          canGrant={canGrant}
+                          className="reports-select user-role-select"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {permissions.isAdmin && roles.length === 0 && (
+                  <p className="-mt-3 text-xs text-muted-foreground">
+                    Нужен руководитель, который ставит задачи и добавляет людей?{" "}
+                    <a href="#roles" className="font-medium text-primary underline-offset-2 hover:underline">Создайте роль ниже</a>.
+                  </p>
+                )}
 
                 <FormField
                   control={form.control}
@@ -444,6 +583,34 @@ export default function AdminUsers() {
                             maxLength={255}
                           />
                         </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground" htmlFor={`edit-position-${u.id}`}>Должность</label>
+                            <Input
+                              id={`edit-position-${u.id}`}
+                              value={editPosition}
+                              onChange={(e) => setEditPosition(e.target.value)}
+                              placeholder="Например, Повар"
+                              className="mt-1"
+                              maxLength={120}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground" htmlFor={`edit-role-${u.id}`}>Роль</label>
+                            {u.id === user.id ? (
+                              <p className="mt-1 text-sm text-muted-foreground">Свою роль поменять нельзя</p>
+                            ) : (
+                              <RoleSelect
+                                id={`edit-role-${u.id}`}
+                                value={editRole}
+                                onChange={setEditRole}
+                                roles={roles}
+                                canGrant={canGrant}
+                                className="reports-select user-role-select mt-1"
+                              />
+                            )}
+                          </div>
+                        </div>
                         <div className="flex gap-2 justify-end">
                           <Button
                             variant="ghost"
@@ -468,17 +635,26 @@ export default function AdminUsers() {
                       <div className="flex items-start justify-between gap-3">
                         <span className="user-row-avatar" aria-hidden>{getUserInitials(u)}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-foreground break-words">{label}</p>
+                          <p className="font-semibold text-foreground break-words">
+                            {label}
+                            {roleLabelOf(u) && (
+                              <span className="role-badge ml-2 align-[2px]" title={u.isAdmin ? "Администратор" : "Роль"}>
+                                {roleLabelOf(u)}
+                              </span>
+                            )}
+                          </p>
                           {(u.name || u.position) && (
                             <p className="text-sm text-muted-foreground">
                               {[u.name ? formatPhoneDisplay(u.phone) : null, u.position].filter(Boolean).join(" · ")}
                             </p>
                           )}
-                          {locations.length > 0 && (
+                          {locations.length > 0 && (canEditUser(u) ? (
                             <div className="mt-1.5">
                               <UserLocationSelect userId={u.id} value={u.locationId ?? null} locations={locations} />
                             </div>
-                          )}
+                          ) : u.locationId ? (
+                            <p className="mt-1 text-xs text-muted-foreground">{locations.find((l) => l.id === u.locationId)?.name}</p>
+                          ) : null)}
                           {!u.isAdmin && (u.pinLocked || u.hasPin === false) && (
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
                               {u.pinLocked ? (
@@ -505,7 +681,7 @@ export default function AdminUsers() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-1">
-                          {!u.isAdmin && (
+                          {!u.isAdmin && canEditUser(u) && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -520,19 +696,19 @@ export default function AdminUsers() {
                               <KeyRound className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                          {!u.isAdmin && (
+                          {canEditUser(u) && (!u.isAdmin || (permissions.isAdmin && u.id !== user.id)) && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => startEditing(u)}
                               className="text-xs"
                               aria-label={`Изменить: ${label}`}
-                              title="Изменить имя и телефон"
+                              title="Изменить имя, телефон, должность и роль"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                          {!u.isAdmin && (
+                          {!u.isAdmin && canEditUser(u) && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -544,7 +720,7 @@ export default function AdminUsers() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                          {!u.isAdmin && u.bonusBalance > 0 && (
+                          {!u.isAdmin && u.bonusBalance > 0 && canEditUser(u) && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -556,11 +732,6 @@ export default function AdminUsers() {
                               Сброс
                             </Button>
                           )}
-                          {u.isAdmin && (
-                            <span className="px-2 py-1 text-xs font-medium bg-primary/20 text-primary rounded">
-                              Админ
-                            </span>
-                          )}
                         </div>
                       </div>
                     )}
@@ -571,8 +742,11 @@ export default function AdminUsers() {
             )}
           </div>
 
+          {/* Роли и права, проверка выполненного — только админ */}
+          {permissions.isAdmin && <RolesPanel />}
+
           {/* Точки сети: привязка сотрудников, фильтры задач и отчётов */}
-          <LocationsPanel />
+          {permissions.isAdmin && <LocationsPanel />}
         </div>
       </div>
       {confirm && (() => {

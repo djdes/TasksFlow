@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields } from "@/components/TaskScheduleFields";
+import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
 import { CheckMark } from "@/components/ui/check-mark";
 import { formatDueDateInput, parseDueDateInput } from "@shared/task-visibility";
 import { Copy, Coins, Tag, FileText, ImagePlus, X } from "lucide-react";
@@ -41,6 +41,8 @@ const formSchema = insertTaskSchema.extend({
   monthDay: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   isRecurring: z.boolean().optional().default(true),
   dueDateInput: z.string().optional(),
+  // «Напомнить в» — «ЧЧ:ММ» или пусто (пустое серверная схема не примет).
+  remindAt: z.string().optional(),
   price: z.string().optional().transform(val => val ? parseInt(val, 10) : 0),
   category: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
   description: z.string().optional().transform(val => val && val.trim() ? val.trim() : null),
@@ -58,6 +60,8 @@ interface Task {
   isRecurring?: boolean;
   /** Срок копируется вместе с остальными полями. */
   dueDate?: number | null;
+  /** «Напомнить в» тоже копируется. */
+  remindAt?: string | null;
   price?: number;
   category?: string | null;
   description?: string | null;
@@ -94,6 +98,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       monthDay: undefined,
       isRecurring: true,
       dueDateInput: "",
+      remindAt: "",
       price: "0",
       category: "",
       description: "",
@@ -116,6 +121,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         isRecurring: task.isRecurring ?? true,
         // Срок видно и можно сменить: копия просроченной задачи иначе сразу была бы просрочена.
         dueDateInput: formatDueDateInput(task.dueDate),
+        remindAt: task.remindAt ?? "",
         price: task.price ? task.price.toString() : "0",
         category: task.category || "",
         description: task.description || "",
@@ -199,6 +205,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       monthDay: dueDate !== null ? null : values.monthDay || null,
       isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
       dueDate,
+      remindAt: remindAtPayload(values.remindAt),
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,

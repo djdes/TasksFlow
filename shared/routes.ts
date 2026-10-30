@@ -50,7 +50,7 @@ export const api = {
       method: 'POST' as const,
       path: '/api/users',
       input: insertUserSchema
-        .pick({ phone: true, name: true, isAdmin: true, position: true })
+        .pick({ phone: true, name: true, isAdmin: true, position: true, roleId: true })
         .extend({
           role: z.enum(["admin", "manager", "employee", "worker"]).optional(),
           // PIN для входа; без него сотрудник придумает PIN при первом входе.
@@ -86,6 +86,8 @@ export const api = {
       input: z.object({
         position: z.string().trim().min(1).max(120).nullable().optional(),
         role: z.enum(['admin', 'manager', 'employee']).optional(),
+        // Своя роль компании (shared/roles.ts) для принявшего приглашение.
+        roleId: z.number().int().positive().nullable().optional(),
       }),
       responses: {
         201: z.object({

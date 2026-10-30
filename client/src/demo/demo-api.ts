@@ -1,6 +1,7 @@
 import type { Task } from "@shared/schema";
 import { dayInZone, daysBetween, isDay, shiftDay } from "@shared/day";
-import { DEFAULT_NOTIFY } from "@shared/notify";
+import { DEFAULT_NOTIFY, DEFAULT_PREFS, type NotifyPrefs } from "@shared/notify";
+import { NO_PERMISSIONS, type CompanyRole } from "@shared/roles";
 import { DEFAULT_PHOTO_SETTINGS } from "@shared/photo-settings";
 import { PLANS } from "@shared/plans";
 import { DEFAULT_PRICES, type BillingInfo } from "@shared/billing";
@@ -29,6 +30,12 @@ function storedRole(): "admin" | "worker" {
 let state: DemoState = createDemoState();
 state.meId = storedRole() === "worker" ? 2 : 1;
 const now = () => Math.floor(Date.now() / 1000);
+
+// Роли, проверка выполненного и личные уведомления — тоже в памяти.
+let demoRoles: CompanyRole[] = [];
+let demoEmployeeApproval = false;
+let demoNotify: NotifyPrefs = { ...DEFAULT_PREFS };
+const rolesReply = () => ({ json: { roles: demoRoles, employeeApproval: demoEmployeeApproval } });
 
 /** Тариф демо-кофейни: «Команда» ещё на 12 дней, один прошлый платёж. */
 function demoBilling(): BillingInfo {
@@ -184,7 +191,11 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
   let m: RegExpMatchArray | null;
 
   // --- сессия и компания ---
-  if (path === "/api/auth/me") return { json: { ...me(), pinResetByEmail: false } };
+  if (path === "/api/auth/me") return { json: { ...me(), pinResetByEmail: false, notify: demoNotify } };
+  if (path === "/api/account/notify-prefs" && method === "PUT") {
+    demoNotify = { ...DEFAULT_PREFS, ...(body ?? {}) };
+    return { json: { notify: demoNotify } };
+  }
   if (path === "/api/auth/logout") {
     // «Выйти» в демо — выход из демо на лендинг.
     exitDemo();
@@ -289,10 +300,32 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     return { json: { task: patchTask(task.id, { checklist }) } };
   }
 
+  // --- роли ---
+  if (path === "/api/roles" && method === "GET") return rolesReply();
+  if (path === "/api/roles/settings" && method === "PUT") {
+    demoEmployeeApproval = !!body?.employeeApproval;
+    return rolesReply();
+  }
+  if (path === "/api/roles" && method === "POST") {
+    const role: CompanyRole = { id: state.nextId++, companyId: 1, name: String(body?.name ?? "").trim() || "Роль", permissions: { ...NO_PERMISSIONS, ...(body?.permissions ?? {}) }, createdAt: now(), updatedAt: now() };
+    demoRoles = [...demoRoles, role];
+    return { status: 201, json: role };
+  }
+  if ((m = path.match(/^\/api\/roles\/(\d+)$/))) {
+    const roleId = Number(m[1]);
+    if (method === "DELETE") {
+      demoRoles = demoRoles.filter((r) => r.id !== roleId);
+      for (const u of state.users as Array<{ roleId?: number | null }>) if (u.roleId === roleId) u.roleId = null;
+      return { json: { ok: true } };
+    }
+    demoRoles = demoRoles.map((r) => (r.id === roleId ? { ...r, name: String(body?.name ?? r.name).trim(), permissions: { ...NO_PERMISSIONS, ...(body?.permissions ?? {}) }, updatedAt: now() } : r));
+    return { json: demoRoles.find((r) => r.id === roleId) ?? null };
+  }
+
   // --- люди ---
   if (path === "/api/users" && method === "GET") return { json: state.users };
   if (path === "/api/users" && method === "POST") {
-    const user = { ...state.users[1], id: state.nextId++, name: body?.name || null, phone: body?.phone, bonusBalance: 0, hasPin: !!body?.pin, locationId: null };
+    const user = { ...state.users[1], id: state.nextId++, name: body?.name || null, phone: body?.phone, bonusBalance: 0, hasPin: !!body?.pin, locationId: null, position: body?.position ?? null, isAdmin: body?.role === "admin", roleId: body?.role === "admin" ? null : body?.roleId ?? null };
     state.users.push(user);
     return { status: 201, json: user };
   }
@@ -303,7 +336,11 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     if (tail === "/location") user.locationId = body?.locationId ?? null;
     else if (tail === "/pin") user.hasPin = method === "POST";
     else if (tail === "/reset-balance") user.bonusBalance = 0;
-    else if (method === "PUT") Object.assign(user, { phone: body?.phone ?? user.phone, name: body?.name ?? user.name });
+    else if (method === "PUT") {
+      Object.assign(user, { phone: body?.phone ?? user.phone, name: body?.name ?? user.name });
+      if (body?.position !== undefined) Object.assign(user, { position: body.position });
+      if (body?.role !== undefined) Object.assign(user, { isAdmin: body.role === "admin", roleId: typeof body.role === "number" ? body.role : null });
+    }
     else if (method === "DELETE") {
       state.users = state.users.filter((u) => u.id !== user.id);
       return { json: { success: true } };
@@ -375,4 +412,7 @@ export function installDemoApi(): void {
 
 export function resetDemo(): void {
   state = createDemoState();
+  demoRoles = [];
+  demoEmployeeApproval = false;
+  demoNotify = { ...DEFAULT_PREFS };
 }

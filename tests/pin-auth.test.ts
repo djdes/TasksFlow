@@ -20,6 +20,8 @@ const storage = {
   reservePinAttempt: vi.fn(),
   resetPinFailures: vi.fn(),
   setUserPin: vi.fn(),
+  // /api/auth/me читает настройку проверки у «Сотрудника» (shared/roles.ts).
+  getCompanyById: vi.fn(),
 };
 
 vi.mock("../server/storage", () => ({ storage, DatabaseStorage: class {} }));

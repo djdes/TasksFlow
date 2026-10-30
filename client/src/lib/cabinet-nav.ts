@@ -15,11 +15,22 @@ import {
 
 /**
  * Разделы кабинета — одна модель на всех: меню слева на ПК, меню-шторка на
- * телефоне и быстрый переход (Ctrl+K). Кто что видит — по ролям, как и
- * раньше: сотрудник — задачи, историю, аккаунт и помощь; руководитель —
- * ещё проверку; админ — управление компанией; root — свои разделы.
+ * телефоне и быстрый переход (Ctrl+K). Кто что видит — по правам роли
+ * (shared/roles.ts): сотрудник — задачи, историю, аккаунт и помощь;
+ * руководитель — ещё проверку, а с правом на людей — «Сотрудники»; админ —
+ * управление компанией (настройки, приглашения, оплата); root — свои разделы.
  */
-export type CabinetRole = { isAdmin: boolean; isRoot: boolean; canManageTasks: boolean };
+export type CabinetRole = {
+  isAdmin: boolean;
+  isRoot: boolean;
+  canManageTasks: boolean;
+  /** Добавляет сотрудников; по умолчанию — только админ. */
+  canManageUsers?: boolean;
+  /** Открывает «На проверке»; по умолчанию — кто ставит задачи. */
+  canVerify?: boolean;
+  /** История всей компании; по умолчанию — только админ. */
+  canViewReports?: boolean;
+};
 
 export type NavGroup = "main" | "company" | "root" | "help";
 
@@ -49,21 +60,23 @@ export function cabinetNav(role: CabinetRole): NavItem[] {
   const items: NavItem[] = [
     { key: "tasks", label: "Задачи", href: "/dashboard", icon: ListTodo, group: "main", also: ["/tasks/"], keywords: "главная сегодня список" },
   ];
-  if (role.canManageTasks) {
+  if (role.canVerify ?? role.canManageTasks) {
     items.push({ key: "verification", label: "На проверке", href: "/admin/verification", icon: ShieldCheck, group: "main", badge: "verification", keywords: "проверка фото принять вернуть" });
   }
   items.push({
     key: "reports",
-    label: role.isAdmin ? "История и отчёты" : "История",
+    label: role.isAdmin || role.canViewReports ? "История и отчёты" : "История",
     href: "/reports",
     icon: BarChart3,
     group: "main",
     testId: "menu-reports",
     keywords: "журнал сводка csv премии",
   });
+  if (role.isAdmin || role.canManageUsers) {
+    items.push({ key: "users", label: "Сотрудники", href: "/admin/users", icon: Users, group: "company", keywords: "люди персонал пин роли права должность руководитель" });
+  }
   if (role.isAdmin) {
     items.push(
-      { key: "users", label: "Сотрудники", href: "/admin/users", icon: Users, group: "company", keywords: "люди персонал пин" },
       { key: "invitations", label: "Приглашения", href: "/admin/invitations", icon: QrCode, group: "company", keywords: "qr ссылка пригласить" },
       {
         key: "settings",

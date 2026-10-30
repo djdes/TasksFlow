@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import { CalendarClock, CalendarDays, Calendar, RefreshCw } from "lucide-react";
+import { BellRing, CalendarClock, CalendarDays, Calendar, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -175,6 +175,45 @@ export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
           </FormItem>
         )}
       />
+
+      <FormField
+        control={form.control}
+        name="remindAt"
+        render={({ field }) => (
+          <FormItem className="task-schedule-field task-schedule-remind">
+            <FormLabel className="task-schedule-label">
+              <BellRing aria-hidden />
+              Напомнить в
+            </FormLabel>
+            <div className="flex items-center gap-2">
+              <FormControl>
+                <Input
+                  type="time"
+                  step={300}
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="max-w-[140px]"
+                  data-testid="input-remind-at"
+                />
+              </FormControl>
+              {field.value && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => field.onChange("")}>
+                  Убрать
+                </Button>
+              )}
+            </div>
+            <p className="task-schedule-hint">
+              Необязательно. В это время исполнитель получит уведомление, если задача ещё не сделана. Утренняя сводка приходит всем и так.
+            </p>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </section>
   );
+}
+
+/** Значение поля «Напомнить в» для API: «ЧЧ:ММ» или null. */
+export function remindAtPayload(value: unknown): string | null {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : null;
 }

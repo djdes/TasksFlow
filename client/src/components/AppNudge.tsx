@@ -43,7 +43,7 @@ function PushNudge({ onClose }: { onClose: () => void }) {
     <Nudge
       icon={<Bell className="w-5 h-5" />}
       title="Включите уведомления"
-      text="Новые задачи и напоминания — сразу на экран."
+      text="Утром — сводка задач на день, днём — напоминания и новые задачи."
       action={
         <Button type="button" size="sm" onClick={push.enable} disabled={push.busy}>
           Включить
@@ -56,8 +56,10 @@ function PushNudge({ onClose }: { onClose: () => void }) {
 
 /**
  * Одна ненавязчивая подсказка на главной: на телефоне в браузере —
- * поставить приложение, в приложении — включить уведомления. Не в первый
- * день работы и не чаще раза в три недели после «×».
+ * поставить приложение, в приложении — включить уведомления. Установку
+ * предлагаем не в первый день работы; уведомления в установленном
+ * приложении (PWA на рабочем столе) — сразу: ради них и ставили, а без них
+ * не придут утренняя сводка и напоминания. После «×» — тишина три недели.
  */
 export function AppNudge() {
   const install = useInstallState();
@@ -66,17 +68,20 @@ export function AppNudge() {
   useEffect(() => {
     const now = Date.now();
     const first = readNumber(FIRST_SEEN_KEY);
+    const dismissed = readNumber(DISMISS_KEY);
+    const quiet = dismissed !== null && now - dismissed < QUIET_DAYS * DAY;
     if (!first) {
       try {
         localStorage.setItem(FIRST_SEEN_KEY, String(now));
       } catch {
         // без localStorage подсказку не показываем вовсе
+        return;
       }
+      if (install.installed) setHidden(quiet);
       return;
     }
-    const dismissed = readNumber(DISMISS_KEY);
-    setHidden(now - first < DAY || (dismissed !== null && now - dismissed < QUIET_DAYS * DAY));
-  }, []);
+    setHidden(quiet || (!install.installed && now - first < DAY));
+  }, [install.installed]);
 
   if (hidden) return null;
   const close = () => {

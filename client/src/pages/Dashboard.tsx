@@ -120,7 +120,11 @@ export default function Dashboard() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: users = [], isLoading: loadingUsers, isError: usersError, refetch: retryUsers } = useUsers();
-  const { data: locations = [] } = useLocations(!!user?.isAdmin);
+  const permissions = usePermissions();
+  // Роль «Ставит задачи» видит главную как админ: все задачи, фильтры по
+  // людям и точкам. Руководитель из WeSetup — свои задачи, как раньше.
+  const { canManageTasks, canVerify, tasksCompanyWide } = permissions;
+  const { data: locations = [] } = useLocations(tasksCompanyWide);
   const { data: tasks = [], dataUpdatedAt: tasksUpdatedAt, isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
   const isMobile = useIsMobile();
   const { reduced } = useMotionPreference();
@@ -200,12 +204,10 @@ export default function Dashboard() {
   // managedWorkerIds лежит в user-record в TasksFlow и пушится с
   // WeSetup из ManagerScope (см. /settings/staff-hierarchy на
   // WeSetup-стороне).
-  const permissions = usePermissions();
-  const { canManageTasks } = permissions;
   // Live-счётчик на проверке для бэйджа в меню. Тот же hook что
   // VerificationBanner — react-query кэш переиспользуется. Сотруднику
   // пункта нет — и запроса с опросом раз в 30 с тоже.
-  const { data: pendingVerifyTasks = [] } = useAwaitingVerification(canManageTasks);
+  const { data: pendingVerifyTasks = [] } = useAwaitingVerification(canVerify);
 
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
@@ -323,7 +325,7 @@ export default function Dashboard() {
   // их на правильные секции и worker не путается.
 
   const baseFilteredTasks = (
-    user?.isAdmin
+    tasksCompanyWide
       ? tasks
           .filter(task => {
             if (filterByLocationId === "all") return true;
@@ -333,7 +335,7 @@ export default function Dashboard() {
           .filter(task => {
             if (filterByUserId === "all") return true;
             if (filterByUserId === "unassigned") return !task.workerId;
-            if (filterByUserId === "__self__") return task.workerId === user.id;
+            if (filterByUserId === "__self__") return task.workerId === user?.id;
             return task.workerId === parseInt(filterByUserId);
           })
           .filter(task => {
@@ -549,7 +551,7 @@ export default function Dashboard() {
   };
 
   // ── Фильтры: одни и те же контролы для строки (desktop) и шторки (mobile).
-  const showFilterSelects = Boolean(user?.isAdmin) || categories.length > 0;
+  const showFilterSelects = tasksCompanyWide || categories.length > 0;
   const showChips = tasks.length >= 4;
   const showFilterControls = showFilterSelects || showChips;
   const activeFilterCount =
@@ -586,7 +588,7 @@ export default function Dashboard() {
     </Select>
   ) : null;
 
-  const userSelect = user?.isAdmin ? (
+  const userSelect = tasksCompanyWide ? (
     <Select value={filterByUserId} onValueChange={setFilterByUserId}>
       <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[150px]">
         <User className="w-4 h-4 mr-1.5 text-muted-foreground" />
@@ -608,7 +610,7 @@ export default function Dashboard() {
     </Select>
   ) : null;
 
-  const locationSelect = user?.isAdmin && locations.length > 0 ? (
+  const locationSelect = tasksCompanyWide && locations.length > 0 ? (
     <Select value={filterByLocationId} onValueChange={setFilterByLocationId}>
       <SelectTrigger className="h-10 w-full rounded-xl border-input bg-background text-sm font-medium text-foreground sm:w-auto sm:min-w-[140px]" aria-label="Точка">
         <MapPin className="w-4 h-4 mr-1.5 text-muted-foreground" />
@@ -710,7 +712,7 @@ export default function Dashboard() {
               <h1 className="header-title">Задачи</h1>
               <p className="header-subtitle truncate">
                 {user.name || user.phone}
-                {user.isAdmin && " (Админ)"}
+                {user.isAdmin ? " (Админ)" : permissions.access?.kind === "role" ? ` (${permissions.roleName})` : null}
               </p>
             </div>
           </div>
@@ -856,14 +858,14 @@ export default function Dashboard() {
             путалась «это мои задачи или те что я проверяю». Теперь
             компактный prominent-баннер ведёт на отдельный экран
             /admin/verification. */}
-        {canManageTasks ? <VerificationBanner /> : null}
+        {canVerify ? <VerificationBanner /> : null}
 
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
             и баланс премии. Заменяет минималистичный progress-card. */}
         {totalCount > 0 && (
           <StatHero
-            isAdmin={Boolean(user?.isAdmin)}
+            isAdmin={tasksCompanyWide}
             totalCount={totalCount}
             completedCount={
               filteredTasks.filter(
@@ -1211,7 +1213,7 @@ export default function Dashboard() {
       ) : null}
 
       {/* Монтируем при первом «Дублировать» и оставляем — для анимации закрытия. */}
-      {user?.isAdmin && duplicateTask && (
+      {canManageTasks && duplicateTask && (
         <Suspense fallback={null}>
           <DuplicateTaskDialog
             task={duplicateTask}

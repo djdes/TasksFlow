@@ -46,6 +46,7 @@ export async function dailyTick(now: number = Math.floor(Date.now() / 1000)): Pr
     if (runtime || pushOn) {
       const runs = await runReminders(reminderStore, reminderSender(runtime, pushOn), now, {
         reportUrl: `${getPublicTasksflowBaseUrl()}/reports`,
+        dashboardUrl: `${getPublicTasksflowBaseUrl()}/dashboard`,
         onError: (companyId, err) => logger.error({ err, companyId }, "[reminders] рассылка не прошла"),
       });
       for (const run of runs) if (run.sent > 0) logger.info(run, "[reminders] отправлено");

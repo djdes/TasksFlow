@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import QRCode from "qrcode";
 import type { Invitation } from "@shared/schema";
+import { useRoles } from "@/hooks/use-roles";
 
 type CreatedInvite = {
   id: number;
@@ -30,7 +31,8 @@ type CreatedInvite = {
   createdAt: number;
 };
 
-type Role = "employee" | "manager" | "admin";
+/** "employee", "admin" или "role-<id>" — своя роль компании. */
+type Role = string;
 
 export default function Invitations() {
   const [, setLocation] = useLocation();
@@ -43,6 +45,10 @@ export default function Invitations() {
   const [position, setPosition] = useState("");
   const [role, setRole] = useState<Role>("employee");
   const [showHistory, setShowHistory] = useState(false);
+  const { data: rolesData } = useRoles(!!user?.isAdmin);
+  const roles = rolesData?.roles ?? [];
+  const roleName = (inv: Invitation) =>
+    inv.isAdmin ? "Админ" : inv.roleId ? roles.find((r) => r.id === inv.roleId)?.name ?? "Сотрудник" : "Сотрудник";
   const [inviteToRevoke, setInviteToRevoke] = useState<Invitation | null>(null);
 
   useEffect(() => {
@@ -79,7 +85,8 @@ export default function Invitations() {
     mutationFn: async () => {
       const body: Record<string, unknown> = {};
       if (position.trim()) body.position = position.trim();
-      if (role !== "employee") body.role = role;
+      if (role === "admin") body.role = "admin";
+      else if (role.startsWith("role-")) body.roleId = Number(role.slice(5));
       const r = await fetchOrFriendlyError("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,7 +191,7 @@ export default function Invitations() {
                     </span>
                     <div className="invite-row-text">
                       <div className="invite-row-title">
-                        {inv.position || "Без должности"} · {inv.isAdmin ? "Админ/менеджер" : "Сотрудник"}
+                        {inv.position || "Без должности"} · {roleName(inv)}
                       </div>
                       <div className="invite-row-meta">Создано: {formatTimestamp(inv.createdAt)}</div>
                     </div>
@@ -295,8 +302,10 @@ export default function Invitations() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="employee">Сотрудник</SelectItem>
-                  <SelectItem value="manager">Менеджер</SelectItem>
-                  <SelectItem value="admin">Админ</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={`role-${r.id}`}>{r.name}</SelectItem>
+                  ))}
+                  <SelectItem value="admin">Администратор</SelectItem>
                 </SelectContent>
               </Select>
             </div>

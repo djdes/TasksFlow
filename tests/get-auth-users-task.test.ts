@@ -22,6 +22,8 @@ const storage = {
   getUserById: vi.fn(),
   getAllUsers: vi.fn(),
   getTask: vi.fn(),
+  // /api/auth/me читает настройку проверки у «Сотрудника» (shared/roles.ts).
+  getCompanyById: vi.fn(),
 };
 
 const DatabaseStorage = {
@@ -141,6 +143,18 @@ describe("GET /api/auth/me", () => {
     expect(r.status).toBe(200);
     expect(r.body.id).toBe(WORKER.id);
     expect(r.body.phone).toBe(WORKER.phone);
+    // Права по роли считает сервер — кабинет строит меню по ним.
+    expect(r.body.access).toMatchObject({ kind: "employee", roleName: "Сотрудник", manageTasks: false });
+    expect(r.body.notify).toMatchObject({ newTask: true, reminders: true });
+  });
+
+  it("сотрудник компании с проверкой → access.requiresApproval", async () => {
+    const { app } = await buildApp({ sessionUserId: WORKER.id });
+    storage.getUserById.mockResolvedValue(WORKER);
+    storage.getCompanyById.mockResolvedValue({ id: 42, accessSettings: '{"employeeApproval":true}' });
+
+    const r = await request(app).get(`/api/auth/me`);
+    expect(r.body.access.requiresApproval).toBe(true);
   });
 
   it("session.userId есть, но user удалён → null (graceful)", async () => {

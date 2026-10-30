@@ -17,6 +17,8 @@ import {
   TaskServiceError,
   type TaskActor,
 } from "./task-actor";
+import { accessOf } from "../access";
+import { isTaskAdmin } from "@shared/roles";
 
 /** Общая часть: найти задачу, проверить компанию и права исполнителя. */
 async function loadTaskForPhoto(
@@ -44,8 +46,11 @@ async function loadTaskForPhoto(
     throw new TaskServiceError(404, "Задача не найдена");
   }
 
-  // Проверяем права: исполнитель или админ
-  const isAllowed = currentUser?.isAdmin || task.workerId === meId;
+  // Проверяем права: исполнитель, админ или роль «Ставит задачи»
+  const isAllowed =
+    task.workerId === meId ||
+    currentUser?.isAdmin ||
+    (!!currentUser && isTaskAdmin(await accessOf(currentUser)));
   if (!isAllowed) {
     throw new TaskServiceError(403, "Вы не являетесь исполнителем этой задачи");
   }

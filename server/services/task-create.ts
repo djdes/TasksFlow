@@ -11,11 +11,12 @@ import { storage } from "../storage";
 import { publishToCompany } from "../live-events";
 import { onTaskCreated, safely } from "../push/events";
 import {
-  canAssignToWorker,
   resolveActorCompanyId,
   TaskServiceError,
   type TaskActor,
 } from "./task-actor";
+import { accessOf } from "../access";
+import { canAssignTo } from "@shared/roles";
 
 export type CreateTaskParams = {
   /** Уже провалидированный insertTaskSchema payload. */
@@ -53,12 +54,13 @@ export async function createTaskForActor({
     }
   }
 
-  // Scope-check: руководитель может назначать задачи только своим
-  // подчинённым. Админ и API key пропускаются.
+  // Scope-check: руководитель из WeSetup может назначать задачи только
+  // своим подчинённым; роль «Ставит задачи» — любому, как админ
+  // (shared/roles.ts canAssignTo). Админ и API key пропускаются.
   if (actor.kind !== "apiKey") {
     const me = await storage.getUserById(actor.userId);
     if (me && !me.isAdmin) {
-      if (!canAssignToWorker(me, input.workerId ?? null)) {
+      if (!canAssignTo(await accessOf(me), input.workerId ?? null)) {
         throw new TaskServiceError(
           403,
           "Можно назначать задачи только своим подчинённым",

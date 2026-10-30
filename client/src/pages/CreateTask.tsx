@@ -7,12 +7,13 @@ import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/use-permissions";
 import { JournalModeComposer } from "@/components/JournalModeComposer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields } from "@/components/TaskScheduleFields";
+import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
 import { CheckMark } from "@/components/ui/check-mark";
 import {
   ArrowLeft,
@@ -70,6 +71,8 @@ const formSchema = insertTaskSchema.extend({
   // локальной полуночи превращаем в onSubmit, а не здесь: transform
   // сработал бы и на промежуточных значениях при вводе.
   dueDateInput: z.string().optional(),
+  // «Напомнить в» — «ЧЧ:ММ» или пусто.
+  remindAt: z.string().optional(),
 });
 
 type FormValues = z.input<typeof formSchema>;
@@ -77,6 +80,7 @@ type FormValues = z.input<typeof formSchema>;
 export default function CreateTask() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { canManageTasks, isAdmin } = usePermissions();
   const createTask = useCreateTask();
   const { data: users = [], dataUpdatedAt: usersUpdatedAt, isLoading: usersLoading, isError: usersError, refetch: retryUsers } = useUsers();
   const { toast } = useToast();
@@ -105,7 +109,8 @@ export default function CreateTask() {
   // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
   // с WeSetup. Без неё TasksFlow — просто «ставить задачи» (свободный режим).
   const wesetupConfig = useWesetupConfiguration();
-  const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured;
+  // Каталог журналов WeSetup — настройка интеграции, он только у админа.
+  const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured && isAdmin;
 
   const [mode, setMode] = useState<"free" | "journal">("free");
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -351,6 +356,7 @@ export default function CreateTask() {
       category: "",
       description: "",
       dueDateInput: "",
+      remindAt: "",
     },
   });
 
@@ -359,12 +365,12 @@ export default function CreateTask() {
   // ругается на «Rendered more hooks than during the previous render»,
   // потому что guest-render оборвался бы до использования useEffect и
   // useMemo выше.
-  if (!user || !user.isAdmin) {
+  if (!user || !canManageTasks) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
-          <p className="text-muted-foreground mb-4">Только администратор может создавать задачи</p>
+          <p className="text-muted-foreground mb-4">Задачи ставят администратор и руководитель</p>
           <button
             onClick={() => setLocation("/")}
             className="text-primary hover:underline"
@@ -571,6 +577,7 @@ export default function CreateTask() {
             : null,
       monthDay: dueDate !== null ? null : values.monthDay || null,
       dueDate,
+      remindAt: remindAtPayload(values.remindAt),
       isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
       price: values.price || 0,
       category: values.category || null,

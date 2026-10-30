@@ -125,10 +125,10 @@ function ScrollToTop() {
   return null;
 }
 
-/** Старые /workers/*: админу — в «Сотрудники», остальным (раздел только для админа) — к задачам. */
+/** Старые /workers/*: кто добавляет сотрудников — в «Сотрудники», остальным — к задачам. */
 function LegacyWorkersRedirect({ add = false }: { add?: boolean }) {
-  const { isAdmin } = usePermissions();
-  return <Redirect to={isAdmin ? (add ? "/admin/users?add=1" : "/admin/users") : "/dashboard"} replace />;
+  const { isAdmin, canManageUsers } = usePermissions();
+  return <Redirect to={isAdmin || canManageUsers ? (add ? "/admin/users?add=1" : "/admin/users") : "/dashboard"} replace />;
 }
 
 function Router() {

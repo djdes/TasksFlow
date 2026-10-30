@@ -126,6 +126,8 @@ export interface NoticeEmail {
   /** Абзацы обычным текстом — экранируются здесь. */
   paragraphs: string[];
   button?: { url: string; label: string };
+  /** Подпись внизу обычным текстом; без неё — про тариф и оплату. */
+  footer?: string;
 }
 
 const escapeHtml = (s: string) =>
@@ -141,5 +143,5 @@ export function renderNoticeEmail(notice: NoticeEmail): { subject: string; html:
       .map((p) => `<p style="font-size:15px;color:${INK};line-height:1.55;margin:0 0 8px;">${escapeHtml(p)}</p>`)
       .join("") +
     (notice.button ? button(escapeHtml(notice.button.url), escapeHtml(notice.button.label)) : "");
-  return { subject: notice.subject, html: layout(inner, NOTICE_FOOTER) };
+  return { subject: notice.subject, html: layout(inner, notice.footer ? escapeHtml(notice.footer) : NOTICE_FOOTER) };
 }

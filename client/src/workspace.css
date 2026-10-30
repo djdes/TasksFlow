@@ -949,6 +949,29 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .location-select { height: 30px; max-width: 100%; padding: 0 28px 0 10px; border: 1px solid hsl(var(--border)); border-radius: 9px; background: hsl(var(--card)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 5.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E") no-repeat right 9px center; color: hsl(var(--foreground)); font-size: 12.5px; appearance: none; }
 .location-select:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
 
+/* Роли и права в «Сотрудниках» */
+.roles-list { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid hsl(var(--border)); border-radius: 14px; overflow: hidden; }
+.role-card { display: grid; gap: 6px; padding: 12px 10px 12px 14px; }
+.role-card + .role-card { border-top: 1px solid hsl(var(--border)); }
+.role-card.is-editing { background: hsl(var(--muted) / .45); padding-right: 14px; }
+.role-card-head { display: flex; align-items: center; gap: 8px; min-height: 32px; min-width: 0; }
+.role-card-name { font-weight: 650; overflow-wrap: anywhere; }
+.role-card-tag { font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.role-card-text { font-size: 13px; color: hsl(var(--muted-foreground)); line-height: 1.45; }
+.role-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.role-chip { font-size: 12px; font-weight: 550; padding: 2px 8px; border-radius: 8px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+.dark .role-chip { background: hsl(var(--primary) / .2); color: hsl(230 100% 85%); }
+.role-approval, .role-perm { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.role-approval { margin-top: 4px; padding: 10px 12px; border-radius: 12px; background: hsl(var(--muted) / .55); }
+.role-approval .schedule-check, .role-perm .schedule-check { margin-top: 1px; }
+.role-approval span, .role-perm span { display: grid; gap: 2px; min-width: 0; }
+.role-approval b, .role-perm b { font-size: 14px; font-weight: 600; color: hsl(var(--foreground)); }
+.role-approval small, .role-perm small { font-size: 12.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+.role-form { display: grid; gap: 14px; }
+.role-perms { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; }
+.role-badge { display: inline-flex; align-items: center; max-width: 100%; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 550; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); overflow-wrap: anywhere; }
+.dark .role-badge { background: hsl(var(--primary) / .22); color: hsl(230 100% 85%); }
+
 /* Root: компании и тарифы */
 .root-companies { display: grid; }
 .root-company { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 0; }
@@ -1441,3 +1464,7 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .task-schedule-hint { font-size: 12.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
 .task-schedule-check { display: flex; align-items: flex-start; gap: 12px; padding-top: 4px; }
 .task-schedule-due { padding-top: 14px; border-top: 1px dashed hsl(var(--border)); }
+
+/* Роль в форме сотрудника: селект на всю ширину, высота как у полей */
+.user-role-select { width: 100%; height: 36px; border-radius: 6px; background-color: hsl(var(--background)); border-color: hsl(var(--input)); }
+.task-schedule-remind { padding-top: 14px; border-top: 1px dashed hsl(var(--border)); }

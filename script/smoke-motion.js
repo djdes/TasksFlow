@@ -81,8 +81,8 @@ async (page) => {
   await dialog.evaluate(el => Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))));
   await page.screenshot({path:'output/playwright/mobile-invitation.png'});
   await dialog.getByRole('combobox').click();
-  await page.getByRole('option',{name:'Менеджер',exact:true}).click();
-  check(await dialog.getByRole('combobox').innerText() === 'Менеджер','Select inside sheet is not clickable');
+  await page.getByRole('option',{name:'Администратор',exact:true}).click();
+  check(await dialog.getByRole('combobox').innerText() === 'Администратор','Select inside sheet is not clickable');
   await dialog.getByLabel('Должность (необязательно)').fill('Кассир');
   const handle = dialog.locator('[data-vaul-handle]').first();
   const box = await handle.boundingBox();

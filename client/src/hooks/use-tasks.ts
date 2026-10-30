@@ -6,6 +6,7 @@ import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
 import { applyCompletionToList } from "@/lib/task-completion";
 import { haptic } from "@/lib/pwa";
+import { toast } from "@/hooks/use-toast";
 
 export function useTasks() {
   return useQuery<Task[]>({
@@ -165,6 +166,14 @@ export function useCompleteTask() {
       queryClient.setQueryData<Task[]>([api.tasks.list.path], (list) => applyCompletionToList(list, task));
       queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.tasks.get.path, task.id] });
+      // Ушла на проверку (назначенный проверяющий или роль сотрудника):
+      // говорим прямо, что задача ещё не закрыта и премия придёт после «Принять».
+      if ((task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
+        toast({
+          title: "Отправлено на проверку",
+          description: (task as { price?: number | null }).price ? "Премия начислится, когда руководитель примет задачу" : "Руководитель посмотрит и примет задачу",
+        });
+      }
     },
   });
 }
