@@ -184,6 +184,10 @@ export default function ApiKeysPage() {
 						<p className="page-subtitle">
 							Ключи TasksFlow для интеграций. Тот же tfk_ ключ можно указать в WeSetup.
 						</p>
+						<p className="page-subtitle" data-testid="api-key-scope">
+							Ключ даёт права администратора компании: всё, что админ делает в кабинете, кроме оплаты,
+							ключей и личного аккаунта. Храните его как пароль.
+						</p>
 					</div>
 				</div>
 

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { MySqlSessionStore, ensureSessionsTable } from "./session-store";
+import { apiKeyWithoutSession } from "./api-key-session";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
@@ -99,6 +100,8 @@ if (!sessionSecret) {
     "[session] SESSION_SECRET не задан — using dev fallback. В prod это бы остановило старт."
   );
 }
+// Запросы с API-ключом — без cookie-сессии (server/api-key-session.ts).
+app.use(apiKeyWithoutSession);
 app.use(
   session({
     secret: sessionSecret || "dev-only-fallback-do-not-use-in-prod",
