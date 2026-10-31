@@ -10,6 +10,8 @@
  *
  * Личные настройки (users.notify_prefs, shared/notify.ts) решают, что
  * человек получает; письмо о новой задаче уходит на его email.
+ * Ночью (тихие часы компании) push не будит, а ждёт утра — ./quiet.ts.
+ * Нажатие на уведомление о конкретной задаче открывает её (?task=ID).
  * Утренние, вечерние напоминания, итоги дня и время задачи — services/reminders.ts.
  */
 import type { Task, User } from "@shared/schema";
@@ -19,9 +21,13 @@ import { storage } from "../storage";
 import { logger } from "../logger";
 import { accessMap } from "../access";
 import { getPublicTasksflowBaseUrl } from "../public-urls";
-import { awaitingReviewMessage, newTasksMessage, notifySoon, sendInBackground } from "./index";
+import { notifySoon } from "./index";
+import { nowOrMorning, soonOrMorning } from "./quiet";
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** Кабинет откроет эту задачу (Dashboard читает ?task=ID). */
+export const taskUrl = (taskId: number) => `/dashboard?task=${taskId}`;
 
 const wants = (user: Pick<User, "notifyPrefs"> | undefined, key: NotifyPrefKey) =>
   !!user && parseNotifyPrefs(user.notifyPrefs)[key];
@@ -32,7 +38,7 @@ export async function onTaskCreated(task: Task, actorUserId: number | null) {
   const worker = await storage.getUserById(task.workerId);
   if (!worker) return;
   if (wants(worker, "newTask")) {
-    notifySoon("new-task", task.workerId, task.title, newTasksMessage);
+    await soonOrMorning("new-task", task, task.workerId, task.title);
   }
   if (wants(worker, "emailNewTask") && worker.email) {
     const to = worker.email;
@@ -67,12 +73,17 @@ export async function onTaskRejected(task: Task, reason: string | null | undefin
   if (!task.workerId) return;
   const worker = await storage.getUserById(task.workerId);
   if (!wants(worker, "verdict")) return;
-  sendInBackground([task.workerId], {
-    title: "Задачу вернули на доработку",
-    body: clip(reason ? `${task.title}: ${reason}` : task.title, 160),
-    url: "/dashboard",
-    tag: `task-${task.id}`,
-  });
+  await nowOrMorning(
+    task.companyId,
+    [task.workerId],
+    {
+      title: "Задачу вернули на доработку",
+      body: clip(reason ? `${task.title}: ${reason}` : task.title, 160),
+      url: taskUrl(task.id),
+      tag: `task-${task.id}`,
+    },
+    task.id,
+  );
 }
 
 /** Принятие без денег — не повод беспокоить; с премией — приятная новость. */
@@ -80,12 +91,17 @@ export async function onTaskApproved(task: Task) {
   if (!task.workerId || !task.price || task.price <= 0) return;
   const worker = await storage.getUserById(task.workerId);
   if (!wants(worker, "verdict")) return;
-  sendInBackground([task.workerId], {
-    title: "Задача принята",
-    body: clip(`${task.title} · +${task.price.toLocaleString("ru-RU")} ₽`, 160),
-    url: "/reports",
-    tag: `task-${task.id}`,
-  });
+  await nowOrMorning(
+    task.companyId,
+    [task.workerId],
+    {
+      title: "Задача принята",
+      body: clip(`${task.title} · +${task.price.toLocaleString("ru-RU")} ₽`, 160),
+      url: "/reports",
+      tag: `task-${task.id}`,
+    },
+    task.id,
+  );
 }
 
 /**
@@ -113,7 +129,7 @@ export async function onTaskSubmitted(task: Task, submitterId: number | null) {
   const who = worker?.name?.trim() || worker?.phone || null;
   const item = who ? `${task.title} — ${who}` : task.title;
   for (const user of recipients) {
-    if (user.id !== submitterId && wants(user, "review")) notifySoon("review", user.id, item, awaitingReviewMessage);
+    if (user.id !== submitterId && wants(user, "review")) await soonOrMorning("review", task, user.id, item);
   }
 }
 

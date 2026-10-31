@@ -3,7 +3,7 @@ import { publishToCompany } from "../live-events";
 import { sendNoticeMail } from "../mailer";
 import { sendOwnerAlert } from "../owner-alert";
 import { getPublicTasksflowBaseUrl } from "../public-urls";
-import { sendInBackground } from "../push";
+import { nowOrMorning } from "../push/quiet";
 import { storage } from "../storage";
 import { escapeHtml } from "../telegram/util";
 import type { BillingNotice, BillingNotifier } from "./service";
@@ -17,7 +17,10 @@ export const billingNotifier: BillingNotifier = {
   async admins(companyId: number, notice: BillingNotice, extraEmails: Array<string | null> = []) {
     const url = `${getPublicTasksflowBaseUrl()}/admin/billing`;
     const admins = (await storage.getAllUsers(companyId)).filter((u) => u.isAdmin);
-    if (admins.length) sendInBackground(admins.map((u) => u.id), { title: notice.title, body: notice.body, url: "/admin/billing", tag: "billing" });
+    // Ночью (автопродление) push ждёт утра; Telegram и письмо — сразу.
+    if (admins.length) {
+      await nowOrMorning(companyId, admins.map((u) => u.id), { title: notice.title, body: notice.body, url: "/admin/billing", tag: "billing" });
+    }
 
     const { getTelegramRuntime } = await import("../telegram");
     const runtime = getTelegramRuntime();

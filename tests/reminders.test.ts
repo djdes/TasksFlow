@@ -72,7 +72,14 @@ describe("расписание напоминаний", () => {
   it("по умолчанию 08:30, 18:00 и 20:30; мусор в БД — тоже по умолчанию", () => {
     expect(parseNotifySettings(null)).toEqual(DEFAULT_NOTIFY);
     expect(parseNotifySettings('{"morning":"25:00"}')).toEqual(DEFAULT_NOTIFY);
-    expect(parseNotifySettings('{"morning":"07:30","evening":null,"digest":"21:00"}')).toEqual({ morning: "07:30", evening: null, digest: "21:00" });
+    // Старая запись без дней и «ночи» — каждый день, ночь с 22:00.
+    expect(parseNotifySettings('{"morning":"07:30","evening":null,"digest":"21:00"}')).toEqual({
+      morning: "07:30",
+      evening: null,
+      digest: "21:00",
+      days: [0, 1, 2, 3, 4, 5, 6],
+      quietFrom: "22:00",
+    });
   });
 
   it("пора, если время наступило, сегодня ещё не отправляли и опоздание меньше 3 часов", () => {
@@ -84,6 +91,13 @@ describe("расписание напоминаний", () => {
     expect(dueSlots(s, { morning: "2026-10-23" }, "2026-10-24", 11 * 60 + 29)).toEqual(["morning"]);
     expect(dueSlots(s, {}, "2026-10-24", 11 * 60 + 30)).toEqual([]);
     expect(dueSlots({ ...s, evening: null }, {}, "2026-10-24", 18 * 60 + 10)).toEqual([]);
+  });
+
+  it("только по будням: в субботу ни одного напоминания, в понедельник — как обычно", () => {
+    const weekdays = { ...DEFAULT_NOTIFY, days: [1, 2, 3, 4, 5] };
+    expect(dueSlots(weekdays, {}, "2026-10-24", 8 * 60 + 30)).toEqual([]); // суббота
+    expect(dueSlots(weekdays, {}, "2026-10-25", 8 * 60 + 30)).toEqual([]); // воскресенье
+    expect(dueSlots(weekdays, {}, "2026-10-26", 8 * 60 + 30)).toEqual(["morning"]); // понедельник
   });
 });
 
@@ -226,7 +240,19 @@ describe("своё время напоминания у задачи", () => {
     const push = vi.fn(async () => true);
     const runs = await runReminders(store, { pushRecipients: async () => new Set([10]), push }, msk(14, 2), { reportUrl: "x" });
     expect(runs).toEqual([{ companyId: 1, slot: "task", sent: 1 }]);
-    expect(push).toHaveBeenCalledWith(10, { title: "Напоминание · 14:00", body: "Позвонить поставщику", url: "/dashboard", tag: "remind-7" });
+    // Нажатие открывает саму задачу.
+    expect(push).toHaveBeenCalledWith(10, { title: "Напоминание · 14:00", body: "Позвонить поставщику", url: "/dashboard?task=7", tag: "remind-7" });
+  });
+
+  it("в выходной компании своё время задачи тоже молчит", async () => {
+    const { store, sender } = withReminders([due()]);
+    const companies = await store.listCompanies();
+    store.listCompanies = vi.fn(async () =>
+      companies.map((c) => ({ ...c, notifySettings: JSON.stringify({ ...DEFAULT_NOTIFY, days: [1, 2, 3, 4, 5] }) })),
+    );
+    // 24.10.2026 — суббота.
+    expect(await runReminders(store, sender, msk(14, 1), { reportUrl: "x" })).toEqual([]);
+    expect(store.claimTaskReminder).not.toHaveBeenCalled();
   });
 });
 

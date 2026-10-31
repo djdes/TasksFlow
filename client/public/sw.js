@@ -8,7 +8,7 @@
  *  - /api/*: в CacheStorage оседали ответы с данными пользователя, и на
  *    общем планшете после смены пользователя офлайн показывал чужое.
  */
-const VERSION = "v4";
+const VERSION = "v5";
 const STATIC_CACHE = `tasksflow-static-${VERSION}`;
 // Хешированные файлы неизменны — переживают смену версии SW, но не больше MAX_ASSETS.
 const ASSET_CACHE = "tasksflow-assets";
@@ -99,6 +99,11 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "TasksFlow";
+  // Число на иконке установленного приложения: сколько задач не сделано.
+  if (typeof data.badge === "number" && self.navigator && "setAppBadge" in self.navigator) {
+    const badge = data.badge > 0 ? self.navigator.setAppBadge(data.badge) : self.navigator.clearAppBadge();
+    event.waitUntil(badge.catch(() => {}));
+  }
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",

@@ -15,15 +15,19 @@
  * включены уведомления на устройстве. Личные настройки (shared/notify.ts)
  * выключают напоминания или итоги дня у конкретного человека.
  *
+ * Дни напоминаний компании (settings.days, например только будни) касаются
+ * всех напоминаний, включая время задачи: в выходной — тишина.
+ *
  * Каждое напоминание уходит один раз за местный день: состояние компании
  * (и remind_sent_day задачи) меняется compare-and-swap, так что тик, рестарт
  * и второй процесс не задвоят. Опоздавшее больше чем на 3 часа (сервер лежал)
  * не отправляем — утреннее в обед только раздражает.
  */
 import type { Task, User } from "@shared/schema";
-import { dayInZone, dayLabelRu, minutesInZone, zoneOrDefault } from "@shared/day";
+import { dayInZone, dayLabelRu, dayOfWeek, minutesInZone, zoneOrDefault } from "@shared/day";
 import {
   hhmmToMinutes,
+  isReminderDay,
   NOTIFY_SLOTS,
   parseNotifyPrefs,
   parseNotifySettings,
@@ -52,6 +56,7 @@ export function parseNotifyState(raw: string | null | undefined): NotifyState {
 
 /** Какие напоминания пора отправить сейчас (минуты от местной полуночи). */
 export function dueSlots(settings: NotifySettings, state: NotifyState, day: string, minutes: number): NotifySlot[] {
+  if (!isReminderDay(settings, dayOfWeek(day))) return [];
   return NOTIFY_SLOTS.filter((slot) => {
     const at = settings[slot];
     if (!at || state[slot] === day) return false;
@@ -187,8 +192,11 @@ export async function runReminders(
     const day = dayInZone(now, tz);
     const minutes = minutesInZone(now, tz);
     const state = parseNotifyState(company.notifyState);
-    const due = dueSlots(parseNotifySettings(company.notifySettings), state, day, minutes);
-    const dueTasks = (remindersByCompany.get(company.id) ?? []).filter((t) => isTaskReminderDue(t, day, minutes));
+    const settings = parseNotifySettings(company.notifySettings);
+    const due = dueSlots(settings, state, day, minutes);
+    const dueTasks = isReminderDay(settings, dayOfWeek(day))
+      ? (remindersByCompany.get(company.id) ?? []).filter((t) => isTaskReminderDue(t, day, minutes))
+      : [];
     if (due.length === 0 && dueTasks.length === 0) continue;
 
     let claimed: NotifySlot[] = [];
@@ -328,6 +336,7 @@ async function sendSlot(slot: NotifySlot, ctx: Ctx, tasks: Task[]): Promise<numb
             body,
             url: team && list.length === 0 && team.review > 0 ? "/admin/verification" : "/dashboard",
             tag: "morning",
+            badge: open.length,
           }),
         );
       }
@@ -341,6 +350,7 @@ async function sendSlot(slot: NotifySlot, ctx: Ctx, tasks: Task[]): Promise<numb
             body: listBody(list.map((t) => t.title)),
             url: "/dashboard",
             tag: "evening",
+            badge: open.length,
           }),
         );
       }
@@ -383,7 +393,7 @@ async function sendTaskReminders(store: ReminderStore, ctx: Ctx, dueTasks: Task[
         ctx.sender.push!(user.id, {
           title: `Напоминание · ${task.remindAt}`,
           body: task.title.length > 120 ? `${task.title.slice(0, 119)}…` : task.title,
-          url: "/dashboard",
+          url: `/dashboard?task=${task.id}`,
           tag: `remind-${task.id}`,
         }),
       );

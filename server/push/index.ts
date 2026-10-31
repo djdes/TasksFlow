@@ -59,7 +59,14 @@ async function deliver(sub: PushSubscriptionRow, message: PushMessage, deps: Pus
   const ttl = message.ttl ?? DEFAULT_TTL;
   if (sub.kind === "web") {
     if (!deps.web || !sub.p256dh || !sub.auth) return null;
-    const payload = JSON.stringify({ title: message.title, body: message.body, url: message.url, tag: message.tag, ts: Date.now() });
+    const payload = JSON.stringify({
+      title: message.title,
+      body: message.body,
+      url: message.url,
+      tag: message.tag,
+      badge: message.badge,
+      ts: Date.now(),
+    });
     return deps.web({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, payload, { ttl, topic: pushTopic(message.tag) });
   }
   if (sub.kind === "apns") {
@@ -68,7 +75,15 @@ async function deliver(sub: PushSubscriptionRow, message: PushMessage, deps: Pus
     return deps.apns(
       sub.endpoint,
       environment,
-      { aps: { alert: { title: message.title, body: message.body }, sound: "default", "thread-id": message.tag }, url: message.url },
+      {
+        aps: {
+          alert: { title: message.title, body: message.body },
+          sound: "default",
+          "thread-id": message.tag,
+          ...(typeof message.badge === "number" ? { badge: message.badge } : {}),
+        },
+        url: message.url,
+      },
       { ttl, collapseId: message.tag },
     );
   }

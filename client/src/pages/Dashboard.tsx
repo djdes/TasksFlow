@@ -10,7 +10,7 @@ import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { matchTaskBySearch } from "@/lib/task-search";
-import { signedOutPath } from "@/lib/pwa";
+import { signedOutPath, useAppBadge } from "@/lib/pwa";
 import { plural } from "@/lib/i18n";
 import { isTaskVisibleOn, passesChipFilters } from "@/lib/task-filters";
 import { extractCategories } from "@/lib/extract-categories";
@@ -476,6 +476,38 @@ export default function Dashboard() {
     setSelectedTask(task);
     setIsTaskDialogOpen(true);
   };
+
+  // Нажали на уведомление о задаче (/dashboard?task=ID) — сразу открываем её.
+  // Параметр убираем, чтобы обновление страницы не открывало задачу снова.
+  const openedFromLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingTasks || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("task");
+    if (!raw || openedFromLink.current === raw) return;
+    openedFromLink.current = raw;
+    params.delete("task");
+    const rest = params.toString();
+    window.history.replaceState(window.history.state, "", window.location.pathname + (rest ? `?${rest}` : "") + window.location.hash);
+    const task = tasks.find((t) => t.id === Number(raw));
+    if (task) handleTaskClick(task);
+    else toast({ title: "Задача уже недоступна", description: "Её удалили или она не на сегодня." });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingTasks, tasks]);
+
+  // Число на иконке установленного приложения — сколько своих задач на
+  // сегодня ещё не сделано (на проверке — уже не долг сотрудника).
+  const ownOpenToday = user
+    ? tasks.filter(
+        (t) =>
+          t.workerId === user.id &&
+          !t.isCompleted &&
+          (t as { verificationStatus?: string | null }).verificationStatus !== "submitted" &&
+          ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) === null &&
+          isTaskVisibleToday(t),
+      ).length
+    : 0;
+  useAppBadge(loadingTasks || tasksError ? null : ownOpenToday);
 
   const toggleTaskComplete = async (taskId: number, e?: React.MouseEvent, comment?: string) => {
     if (e) {

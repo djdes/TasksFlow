@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock3 } from "lucide-react";
+import { Clock3, Moon } from "lucide-react";
 import { DEFAULT_TIMEZONE, TIMEZONE_OPTIONS, utcOffsetLabel } from "@shared/day";
-import { DEFAULT_NOTIFY, NOTIFY_SLOTS, type NotifySettings, type NotifySlot } from "@shared/notify";
+import {
+  ALL_DAYS,
+  daysLabel,
+  DEFAULT_NOTIFY,
+  NOTIFY_SLOTS,
+  QUIET_MAX_MINUTES,
+  quietLength,
+  quietUntil,
+  WEEKDAYS,
+  withDefaults,
+  type NotifySettings,
+  type NotifySlot,
+} from "@shared/notify";
+import { WEEK_DAYS } from "@/lib/task-schedule";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +26,9 @@ const SLOT_TEXT: Record<NotifySlot, { title: string; hint: string }> = {
   digest: { title: "Итоги дня", hint: "Админу и руководителям — по их людям" },
 };
 
-type CompanyLike = { name: string; timezone?: string | null; notify?: NotifySettings | null };
+type CompanyLike = { name: string; timezone?: string | null; notify?: Partial<NotifySettings> | null };
+
+const sameDays = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((d) => b.includes(d));
 
 /**
  * «Расписание дня»: часовой пояс компании (по нему полночный сброс задач и
@@ -24,18 +39,30 @@ export function ScheduleSettings({ company }: { company: CompanyLike }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [timezone, setTimezone] = useState(company.timezone || DEFAULT_TIMEZONE);
-  const [notify, setNotify] = useState<NotifySettings>(company.notify ?? DEFAULT_NOTIFY);
+  // Старый сервер (или демо) может не прислать дни и «ночь» — дополняем.
+  const [notify, setNotify] = useState<NotifySettings>(withDefaults(company.notify ?? {}));
   // Время, которое вернётся при повторном включении выключенного слота.
   const [lastTimes, setLastTimes] = useState<Record<NotifySlot, string>>({
     morning: company.notify?.morning ?? DEFAULT_NOTIFY.morning!,
     evening: company.notify?.evening ?? DEFAULT_NOTIFY.evening!,
     digest: company.notify?.digest ?? DEFAULT_NOTIFY.digest!,
   });
+  const [lastQuiet, setLastQuiet] = useState(company.notify?.quietFrom ?? DEFAULT_NOTIFY.quietFrom!);
 
   useEffect(() => {
     setTimezone(company.timezone || DEFAULT_TIMEZONE);
-    setNotify(company.notify ?? DEFAULT_NOTIFY);
+    setNotify(withDefaults(company.notify ?? {}));
   }, [company.timezone, company.notify]);
+
+  const until = quietUntil(notify);
+  const nightTooLong = !!notify.quietFrom && quietLength(notify.quietFrom, until) > QUIET_MAX_MINUTES;
+  const toggleDay = (day: number) =>
+    setNotify((n) => {
+      const has = n.days.includes(day);
+      // Последний день не снимаем: без дней напоминаний не было бы вовсе.
+      if (has && n.days.length === 1) return n;
+      return { ...n, days: has ? n.days.filter((d) => d !== day) : [...n.days, day].sort((a, b) => a - b) };
+    });
 
   const save = useMutation({
     mutationFn: () => apiRequest("PUT", "/api/companies/me", { name: company.name, timezone, notify }),
@@ -115,10 +142,98 @@ export function ScheduleSettings({ company }: { company: CompanyLike }) {
             );
           })}
         </div>
+
+        <div className="schedule-days" role="group" aria-labelledby="notify-days-label">
+          <div className="schedule-days-head">
+            <span id="notify-days-label" className="text-sm font-medium text-foreground">
+              Дни напоминаний
+            </span>
+            <span className="schedule-days-summary" aria-live="polite">
+              {daysLabel(notify.days)}
+            </span>
+          </div>
+          <div className="schedule-days-row">
+            {WEEK_DAYS.map((day) => {
+              const on = notify.days.includes(day.value);
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  className="schedule-day"
+                  aria-pressed={on}
+                  aria-label={`${day.label}: ${on ? "напоминания есть" : "без напоминаний"}`}
+                  onClick={() => toggleDay(day.value)}
+                >
+                  {day.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="schedule-days-preset"
+              onClick={() =>
+                setNotify((n) => ({ ...n, days: sameDays(n.days, WEEKDAYS) ? [...ALL_DAYS] : [...WEEKDAYS] }))
+              }
+            >
+              {sameDays(notify.days, WEEKDAYS) ? "Каждый день" : "Только будни"}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            В остальные дни нет ни сводок, ни времени задач. Новые задачи и проверки приходят всегда.
+          </p>
+        </div>
+
+        <div className="schedule-slots mt-4">
+          <div className="schedule-slot" data-off={!notify.quietFrom || undefined}>
+            <input
+              id="notify-quiet"
+              type="checkbox"
+              className="schedule-check"
+              checked={!!notify.quietFrom}
+              onChange={(e) => setNotify((n) => ({ ...n, quietFrom: e.target.checked ? lastQuiet : null }))}
+            />
+            <label htmlFor="notify-quiet" className="schedule-slot-text">
+              <span className="inline-flex items-center gap-1.5">
+                <Moon className="w-4 h-4" aria-hidden="true" />
+                Ночью не беспокоить
+              </span>
+              <small>
+                {notify.quietFrom
+                  ? `Новые задачи, проверки и оплата ночью не будят — придут утром, в ${until}${notify.morning ? " вместе со сводкой" : ""}.`
+                  : "Уведомления приходят сразу, круглые сутки — для ночных смен."}
+              </small>
+            </label>
+            <input
+              type="time"
+              aria-label="Не беспокоить с"
+              className="schedule-time"
+              value={notify.quietFrom ?? lastQuiet}
+              disabled={!notify.quietFrom}
+              step={300}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!/^\d{2}:\d{2}$/.test(value)) return;
+                setLastQuiet(value);
+                setNotify((n) => ({ ...n, quietFrom: value }));
+              }}
+            />
+          </div>
+        </div>
+        {nightTooLong ? (
+          <p className="text-xs text-destructive mt-2" role="alert">
+            Ночь с {notify.quietFrom} до {until} длиннее 14 часов — проверьте время.
+          </p>
+        ) : null}
       </fieldset>
 
       <div className="mt-5 flex justify-end">
-        <Button type="button" onClick={() => save.mutate()} loading={save.isPending} loadingLabel="Сохраняем…">
+        <Button
+          type="button"
+          onClick={() => save.mutate()}
+          disabled={nightTooLong}
+          loading={save.isPending}
+          loadingLabel="Сохраняем…"
+        >
           Сохранить расписание
         </Button>
       </div>

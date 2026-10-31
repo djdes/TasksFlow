@@ -129,14 +129,49 @@ async (page) => {
     await page.locator('.schedule-settings select').selectOption('Asia/Vladivostok');
     await page.getByRole('checkbox', { name: /Вечером/ }).check();
     await page.getByLabel('Время: Утренняя сводка').fill('07:45');
+    // Дни напоминаний: сервер их не прислал (старый) — по умолчанию все; «Только будни».
+    check(await page.locator('.schedule-day[aria-pressed="true"]').count() === 7, 'all 7 days on by default');
+    await page.getByRole('button', { name: 'Только будни' }).click();
+    check((await page.locator('.schedule-days-summary').textContent()).trim() === 'по будням', 'weekdays summary');
+    check(await page.getByRole('button', { name: 'Каждый день' }).count() === 1, 'preset flips to «Каждый день»');
+    // Ночью не беспокоить: включено, придёт утром во время сводки.
+    check(await page.getByRole('checkbox', { name: /Ночью не беспокоить/ }).isChecked(), 'quiet hours on by default');
+    await page.getByLabel('Не беспокоить с').fill('23:00');
+    check((await page.locator('.schedule-settings').textContent()).includes('придут утром, в 07:45'), 'quiet hint follows morning time');
     await page.locator('.schedule-settings').screenshot({ path: `output/playwright/reports-schedule.png` });
     await page.getByRole('button', { name: 'Сохранить расписание' }).click();
     await page.waitForTimeout(400);
-    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && puts[0].notify.morning === '07:45' && puts[0].notify.evening === '18:00' && puts[0].notify.digest === '20:30' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
+    const n = puts[0]?.notify ?? {};
+    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && n.morning === '07:45' && n.evening === '18:00' && n.digest === '20:30' && JSON.stringify(n.days) === '[1,2,3,4,5]' && n.quietFrom === '23:00' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
+    // Ночь длиннее 14 часов — кнопка выключена, объяснение рядом.
+    await page.getByLabel('Не беспокоить с').fill('12:00');
+    check(await page.getByRole('alert').filter({ hasText: 'длиннее 14 часов' }).count() === 1, 'long night warning');
+    check(await page.getByRole('button', { name: 'Сохранить расписание' }).isDisabled(), 'save disabled on long night');
     check(errors.length === 0, `settings errors: ${errors.join('; ')}`);
     await context.close();
   }
 
+  // Расписание на телефоне: дни в одну строку, без горизонтальной прокрутки.
+  for (const theme of ['light', 'dark']) {
+    const { context, page, errors } = await open({ width: 360, height: 780 }, theme);
+    await page.goto(base + '/admin/settings');
+    await page.getByText('Дни напоминаний').waitFor();
+    await page.getByText('Дни напоминаний').scrollIntoViewIfNeeded();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check(overflow <= 0, `schedule 360 ${theme}: horizontal overflow ${overflow}px`);
+    // Ничего не вылезает за карточку (fieldset по умолчанию шире экрана).
+    const sticking = await page.locator('.schedule-settings').evaluate((panel) => {
+      const right = panel.getBoundingClientRect().right - parseFloat(getComputedStyle(panel).paddingRight) + 0.5;
+      return Array.from(panel.querySelectorAll('*')).filter((el) => el.getBoundingClientRect().right > right).map((el) => el.className || el.tagName).slice(0, 5);
+    });
+    check(sticking.length === 0, `schedule 360 ${theme}: sticks out of the card: ${sticking.join(', ')}`);
+    const tops = await page.locator('.schedule-day').evaluateAll((els) => Array.from(new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))));
+    check(tops.length === 1, `schedule 360 ${theme}: day chips in one row (${tops.join(',')})`);
+    await page.locator('.schedule-settings').screenshot({ path: `output/playwright/reports-schedule-360-${theme}.png` });
+    check(errors.length === 0, `schedule 360 ${theme} errors: ${errors.join('; ')}`);
+    await context.close();
+  }
+
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'day journal (today/yesterday), summary 7/30 days, chart tooltip by hover and keyboard, photo viewer focus return, person filter, CSV link, schedule settings PUT, 360/390/desktop, dark', failures };
+  return { checks: 'day journal (today/yesterday), summary 7/30 days, chart tooltip by hover and keyboard, photo viewer focus return, person filter, CSV link, schedule settings PUT with weekdays and quiet hours, schedule at 360 light/dark, 360/390/desktop, dark', failures };
 }

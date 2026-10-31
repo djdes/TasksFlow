@@ -36,7 +36,8 @@ import { resolveUploadAbs } from "./uploads-paths";
 import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec } from "./pin-auth";
 import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import { isValidTimeZone } from "@shared/day";
-import { notifySettingsSchema, parseNotifySettings } from "@shared/notify";
+import { notifySettingsSchema, parseNotifySettings, QUIET_MAX_MINUTES, quietLength, quietUntil, withDefaults } from "@shared/notify";
+import { forgetCompanyClock } from "./push/quiet";
 import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings";
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
@@ -1299,10 +1300,23 @@ export async function registerRoutes(
       if (wesetupBaseUrl !== undefined) updateData.wesetupBaseUrl = wesetupBaseUrl;
       if (wesetupApiKey !== undefined) updateData.wesetupApiKey = wesetupApiKey;
       if (timezone !== undefined) updateData.timezone = timezone;
-      if (notify !== undefined) updateData.notifySettings = JSON.stringify(notify);
+      if (notify !== undefined) {
+        // Дни и «ночь» старый кабинет не присылает — оставляем сохранённые.
+        const saved = parseNotifySettings((await storage.getCompanyById(user.companyId))?.notifySettings);
+        const merged = withDefaults({ ...saved, ...notify });
+        if (merged.quietFrom && quietLength(merged.quietFrom, quietUntil(merged)) > QUIET_MAX_MINUTES) {
+          return res.status(400).json({
+            message: "Ночь получается длиннее 14 часов — проверьте время «не беспокоить с»",
+            field: "notify.quietFrom",
+          });
+        }
+        updateData.notifySettings = JSON.stringify(merged);
+      }
       if (photo !== undefined) updateData.photoSettings = JSON.stringify(photo);
 
       const company = await storage.updateCompany(user.companyId, updateData);
+      // Новая «ночь» действует сразу, а не через минуту кэша.
+      if (notify !== undefined || timezone !== undefined) forgetCompanyClock(user.companyId);
 
       res.json(company ? toPublicCompany(company, true) : null);
     } catch (err: any) {

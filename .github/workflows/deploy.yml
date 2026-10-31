@@ -280,6 +280,9 @@ jobs:
             # напоминания задачи: код читает новые колонки users и tasks в
             # каждом запросе — обязательный шаг, как PIN.
             npm run add-roles-notify
+            # Ночные уведомления ждут утра. Без таблицы уходят сразу, как
+            # раньше, — шаг необязательный.
+            npm run add-push-deferred || echo "push deferred migration failed (non-fatal)"
 
             echo ">>> build (в dist.next, рабочий dist не трогаем)"
             # Раньше npm run build первым делом удалял dist: на время сборки

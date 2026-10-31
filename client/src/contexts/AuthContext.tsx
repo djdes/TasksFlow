@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { forgetThisDevice } from "@/lib/push";
+import { setAppBadge } from "@/lib/pwa";
 import type { UserAccess } from "@shared/roles";
 import type { NotifyPrefs } from "@shared/notify";
 
@@ -93,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     // Пока сессия жива — отвязать push этого устройства (общий планшет).
+    // И убрать число задач с иконки: следующему человеку оно не про него.
+    setAppBadge(0);
     await forgetThisDevice();
     await logoutMutation.mutateAsync();
   };

@@ -774,6 +774,24 @@ export const pushSubscriptions = mysqlTable("push_subscriptions", {
 
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
+// Уведомления, случившиеся ночью (companies.notify_settings.quietFrom):
+// ждут утра и уходят одной пачкой — server/push/quiet.ts.
+//   new-task / review — склеиваются («Новых задач: 5»), перед отправкой
+//                       проверяется, что задача ещё актуальна;
+//   message           — готовое сообщение (вернули, приняли, оплата).
+export const pushDeferred = mysqlTable("push_deferred", {
+  id: int("id").primaryKey().autoincrement(),
+  companyId: int("company_id").notNull(),
+  userId: int("user_id").notNull(),
+  kind: varchar("kind", { length: 16 }).notNull(),
+  taskId: int("task_id"),
+  item: varchar("item", { length: 255 }).notNull(),
+  message: text("message"),
+  createdAt: int("created_at").notNull().default(0),
+});
+
+export type PushDeferredRow = typeof pushDeferred.$inferSelect;
+
 // ===== Оплата тарифов (Робокасса) =====
 // Таблицы создаёт script/_add-billing.ts; правила — shared/billing.ts и
 // server/billing. Суммы — целые рубли, время — unix sec.

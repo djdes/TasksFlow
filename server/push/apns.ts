@@ -69,7 +69,7 @@ export function closeApnsSessions() {
 }
 
 export type ApnsPayload = {
-  aps: { alert: { title: string; body: string }; sound?: string; "thread-id"?: string };
+  aps: { alert: { title: string; body: string }; sound?: string; "thread-id"?: string; badge?: number };
   url: string;
 };
 

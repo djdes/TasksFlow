@@ -941,6 +941,24 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .schedule-time:disabled { opacity: .45; }
 .dark .schedule-time { color-scheme: dark; }
 .schedule-check:focus-visible, .schedule-time:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.schedule-days { margin-top: 16px; }
+.schedule-days-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.schedule-days-summary { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.schedule-days-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.schedule-day { min-width: 44px; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 550; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+.schedule-day[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.schedule-day:hover:not([aria-pressed="true"]) { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.schedule-days-preset { height: 40px; padding: 0 12px; border-radius: 10px; background: transparent; color: hsl(var(--primary)); font-size: 13.5px; font-weight: 550; }
+.schedule-days-preset:hover { background: hsl(var(--primary) / .08); }
+.schedule-day:focus-visible, .schedule-days-preset:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+/* fieldset по умолчанию не уже своего содержимого — на 360px поле времени вылезало за карточку. */
+.schedule-settings fieldset { min-width: 0; }
+@media (max-width: 420px) {
+  .schedule-slot { gap: 10px; padding: 12px; }
+  .schedule-time { width: 108px; padding: 0 8px; }
+  .schedule-day { min-width: 0; flex: 1 1 0; padding: 0; }
+  .schedule-days-preset { flex-basis: 100%; }
+}
 
 /* Точки: список в «Сотрудниках» и выбор точки в строке сотрудника */
 .locations-list { display: grid; margin: 0 0 12px; padding: 0; list-style: none; border: 1px solid hsl(var(--border)); border-radius: 14px; overflow: hidden; }

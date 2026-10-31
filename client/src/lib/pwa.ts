@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * Установка TasksFlow на телефон и мост к приложениям.
@@ -145,6 +145,33 @@ export async function promptInstall(): Promise<"accepted" | "dismissed" | "unava
   if (outcome === "accepted") installedNow = true;
   emit();
   return outcome;
+}
+
+type BadgeNavigator = Navigator & {
+  setAppBadge?: (count?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+
+/**
+ * Число на иконке установленного приложения (Badging API: ПК, iPhone с
+ * iOS 16.4+, часть Android). Браузер без поддержки просто ничего не делает.
+ */
+export function setAppBadge(count: number) {
+  if (typeof navigator === "undefined") return;
+  const nav = navigator as BadgeNavigator;
+  try {
+    const run = count > 0 ? nav.setAppBadge?.(count) : nav.clearAppBadge?.();
+    run?.catch(() => {});
+  } catch {
+    // без разрешения или вне установленного приложения — молча
+  }
+}
+
+/** null — ещё не знаем (грузится или ошибка): число на иконке не трогаем. */
+export function useAppBadge(count: number | null) {
+  useEffect(() => {
+    if (count !== null) setAppBadge(count);
+  }, [count]);
 }
 
 /** Короткий отклик на действие: в iOS-приложении — системный, на Android — вибрация. */

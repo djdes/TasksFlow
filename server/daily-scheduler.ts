@@ -5,13 +5,15 @@ import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { runDueResets } from "./services/daily-reset";
 import { runReminders } from "./services/reminders";
 import { reminderSender, reminderStore } from "./reminders-runtime";
-import { pushConfig } from "./push";
+import { pushConfig, sendToUsers } from "./push";
+import { deferStore, flushDeferred } from "./push/quiet";
 import { photoRetentionDays, pruneHistoryPhotos, resetStore } from "./task-history-store";
 
 /**
  * Раз в минуту, по местному времени каждой компании:
  *   • сброс повторяющихся задач в полночь с переносом дня в историю;
  *   • напоминания и итоги дня в Telegram (если бот запущен) и push;
+ *   • утром — push, накопленные за ночь (тихие часы компании);
  *   • раз в сутки — удаление фото старше PHOTO_RETENTION_DAYS, если задан;
  *   • раз в 10 минут — оплата: предупреждения и автосписания (server/billing).
  * Внешний cron для компаний больше не нужен; `npm run reset-tasks`
@@ -26,6 +28,7 @@ let lastPruneDay: string | null = null;
 const BILLING_EVERY_SEC = 10 * 60;
 let lastBillingAt = 0;
 let billingRunning = false;
+let deferredOff = false;
 
 export async function dailyTick(now: number = Math.floor(Date.now() / 1000)): Promise<void> {
   if (running) return;
@@ -50,6 +53,27 @@ export async function dailyTick(now: number = Math.floor(Date.now() / 1000)): Pr
         onError: (companyId, err) => logger.error({ err, companyId }, "[reminders] рассылка не прошла"),
       });
       for (const run of runs) if (run.sent > 0) logger.info(run, "[reminders] отправлено");
+    }
+
+    // Ночь кончилась — накопленные за ночь уведомления (server/push/quiet.ts).
+    if (pushOn && !deferredOff) {
+      try {
+        const runs = await flushDeferred(
+          {
+            store: deferStore,
+            listCompanies: () => reminderStore.listCompanies(),
+            getTasks: (companyId) => reminderStore.getTasks(companyId),
+            push: (userId, message) => sendToUsers([userId], message),
+          },
+          now,
+        );
+        for (const run of runs) logger.info(run, "[push] утром отправлено накопленное за ночь");
+      } catch (err) {
+        // Нет таблицы (миграция не прошла) — не шумим в лог каждую минуту.
+        const e = err as { code?: string; cause?: { code?: string } };
+        if ((e?.code ?? e?.cause?.code) === "ER_NO_SUCH_TABLE") deferredOff = true;
+        logger.warn({ err }, "[push] очередь до утра не разослана");
+      }
     }
 
     if (!billingRunning && now - lastBillingAt >= BILLING_EVERY_SEC) {
