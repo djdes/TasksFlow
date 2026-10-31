@@ -31,6 +31,7 @@ import { autoRegisterByEmail, MAGIC_TTL_SEC } from "./auto-register";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { requireApiKey, extractBearerKey, generateApiKey, hashApiKey } from "./api-keys";
+import { isStatelessSession } from "./api-key-session";
 import { resolveUploadAbs } from "./uploads-paths";
 import { checkPin, hashPin, lockedResult, lockRemaining, notifyPinEvent, nowSec } from "./pin-auth";
 import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
@@ -155,8 +156,42 @@ declare module "express-session" {
   }
 }
 
+/**
+ * API-ключ на маршруте кабинета: действует от имени создателя ключа, пока
+ * тот админ компании ключа, — те же права, что у админа в интерфейсе.
+ * Запрос с ключом идёт без cookie-сессии (server/api-key-session.ts), поэтому
+ * userId живёт один запрос. false — ответ уже отправлен.
+ */
+async function sessionFromApiKey(req: Request, res: Response): Promise<boolean> {
+  if (req.session.userId || !extractBearerKey(req)) return true;
+  // Настоящую сессию не трогаем: userId в ней сохранился бы и ушёл cookie.
+  if ("cookie" in req.session && !isStatelessSession(req.session)) return true;
+  let valid = false;
+  await requireApiKey(req, res, () => {
+    valid = true;
+  });
+  if (!valid || !req.apiKey) return false;
+  const owner = await storage.getUserById(req.apiKey.createdByUserId);
+  if (!owner || !owner.isAdmin || owner.companyId !== req.apiKey.companyId) {
+    res.status(403).json({
+      message: "Создатель API-ключа больше не администратор этой компании — выпустите новый ключ",
+    });
+    return false;
+  }
+  req.session.userId = owner.id;
+  if (req.method !== "GET") {
+    console.info(`[api-key] key=${req.apiKey.id} от имени user=${owner.id}: ${req.method} ${req.path}`);
+  }
+  return true;
+}
+
 // Middleware для проверки авторизации
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!(await sessionFromApiKey(req, res))) return;
+  } catch (err) {
+    return next(err);
+  }
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
   }
@@ -165,6 +200,11 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 // Middleware для проверки админских прав
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!(await sessionFromApiKey(req, res))) return;
+  } catch (err) {
+    return next(err);
+  }
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
   }
@@ -178,7 +218,11 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
 // Root (владелец сайта) — управление глобальными вещами вроде промо-баннеров.
 // Строго по флагу users.is_root. НЕ равно isAdmin (тот — админ своей компании),
 // регистрацией не выдаётся, фолбэков нет: нет is_root → нет доступа.
+// По API-ключу root недоступен никогда, даже если ключ выпустил root.
 async function requireRoot(req: Request, res: Response, next: NextFunction) {
+  if (extractBearerKey(req)) {
+    return res.status(403).json({ message: "Доступ только для root" });
+  }
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
   }
@@ -240,6 +284,11 @@ async function requireAdminOrManagerOrApiKey(
  * Кого именно можно менять — проверяет хендлер (canManageUser).
  */
 async function requireUserManager(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!(await sessionFromApiKey(req, res))) return;
+  } catch (err) {
+    return next(err);
+  }
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
   }
@@ -265,6 +314,11 @@ async function requireUserManagerOrApiKey(req: Request, res: Response, next: Nex
  * руководитель из WeSetup. Чью задачу можно менять — canEditTaskOf().
  */
 async function requireTaskManager(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!(await sessionFromApiKey(req, res))) return;
+  } catch (err) {
+    return next(err);
+  }
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
   }
