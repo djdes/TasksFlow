@@ -41,6 +41,7 @@ describe("buildCallback → parseCallback roundtrip", () => {
     { kind: "taskOpen", taskId: 987654 },
     { kind: "taskPhoto", taskId: 987654 },
     { kind: "taskItemPhoto", taskId: 42, itemId: "item-7" },
+    { kind: "taskItemDone", taskId: 42, itemId: "item-7" },
     { kind: "tasksRefresh" },
   ];
 

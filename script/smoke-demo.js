@@ -40,6 +40,41 @@ async (page) => {
       await tab.keyboard.press('Escape');
       await dup.waitFor({ state: 'hidden' });
       check(await tab.getByText('Что-то пошло не так').count() === 0, 'duplicate dialog crashed the page');
+      // Фото у пункта чек-листа — по желанию: в правке у каждого пункта камера,
+      // в задаче пункт без фото отмечается касанием.
+      await tab.goto(base + '/tasks/3/edit');
+      const editor = tab.getByTestId('checklist-editor');
+      await editor.waitFor();
+      const photoToggles = editor.getByTestId('checklist-photo-toggle');
+      check(await photoToggles.count() === 4, 'edit: checklist editor rows');
+      check(await photoToggles.nth(0).getAttribute('aria-pressed') === 'false', 'edit: no-photo item shows camera off');
+      check(await photoToggles.nth(1).getAttribute('aria-pressed') === 'true', 'edit: photo item shows camera on');
+      await tab.goto(base + '/dashboard');
+      const openCleaning = async () => {
+        const card = tab.getByRole('button', { name: 'Уборка зала по чек-листу', exact: true }).first();
+        // Задачи сгруппированы по людям — раскрываем группу уборщицы.
+        if (!(await card.isVisible())) await tab.getByText(/Ольга Смирнова/).first().click();
+        await card.click();
+        const view = tab.getByRole('dialog');
+        await view.getByText('Подзадачи').waitFor();
+        return view;
+      };
+      let cleaning = await openCleaning();
+      // Днём демо-уборка уже сделана — вернём в работу, чтобы пункты можно было менять.
+      const backToWork = cleaning.getByRole('button', { name: 'Вернуть в работу' });
+      if (await backToWork.count()) {
+        await backToWork.click();
+        await cleaning.waitFor({ state: 'hidden' });
+        cleaning = await openCleaning();
+      }
+      const tables = cleaning.getByRole('checkbox', { name: /Столы и стулья/ });
+      const wasChecked = await tables.getAttribute('aria-checked');
+      await tables.click();
+      await cleaning.locator(`[data-testid="checklist-item-toggle"][aria-checked="${wasChecked === 'true' ? 'false' : 'true'}"]`).filter({ hasText: 'Столы и стулья' }).waitFor();
+      check(await cleaning.getByRole('checkbox', { name: /Пол/ }).count() === 0, 'photo item became a tap toggle');
+      await tab.screenshot({ path: 'output/playwright/demo-checklist-no-photo.png' });
+      await tab.keyboard.press('Escape');
+      await cleaning.waitFor({ state: 'hidden' });
       await tab.goto(base + '/reports');
       await tab.getByRole('heading', { name: 'Сегодня' }).waitFor();
       await tab.getByRole('button', { name: 'Предыдущий день' }).click();
@@ -64,5 +99,5 @@ async (page) => {
     }
   }
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'demo entry, verification queue not empty, duplicate dialog (schedule, workers), no real API calls, history and summary from shared code, CSV, worker role persists, bar fits 360/390', failures };
+  return { checks: 'demo entry, verification queue not empty, duplicate dialog (schedule, workers), checklist item without photo (edit toggle, tap to mark), no real API calls, history and summary from shared code, CSV, worker role persists, bar fits 360/390', failures };
 }

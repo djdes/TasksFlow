@@ -20,6 +20,9 @@ import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, Image
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
+import { allItemsNeedPhoto, itemNeedsPhoto } from "@shared/checklist";
+import { CheckMark } from "@/components/ui/check-mark";
+import { cn } from "@/lib/utils";
 
 interface TaskViewDialogProps {
   task: Task | null;
@@ -65,9 +68,11 @@ export function TaskViewDialog({
   const queuedHere = currentTask ? queuedUploads.filter((u) => u.taskId === currentTask.id).length : 0;
   const canAddMorePhotos = photoUrls.length < 10;
 
-  // Чек-лист (подзадачи). Пункт считается выполненным, когда есть фото.
+  // Чек-лист (подзадачи). Пункт с фото выполнен, когда есть фото; пункт без
+  // фото (requiresPhoto: false) отмечается касанием.
   const checklist: ChecklistItem[] = (currentTask?.checklist as ChecklistItem[] | undefined) || [];
   const hasChecklist = checklist.length > 0;
+  const checklistAllPhoto = allItemsNeedPhoto(checklist);
   const checklistDoneCount = checklist.filter((i) => i.done).length;
   const allChecklistDone = hasChecklist && checklistDoneCount === checklist.length;
   const checklistFileInputRef = useRef<HTMLInputElement>(null);
@@ -250,6 +255,34 @@ export function TaskViewDialog({
     },
   });
 
+  // Пункт без фото: отметить касанием или снять отметку.
+  const toggleChecklistItemMutation = useMutation({
+    mutationFn: async ({ itemId, done }: { itemId: string; done: boolean }) => {
+      if (!currentTask) throw new Error("Задача не выбрана");
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${currentTask.id}/checklist/${encodeURIComponent(itemId)}/done`,
+        {
+          method: "POST",
+          credentials: "include",
+          signal: AbortSignal.timeout(30_000),
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ done }),
+        },
+      );
+      const text = await response.text();
+      const d = parseJsonOrEmpty(text);
+      if (!response.ok) throw new Error((d.message as string | undefined) || "Не удалось отметить пункт");
+      return d as { task: Task };
+    },
+    onSuccess: async (data) => {
+      if (data.task) { setCurrentTask(data.task); onTaskUpdate?.(data.task); }
+      await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка", description: error.message || "Не удалось отметить пункт", variant: "destructive" });
+    },
+  });
+
   const openChecklistPhotoPicker = (itemId: string) => {
     checklistUploadItemIdRef.current = itemId;
     checklistFileInputRef.current?.click();
@@ -309,7 +342,7 @@ export function TaskViewDialog({
     if (hasChecklist && !allChecklistDone) {
       toast({
         title: "Не всё готово",
-        description: `Закройте все пункты чек-листа с фото (${checklistDoneCount}/${checklist.length})`,
+        description: `Закройте все пункты чек-листа${checklistAllPhoto ? " с фото" : ""} (${checklistDoneCount}/${checklist.length})`,
         variant: "destructive",
       });
       return;
@@ -501,7 +534,7 @@ export function TaskViewDialog({
             </div>
           )}
 
-          {/* Чек-лист (подзадачи) — фото на каждый пункт */}
+          {/* Чек-лист (подзадачи): пункт с фото закрывается фото, без фото — касанием */}
           {hasChecklist && (
             <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl p-4 border border-primary/15">
               <div className="flex items-center justify-between mb-3">
@@ -534,6 +567,54 @@ export function TaskViewDialog({
                     uploadChecklistPhotoMutation.isPending &&
                     uploadChecklistPhotoMutation.variables?.itemId === item.id;
                   const editable = canComplete && !currentTask.isCompleted;
+                  const needsPhoto = itemNeedsPhoto(item);
+                  const mark = (
+                    <CheckMark
+                      checked={Boolean(item.done)}
+                      className={cn(
+                        "w-6 h-6 rounded-md border-2 [&>svg]:w-3.5 [&>svg]:h-3.5",
+                        item.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30",
+                      )}
+                    />
+                  );
+                  const rowTone = item.done
+                    ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+                    : "border-border bg-background";
+                  if (!needsPhoto) {
+                    // Без фото: вся строка — переключатель. Пока задача на
+                    // проверке, пункты не меняются (сервер ответит 409).
+                    const canToggle = editable && currentTask.verificationStatus !== "submitted";
+                    const toggling =
+                      toggleChecklistItemMutation.isPending &&
+                      toggleChecklistItemMutation.variables?.itemId === item.id;
+                    const label = (
+                      <>
+                        {mark}
+                        <span className={`flex-1 text-sm ${item.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                          {item.title}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">без фото</span>
+                      </>
+                    );
+                    return canToggle ? (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={Boolean(item.done)}
+                        data-testid="checklist-item-toggle"
+                        disabled={toggling}
+                        onClick={() => toggleChecklistItemMutation.mutate({ itemId: item.id, done: !item.done })}
+                        className={`w-full text-left rounded-xl border p-2.5 flex items-center gap-3 min-h-[3.25rem] transition-colors disabled:opacity-60 active:scale-[0.99] ${rowTone}`}
+                      >
+                        {label}
+                      </button>
+                    ) : (
+                      <div key={item.id} className={`rounded-xl border p-2.5 flex items-center gap-3 min-h-[3.25rem] ${rowTone}`}>
+                        {label}
+                      </div>
+                    );
+                  }
                   return (
                     <div
                       key={item.id}
@@ -543,15 +624,7 @@ export function TaskViewDialog({
                           : "border-border bg-background"
                       }`}
                     >
-                      <span
-                        className={`w-6 h-6 rounded-md grid place-items-center shrink-0 border-2 ${
-                          item.done
-                            ? "bg-emerald-500 border-emerald-500 text-white"
-                            : "border-muted-foreground/30"
-                        }`}
-                      >
-                        {item.done && <Check className="w-3.5 h-3.5" />}
-                      </span>
+                      {mark}
                       <span
                         className={`flex-1 text-sm ${
                           item.done ? "text-muted-foreground line-through" : "text-foreground"
@@ -609,7 +682,9 @@ export function TaskViewDialog({
                 className="hidden"
               />
               <p className="mt-3 text-xs text-muted-foreground">
-                Отметьте каждый пункт фото — тогда задачу можно завершить.
+                {checklistAllPhoto
+                  ? "Отметьте каждый пункт фото — тогда задачу можно завершить."
+                  : "Отметьте все пункты: где нужно — фото, остальные касанием. Тогда задачу можно завершить."}
               </p>
             </div>
           )}

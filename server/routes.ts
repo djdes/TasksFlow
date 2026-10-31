@@ -38,6 +38,7 @@ import { consentSchema, newPinSchema, pinSchema } from "@shared/pin";
 import { isValidTimeZone } from "@shared/day";
 import { notifySettingsSchema, parseNotifySettings, QUIET_MAX_MINUTES, quietLength, quietUntil, withDefaults } from "@shared/notify";
 import { forgetCompanyClock } from "./push/quiet";
+import { itemNeedsPhoto, mergeChecklistProgress } from "@shared/checklist";
 import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings";
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
@@ -90,6 +91,7 @@ import { completeTaskForActor } from "./services/task-complete";
 import {
   attachTaskPhoto,
   attachChecklistItemPhoto,
+  setChecklistItemDone,
 } from "./services/task-photo";
 
 // Настройка загрузки файлов
@@ -1737,6 +1739,12 @@ export async function registerRoutes(
         }
       }
 
+      // Чек-лист: из запроса — только состав пунктов, отметки и фото — из
+      // базы (shared/checklist.ts mergeChecklistProgress).
+      if (input.checklist !== undefined) {
+        input.checklist = mergeChecklistProgress(existing.checklist, input.checklist);
+      }
+
       // То же время напоминания — не трогаем: иначе правка названия после
       // утреннего напоминания сбросила бы «уже отправлено сегодня».
       if (input.remindAt !== undefined && (input.remindAt ?? null) === (existing.remindAt ?? null)) {
@@ -1927,7 +1935,8 @@ export async function registerRoutes(
 
   // ===== Чек-лист (подзадачи): фото на пункт =====
   // Загрузка фото к пункту чек-листа → пункт помечается выполненным.
-  // Фото на каждый пункт обязательно (галочку без фото не поставить).
+  // Пункт с фото (requiresPhoto нет или true) иначе не закрыть; пункт без
+  // фото отмечается касанием — POST /api/tasks/:id/checklist/:itemId/done.
   app.post("/api/tasks/:id/checklist/:itemId/photo", requireAuth, (req, res) => {
     res.setHeader("Content-Type", "application/json");
     upload.single("photo")(req, res, async (err: any) => {
@@ -1964,7 +1973,31 @@ export async function registerRoutes(
     });
   });
 
-  // Убрать фото у пункта чек-листа (переснять) → если фото не осталось, пункт снова не выполнен.
+  // Пункт без фото (requiresPhoto: false): отметить касанием или снять отметку.
+  app.post("/api/tasks/:id/checklist/:itemId/done", requireAuth, async (req, res) => {
+    const parsed = z.object({ done: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Нужно поле done: true или false", field: "done" });
+    }
+    try {
+      const { task } = await setChecklistItemDone({
+        taskId: Number(req.params.id),
+        itemId: String(req.params.itemId),
+        done: parsed.data.done,
+        actor: actorFromReq(req),
+      });
+      return res.json({ task });
+    } catch (e: any) {
+      if (isTaskServiceError(e)) {
+        return res.status(e.status).json({ message: e.message });
+      }
+      console.error("Error marking checklist item:", e);
+      return res.status(500).json({ message: "Не удалось отметить пункт" });
+    }
+  });
+
+  // Убрать фото у пункта чек-листа (переснять) → у пункта с фото, если фото
+  // не осталось, пункт снова не выполнен; у пункта без фото отметка остаётся.
   app.delete("/api/tasks/:id/checklist/:itemId/photo", requireAuth, async (req, res) => {
     try {
       const taskId = Number(req.params.id);
@@ -1985,7 +2018,9 @@ export async function registerRoutes(
 
       const remaining = (checklist[idx].photoUrls || []).filter((u) => u !== url);
       const newChecklist = checklist.map((it, i) =>
-        i === idx ? { ...it, photoUrls: remaining, done: remaining.length > 0 } : it,
+        i === idx
+          ? { ...it, photoUrls: remaining, done: itemNeedsPhoto(it) ? remaining.length > 0 : Boolean(it.done) }
+          : it,
       );
       const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
 

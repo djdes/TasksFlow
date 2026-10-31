@@ -34,10 +34,11 @@ export type CallbackAction =
   | { kind: "fileToggle"; draft: string; file: number; seg: number }
   | { kind: "fileAll"; draft: string; file: number }
   | { kind: "fileNone"; draft: string; file: number }
-  /** Мои задачи: открыть карточку, запросить фото, обновить список. */
+  /** Мои задачи: открыть карточку, запросить фото, отметить пункт без фото, обновить список. */
   | { kind: "taskOpen"; taskId: number }
   | { kind: "taskPhoto"; taskId: number }
   | { kind: "taskItemPhoto"; taskId: number; itemId: string }
+  | { kind: "taskItemDone"; taskId: number; itemId: string }
   | { kind: "tasksRefresh" }
   /** Групповое меню: чьи задачи показать и задачи конкретного сотрудника. */
   | { kind: "workerMenu" }
@@ -83,6 +84,7 @@ function encodeAction(a: CallbackAction): string {
     case "taskOpen": return `t:${a.taskId}`;
     case "taskPhoto": return `tp:${a.taskId}`;
     case "taskItemPhoto": return `ti:${a.taskId}:${a.itemId}`;
+    case "taskItemDone": return `td:${a.taskId}:${a.itemId}`;
     case "tasksRefresh": return "tr";
     case "workerMenu": return "wm";
     case "workerTasks": return `wt:${a.workerId}`;
@@ -182,11 +184,13 @@ export function parseCallback(data: string | undefined): CallbackAction | null {
       const t = num(1);
       return t !== null ? { kind: "taskPhoto", taskId: t } : null;
     }
-    case "ti": {
+    case "ti":
+    case "td": {
       const t = num(1), itemId = parts.slice(2).join(":");
-      return t !== null && itemId && itemId.length <= 64
+      if (t === null || !itemId || itemId.length > 64) return null;
+      return op === "ti"
         ? { kind: "taskItemPhoto", taskId: t, itemId }
-        : null;
+        : { kind: "taskItemDone", taskId: t, itemId };
     }
     case "tr":
       return { kind: "tasksRefresh" };

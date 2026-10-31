@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserInitials } from "@/lib/user-display";
 import { avatarTone } from "@/lib/shift-summary";
 import {
+  checklistItemProof,
   collectTaskPhotos,
   getExamplePhotos,
   nextTaskIdAfter,
@@ -446,16 +447,21 @@ export default function VerificationPage() {
                   кнопки должны помещаться на экран без прокрутки. */}
               {(current.checklist ?? []).length > 0 ? (
                 <ul className="verify-checklist" aria-label="Чек-лист">
-                  {(current.checklist ?? []).map((item) => (
-                    <li key={item.id} data-done={item.done || undefined}>
-                      {item.done ? <Check aria-hidden="true" /> : <Circle aria-hidden="true" />}
-                      <span>{item.title}</span>
-                      {item.photoUrls?.length ? (
-                        <span className="verify-checklist-photos"><Camera aria-hidden="true" />{item.photoUrls.length}</span>
-                      ) : null}
-                      <span className="sr-only">{item.done ? "выполнено" : "не отмечено"}</span>
-                    </li>
-                  ))}
+                  {(current.checklist ?? []).map((item) => {
+                    const proof = checklistItemProof(item);
+                    return (
+                      <li key={item.id} data-done={item.done || undefined}>
+                        {item.done ? <Check aria-hidden="true" /> : <Circle aria-hidden="true" />}
+                        <span>{item.title}</span>
+                        {proof.kind === "photos" ? (
+                          <span className="verify-checklist-photos"><Camera aria-hidden="true" />{proof.count}</span>
+                        ) : proof.kind === "no-photo-needed" ? (
+                          <span className="verify-checklist-photos">фото не нужно</span>
+                        ) : null}
+                        <span className="sr-only">{item.done ? "выполнено" : "не отмечено"}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : null}
             </section>
