@@ -1,5 +1,6 @@
 /**
- * Прикрепление уже сохранённого на диск фото к задаче или пункту чек-листа.
+ * Прикрепление уже сохранённого на диск фото к задаче или пункту чек-листа
+ * и отметка пункта без фото (setChecklistItemDone).
  *
  * Извлечено из inline-хендлеров POST /api/tasks/:id/photo и
  * POST /api/tasks/:id/checklist/:itemId/photo. Приём файла (multer, лимит
@@ -19,6 +20,7 @@ import {
 } from "./task-actor";
 import { accessOf } from "../access";
 import { isTaskAdmin } from "@shared/roles";
+import { itemNeedsPhoto } from "@shared/checklist";
 
 /** Общая часть: найти задачу, проверить компанию и права исполнителя. */
 async function loadTaskForPhoto(
@@ -101,9 +103,9 @@ export async function attachTaskPhoto({
 }
 
 /**
- * Фото к пункту чек-листа → пункт помечается выполненным.
- * Фото на каждый пункт обязательно (галочку без фото не поставить).
- * Лимит — 5 фото на пункт.
+ * Фото к пункту чек-листа → пункт помечается выполненным. Пункт с фото
+ * (requiresPhoto нет или true) иначе не закрыть; к пункту без фото снимок
+ * тоже можно приложить. Лимит — 5 фото на пункт.
  */
 export async function attachChecklistItemPhoto({
   taskId,
@@ -141,4 +143,51 @@ export async function attachChecklistItemPhoto({
 
   publishToCompany(updatedTask.companyId, { type: "tasks", taskId });
   return { photoUrl, task: updatedTask };
+}
+
+/**
+ * Отметить пункт чек-листа без фото (requiresPhoto: false) или снять отметку.
+ * Пункт с фото так не закрыть: он отмечается загрузкой фото и снимается её
+ * удалением. Выполненную и отправленную на проверку задачу не трогаем —
+ * иначе пункты разошлись бы с уже принятым или проверяемым результатом.
+ */
+export async function setChecklistItemDone({
+  taskId,
+  itemId,
+  done,
+  actor,
+}: {
+  taskId: number;
+  itemId: string;
+  done: boolean;
+  actor: TaskActor;
+}): Promise<{ task: Task }> {
+  const task = await loadTaskForPhoto(taskId, actor);
+
+  const checklist = task.checklist || [];
+  const idx = checklist.findIndex((it) => it.id === itemId);
+  if (idx === -1) {
+    throw new TaskServiceError(404, "Пункт чек-листа не найден");
+  }
+  if (itemNeedsPhoto(checklist[idx])) {
+    throw new TaskServiceError(400, "К этому пункту нужно фото");
+  }
+  if (task.isCompleted) {
+    throw new TaskServiceError(409, "Задача уже выполнена — пункты не меняются");
+  }
+  if (task.verificationStatus === "submitted") {
+    throw new TaskServiceError(409, "Задача на проверке — пункты не меняются, пока её не примут или не вернут");
+  }
+  if (Boolean(checklist[idx].done) === done) {
+    return { task };
+  }
+
+  const newChecklist = checklist.map((it, i) => (i === idx ? { ...it, done } : it));
+  const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
+  if (!updatedTask) {
+    throw new TaskServiceError(500, "Ошибка обновления задачи");
+  }
+
+  publishToCompany(updatedTask.companyId, { type: "tasks", taskId });
+  return { task: updatedTask };
 }

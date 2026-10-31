@@ -19,7 +19,8 @@ import { storage } from "../storage";
 import { logger } from "../logger";
 import { isTaskVisibleOn, formatDueBadge } from "@shared/task-visibility";
 import { completeTaskForActor } from "../services/task-complete";
-import { attachChecklistItemPhoto, attachTaskPhoto } from "../services/task-photo";
+import { attachChecklistItemPhoto, attachTaskPhoto, setChecklistItemDone } from "../services/task-photo";
+import { itemNeedsPhoto } from "@shared/checklist";
 import { isTaskServiceError, type TaskActor } from "../services/task-actor";
 import type { TelegramRuntime } from "./index";
 import type { TgCallbackQuery, TgMessage, TgReplyMarkup } from "./client";
@@ -196,7 +197,7 @@ function taskLine(task: Task): string {
 export async function handleTaskCallback(
   action: Extract<
     CallbackAction,
-    | { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" }
+    | { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" } | { kind: "taskItemDone" }
     | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
   >,
   query: TgCallbackQuery,
@@ -301,6 +302,40 @@ export async function handleTaskCallback(
     return;
   }
 
+  // Пункт без фото — отмечаем касанием, перерисовываем карточку и, если
+  // это был последний пункт, пробуем закрыть задачу, как после фото.
+  if (action.kind === "taskItemDone") {
+    try {
+      const { task: updated } = await setChecklistItemDone({
+        taskId: task.id,
+        itemId: action.itemId,
+        done: true,
+        actor: { kind: "telegram", userId: user.id },
+      });
+      const view = renderTaskCard(updated);
+      await runtime.client
+        .editMessageText({
+          chat_id: chatId,
+          message_id: messageId,
+          text: view.text,
+          parse_mode: "HTML",
+          reply_markup: view.reply_markup,
+        })
+        .catch(() => null);
+      await answer("Отмечено");
+      if (updated.checklist.length > 0 && updated.checklist.every((c) => c.done)) {
+        await finishAfterPhoto(chatId, task.id, user, runtime, "tap");
+      }
+    } catch (err) {
+      if (isTaskServiceError(err)) {
+        await answer(err.message, true);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
   // taskPhoto / taskItemPhoto — переводим чат в режим «жду фото».
   const itemId = action.kind === "taskItemPhoto" ? action.itemId : null;
   if (itemId && !task.checklist.some((c) => c.id === itemId)) {
@@ -320,7 +355,31 @@ export async function handleTaskCallback(
   await answer();
 }
 
-function renderTaskCard(task: Task): { text: string; reply_markup: TgReplyMarkup } {
+/** Сколько пунктов осталось — честно для списка, где фото нужно не везде. */
+export function checklistLeftText(checklist: Task["checklist"]): string | null {
+  const left = checklist.filter((c) => !c.done);
+  if (left.length === 0) return null;
+  const photo = left.filter(itemNeedsPhoto).length;
+  const tap = left.length - photo;
+  if (tap === 0) return `Осталось сфоткать: ${photo}`;
+  if (photo === 0) return `Осталось отметить: ${tap}`;
+  return `Осталось: сфоткать ${photo}, отметить ${tap}`;
+}
+
+/**
+ * Кнопка пункта. callback_data ограничен 64 байтами, а id пункта из API —
+ * до 64 символов: слишком длинный id оставляет пункт без кнопки, а не
+ * роняет всю карточку.
+ */
+function itemButton(text: string, action: CallbackAction) {
+  try {
+    return [{ text, callback_data: buildCallback(action) }];
+  } catch {
+    return null;
+  }
+}
+
+export function renderTaskCard(task: Task): { text: string; reply_markup: TgReplyMarkup } {
   const lines = [`<b>${escapeHtml(task.title)}</b>`];
   if (task.description) lines.push(escapeHtml(task.description));
 
@@ -343,21 +402,18 @@ function renderTaskCard(task: Task): { text: string; reply_markup: TgReplyMarkup
     lines.push("");
     lines.push("<b>Чек-лист:</b>");
     for (const item of task.checklist) {
-      lines.push(`${item.done ? "✅" : "⬜"} ${escapeHtml(item.title)}`);
+      const photoMark = !item.done && itemNeedsPhoto(item) ? " 📸" : "";
+      lines.push(`${item.done ? "✅" : "⬜"} ${escapeHtml(item.title)}${photoMark}`);
     }
-    // Кнопка на каждый несфотканный пункт: задача не закроется, пока
-    // каждый не получит фото.
-    for (const item of task.checklist.filter((c) => !c.done)) {
-      keyboard.push([
-        {
-          text: `📸 ${item.title.slice(0, 30)}`,
-          callback_data: buildCallback({
-            kind: "taskItemPhoto",
-            taskId: task.id,
-            itemId: item.id,
-          }),
-        },
-      ]);
+    // Кнопка на каждый невыполненный пункт: с фото — «📸» (ждём снимок),
+    // без фото — «✅» (отметить касанием). Задача не закроется, пока не
+    // отмечены все. На проверке и у закрытой задачи пункты уже не меняются.
+    const editable = !task.isCompleted && task.verificationStatus !== "submitted";
+    for (const item of task.checklist.filter((c) => !c.done && editable)) {
+      const row = itemNeedsPhoto(item)
+        ? itemButton(`📸 ${item.title.slice(0, 30)}`, { kind: "taskItemPhoto", taskId: task.id, itemId: item.id })
+        : itemButton(`✅ ${item.title.slice(0, 30)}`, { kind: "taskItemDone", taskId: task.id, itemId: item.id });
+      if (row) keyboard.push(row);
     }
   } else if (!task.isCompleted) {
     keyboard.push([
@@ -463,7 +519,9 @@ async function finishAfterPhoto(
   taskId: number,
   user: User,
   runtime: TelegramRuntime,
+  via: "photo" | "tap" = "photo",
 ): Promise<void> {
+  const accepted = via === "photo" ? "Фото принято" : "Все пункты отмечены";
   try {
     const result = await completeTaskForActor({
       taskId,
@@ -475,7 +533,7 @@ async function finishAfterPhoto(
       await runtime.client.sendMessage({
         chat_id: chatId,
         parse_mode: "HTML",
-        text: `🕓 <b>${escapeHtml(result.task.title)}</b>\nФото принято, отправлено на проверку.`,
+        text: `🕓 <b>${escapeHtml(result.task.title)}</b>\n${accepted}, отправлено на проверку.`,
       });
       return;
     }
@@ -493,13 +551,11 @@ async function finishAfterPhoto(
     if (isTaskServiceError(err) && err.status === 400) {
       // Чек-лист не добит или нужно ещё фото — нормальный ход событий.
       const task = await storage.getTask(taskId);
-      const progress =
-        task && task.checklist.length > 0
-          ? `\n\nОсталось сфоткать: ${task.checklist.filter((c) => !c.done).length}`
-          : "";
+      const left = task ? checklistLeftText(task.checklist) : null;
+      const progress = left ? `\n\n${left}` : via === "tap" ? `\n\n${err.message}` : "";
       await runtime.client.sendMessage({
         chat_id: chatId,
-        text: `📸 Фото принято.${progress}`,
+        text: `${via === "photo" ? "📸" : "✅"} ${accepted}.${progress}`,
       });
       return;
     }

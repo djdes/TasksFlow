@@ -219,12 +219,14 @@ export const tasks = mysqlTable("tasks", {
   // См. routes.ts /api/wesetup/complete-with-values + verify-handler.
   submittedValues: text("submitted_values"),
   // Чек-лист (подзадачи) внутри задачи. JSON-массив пунктов:
-  //   [{ id: string, title: string, done: boolean, photoUrls: string[] }]
+  //   [{ id: string, title: string, done: boolean, photoUrls: string[],
+  //      requiresPhoto?: boolean }]
   // NULL или [] = обычная задача без чек-листа (поведение как раньше).
-  // Пункт нельзя отметить готовым без фото (requiresPhoto на уровне пункта
-  // подразумевается). Задача считается выполненной, когда все пункты done.
+  // requiresPhoto нет или true — пункт закрывается только фото (как было у
+  // всех старых задач); false — касанием, без фото (shared/checklist.ts).
+  // Задача считается выполненной, когда все пункты done.
   // При ежедневном сбросе повторяющейся задачи у пунктов чистятся done+photoUrls,
-  // заголовки остаются.
+  // заголовки и requiresPhoto остаются.
   checklist: text("checklist"),
   // Срок выполнения — unix sec локальной полуночи целевого дня.
   // Семантика намеренно мягкая: задача со сроком видна СРАЗУ и не
@@ -410,13 +412,15 @@ export const insertWorkerSchema = createInsertSchema(workers).pick({
   name: true,
 });
 
-// Пункт чек-листа (подзадача). done ставится только вместе с фото —
-// это проверяется на сервере в эндпоинте отметки пункта.
+// Пункт чек-листа (подзадача). Пункт с фото (requiresPhoto нет или true)
+// отмечается только загрузкой фото, без фото (false) — касанием; это
+// проверяется на сервере в эндпоинтах пункта (services/task-photo.ts).
 export const checklistItemSchema = z.object({
   id: z.string().min(1).max(64),
   title: z.string().trim().min(1, "Название пункта обязательно").max(200),
   done: z.boolean().optional().default(false),
   photoUrls: z.array(z.string()).optional().default([]),
+  requiresPhoto: z.boolean().optional(),
 });
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 

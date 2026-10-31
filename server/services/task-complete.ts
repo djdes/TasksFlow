@@ -112,13 +112,14 @@ export async function completeTaskForActor({
   }
 
   // Чек-лист: задачу нельзя завершить, пока не все пункты выполнены
-  // (каждый пункт закрывается фото). Задачи без чек-листа не затрагиваются.
+  // (пункт с фото закрывается фото, без фото — касанием). Задачи без
+  // чек-листа не затрагиваются.
   const completeChecklist = task.checklist || [];
   if (completeChecklist.length > 0 && !completeChecklist.every((it) => it.done)) {
     const doneCount = completeChecklist.filter((it) => it.done).length;
     throw new TaskServiceError(
       400,
-      `Отметьте все пункты чек-листа с фото (${doneCount}/${completeChecklist.length})`,
+      `Отметьте все пункты чек-листа (${doneCount}/${completeChecklist.length})`,
     );
   }
 

@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
-import { ArrowLeft, Edit, Coins, Tag, FileText, ImagePlus, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Coins, Tag, FileText, ImagePlus, X, Trash2, Check } from "lucide-react";
+import { ChecklistEditor, checklistDraftFrom, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import { parseDueDateInput, formatDueDateInput } from "@shared/task-visibility";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
@@ -56,6 +57,11 @@ const formSchema = insertTaskSchema.extend({
 
 type FormValues = z.input<typeof formSchema>;
 
+/** Состав чек-листа для сравнения: id, название и «нужно фото», без отметок. */
+function checklistShape(items: readonly { id: string; title: string; requiresPhoto?: boolean }[] | null): string {
+  return JSON.stringify((items ?? []).map((it) => [it.id, it.title.trim(), it.requiresPhoto !== false]));
+}
+
 export default function EditTask() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -74,6 +80,9 @@ export default function EditTask() {
   const [isUploadingExample, setIsUploadingExample] = useState(false);
   const [isDeletingExample, setIsDeletingExample] = useState(false);
   const examplePhotoInputRef = useRef<HTMLInputElement>(null);
+  // Чек-лист: состав пунктов и «нужно фото». Отметки и фото исполнителя
+  // сервер сохранит сам (mergeChecklistProgress), даже если форма устарела.
+  const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -115,6 +124,7 @@ export default function EditTask() {
 
       // Устанавливаем текущее пример фото если есть
       setCurrentExamplePhoto((task as any).examplePhotoUrl || null);
+      setChecklistItems(checklistDraftFrom(task.checklist));
     }
   }, [task, form]);
 
@@ -263,6 +273,11 @@ export default function EditTask() {
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
+      // Чек-лист шлём, только если поменяли состав: иначе сохранение формы
+      // зря перезаписывало бы пункты.
+      ...(checklistShape(checklistPayload(checklistItems)) !== checklistShape(task?.checklist ?? null)
+        ? { checklist: checklistPayload(checklistItems) }
+        : {}),
     };
     updateTask.mutate(
       taskData as any,
@@ -580,6 +595,15 @@ export default function EditTask() {
                 </FormItem>
               )}
             />
+
+            {/* Чек-лист (подзадачи) */}
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-primary" />
+                Подзадачи (чек-лист)
+              </FormLabel>
+              <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
+            </FormItem>
 
             <TaskScheduleFields form={form} />
 

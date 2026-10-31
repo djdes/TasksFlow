@@ -44,6 +44,27 @@ export function collectTaskPhotos(task: PhotoTask): ReviewPhoto[] {
 }
 
 /**
+ * Чем подтверждён пункт чек-листа: фото (сколько), «фото не нужно» у
+ * пункта без фото (requiresPhoto: false) или ничем. Пункт без фото,
+ * отмеченный касанием, — не повод для подозрений у проверяющего.
+ */
+export type ChecklistProof =
+  | { kind: "photos"; count: number }
+  | { kind: "no-photo-needed" }
+  | { kind: "none" };
+
+export function checklistItemProof(item: {
+  done?: boolean | null;
+  photoUrls?: readonly string[] | null;
+  requiresPhoto?: boolean | null;
+}): ChecklistProof {
+  const count = item.photoUrls?.length ?? 0;
+  if (count > 0) return { kind: "photos", count };
+  if (item.done && item.requiresPhoto === false) return { kind: "no-photo-needed" };
+  return { kind: "none" };
+}
+
+/**
  * Какая задача станет текущей после решения по decidedId: следующая в
  * очереди, а если решили последнюю — предыдущая. null — очередь пуста.
  */

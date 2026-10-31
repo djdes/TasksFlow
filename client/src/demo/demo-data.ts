@@ -83,6 +83,20 @@ type TaskSeed = {
   at: number;
 };
 
+/** Пункты демо-чек-листа, которые отмечаются касанием, без фото. */
+const NO_PHOTO_ITEMS = new Set(["Столы и стулья", "Окна у входа"]);
+
+function demoChecklistItem(id: string, title: string): ChecklistItem {
+  return NO_PHOTO_ITEMS.has(title)
+    ? { id, title, done: false, photoUrls: [], requiresPhoto: false }
+    : { id, title, done: false, photoUrls: [] };
+}
+
+/** Отметить демо-пункт: у пункта с фото — со снимком, без фото — без. */
+function doneItem(c: ChecklistItem, photo: string): ChecklistItem {
+  return { ...c, done: true, photoUrls: c.requiresPhoto === false ? [] : [photo] };
+}
+
 const SEEDS: TaskSeed[] = [
   { title: "Открыть смену: включить кофемашину и проверить помол", workerId: 2, category: "Открытие смены", photo: "coffee", reliability: 0.97, at: 7.8 },
   { title: "Выложить витрину и проверить ценники", workerId: 2, category: "Открытие смены", photo: "showcase", price: 100, reliability: 0.93, at: 8.3 },
@@ -115,7 +129,7 @@ export function createDemoState(now: number = Math.floor(Date.now() / 1000)): De
   const nowHour = (now - todayStart) / 3600;
 
   const tasks: Task[] = SEEDS.map((seed, i) => {
-    const checklist: ChecklistItem[] = (seed.checklist ?? []).map((title, j) => ({ id: `c${i}-${j}`, title, done: false, photoUrls: [] }));
+    const checklist: ChecklistItem[] = (seed.checklist ?? []).map((title, j) => demoChecklistItem(`c${i}-${j}`, title));
     const base = {
       id: i + 1,
       title: seed.title,
@@ -159,11 +173,11 @@ export function createDemoState(now: number = Math.floor(Date.now() / 1000)): De
         completedAt: doneAt,
         photoUrls: seed.photo ? [demoPhoto(seed.photo, 1)] : [],
         photoUrl: seed.photo ? demoPhoto(seed.photo, 1) : null,
-        checklist: checklist.map((c) => ({ ...c, done: true, photoUrls: [demoPhoto("floor", 2)] })),
+        checklist: checklist.map((c) => doneItem(c, demoPhoto("floor", 2))),
       } as Task;
     }
     if (checklist.length > 0 && seed.at - 1 < nowHour) {
-      return { ...base, checklist: checklist.map((c, j) => (j < 2 ? { ...c, done: true, photoUrls: [demoPhoto("floor", j)] } : c)) } as Task;
+      return { ...base, checklist: checklist.map((c, j) => (j < 2 ? doneItem(c, demoPhoto("floor", j)) : c)) } as Task;
     }
     return base;
   });
@@ -190,7 +204,10 @@ export function createDemoState(now: number = Math.floor(Date.now() / 1000)): De
       if (!isTaskVisibleOn({ weekDays: seed.weekDays ?? null, monthDay: null }, dow, d)) return;
       const done = random() < seed.reliability;
       const completedAt = done ? dayStart + Math.round((seed.at + (random() - 0.3) * 0.8) * 3600) : null;
-      const checklist = seed.checklist?.map((title, j) => ({ id: `c${i}-${j}`, title, done: done || j < 1, photoUrls: done || j < 1 ? [demoPhoto("floor", j)] : [] }));
+      const checklist = seed.checklist?.map((title, j) => {
+        const item = demoChecklistItem(`c${i}-${j}`, title);
+        return done || j < 1 ? doneItem(item, demoPhoto("floor", j)) : item;
+      });
       history.push({
         id: hid++,
         taskId: i + 1,
