@@ -488,10 +488,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: number, updateUser: UpdateUser): Promise<User | undefined> {
     const normalizedPhone = normalizePhone(updateUser.phone);
-    const patch: Record<string, unknown> = {
-      phone: normalizedPhone,
-      name: updateUser.name ?? null,
-    };
+    const patch: Record<string, unknown> = { phone: normalizedPhone };
+    // Не передали имя (запрос по API только со сменой роли) — имя не трогаем.
+    if (updateUser.name !== undefined) {
+      patch.name = updateUser.name ?? null;
+    }
     if (updateUser.position !== undefined) {
       patch.position = updateUser.position ?? null;
     }
