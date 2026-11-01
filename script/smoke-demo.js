@@ -50,10 +50,16 @@ async (page) => {
       check(await photoToggles.nth(0).getAttribute('aria-pressed') === 'false', 'edit: no-photo item shows camera off');
       check(await photoToggles.nth(1).getAttribute('aria-pressed') === 'true', 'edit: photo item shows camera on');
       await tab.goto(base + '/dashboard');
+      const shown = (loc) => loc.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false);
       const openCleaning = async () => {
         const card = tab.getByRole('button', { name: 'Уборка зала по чек-листу', exact: true }).first();
-        // Задачи сгруппированы по людям — раскрываем группу уборщицы.
-        if (!(await card.isVisible())) await tab.getByText(/Ольга Смирнова/).first().click();
+        // Задачи сгруппированы по людям — если карточки не видно, раскрываем группу уборщицы.
+        if (!(await shown(card))) {
+          const group = tab.getByText(/Ольга Смирнова/).first();
+          if (await group.isVisible()) await group.click();
+        }
+        // Днём демо уборку уже сделало — она в свёрнутом блоке «Выполненные».
+        if (!(await shown(card))) await tab.getByRole('button', { name: /^Выполненные/ }).first().click();
         await card.click();
         const view = tab.getByRole('dialog');
         await view.getByText('Подзадачи').waitFor();
