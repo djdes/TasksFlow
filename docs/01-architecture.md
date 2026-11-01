@@ -1,7 +1,7 @@
 # TasksFlow — Architecture & Anti-Regression Plan
 
 **Date:** 2026-05-08
-**Соответствие:** `c:\www\Wesetup.ru\docs\superpowers\specs\01-architecture.md` (sister project — те же principles, упрощённые под Express+Drizzle stack).
+**Соответствие:** такой же план в WeSetup (`docs/superpowers/specs/01-architecture.md` в его репозитории) — те же принципы, упрощённые под Express + Drizzle.
 
 ## Что было
 
@@ -12,7 +12,7 @@
 
 ## Что добавлено (Phase 1)
 
-1. **CI gate в .github/workflows/deploy.yml**: новый job `ci-gate` запускается ДО `deploy`. Делает `npm ci → npm run check → npm test`. Если что-то падает — deploy не стартует. Регрессии больше не уезжают на прод автоматически.
+1. **CI gate в .github/workflows/deploy.yml**: job `test` запускается ДО `deploy`. Делает `npm ci → npm run check → npm test`. Если что-то падает — deploy не стартует. Регрессии больше не уезжают на прод автоматически.
 
 2. **Pre-commit hook (.husky/pre-commit)**: на каждый локальный `git commit` запускается `tsc --noEmit` + `vitest run`. Если новый коммит сломал что-то — commit блокируется.
 
@@ -25,10 +25,11 @@
 | Правило | Почему |
 |---------|--------|
 | **Tests-first для bug-fix'ов** | Без теста баг возвращается через 2 недели в новом виде. После 28.04.2026-инцидента это критично. |
-| **Не блокировать deploy легаси-fail'ами** | TF baseline = 1325 pass / 0 fail. Любой fail = регрессия. Если у TF появятся легаси — добавим baseline по схеме Wesetup. |
+| **Не блокировать deploy легаси-fail'ами** | Baseline TF — 0 fail. Любой fail = регрессия. Если у TF появятся легаси — добавим baseline по схеме Wesetup. |
 | **Контракты явные**: schema.ts (Drizzle) + zod на ввод | Нельзя пихнуть произвольные поля в storage methods. Каждый endpoint валидирует body zod-схемой. |
 | **HMAC для cross-system** | WeSetup ↔ TF callback'и через webhookSecret. Нельзя подделать чужую запись. |
 | **Никаких --force / drop в db-скриптах** | Урок 28.04.2026. Каждая миграция — additive `ALTER TABLE`. |
+| **Миграция в деплое обязательна по умолчанию** | Строка в шаге «safe migrations» без `\|\| echo` останавливает деплой, если скрипт упал: прод остаётся на старом коде, а не на новом коде со старой схемой. `\|\| echo` — только для шага, без которого сайт работает, и с причиной рядом. |
 
 ## Anti-patterns (не делаем)
 
@@ -42,10 +43,10 @@
 
 ```
 server/
-├── routes.ts          # HTTP routes (3000+ строк — TODO Phase 2 split)
+├── routes.ts          # HTTP routes + requireAuth/requireAdmin (~4800 строк — TODO Phase 2 split)
 ├── storage.ts         # IStorage interface + реализация (Drizzle queries)
-├── auth.ts            # session middleware + requireAuth/requireAdmin
-├── api-key-storage.ts # API keys + encryption
+├── access.ts          # права пользователя (accessOf); правила — shared/roles.ts
+├── api-keys.ts        # API-ключи tfk_; api-key-crypto.ts — шифрование для «Показать ключ»
 ├── webhook-queue.ts   # outbound webhooks к WeSetup, retry-логика
 ├── mail.ts            # SMTP / templates
 ├── url-allowlist.ts   # safelist для outbound URL'ов (защита от SSRF)
@@ -59,7 +60,7 @@ client/
 └── src/               # React UI (vite-bundled)
 
 tests/
-└── *.test.ts          # 1325 vitest tests (covers storage, routes, parsing)
+└── *.test.ts          # vitest: storage, routes, права, разбор, оплата
 
 script/
 └── *.ts              # одноразовые миграции / админ-задачи (point-in-time)
@@ -67,7 +68,7 @@ script/
 
 ## Phase 2 — план (не делаем сейчас)
 
-- **Split `server/routes.ts`** (3000+ строк) на feature-modules: `routes/auth.ts`, `routes/tasks.ts`, `routes/api-keys.ts`, `routes/wesetup-callback.ts`. Каждый — registers routes на `app`.
+- **Split `server/routes.ts`** (~4800 строк) на feature-modules: `routes/auth.ts`, `routes/tasks.ts`, `routes/api-keys.ts`, `routes/wesetup-callback.ts`. Каждый — registers routes на `app`.
 - **Branded types**: `UserId`, `CompanyId`, `TaskId` — компилятор не даст перепутать.
 - **Sentry-style observability**: console.error → структурированный logger с уровнями.
 - **Snapshot tests** для critical client-side компонентов (Dashboard, TaskViewDialog).
@@ -76,7 +77,7 @@ script/
 ## Workflow с этого момента
 
 1. **Перед коммитом**: pre-commit запустит typecheck + tests. Сломал — exit 1, коммит блокируется.
-2. **Перед merge в main**: GitHub Actions ci-gate job. Сломал — deploy не идёт.
+2. **До merge в main**: `ci.yml` на PR и рабочих ветках (typecheck, тесты, сборка, UI smoke); после merge — job `test` в `deploy.yml`. Сломал — deploy не идёт.
 3. **При merge / manual dispatch**: deploy job через SSH к прод-серверу. Тесты УЖЕ прошли — фиксы реально доезжают.
 4. **Если бажно**: пишешь test ДО fix'а, fix покрывает test, коммитишь оба.
 

@@ -78,19 +78,11 @@ npm run backup-db    # mysqldump в ~/backups (деплой делает его 
 
 Миграции — точечные `npm run add-*` / `create-*` из `package.json`, порядок — в `deploy.yml`.
 
-## Production (PM2)
+## Production
 
-```bash
-# Сборка
-npm run build
-
-# Запуск через PM2
-pm2 start npm --name "tasksflow" -- start
-
-# Сервер сам сбрасывает задачи в местную полночь компании (история сохраняется).
-# Cron — подстраховка для старых задач без компании:
-0 0 * * * cd /path/to/project && npm run reset-tasks
-```
+Push в `main` выкатывает прод сам: проверки, бэкап базы, миграции, сборка, `pm2 reload`
+и откат, если новая сборка не ответила на `/api/health`. Как это устроено, секреты, новый
+сервер и cron сброса задач — [DEPLOY.md](./DEPLOY.md).
 
 ## Переменные окружения
 
@@ -111,7 +103,7 @@ pm2 start npm --name "tasksflow" -- start
 - [docs/01-architecture.md](./docs/01-architecture.md) - Защита от регрессий: CI, pre-commit, правила миграций
 - [ENV.md](./ENV.md) - Переменные окружения
 - [API.md](./API.md) - Примеры API запросов
-- [DEPLOY.md](./DEPLOY.md) - Инструкция по деплою
+- [DEPLOY.md](./DEPLOY.md) - Автодеплой из `main`, секреты, новый сервер, сброс задач
 - [docs/mobile.md](./docs/mobile.md) - Приложения для Android и iPhone, push-уведомления, публикация в магазинах
 - [docs/billing.md](./docs/billing.md) - Оплата тарифов через Робокассу: подключение магазина, автопродление, цены
 
