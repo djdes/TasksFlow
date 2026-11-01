@@ -5,24 +5,25 @@
 ## Quick Start
 
 ```bash
-# 1. Установка зависимостей
-npm install
-
-# 2. Настройка окружения
-cp .env.example .env
-# Отредактируйте .env - укажите данные MySQL
-
-# 3. Создание таблиц в БД
-npm run setup-db
-
-# 4. Создание админа
-npm run create-admin
-# Следуйте инструкциям в консоли
-
-# 5. Запуск dev-сервера
-npm run dev
-# Откройте http://localhost:5000
+npm ci
+cp .env.example .env   # MYSQL_*, SESSION_SECRET; остальные переменные — ENV.md
+npm run dev            # http://localhost:5000
 ```
+
+Первый админ появляется при регистрации компании на `/register/company`.
+
+**Схема базы.** `npm run setup-db` и `npm run db:push` заблокированы: 28.04.2026
+`DROP TABLE` из `script/create-tables.ts` и `drizzle-kit push --force` уничтожили боевую базу.
+Пустую базу собирают так:
+
+1. Таблицы `users`, `companies`, `workers`, `tasks` — из SQL, который печатает
+   `npx drizzle-kit export --dialect=mysql --schema=./shared/schema.ts`. Команда к базе не подключается.
+2. Остальное — скрипты `script/` в том порядке, в каком их запускает шаг «safe migrations»
+   в `.github/workflows/deploy.yml`. Скрипты идемпотентны.
+
+В облачной сессии Claude то же самое делает `bash .claude/skills/dev-stand/stand.sh`: он поднимает
+MariaDB, схему и демо-данные. Новая колонка — это новый точечный скрипт в `script/` и строка
+в `deploy.yml`, а не правка через `drizzle-kit push`.
 
 ## Архитектура
 
@@ -42,51 +43,24 @@ npm run dev
 │  └── Drizzle ORM (database)                                 │
 ├─────────────────────────────────────────────────────────────┤
 │  MySQL Database                                             │
-│  └── users, tasks tables                                    │
+│  └── схема: shared/schema.ts                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Роли пользователей
 
-### Админ (`isAdmin: true`)
-- Видит все задачи
-- Создаёт/редактирует/удаляет задачи
-- Управляет пользователями
-- Фильтрует по исполнителю и категории
+- **Администратор** (`users.is_admin`) — всё в своей компании.
+- **Своя роль компании** (`company_roles`, «Роли и права» в «Сотрудниках») — набор прав:
+  «Ставит задачи», «Добавляет сотрудников», «Принимает задачи», «Видит отчёты», «Своё — на проверку».
+- **Руководитель из WeSetup** (`managed_worker_ids`) — свои люди.
+- **Сотрудник** — свои задачи на сегодня, фото, баланс премий.
 
-### Сотрудник (`isAdmin: false`)
-- Видит только свои задачи на сегодня
-- Может выполнять задачи и загружать фото
-- Видит свой баланс бонусов
+Модель прав одна — `shared/roles.ts`, сервер считает их в `server/access.ts`.
 
 ## База данных
 
-### Таблица `users`
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | INT | Primary key |
-| phone | VARCHAR(20) | Номер телефона (+7...), unique |
-| name | VARCHAR(255) | Имя пользователя |
-| isAdmin | BOOLEAN | Флаг админа |
-| bonusBalance | INT | Баланс бонусов в рублях |
-| createdAt | INT | Unix timestamp создания |
-
-### Таблица `tasks`
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | INT | Primary key |
-| title | VARCHAR(255) | Название задачи |
-| workerId | INT | FK на users.id (исполнитель) |
-| requiresPhoto | BOOLEAN | Требуется фото для выполнения |
-| photoUrls | TEXT | JSON массив URL фотографий |
-| examplePhotoUrl | VARCHAR(500) | Пример фото от админа |
-| isCompleted | BOOLEAN | Выполнена ли задача |
-| isRecurring | BOOLEAN | Повторяющаяся (сбрасывается ежедневно) |
-| weekDays | VARCHAR(20) | JSON [0-6], дни недели (0=Вс) |
-| monthDay | INT | День месяца (1-31) |
-| price | INT | Оплата за выполнение |
-| category | VARCHAR(100) | Категория |
-| description | TEXT | Описание |
+Источник правды о схеме — `shared/schema.ts` (Drizzle, MySQL/MariaDB). Как собрать пустую базу
+и добавить колонку — в Quick Start выше.
 
 ## Скрипты
 
@@ -95,11 +69,14 @@ npm run dev          # Dev сервер с hot reload
 npm run build        # Сборка для production
 npm start            # Запуск production
 npm run check        # TypeScript проверка
+npm test             # Unit-тесты (vitest)
+npm run smoke        # UI smoke в браузере, после npm run build
 
-npm run setup-db     # Создание таблиц
-npm run create-admin # Создание админа
 npm run reset-tasks  # Ручной сброс задач (сервер и так сбрасывает в полночь компании)
+npm run backup-db    # mysqldump в ~/backups (деплой делает его перед миграциями)
 ```
+
+Миграции — точечные `npm run add-*` / `create-*` из `package.json`, порядок — в `deploy.yml`.
 
 ## Production (PM2)
 
@@ -126,9 +103,13 @@ pm2 start npm --name "tasksflow" -- start
 | SESSION_SECRET | Да | Секрет для сессий (мин. 32 символа) |
 | PORT | Нет | Порт сервера (по умолчанию 5000) |
 
+Полный список — [ENV.md](./ENV.md) и [.env.example](./.env.example).
+
 ## Документация
 
-- [CLAUDE.md](./CLAUDE.md) - Подробная документация для разработчиков
+- [AGENTS.md](./AGENTS.md) - Правила и устройство проекта для разработчиков и агентов (CLAUDE.md подключает его же)
+- [docs/01-architecture.md](./docs/01-architecture.md) - Защита от регрессий: CI, pre-commit, правила миграций
+- [ENV.md](./ENV.md) - Переменные окружения
 - [API.md](./API.md) - Примеры API запросов
 - [DEPLOY.md](./DEPLOY.md) - Инструкция по деплою
 - [docs/mobile.md](./docs/mobile.md) - Приложения для Android и iPhone, push-уведомления, публикация в магазинах
