@@ -18,10 +18,19 @@ if [ -n "$staged_ts" ]; then
     exit 1
   }
 
-  echo "→ Tests..."
-  # Vitest run на все тесты: полный прогон — около 30–40 сек. Если
-  # станет тормозить — переключим на staged-only.
-  npx vitest run || {
+  echo "→ ESLint (изменённые файлы)..."
+  # Валят коммит только ошибки (хуки React, явные баги), предупреждения — нет.
+  # shellcheck disable=SC2086
+  npx eslint --no-warn-ignored $staged_ts || {
+    echo "✗ ESLint нашёл ошибки. Поправьте или --no-verify (только осознанно)."
+    exit 1
+  }
+
+  echo "→ Tests (связанные с изменёнными файлами)..."
+  # Только тесты, которые импортируют изменённые файлы: секунды вместо
+  # полного прогона на 30–40 с. Полный прогон — в CI на каждый push и PR.
+  # shellcheck disable=SC2086
+  npx vitest related --run --passWithNoTests $staged_ts || {
     echo "✗ Tests провалились. Почините или --no-verify (только осознанно)."
     exit 1
   }
