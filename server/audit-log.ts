@@ -26,7 +26,15 @@ export type AuditAction =
   | "task.verified"
   | "task.rejected"
   | "task.photo_uploaded"
-  | "task.photo_deleted";
+  | "task.photo_deleted"
+  // Root правит человека (server/root-users.ts).
+  | "root.user_updated"
+  | "root.user_pin_set"
+  | "root.user_pin_cleared"
+  | "root.user_unlocked"
+  | "root.user_telegram_unlinked"
+  | "root.user_logged_out"
+  | "root.user_deleted";
 
 export type RecordAuditArgs = {
   /** Multi-tenant scope. NULL = system-wide event. */

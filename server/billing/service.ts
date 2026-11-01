@@ -1328,7 +1328,7 @@ export function expiryNotice(row: Pick<ExpiringPlan, "plan" | "planUntil">, kind
     title: "Тариф закончился",
     body: `«${name}» закончился ${formatDay(row.planUntil)}. Продлить — в «Тариф и оплата».`,
     paragraphs: [
-      `Тариф «${name}» закончился ${formatDay(row.planUntil)}. Кабинет перешёл на бесплатный «${PLANS.start.name}»: данные и история на месте.`,
+      `Тариф «${name}» закончился ${formatDay(row.planUntil)}. Кабинет перешёл на тариф «${PLANS.start.name}»: данные и история на месте.`,
       "Продлить тариф можно в «Тариф и оплата» — всё вернётся сразу после оплаты.",
     ],
   };

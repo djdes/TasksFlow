@@ -19,7 +19,7 @@ export type PlanPrice = { plan: PaidPlanId; months: BillingMonths; priceRub: num
 
 /**
  * Цены, пока root не задал свои (Root → Компании → Цены): как на лендинге,
- * «Команда» — 990 ₽ в месяц. «Бизнес» без цены — «по запросу», онлайн его
+ * «Стандарт» (team) — 990 ₽ в месяц. «Премиум» (business) без цены — «по запросу», онлайн его
  * не купить, пока цену не добавят.
  */
 export const DEFAULT_PRICES: readonly PlanPrice[] = [{ plan: "team", months: 1, priceRub: 990 }];
@@ -193,7 +193,8 @@ export const OFFER_PATH = "/offer";
 /** Редакция оферты — пишется в историю согласий вместе с текстом. */
 // .2 — промокоды, оплата по счёту, закрывающие документы (24.10.2026).
 // .3 — баланс и баллы, акции, постоянные скидки (24.10.2026).
-export const OFFER_REVISION = "2026-10-24.3";
+// 2026-11-01 — тарифы переименованы: «Бесплатный», «Стандарт», «Премиум».
+export const OFFER_REVISION = "2026-11-01";
 /** Раздел оферты об автопродлении (id заголовка «Автопродление»). */
 export const RECURRING_OFFER_HREF = `${OFFER_PATH}#avtoprodlenie`;
 

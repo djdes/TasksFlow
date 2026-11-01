@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
  * Оплата тарифов через Робокассу (shared/billing.ts, server/billing):
  *
  *   billing_prices    — цены тарифов (тариф × срок), правит root. При
- *                       создании — «Команда» 990 ₽ в месяц, как на лендинге.
+ *                       создании — «Стандарт» (до 01.11.2026 «Команда») 990 ₽ в месяц, как на лендинге.
  *   payment_orders    — заказы; id уходит в Робокассу как InvId.
  *   payment_consents  — история согласий на автосписания и их отзывов.
  *   company_billing   — автопродление компании (серия платежей).
@@ -240,7 +240,7 @@ async function main() {
         await db.execute(
           sql`INSERT INTO billing_prices (plan, months, price_rub, updated_at) VALUES ('team', 1, 990, ${Math.floor(Date.now() / 1000)})`,
         );
-        console.log("[migrate] billing_prices: «Команда» 990 ₽ в месяц");
+        console.log("[migrate] billing_prices: «Стандарт» 990 ₽ в месяц");
       }
     } catch (err: any) {
       if (err?.code === "ER_TABLE_EXISTS_ERROR") console.log(`[migrate] ${name} already exists, skipping`);

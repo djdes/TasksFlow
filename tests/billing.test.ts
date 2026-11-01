@@ -1476,7 +1476,7 @@ describe("напоминания об окончании тарифа", () => {
     await runBillingTick(t.deps);
     await runBillingTick(t.deps);
     expect(t.notices.map((n) => n.notice.title)).toEqual(["Тариф скоро закончится", "Тариф закончился"]);
-    expect(t.notices[1].notice.paragraphs[0]).toMatch(/«Старт»/);
+    expect(t.notices[1].notice.paragraphs[0]).toMatch(/«Бесплатный»/);
 
     // Через сутки после конца — уже не напоминаем (и старые тарифы при выкладке не всплывут).
     t.clock.now = until + DAY + 600;

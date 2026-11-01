@@ -92,7 +92,7 @@ export function cabinetNav(role: CabinetRole): NavItem[] {
   }
   if (role.isRoot) {
     items.push(
-      { key: "companies", label: "Компании и тарифы", href: "/admin/companies", icon: Building2, group: "root", keywords: "root касса цены акции промокоды" },
+      { key: "companies", label: "Компании и тарифы", href: "/admin/companies", icon: Building2, group: "root", keywords: "root касса цены акции промокоды люди пользователи" },
       { key: "banners", label: "Промо-баннеры", href: "/admin/banners", icon: Megaphone, group: "root", keywords: "root баннер" },
     );
   }

@@ -18,7 +18,7 @@ import { sql } from "drizzle-orm";
  *                             по умолчанию; notify_state — что уже ушло сегодня.
  *   companies.photo_settings — время на фото и «только камера» (JSON), NULL —
  *                             по умолчанию.
- *   companies.plan / plan_until — тариф (shared/plans.ts), NULL — «Старт».
+ *   companies.plan / plan_until — тариф (shared/plans.ts), NULL — «Бесплатный».
  *   locations, users.location_id — точки сети и привязка сотрудника к точке.
  *
  * Только CREATE TABLE и ADD COLUMN, существующие строки не меняются.

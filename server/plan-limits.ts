@@ -31,8 +31,8 @@ export async function seatProblem(companyId: number | null | undefined): Promise
   );
 }
 
-/** Точки доступны на «Бизнесе» (при выключенных лимитах — всем). */
+/** Точки доступны на «Премиуме» (при выключенных лимитах — всем). */
 export function locationsProblem(company: Pick<Company, "plan" | "planUntil"> | null | undefined): string | null {
   if (!planLimitsEnforced() || companyPlan(company).locations) return null;
-  return "Несколько точек — на тарифе «Бизнес»: меню → «Тариф и оплата» или support@tasksflow.ru.";
+  return `Несколько точек — на тарифе «${PLANS.business.name}»: меню → «Тариф и оплата» или support@tasksflow.ru.`;
 }

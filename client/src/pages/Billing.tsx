@@ -79,7 +79,7 @@ import { ApiError } from "@/lib/queryClient";
 
 const DAY = 86400;
 const SUPPORT_EMAIL = "support@tasksflow.ru";
-const BUSINESS_MAIL = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("TasksFlow Бизнес: подключение")}`;
+const BUSINESS_MAIL = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`TasksFlow ${PLANS.business.name}: подключение`)}`;
 
 // «24 ноября 2026» — без «г.», чтобы не было двух точек в конце фразы.
 const longDate = (sec: number) =>

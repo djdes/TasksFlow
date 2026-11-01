@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { addMonths, INVOICE_VALID_DAYS, isPaidPlan, periodLabel } from "@shared/billing";
-import { PLANS } from "@shared/plans";
+import { planNameFromDescription } from "@shared/plans";
 import type { Party, SellerRequisites } from "./legal";
 import { drawTable, PdfDocument } from "./pdf/pdf";
 import { parseTrueType, type TrueTypeFont } from "./pdf/ttf";
@@ -42,6 +42,8 @@ export type OrderForDocument = {
   promotionDiscountRub?: number;
   discountSource?: string | null;
   pointsRub?: number;
+  /** Описание заказа, как в чеке: из него берём название тарифа на момент оплаты. */
+  description?: string | null;
 };
 
 export type InvoiceDraft = {
@@ -140,7 +142,8 @@ export function amountInWords(value: number): string {
 
 // --- Сборка ---------------------------------------------------------------------------
 
-const planTitle = (plan: string) => (isPaidPlan(plan) ? PLANS[plan].name : plan);
+const planTitle = (order: OrderForDocument) =>
+  isPaidPlan(order.plan) ? planNameFromDescription(order.plan, order.description) : order.plan;
 const isTopupOrder = (order: OrderForDocument) => order.orderKind === "topup";
 
 /** Скидки и баллы — пояснением в строке: сумма строки — то, что оплачено деньгами. */
@@ -177,7 +180,7 @@ export function buildInvoiceDraft(input: { order: OrderForDocument; seller: Sell
       {
         title: isTopupOrder(order)
           ? "Пополнение баланса сервиса TasksFlow — предоплата за доступ к сервису (1 балл = 1 ₽)."
-          : `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${periodLabel(order.months)} (срок — с даты оплаты).${promoNote(order)}`,
+          : `Доступ к сервису TasksFlow, тариф «${planTitle(order)}», ${periodLabel(order.months)} (срок — с даты оплаты).${promoNote(order)}`,
         unit: "усл. ед.",
         unitCode: "876",
         qty: 1,
@@ -219,7 +222,7 @@ export function buildClosingDraft(input: {
       {
         title: isTopupOrder(order)
           ? "Предоплата за доступ к сервису TasksFlow: пополнение баланса (1 балл = 1 ₽)."
-          : `Доступ к сервису TasksFlow, тариф «${planTitle(order.plan)}», ${period}.${promoNote(order)}`,
+          : `Доступ к сервису TasksFlow, тариф «${planTitle(order)}», ${period}.${promoNote(order)}`,
         unit: "усл. ед.",
         unitCode: "876",
         qty: 1,

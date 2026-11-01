@@ -58,7 +58,7 @@ async (page) => {
         return route.fulfill({ json: { roles: state.roles, employeeApproval: state.employeeApproval } });
       }
       if (p === '/api/account/notify-prefs') return route.fulfill({ json: { notify: body } });
-      if (p === '/api/companies/me') return route.fulfill({ json: { id: 1, name: 'ООО БФС', planInfo: { id: 'start', name: 'Старт', maxUsers: 10, locations: false, until: null, enforced: true }, photo: { stamp: true, cameraOnly: false }, notify: { morning: '08:30', evening: '18:00', digest: '20:30' }, wesetupConfigured: false, employeeApproval: state.employeeApproval } });
+      if (p === '/api/companies/me') return route.fulfill({ json: { id: 1, name: 'ООО БФС', planInfo: { id: 'start', name: 'Бесплатный', maxUsers: 10, locations: false, until: null, enforced: true }, photo: { stamp: true, cameraOnly: false }, notify: { morning: '08:30', evening: '18:00', digest: '20:30' }, wesetupConfigured: false, employeeApproval: state.employeeApproval } });
       if (p === '/api/locations') return route.fulfill({ json: [] });
       if (p === '/api/tasks' && req.method() === 'POST') return route.fulfill({ status: 201, json: { id: 99, ...body } });
       if (p === '/api/push/config') return route.fulfill({ json: { web: { enabled: false, publicKey: null }, apns: { enabled: false } } });
@@ -154,7 +154,7 @@ async (page) => {
       await tab.getByText('Анна').first().waitFor();
       check(await tab.locator('.roles-panel').count() === 0, 'руководителю не показываем «Роли и права»');
       check(await tab.getByRole('heading', { name: 'Точки' }).count() === 0, 'руководителю не показываем «Точки»');
-      check(await tab.getByText(/Тариф «Старт»/).count() === 0, 'руководитель не видит тариф');
+      check(await tab.getByText(/Тариф «Бесплатный»/).count() === 0, 'руководитель не видит тариф');
       check(await tab.getByRole('button', { name: 'Изменить: Денис' }).count() === 0, 'руководитель не меняет админа');
       check(await tab.getByRole('button', { name: 'Изменить: Михаил Шеф Сушеф' }).count() === 0, 'руководитель не меняет себя');
       check(await tab.getByRole('button', { name: 'Изменить: Анна' }).count() === 1, 'руководитель меняет сотрудника');

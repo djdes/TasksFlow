@@ -39,7 +39,7 @@ const FULL_ENV = {
 };
 const SLUGS = ["privacy", "consent", "terms", "offer"] as const;
 // Дата редакции из файла (frontmatter updated), пока не задан LEGAL_UPDATED_AT.
-const FILE_DATES: Record<(typeof SLUGS)[number], string> = { privacy: "2026-10-23", consent: "2026-10-23", terms: "2026-10-24", offer: "2026-10-24" };
+const FILE_DATES: Record<(typeof SLUGS)[number], string> = { privacy: "2026-10-23", consent: "2026-10-23", terms: "2026-11-01", offer: "2026-11-01" };
 const originalEnv = { ...process.env };
 
 afterEach(() => {

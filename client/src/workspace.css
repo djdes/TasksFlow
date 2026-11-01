@@ -1000,6 +1000,33 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .root-company-plan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .root-company-plan .reports-select { width: 140px; }
 
+/* Root «Люди»: поиск по всем компаниям и правка человека */
+.root-people { display: grid; }
+.root-person { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 10px 6px; border-radius: 12px; text-align: left; }
+.root-person + .root-person { border-top: 1px solid hsl(var(--border)); }
+.root-person:hover { background: hsl(var(--primary) / .06); }
+.root-person:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+.root-person-avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+.root-person-main { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.root-person-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.root-person-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.root-person-flag { color: hsl(var(--foreground)); font-weight: 600; }
+.root-person-flag.is-danger { color: hsl(var(--destructive)); }
+.root-person-editor { display: grid; gap: 14px; min-width: 0; }
+.root-person-back { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
+.root-person-back:hover { color: hsl(var(--foreground)); }
+.root-person-back:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 6px; }
+.root-person-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.root-field { display: grid; gap: 4px; min-width: 0; }
+.root-field > span { font-size: 12.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.root-person-save { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.root-person-block { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); }
+.root-person-block-title { font-size: 13px; font-weight: 650; color: hsl(var(--foreground)); }
+.root-person-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (max-width: 520px) {
+  .root-person-form { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Демо-кабинет: полоса сверху */
 .demo-bar { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 8px 14px; background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--violet, 262 83% 62%))); color: white; font-size: 13.5px; }
 .demo-bar-text { flex: 1; min-width: 0; font-weight: 600; }
