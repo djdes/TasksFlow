@@ -131,6 +131,31 @@ job'ов в час на пользователя-инициатора, а ини
 бота. Сверху есть свой лимит 20 разборов в час на пользователя, чтобы один
 чат не выел общий.
 
+Без `PF_AGENT_TOKEN` бот разбирает сообщения локальным Claude CLI на сервере
+(`server/telegram/local-ai.ts`):
+
+```
+# Путь к claude, если его нет в ~/.local/bin, /usr/local/bin, ~/.npm-global/bin
+CLAUDE_BIN=/usr/local/bin/claude
+# Модель для --model, по умолчанию sonnet
+TASKSFLOW_AI_MODEL=sonnet
+```
+
+## Публичные адреса, WeSetup, алерты, логи
+
+Все необязательные. Подробные комментарии — в `.env.example`.
+
+| Переменная | Что делает |
+|---|---|
+| `TASKSFLOW_PUBLIC_URL` (или `APP_PUBLIC_URL`, `APP_URL`, `PUBLIC_URL` — берётся первая заданная) | Адрес сайта в ссылках наружу: возврат из WeSetup, ссылки бота. В production без неё — `https://tasksflow.ru`: заголовкам Host/Origin сервер не верит |
+| `WESETUP_PUBLIC_URL` | Адрес WeSetup для браузера, если внутренний адрес интеграции другой (localhost на том же сервере) |
+| `WESETUP_BASE_URL` + `WESETUP_API_KEY` | WeSetup для компаний без своих `wesetup_base_url` / `wesetup_api_key` в базе (старая схема с одной организацией). Нужны оба |
+| `LOCAL_INTEGRATIONS_ALLOWED=1` | Только dev: интеграциям можно ходить на localhost и во внутренние сети (выключает защиту от SSRF) |
+| `API_KEY_REVEAL_SECRET` | Шифрует сохранённые API-ключи для «Показать ключ», ≥16 символов. Без неё — `SESSION_SECRET`, и его смена делает ключи нечитаемыми |
+| `ALERT_TELEGRAM_BOT_TOKEN` + `ALERT_TELEGRAM_CHAT_ID` | Алерты владельцу в Telegram: ошибки в браузерах (раз в 10 минут на одну), оплаты, сбои автопродления |
+| `LOG_LEVEL` | Уровень pino-лога; по умолчанию `debug` в dev и `info` в production |
+| `MAIL_DEV_OUTBOX` | Папка для писем dev-транспорта почты, по умолчанию `.dev-outbox` |
+
 ## Аналитика (опционально, для SEO-трафика)
 
 Счётчики грузятся только если задан ID, иначе ничего не подключается.

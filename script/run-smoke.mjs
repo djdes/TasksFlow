@@ -15,28 +15,41 @@ const port = Number(process.env.PORT) || 5301;
 const base = `http://127.0.0.1:${port}`;
 const SCRIPT_TIMEOUT_MS = 4 * 60 * 1000;
 
-// Порядок из CLAUDE.md: workspace идёт после smoke-motion в той же сессии,
-// details и extra — после smoke-motion в другой.
+// Единственный список сценариев: AGENTS.md ссылается сюда, а не перечисляет их.
+// Каждая группа — своя браузерная сессия. Порядок внутри группы важен:
+// workspace, details и extra идут после smoke-motion в той же сессии.
 const SESSIONS = [
+  // Движение кабинета, затем регрессия сводки, фильтров и карточек задач.
   ['script/smoke-motion.js', 'script/smoke-workspace.js'],
+  // Details и extra: прокрутка и touch-свайп, SSR-вход, холодный старт,
+  // обучение сотрудника.
   ['script/smoke-motion.js', 'script/smoke-motion-details.js', 'script/smoke-motion-extra.js'],
-  // PIN-вход: свои контексты и фикстуры API, отдельная сессия.
+  // PIN: вход, блокировка, PIN от руководителя, регистрация с согласием.
+  // Свои контексты и фикстуры API, отдельная сессия.
   ['script/smoke-pin.js'],
-  // История и отчёты, расписание дня.
+  // Журнал дня, сводка с графиком, CSV; расписание дня — дни напоминаний,
+  // «Ночью не беспокоить», 360px.
   ['script/smoke-reports.js'],
   // Фото: сжатие, «только камера», очередь без сети.
   ['script/smoke-photo.js'],
   // Точки, тарифы, root «Компании».
   ['script/smoke-company.js'],
-  // Демо-кабинет без сервера.
+  // Демо-кабинет без сервера: очередь проверки, «Дублировать», пункт
+  // чек-листа без фото.
   ['script/smoke-demo.js'],
   // Приложение: манифест, /app, офлайн-страница, push на устройстве.
   ['script/smoke-pwa.js'],
-  // Тариф и оплата: форма, Робокасса (подменена), возврат, автопродление, root «Цены».
+  // Тариф и оплата: форма тарифов, Робокасса (подменена), возврат с оплаты,
+  // автопродление, промокоды, счёт для юрлиц с реквизитами, ссылки на счёт и
+  // УПД; root «Касса», «Цены», «Промокоды», отметка оплаты по счёту.
   ['script/smoke-billing.js'],
-  // Меню слева на ПК и быстрый переход Ctrl+K.
+  // Меню слева на ПК: разделы по ролям, счётчик проверки, подсветка, sticky,
+  // 1024/1023px; Ctrl+K, клавиша N, падение страницы при живом меню, шторка
+  // на телефоне.
   ['script/smoke-sidebar.js'],
-  // Роли и права, проверка выполненного, время напоминания, «Уведомления».
+  // «Роли и права» (заготовка «Руководитель», проверка у «Сотрудника»),
+  // сотрудник с должностью и ролью, ограничения руководителя на 390px, время
+  // напоминания в задаче, «Уведомления» в аккаунте.
   ['script/smoke-roles.js'],
 ];
 
@@ -88,7 +101,13 @@ let browser;
 try {
   await waitForPreview();
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
-  browser = await chromium.launch({ executablePath });
+  // Облачный контейнер Claude держит Chromium своей версии Playwright в
+  // /opt/pw-browsers, а проект закрепляет другую — как в visual-check/shots.mjs.
+  const cloudChromium = '/opt/pw-browsers/chromium';
+  browser = await chromium.launch({ executablePath }).catch((e) => {
+    if (executablePath || !/Executable doesn't exist/.test(String(e.message)) || !fs.existsSync(cloudChromium)) throw e;
+    return chromium.launch({ executablePath: cloudChromium });
+  });
   for (const [index, scripts] of RUN.entries()) {
     console.log(`— сессия ${index + 1}: ${scripts.map((s) => path.basename(s)).join(' → ')}`);
     // Service worker перехватывал бы навигации и ассеты мимо page.route —

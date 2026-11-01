@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Pre-commit gate для TasksFlow. По мотивам Wesetup anti-regression
-# Phase 1 (см. C:\www\Wesetup.ru\docs\superpowers\specs\01-architecture.md).
+# Phase 1 (docs/01-architecture.md).
 #
 # Защищает прод от очевидных регрессий ДО того как код попадает в master.
 # Запускается автоматически на каждый `git commit`. Можно пропустить
@@ -19,7 +19,7 @@ if [ -n "$staged_ts" ]; then
   }
 
   echo "→ Tests..."
-  # Vitest run на все тесты — TF имеет 1325 тестов, ~40 сек. Если
+  # Vitest run на все тесты: полный прогон — около 30–40 сек. Если
   # станет тормозить — переключим на staged-only.
   npx vitest run || {
     echo "✗ Tests провалились. Почините или --no-verify (только осознанно)."

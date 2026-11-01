@@ -41,14 +41,16 @@ EOF
 # Те же миграции, что в деплое (порядок читается из deploy.yml), плюс скрипты, которых нет
 # в деплое, но без которых схема неполная. Все идемпотентны.
 migrate() {
-  local chain extra name
-  chain="$(grep -oE 'npm run [a-z0-9:-]+' .github/workflows/deploy.yml | awk '{print $3}' | grep -vE '^(backup-db|build)$' | awk '!seen[$0]++')"
+  local chain extra name required
+  chain="$(grep -oE 'npm run [a-z0-9:-]+' .github/workflows/deploy.yml | awk '{print $3}' | grep -vE '^(backup-db|build|check)$' | awk '!seen[$0]++')"
+  # Обязательная в деплое — строка из одного `npm run X`, без `|| echo`.
+  required=" $(grep -E '^[[:space:]]*npm run [a-z0-9:-]+[[:space:]]*$' .github/workflows/deploy.yml | awk '{print $3}' | tr '\n' ' ') "
   extra="add-email-auth-cols add-is-root-col add-checklist-col add-banners-table db:indexes"
   for name in $chain $extra; do
     if ! npm run -s "$name" >>"$DS_OUT/migrate.log" 2>&1; then
-      case "$name" in
-        add-pin-cols | add-company-features | add-billing | add-roles-notify) ds_die "обязательная миграция $name упала, лог: output/dev-stand/migrate.log" ;;
-        *) ds_log "миграция $name упала (в деплое она тоже необязательна)" ;;
+      case "$required" in
+        *" $name "*) ds_die "обязательная миграция $name упала, лог: output/dev-stand/migrate.log" ;;
+        *) ds_log "миграция $name упала (в деплое её нет или она необязательна)" ;;
       esac
     fi
   done
