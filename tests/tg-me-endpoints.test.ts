@@ -65,7 +65,7 @@ async function buildApp(sessionUserId?: number) {
 const USER: User = {
   id: 183,
   phone: null,
-  name: "bugdenes",
+  name: "Владелец",
   isAdmin: true,
   isRoot: false,
   createdAt: 1,
@@ -73,7 +73,7 @@ const USER: User = {
   companyId: 18,
   managedWorkerIds: null,
   position: null,
-  email: "bugdenes@gmail.com",
+  email: "owner@example.com",
   passwordHash: null,
   magicToken: null,
   magicTokenExpiresAt: null,

@@ -5,7 +5,14 @@ import { eq } from "drizzle-orm";
 
 async function createAdmin() {
   try {
-    const adminPhone = "+79263740794"; // Нормализуем номер (убираем пробелы)
+    // Телефон — аргументом или из окружения, не в коде: репозиторий публичный.
+    //   npm run create-admin -- --phone=+79991234567   (или ADMIN_PHONE=+7…)
+    const arg = process.argv.find((a) => a.startsWith("--phone="))?.slice("--phone=".length);
+    const adminPhone = (arg ?? process.env.ADMIN_PHONE ?? "").replace(/[\s()-]/g, "");
+    if (!/^\+7\d{10}$/.test(adminPhone)) {
+      console.error("Укажите телефон: npm run create-admin -- --phone=+7XXXXXXXXXX (или ADMIN_PHONE)");
+      process.exit(1);
+    }
     
     // Проверяем, существует ли уже админ
     const [existing] = await db.select().from(users).where(eq(users.phone, adminPhone));

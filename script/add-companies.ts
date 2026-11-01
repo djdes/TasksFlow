@@ -2,6 +2,14 @@ import "dotenv/config";
 import mysql from "mysql2/promise";
 
 async function addCompanies() {
+  // Компания, к которой привязываются старые пользователи и задачи. Название и
+  // почта — из окружения, не в коде: репозиторий публичный.
+  const defaultCompanyName = process.env.DEFAULT_COMPANY_NAME?.trim();
+  const defaultCompanyEmail = process.env.DEFAULT_COMPANY_EMAIL?.trim();
+  if (!defaultCompanyName || !defaultCompanyEmail) {
+    console.error("Задайте DEFAULT_COMPANY_NAME и DEFAULT_COMPANY_EMAIL — компания по умолчанию для старых данных");
+    process.exit(1);
+  }
   const host = process.env.MYSQL_HOST;
   const user = process.env.MYSQL_USER;
   const password = process.env.MYSQL_PASSWORD;
@@ -80,10 +88,8 @@ async function addCompanies() {
       }
     }
 
-    // 5. Создаем компанию по умолчанию "ИП Волков Денис"
+    // 5. Создаем компанию по умолчанию (DEFAULT_COMPANY_NAME / DEFAULT_COMPANY_EMAIL)
     console.log("5. Создаю компанию по умолчанию...");
-    const defaultCompanyName = "ИП Волков Денис";
-    const defaultCompanyEmail = "bugdenes@gmail.com";
 
     // Проверяем, существует ли уже компания
     const [existingCompanies] = await connection.execute(

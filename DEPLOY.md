@@ -40,6 +40,14 @@ Push в `main` запускает `.github/workflows/deploy.yml` («Deploy to Pr
   `env:` шага деплоя, смысл каждой переменной — `ENV.md` и `.env.example`.
 - Мобильные приложения и их ключи подписи — `docs/mobile.md`.
 
+## SSH из Claude Code на своём компьютере
+
+`.mcp.json` подключает MCP-сервер `ssh-tasks`. Порт, пользователь и ключ он берёт из переменных
+окружения, а не из файла, потому что репозиторий публичный: `TASKSFLOW_SSH_PORT`,
+`TASKSFLOW_SSH_USER`, `TASKSFLOW_SSH_KEY_PATH` и необязательный `TASKSFLOW_SSH_HOST` (по умолчанию
+`tasksflow.ru`). В Windows задайте их через `setx ИМЯ значение` и перезапустите терминал. Из облачной
+сессии SSH закрыт — там работает скилл `prod`.
+
 ## Новый сервер
 
 1. Node 24 через nvm (деплой берёт `~/.nvm/versions/node/v24.12.0/bin`), PM2, MariaDB 10.11 с
