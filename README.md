@@ -19,7 +19,10 @@ npm run dev            # http://localhost:5000
 1. Таблицы `users`, `companies`, `workers`, `tasks` — из SQL, который печатает
    `npx drizzle-kit export --dialect=mysql --schema=./shared/schema.ts`. Команда к базе не подключается.
 2. Остальное — скрипты `script/` в том порядке, в каком их запускает шаг «safe migrations»
-   в `.github/workflows/deploy.yml`. Скрипты идемпотентны.
+   в `.github/workflows/deploy.yml`, и затем те, которых в деплое нет (таблицы `sessions`,
+   `audit_log`, `webhook_deliveries`, `banners`, колонки email-входа, `is_root`, чек-листа,
+   индексы). Полный список в нужном порядке — функция `migrate()` в
+   `.claude/skills/dev-stand/stand.sh`. Скрипты идемпотентны.
 
 В облачной сессии Claude то же самое делает `bash .claude/skills/dev-stand/stand.sh`: он поднимает
 MariaDB, схему и демо-данные. Новая колонка — это новый точечный скрипт в `script/` и строка
