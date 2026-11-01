@@ -50,7 +50,36 @@ export function getTelegramRuntime(): TelegramRuntime | null {
   return runtime;
 }
 
+/**
+ * Повтор подключения, если при старте Telegram недоступен. Без него бот
+ * оставался выключенным до следующего перезапуска процесса: сбой сети у
+ * хостинга во время деплоя — и бот молчит до следующей выкладки. Повторы
+ * идут в фоне (сервер уже слушает порт), пауза растёт до 10 минут.
+ */
+const RETRY_DELAYS_MS = [30_000, 60_000, 120_000, 300_000, 600_000];
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryCount = 0;
+
+function scheduleRetry(): void {
+  if (retryTimer || runtime) return;
+  const delay = RETRY_DELAYS_MS[Math.min(retryCount, RETRY_DELAYS_MS.length - 1)];
+  retryCount += 1;
+  logger.info({ inSec: delay / 1000, attempt: retryCount }, "[telegram] повторю подключение позже");
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    startTelegramBot().catch((err) =>
+      logger.error(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[telegram] повторный старт бота упал",
+      ),
+    );
+  }, delay);
+  retryTimer.unref?.();
+}
+
 export async function startTelegramBot(): Promise<void> {
+  // Бот уже поднят (старт или повтор) — второй поллер дал бы 409 от Telegram.
+  if (runtime) return;
   // let, а не const: при фолбэке на пришпиленный IP конфиг заменяется
   // на сработавший вариант, и runtime должен хранить именно его.
   let config = loadTelegramConfig();
@@ -111,11 +140,14 @@ export async function startTelegramBot(): Promise<void> {
     logger.error(
       { err: startupError },
       "[telegram] бот не поднялся: неверный токен либо нет сети до Bot API " +
-        "даже по прямому IP. Помогут TELEGRAM_HTTP_PROXY или TELEGRAM_API_BASE_URL",
+        "даже по прямому IP. Помогут TELEGRAM_HTTP_PROXY или TELEGRAM_API_BASE_URL. " +
+        "Повторяю подключение в фоне",
     );
+    scheduleRetry();
     return;
   }
 
+  retryCount = 0;
   runtime = { config, client, poller: null, me };
 
   // Меню команд. Не критично: если не прошло — бот работает, просто без
@@ -162,5 +194,9 @@ export async function startTelegramBot(): Promise<void> {
 }
 
 export function stopTelegramBot(): void {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
   runtime?.poller?.stop();
 }
