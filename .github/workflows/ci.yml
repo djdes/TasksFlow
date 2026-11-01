@@ -32,6 +32,10 @@ jobs:
       - name: Typecheck
         run: npm run check
 
+      # Ошибки — нарушения правил хуков React и явные баги; предупреждения не валят CI.
+      - name: Lint
+        run: npm run lint
+
       - name: Unit tests
         run: npm test
 

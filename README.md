@@ -72,6 +72,7 @@ npm run dev          # Dev сервер с hot reload
 npm run build        # Сборка для production
 npm start            # Запуск production
 npm run check        # TypeScript проверка
+npm run lint         # ESLint: правила хуков React и явные баги
 npm test             # Unit-тесты (vitest)
 npm run smoke        # UI smoke в браузере, после npm run build
 
