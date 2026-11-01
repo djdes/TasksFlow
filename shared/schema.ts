@@ -27,7 +27,7 @@ export const companies = mysqlTable("companies", {
   notifyState: text("notify_state"),
   // Фото-отчёты: JSON {stamp, cameraOnly}; NULL — по умолчанию (shared/photo-settings.ts).
   photoSettings: text("photo_settings"),
-  // Тариф (shared/plans.ts): NULL — «Старт». plan_until — до какого
+  // Тариф (shared/plans.ts): NULL — «Бесплатный» (start). plan_until — до какого
   // момента действует платный тариф; NULL — бессрочно.
   plan: varchar("plan", { length: 20 }),
   planUntil: int("plan_until"),
@@ -830,7 +830,7 @@ export const paymentOrders = mysqlTable("payment_orders", {
   // До какого момента оплата продлила тариф.
   planUntilAfter: int("plan_until_after"),
   // Тариф и срок до оплаты — чтобы вернуть их, если деньги вернули.
-  // "" — тарифа не было («Старт»); NULL — неизвестно (оплата до 11.2026).
+  // "" — тарифа не было («Бесплатный»); NULL — неизвестно (оплата до 11.2026).
   planBefore: varchar("plan_before", { length: 20 }),
   planUntilBefore: int("plan_until_before"),
   // Последняя сверка с кассой (OpStateExt) — для зависших «ожидает оплаты».

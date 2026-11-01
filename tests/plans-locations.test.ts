@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 describe("тарифы", () => {
-  it("платный до plan_until, потом «Старт»; мусор — «Старт»", () => {
+  it("платный до plan_until, потом «Бесплатный»; мусор — «Бесплатный»", () => {
     expect(effectivePlan("team", null).id).toBe("team");
     expect(effectivePlan("team", 100, 200).id).toBe("start");
     expect(effectivePlan("team", 300, 200).id).toBe("team");
@@ -93,7 +93,7 @@ describe("тарифы", () => {
     expect(r.status).toBe(201);
   });
 
-  it("с PLAN_LIMITS=on на «Старте» шестой — 402 с понятным текстом", async () => {
+  it("с PLAN_LIMITS=on на «Бесплатном» шестой — 402 с понятным текстом", async () => {
     process.env.PLAN_LIMITS = "on";
     const app = await buildApp();
     sessionStore.userId = admin.id;
@@ -102,8 +102,8 @@ describe("тарифы", () => {
     const r = await request(app).post("/api/users").send({ phone: "+79990000011", name: "Борис", pin: "5830" });
     expect(r.status).toBe(402);
     expect(r.body.code).toBe("plan_limit");
-    expect(r.body.message).toContain("«Старт» — до 5 человек");
-    expect(r.body.message).toContain("«Команда»");
+    expect(r.body.message).toContain("«Бесплатный» — до 5 человек");
+    expect(r.body.message).toContain("«Стандарт»");
     expect(storage.createUser).not.toHaveBeenCalled();
   });
 
@@ -113,7 +113,7 @@ describe("тарифы", () => {
     sessionStore.userId = worker.id;
     storage.getCompanyById.mockResolvedValue({ ...company, plan: "team" });
     const r = await request(app).get("/api/companies/me");
-    expect(r.body.planInfo).toMatchObject({ id: "team", name: "Команда", maxUsers: 30, enforced: true });
+    expect(r.body.planInfo).toMatchObject({ id: "team", name: "Стандарт", maxUsers: 30, enforced: true });
   });
 
   it("root видит компании и меняет тариф, админ компании — нет", async () => {
@@ -133,6 +133,20 @@ describe("тарифы", () => {
     const bad = await request(app).put("/api/root/companies/1/plan").send({ plan: "gold", until: null });
     expect(bad.status).toBe(400);
   });
+
+  it("root «Люди» закрыты для админа компании и для API-ключа", async () => {
+    const app = await buildApp();
+    sessionStore.userId = admin.id;
+    expect((await request(app).get("/api/root/users?q=Анна")).status).toBe(403);
+    expect((await request(app).get("/api/root/companies/1/users")).status).toBe(403);
+    expect((await request(app).patch("/api/root/users/10").send({ name: "Х" })).status).toBe(403);
+    expect((await request(app).post("/api/root/users/10/pin").send({ pin: "6083" })).status).toBe(403);
+    expect((await request(app).delete("/api/root/users/10")).status).toBe(403);
+    sessionStore.userId = root.id;
+    const keyed = await request(app).patch("/api/root/users/10").set("Authorization", "Bearer tfk_test").send({ name: "Х" });
+    expect(keyed.status).toBe(403);
+    expect(dbState.updates).toEqual([]);
+  });
 });
 
 describe("точки", () => {
@@ -142,13 +156,13 @@ describe("точки", () => {
     expect((await request(app).post("/api/locations").send({ name: "Центр" })).status).toBe(403);
   });
 
-  it("на «Старте» с PLAN_LIMITS=on точки закрыты — 402", async () => {
+  it("на «Бесплатном» с PLAN_LIMITS=on точки закрыты — 402", async () => {
     process.env.PLAN_LIMITS = "on";
     const app = await buildApp();
     sessionStore.userId = admin.id;
     const r = await request(app).post("/api/locations").send({ name: "Центр" });
     expect(r.status).toBe(402);
-    expect(r.body.message).toContain("«Бизнес»");
+    expect(r.body.message).toContain("«Премиум»");
   });
 
   it("админ создаёт точку; пустое название — 400", async () => {

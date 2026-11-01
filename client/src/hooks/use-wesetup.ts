@@ -13,7 +13,7 @@ type CompanyPublic = {
   name?: string;
   wesetupConfigured?: boolean;
   photo?: PhotoSettings;
-  /** Действующий тариф (истёкший — «Старт») и срок оплаченного. */
+  /** Действующий тариф (истёкший — «Бесплатный») и срок оплаченного. */
   planInfo?: { id: PlanId; name: string; until: number | null };
 } | null;
 

@@ -38,7 +38,7 @@ let demoEmployeeApproval = false;
 let demoNotify: NotifyPrefs = { ...DEFAULT_PREFS };
 const rolesReply = () => ({ json: { roles: demoRoles, employeeApproval: demoEmployeeApproval } });
 
-/** Тариф демо-кофейни: «Команда» ещё на 12 дней, один прошлый платёж. */
+/** Тариф демо-кофейни: «Стандарт» ещё на 12 дней, один прошлый платёж. */
 function demoBilling(): BillingInfo {
   const t = now();
   const paidAt = t - 18 * 86400;
@@ -56,7 +56,7 @@ function demoBilling(): BillingInfo {
         plan: "team",
         months: 1,
         amountRub: 990,
-        description: "TasksFlow, тариф «Команда» на 1 месяц",
+        description: "TasksFlow, тариф «Стандарт» на 1 месяц",
         status: "paid",
         isTest: false,
         automatic: false,
