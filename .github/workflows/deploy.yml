@@ -249,19 +249,27 @@ jobs:
             npm run backup-db
 
             echo ">>> safe migrations"
-            npm run create-api-keys-table || echo "api_keys migration failed (non-fatal)"
-            npm run create-invitations-table || echo "invitations migration failed (non-fatal)"
-            npm run add-claim-col || echo "claim col migration failed (non-fatal)"
-            npm run add-managed-workers-col || echo "managed-workers col migration failed (non-fatal)"
-            npm run add-position-col || echo "position col migration failed (non-fatal)"
-            npm run add-api-key-encrypted || echo "api-key-encrypted migration failed (non-fatal)"
-            npm run add-verification-cols || echo "verification-cols migration failed (non-fatal)"
-            npm run add-telegram-cols || echo "telegram cols migration failed (non-fatal)"
-            npm run add-due-date-col || echo "due-date col migration failed (non-fatal)"
-            npm run add-example-photos-col || echo "example-photos col migration failed (non-fatal)"
-            npm run create-telegram-tables || echo "telegram tables migration failed (non-fatal)"
-            npm run add-tg-link-code-cols || echo "tg-link-code cols migration failed (non-fatal)"
-            npm run add-draft-autocreate-col || echo "draft auto-create col migration failed (non-fatal)"
+            # Скрипты идемпотентны: «уже есть» — не ошибка, код выхода 0.
+            # Ненулевой код значит настоящую ошибку (база недоступна, нет
+            # прав, кривой SQL), и деплой останавливается до сборки — прод
+            # остаётся на старом коде. Колонки users и tasks из этих скриптов
+            # Drizzle читает в каждом запросе: без них падают вход и задачи.
+            # Необязательный шаг — только с `|| echo` и причиной рядом: без
+            # него сайт обязан работать. Стенд (.claude/skills/dev-stand)
+            # читает обязательность отсюда же.
+            npm run create-api-keys-table
+            npm run create-invitations-table
+            npm run add-claim-col
+            npm run add-managed-workers-col
+            npm run add-position-col
+            npm run add-api-key-encrypted
+            npm run add-verification-cols
+            npm run add-telegram-cols
+            npm run add-due-date-col
+            npm run add-example-photos-col
+            npm run create-telegram-tables
+            npm run add-tg-link-code-cols
+            npm run add-draft-autocreate-col
             # Колонки PIN обязательны: без них код не прочитает users и вход
             # сломается. Падение здесь останавливает деплой до сборки — прод
             # остаётся на старом коде.
