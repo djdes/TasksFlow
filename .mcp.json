@@ -4,10 +4,10 @@
       "command": "npx",
       "args": ["ssh-mcp"],
       "env": {
-        "SSH_HOST": "tasksflow.ru",
-        "SSH_PORT": "50222",
-        "SSH_USER": "tasks",
-        "SSH_KEY_PATH": "C:\\Users\\djdes\\.ssh\\magday_deploy"
+        "SSH_HOST": "${TASKSFLOW_SSH_HOST:-tasksflow.ru}",
+        "SSH_PORT": "${TASKSFLOW_SSH_PORT:-}",
+        "SSH_USER": "${TASKSFLOW_SSH_USER:-}",
+        "SSH_KEY_PATH": "${TASKSFLOW_SSH_KEY_PATH:-}"
       }
     }
   }

@@ -18,11 +18,12 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # Как на проде: сервер работает на Node 24 (nvm, v24.12) — см. DEPLOY.md.
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -30,6 +31,10 @@ jobs:
 
       - name: Typecheck
         run: npm run check
+
+      # Ошибки — нарушения правил хуков React и явные баги; предупреждения не валят CI.
+      - name: Lint
+        run: npm run lint
 
       - name: Unit tests
         run: npm test
@@ -45,7 +50,7 @@ jobs:
 
       - name: Upload smoke artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-output
           path: output/playwright/

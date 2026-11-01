@@ -9,7 +9,7 @@
 
 ## Workflow
 - Проектные скиллы лежат в `.claude/skills/`: стенд, снимки, прод — см. «Облачные сессии Claude». Скилл, который подходит к задаче или назван пользователем, бери по его `SKILL.md`; не открывай скилл ради галочки.
-- После правок запускай минимально достаточные проверки: `npm run check`, `npm test`, `npm run build`, для интерфейса — `npm run smoke` или точечный сценарий. Линтера в проекте нет.
+- После правок запускай минимально достаточные проверки: `npm run check`, `npm test`, `npm run build`, для интерфейса — `npm run smoke` или точечный сценарий. Линтер — `npm run lint` (ESLint): ошибки — правила хуков React и явные баги, остальное — предупреждения.
 - Если проверку нельзя выполнить из-за окружения, честно напиши причину и остаточный риск.
 
 ## Git
@@ -22,9 +22,10 @@
 ## Project Notes
 - TasksFlow: React + Express + TypeScript.
 - Frontend: `client/src`; backend: `server`; общие схемы и API-контракты: `shared`.
+- Маршруты API — `server/routes/*.ts` по разделам (вход, задачи, фото, выполнение, сотрудники, приглашения, ключи, WeSetup), проверки прав и загрузка — `server/routes/common.ts`. Порядок регистрации задаёт `registerRoutes` в `server/routes.ts`: лимиты и статичные пути (`/api/tasks/awaiting-verification`) должны стоять раньше динамических (`/api/tasks/:id`).
 - React 18 + Vite + wouter + TanStack Query; UI — Tailwind, Radix, Framer Motion, Vaul. БД — MySQL через Drizzle и `server/storage.ts`.
 - Публичные страницы (`client/src/public`) рендерятся через SSR; кабинет — отдельная SPA (`client/src/App.tsx`). Проверяй обе точки входа при общих CSS-изменениях.
-- Основные команды: `npm run check`, `npm run test`, `npm run build`.
+- Основные команды: `npm run check`, `npm run lint`, `npm run test`, `npm run build`.
 - Разработка: `npm run dev`; production: `npm start` после сборки. Для изолированного UI smoke можно запустить `npx vite --host 127.0.0.1 --port <свободный порт>` и подменить API в Playwright.
 - Не запускай `setup-db`, `db:push`, `drizzle-kit push --force`, DROP или пересоздание БД: 28.04.2026 так потеряли боевую базу. Миграции только точечными скриптами из `script/` после проверки их SQL. Новая колонка — новый идемпотентный скрипт и строка в шаге «safe migrations» `deploy.yml`; строка без `|| echo` обязательна, и упавшая миграция останавливает деплой. Пустую базу собирают по README (Quick Start), правила защиты от регрессий — `docs/01-architecture.md`.
 - API сотрудников: `POST /api/users`; для интеграций должен работать API key через `Authorization: Bearer tfk_...`. Ключ — права админа своей компании: на маршрутах кабинета (`requireAuth`, `requireAdmin`, `requireUserManager`, `requireTaskManager`) он действует от имени создателя, пока тот админ компании ключа (`server/api-key-session.ts`, тесты `tests/api-key-admin-access.test.ts`). Запрос с ключом идёт без cookie-сессии; вход и личный аккаунт, push, Telegram, ключи, оплата и root по ключу закрыты.
@@ -41,7 +42,7 @@
 - Оплата тарифов — Робокасса: `shared/billing.ts`, `server/billing/*`, `server/billing-routes.ts`, страница `/admin/billing`, оферта `content/legal/offer.md`. Сумму считает только сервер, оплата засчитывается только по ResultURL с подписью Пароля #2 или по сверке с кассой (наш запрос OpStateExt с Паролем #2); возвраты — через API кассы с Паролем #3. Внутри приложений оплаты нет (правила App Store и Google Play). Акции, промокоды и постоянные скидки, баланс в баллах (журнал `balance_transactions` в той же транзакции, в минус не уходит; проводки — `server/billing/ledger.ts`), счёт для юрлиц, УПД и реквизиты по ИНН (DaData, `DADATA_API_KEY`) — там же; сумму страница и сервер считают одной функцией `priceBreakdown`. PDF рисует свой генератор `server/billing/pdf` (без npm-зависимостей, шрифт DejaVu в `server/billing/fonts`). Подключение магазина, секреты `ROBOKASSA_*`, `LEGAL_*` и `DADATA_API_KEY`, автопродление, сверка и возвраты — `docs/billing.md`.
 
 ## Облачные сессии Claude (claude.ai/code, приложение на телефоне)
-- Контейнер облака — Ubuntu 24.04 с Node 22 и Playwright. Наружу он пускает только 80/443, SSH на сервер оттуда не открыть. Для работы есть три скилла в `.claude/skills/`. `.claude/` лежит в `.gitignore`, кроме `skills/`, `agents/` и `settings.json`.
+- Контейнер облака — Ubuntu 24.04 с Node 22 и Playwright (прод и CI — Node 24, `.nvmrc`; `engines` в `package.json` — от 22). Наружу он пускает только 80/443, SSH на сервер оттуда не открыть. Для работы есть три скилла в `.claude/skills/`. `.claude/` лежит в `.gitignore`, кроме `skills/`, `agents/`, `hooks/` и `settings.json`. Хук SessionStart (`.claude/hooks/session-start.sh`) в облаке сам делает `npm ci`, если поменялись `package.json` или lock-файл.
 - `dev-stand` — дев-версия с настоящей базой. `bash .claude/skills/dev-stand/stand.sh` поднимает MariaDB 10.11 (МСК) и базу `tasksflow_dev`. Таблицы `users/companies/workers/tasks` берутся из `drizzle-kit export`, он только печатает SQL. Остальную схему накатывают скрипты `script/` в порядке `deploy.yml`. Демо создаётся через API, сервер — `npm run dev` на `localhost:5000`. Вход: `+79990000001`, PIN `4826`. `setup-db`/`db:push`/`drizzle-kit push` не используются и на стенде.
 - `visual-check` — снимки Playwright на ПК и телефоне, в светлой и тёмной теме. Ловит ошибки консоли, упавшие запросы и горизонтальную прокрутку, собирает общий лист `contact-sheet*.png`. Снимает стенд, `/demo` и прод. Это дополнение к `npm run smoke`, а не замена.
 - `prod` — сервер (`tasks@`) и боевая база через мостик `claude-ops`: `.github/workflows/claude-ops.yml` на секретах деплоя. Запрос и ответ зашифрованы: репозиторий публичный, в журнале Actions только шифротекст. Команды: `node .claude/skills/prod/ops.mjs status|logs|run|sql`, SQL по умолчанию только на чтение. Любое изменение на проде — только после явного «да» владельца.

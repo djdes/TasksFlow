@@ -85,6 +85,9 @@ async (page) => {
   }
 
   const noOverflow = (tab) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  // Данные (роли, список, аккаунт) приходят после заголовка: ждём появления,
+  // а не проверяем мгновенно — иначе проверка иногда успевает раньше ответа API.
+  const shown = (loc, timeout = 5000) => loc.waitFor({ state: 'visible', timeout }).then(() => true, () => false);
 
   // ---------- 1. Админ: роли и новый сотрудник ----------
   {
@@ -93,7 +96,7 @@ async (page) => {
       await tab.goto(base + '/admin/users');
       const panel = tab.locator('.roles-panel');
       await panel.getByRole('heading', { name: 'Роли и права' }).waitFor();
-      check(await panel.getByText('Администратор', { exact: true }).isVisible(), 'нет встроенной роли «Администратор»');
+      check(await shown(panel.getByText('Администратор', { exact: true })), 'нет встроенной роли «Администратор»');
       await panel.getByRole('button', { name: 'Роль «Руководитель»' }).click();
       const form = panel.getByRole('form', { name: 'Новая роль' });
       await form.waitFor();
@@ -123,7 +126,7 @@ async (page) => {
       const post = fx.state.calls.find((c) => c.method === 'POST' && c.p === '/api/users');
       check(post?.body?.position === 'Повар', 'POST /api/users: должность');
       check(typeof post?.body?.roleId === 'number', 'POST /api/users: roleId');
-      check(await tab.locator('.role-badge', { hasText: 'Админ' }).first().isVisible(), 'бейдж «Админ» в списке');
+      check(await shown(tab.locator('.role-badge', { hasText: 'Админ' }).first()), 'бейдж «Админ» в списке');
       await tab.screenshot({ path: `${shots}/roles-admin-1280.png`, fullPage: true });
       check(errors.length === 0, `админ: ошибки страницы: ${errors.join('; ')}`);
     } finally {
@@ -158,6 +161,8 @@ async (page) => {
       check(await tab.getByRole('button', { name: 'Изменить: Денис' }).count() === 0, 'руководитель не меняет админа');
       check(await tab.getByRole('button', { name: 'Изменить: Михаил Шеф Сушеф' }).count() === 0, 'руководитель не меняет себя');
       check(await tab.getByRole('button', { name: 'Изменить: Анна' }).count() === 1, 'руководитель меняет сотрудника');
+      // Роли приходят отдельным запросом: ждём их в списке, потом читаем весь список разом.
+      await tab.locator('#new-user-role option', { hasText: 'Старший смены' }).waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
       const options = await tab.locator('#new-user-role option:not([disabled])').allTextContents();
       check(JSON.stringify(options) === JSON.stringify(['Сотрудник', 'Старший смены']), `роли руководителя: ${options.join(', ')}`);
       check(await noOverflow(tab), 'сотрудники 390: горизонтальная прокрутка');
@@ -189,7 +194,7 @@ async (page) => {
       await tab.goto(base + '/account');
       const card = tab.locator('#notifications');
       await card.getByRole('heading', { name: 'Уведомления' }).waitFor();
-      check(await card.getByText('На anna@example.com').isVisible(), 'письма — на email сотрудника');
+      check(await shown(card.getByText('На anna@example.com')), 'письма — на email сотрудника');
       check(await card.getByText('Задачи на проверку').count() === 0, 'сотруднику нет пункта «Задачи на проверку»');
       check(!(await card.getByRole('checkbox', { name: /Письма о новых задачах/ }).isChecked()), 'письма — по желанию, по умолчанию выключены');
       await card.getByRole('checkbox', { name: /Письма о новых задачах/ }).check();

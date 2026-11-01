@@ -23,7 +23,7 @@ vi.mock("../server/storage", () => ({
   DatabaseStorage: { parseManagedWorkerIds: () => null },
 }));
 
-const OWNER = { id: 183, name: "bugdenes", companyId: 18 } as User;
+const OWNER = { id: 183, name: "Владелец", companyId: 18 } as User;
 
 beforeEach(() => {
   storage.findUserByTelegramLinkCode.mockResolvedValue(OWNER);

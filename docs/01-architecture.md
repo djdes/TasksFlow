@@ -43,7 +43,9 @@
 
 ```
 server/
-├── routes.ts          # HTTP routes + requireAuth/requireAdmin (~4800 строк — TODO Phase 2 split)
+├── routes.ts          # registerRoutes: общие middleware, лимиты и порядок регистрации разделов
+├── routes/            # маршруты по разделам: auth, tasks, task-photos, task-status, users, invitations, api-keys, wesetup…
+│   └── common.ts      # requireAuth/requireAdmin/…, загрузка файлов, хелперы запросов
 ├── storage.ts         # IStorage interface + реализация (Drizzle queries)
 ├── access.ts          # права пользователя (accessOf); правила — shared/roles.ts
 ├── api-keys.ts        # API-ключи tfk_; api-key-crypto.ts — шифрование для «Показать ключ»
@@ -68,7 +70,7 @@ script/
 
 ## Phase 2 — план (не делаем сейчас)
 
-- **Split `server/routes.ts`** (~4800 строк) на feature-modules: `routes/auth.ts`, `routes/tasks.ts`, `routes/api-keys.ts`, `routes/wesetup-callback.ts`. Каждый — registers routes на `app`.
+- ~~**Split `server/routes.ts`**~~ — сделано 01.11.2026: разделы в `server/routes/*.ts`, `routes.ts` задаёт порядок регистрации. Проверка — один и тот же стек маршрутов Express до и после.
 - **Branded types**: `UserId`, `CompanyId`, `TaskId` — компилятор не даст перепутать.
 - **Sentry-style observability**: console.error → структурированный logger с уровнями.
 - **Snapshot tests** для critical client-side компонентов (Dashboard, TaskViewDialog).

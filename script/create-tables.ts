@@ -58,7 +58,11 @@ async function createTables() {
     console.log("Таблица users создана");
 
     // Создаем админа
-    const adminPhone = "+79263740794";
+    // Телефон админа — из ADMIN_PHONE, не в коде: репозиторий публичный.
+    const adminPhone = (process.env.ADMIN_PHONE ?? "").replace(/[\s()-]/g, "");
+    if (!/^\+7\d{10}$/.test(adminPhone)) {
+      throw new Error("Задайте ADMIN_PHONE=+7XXXXXXXXXX — без него админ не создаётся");
+    }
     const [rows] = await connection.execute(
       "SELECT * FROM `users` WHERE `phone` = ?",
       [adminPhone]
