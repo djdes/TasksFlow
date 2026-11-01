@@ -43,6 +43,7 @@ import { parsePhotoSettings, photoSettingsSchema } from "@shared/photo-settings"
 import { registerHistoryRoutes } from "./history-routes";
 import { openLiveStream, publishToCompany } from "./live-events";
 import { registerCompanyRoutes } from "./company-routes";
+import { dbRootUsersStore, registerRootUserRoutes } from "./root-users";
 import { registerPushRoutes } from "./push-routes";
 import { registerBillingRoutes } from "./billing-routes";
 import { companyPlan, planLimitsEnforced, seatProblem } from "./plan-limits";
@@ -4829,6 +4830,15 @@ export async function registerRoutes(
     requireUserManager,
     canTouchUser,
     getCompanyIdFromReq,
+  });
+
+  // Root: люди всех компаний — поиск и правка (server/root-users.ts).
+  registerRootUserRoutes(app, {
+    requireRoot,
+    store: dbRootUsersStore(db, storage),
+    hashPin,
+    notifyPin: notifyPinEvent,
+    audit: async (args) => (await import("./audit-log")).recordAudit(args),
   });
 
   // Роли компании и настройка проверки выполненного (server/role-routes.ts).

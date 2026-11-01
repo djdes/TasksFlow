@@ -136,7 +136,7 @@ async (page) => {
         const spec = orders[id];
         if (!spec) return route.fulfill({ status: 404, json: { message: 'Заказ не найден' } });
         const paid = spec.paidAfter !== undefined && state.orderPolls[id] > spec.paidAfter;
-        return route.fulfill({ json: { id, plan: 'team', months: spec.months ?? 1, amountRub: spec.amount ?? 990, description: 'TasksFlow, тариф «Команда» на 1 месяц', status: paid ? 'paid' : 'pending', isTest: false, automatic: false, createdAt: now, paidAt: paid ? now : null, planUntil: paid ? now + 30 * DAY : null } });
+        return route.fulfill({ json: { id, plan: 'team', months: spec.months ?? 1, amountRub: spec.amount ?? 990, description: 'TasksFlow, тариф «Стандарт» на 1 месяц', status: paid ? 'paid' : 'pending', isTest: false, automatic: false, createdAt: now, paidAt: paid ? now : null, planUntil: paid ? now + 30 * DAY : null } });
       }
       if (p === '/api/billing/recurring' && req.method() === 'DELETE') {
         state.info = { ...state.info, recurring: { active: false, plan: null, months: null, amountRub: null, nextChargeAt: null } };
@@ -227,8 +227,8 @@ async (page) => {
     try {
       await tab.goto(base + '/admin/billing');
       await tab.getByRole('heading', { name: 'Тариф и оплата' }).waitFor();
-      await tab.getByRole('heading', { name: '«Старт»' }).waitFor();
-      check(await tab.getByRole('radio', { name: /Команда/ }).getAttribute('aria-checked') === 'true', 'team not preselected');
+      await tab.getByRole('heading', { name: '«Бесплатный»' }).waitFor();
+      check(await tab.getByRole('radio', { name: /Стандарт/ }).getAttribute('aria-checked') === 'true', 'team not preselected');
       check(await tab.getByRole('radio', { name: /1 месяц/ }).getAttribute('aria-checked') === 'true', '1 month not preselected');
       await tab.locator('.billing-summary').getByText('990 ₽', { exact: true }).waitFor();
       const consent = tab.getByRole('checkbox', { name: /Я согласен на автоматические списания/ });
@@ -283,7 +283,7 @@ async (page) => {
     const { context, tab, errors, calls } = await open({ info });
     try {
       await tab.goto(base + '/admin/billing');
-      await tab.getByRole('heading', { name: '«Команда»' }).waitFor();
+      await tab.getByRole('heading', { name: '«Стандарт»' }).waitFor();
       await tab.locator('.billing-recurring').getByText('включено').waitFor();
       await tab.getByRole('button', { name: 'Отключить автопродление' }).click();
       await tab.getByRole('dialog').getByRole('button', { name: 'Отключить' }).click();
@@ -291,7 +291,7 @@ async (page) => {
       check(calls.some((c) => c.method === 'DELETE' && c.p === '/api/billing/recurring'), 'disable not sent');
       // Тот же тариф — «прибавится к оставшемуся», другой — пересчёт остатка.
       await tab.getByText('Срок прибавится к оставшемуся.').waitFor();
-      await tab.getByRole('radio', { name: /Бизнес/ }).click();
+      await tab.getByRole('radio', { name: /Премиум/ }).click();
       await tab.getByText(/пересчитаем по цене/).waitFor();
       check(errors.length === 0, `recurring errors: ${errors.join('; ')}`);
     } finally {
@@ -325,7 +325,7 @@ async (page) => {
     const { context, tab, errors } = await open({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 TasksFlowApp/1.0.0' });
     try {
       await tab.goto(base + '/admin/billing');
-      await tab.getByRole('heading', { name: '«Старт»' }).waitFor();
+      await tab.getByRole('heading', { name: '«Бесплатный»' }).waitFor();
       check(await tab.locator('.cabinet-main').getByRole('radio').count() === 0, 'plans shown in app');
       check(await tab.getByRole('button', { name: /Перейти к оплате/ }).count() === 0, 'pay button in app');
       check(await tab.getByText(/Робокасс/).count() === 0, 'payment text in app');
@@ -421,7 +421,7 @@ async (page) => {
       await tab.goto(base + '/admin/billing');
       await tab.locator('.billing-promotion').getByText(/Осень: −20 % на все тарифы/).waitFor();
       await tab.locator('.billing-lifetime').getByText(/Постоянная скидка −10 %/).waitFor();
-      const team = tab.getByRole('radio', { name: /Команда/ });
+      const team = tab.getByRole('radio', { name: /Стандарт/ });
       await team.locator('s').getByText('990 ₽').waitFor();
       await team.getByText('792 ₽').waitFor();
       const summary = tab.locator('.billing-summary');
@@ -518,7 +518,7 @@ async (page) => {
       check(calls.some((c) => c.p === '/api/root/billing/check' && c.method === 'POST'), 'check not called');
 
       await tab.getByRole('heading', { name: 'Цены тарифов' }).waitFor();
-      await tab.getByText('Пекарня · Команда на 1 месяц').waitFor();
+      await tab.getByText('Пекарня · Стандарт на 1 месяц').waitFor();
       await tab.getByRole('spinbutton', { name: 'Цена, ₽' }).first().fill('1190');
       await tab.getByRole('button', { name: 'Сохранить цены' }).click();
       await tab.waitForTimeout(300);

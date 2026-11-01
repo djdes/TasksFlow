@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, Users } from "lucide-react";
 import { PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { RootBillingPanel } from "@/components/RootBillingPanel";
+import { RootPeopleDialog, RootPeopleSearch, type RootPerson } from "@/components/RootPeople";
 import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
 import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
@@ -31,12 +32,22 @@ const shortDate = (sec: number | null) => (sec ? new Date(sec * 1000).toLocaleDa
 /**
  * Root: компании сервиса и их тарифы, цены и платежи. Картой компании
  * платят сами («Тариф и оплата»); здесь тариф и срок можно поставить
- * вручную — например, после оплаты по счёту.
+ * вручную — например, после оплаты по счёту. «Люди» — поиск человека во
+ * всех компаниях и правка: данные, роль, PIN, блокировка, Telegram, удаление.
  */
+type PeopleTarget = { companyId: number | null; companyName: string | null; person: RootPerson | null };
+
 export default function RootCompanies() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const isRoot = !!(user as { isRoot?: boolean } | null)?.isRoot;
+  // Цель остаётся и после закрытия: окно уезжает со своим содержимым, а не пустым.
+  const [people, setPeople] = useState<PeopleTarget | null>(null);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const openPeople = (target: PeopleTarget) => {
+    setPeople(target);
+    setPeopleOpen(true);
+  };
   const query = useQuery<{ enforced: boolean; companies: RootCompany[] }>({
     queryKey: KEY,
     queryFn: async ({ signal }) => {
@@ -65,7 +76,7 @@ export default function RootCompanies() {
           <div>
             <h1 className="page-title">Компании</h1>
             <p className="page-subtitle">
-              Тарифы клиентов.{" "}
+              Тарифы и люди клиентов.{" "}
               {query.data?.enforced
                 ? "Лимиты включены (PLAN_LIMITS=on)."
                 : "Лимиты выключены: тариф только показывается. Включить — PLAN_LIMITS=on в .env сервера."}
@@ -74,6 +85,7 @@ export default function RootCompanies() {
         </div>
 
         <div className="page-sections">
+          <RootPeopleSearch onOpen={(p) => openPeople({ companyId: p.companyId, companyName: p.companyName, person: p })} />
           <RootBillingPanel />
           <section className="content-panel">
             {query.isLoading ? (
@@ -83,18 +95,25 @@ export default function RootCompanies() {
             ) : (
               <div className="root-companies">
                 {(query.data?.companies ?? []).map((c) => (
-                  <CompanyRow key={c.id} company={c} />
+                  <CompanyRow key={c.id} company={c} onPeople={() => openPeople({ companyId: c.id, companyName: c.name, person: null })} />
                 ))}
               </div>
             )}
           </section>
         </div>
       </div>
+      <RootPeopleDialog
+        open={peopleOpen}
+        onOpenChange={setPeopleOpen}
+        companyId={people?.companyId ?? null}
+        companyName={people?.companyName ?? null}
+        initialPerson={people?.person ?? null}
+      />
     </div>
   );
 }
 
-function CompanyRow({ company }: { company: RootCompany }) {
+function CompanyRow({ company, onPeople }: { company: RootCompany; onPeople: () => void }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [plan, setPlan] = useState<PlanId>((company.plan as PlanId) || "start");
@@ -151,6 +170,10 @@ function CompanyRow({ company }: { company: RootCompany }) {
         )}
         <Button type="button" size="sm" disabled={!dirty} loading={save.isPending} loadingLabel="…" onClick={() => save.mutate()}>
           Сохранить
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onPeople} aria-label={`Люди: ${company.name}`}>
+          <Users className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          Люди · {company.usersCount}
         </Button>
       </div>
     </article>

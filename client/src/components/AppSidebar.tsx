@@ -49,7 +49,7 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <span className="app-sidebar-company">{company?.name || "TasksFlow"}</span>
           {role.isAdmin && plan ? (
             <span className={`app-sidebar-plan ${ending ? "is-warn" : ""}`}>
-              {plan.id === "start" ? "Тариф «Старт»" : plan.until ? `«${plan.name}» до ${untilText(plan.until)}` : `«${plan.name}» бессрочно`}
+              {plan.id === "start" ? `Тариф «${plan.name}»` : plan.until ? `«${plan.name}» до ${untilText(plan.until)}` : `«${plan.name}» бессрочно`}
             </span>
           ) : (
             <span className="app-sidebar-plan">{roleLabel}</span>

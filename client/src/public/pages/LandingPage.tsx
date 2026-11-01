@@ -80,10 +80,10 @@ function priceAnswer(prices: readonly PlanPrice[], promotion: PricePromotion | n
   const rates = (["team", "business"] as const).map((id) => monthlyRate(prices, id)).filter((r): r is number => r !== null);
   const from = rates.length ? ` — от ${formatRub(Math.round(Math.min(...rates)))} в месяц` : "";
   const sale = promotion ? ` Сейчас акция: −${promotion.percent} % на все тарифы до ${promotionUntil(promotion)}.` : "";
-  return `Тариф «Старт» бесплатный: до 5 сотрудников, без срока. Платные тарифы${from}, оплата картой или СБП прямо в кабинете, условия — в публичной оферте.${sale}`;
+  return `Тариф «${PLANS.start.name}» — 0 ₽: до ${PLANS.start.maxUsers} сотрудников, без срока. Платные тарифы${from}, оплата картой или СБП прямо в кабинете, условия — в публичной оферте.${sale}`;
 }
 
-const BUSINESS_SUBJECT = "TasksFlow Бизнес: подключение сети точек";
+const BUSINESS_SUBJECT = `TasksFlow ${PLANS.business.name}: подключение сети точек`;
 
 const FAQ = [
   { q: "Нужно ли что-то устанавливать?", a: "Нет. TasksFlow открывается в браузере и на телефоне. Регистрация — за секунду: введите телефон или email." },

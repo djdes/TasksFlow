@@ -44,7 +44,7 @@ async (page) => {
       else if (/^\/api\/workers\/\d+$/.test(p)) data = { id: 2, name: worker.name, companyId: 1 };
       else if (/^\/api\/tasks\/\d+$/.test(p)) data = tasks[0];
       else if (/^\/api\/users\/\d+$/.test(p)) data = worker;
-      else if (p === '/api/companies/me') data = { id: 1, name: 'Кафе «Ромашка»', planInfo: { id: 'team', name: 'Команда', until: planUntil }, photo: null };
+      else if (p === '/api/companies/me') data = { id: 1, name: 'Кафе «Ромашка»', planInfo: { id: 'team', name: 'Стандарт', until: planUntil }, photo: null };
       else if (p === '/api/me/telegram') data = { connected: false, botConfigured: false };
       else if (p === '/api/app/info') data = { android: { apk: null, playUrl: null, rustoreUrl: null }, ios: { appStoreUrl: null, testflightUrl: null } };
       else if (p.includes('/wesetup/')) data = { enabled: false, ok: false, configured: false };
