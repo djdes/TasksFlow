@@ -22,6 +22,7 @@
 ## Project Notes
 - TasksFlow: React + Express + TypeScript.
 - Frontend: `client/src`; backend: `server`; общие схемы и API-контракты: `shared`.
+- Маршруты API — `server/routes/*.ts` по разделам (вход, задачи, фото, выполнение, сотрудники, приглашения, ключи, WeSetup), проверки прав и загрузка — `server/routes/common.ts`. Порядок регистрации задаёт `registerRoutes` в `server/routes.ts`: лимиты и статичные пути (`/api/tasks/awaiting-verification`) должны стоять раньше динамических (`/api/tasks/:id`).
 - React 18 + Vite + wouter + TanStack Query; UI — Tailwind, Radix, Framer Motion, Vaul. БД — MySQL через Drizzle и `server/storage.ts`.
 - Публичные страницы (`client/src/public`) рендерятся через SSR; кабинет — отдельная SPA (`client/src/App.tsx`). Проверяй обе точки входа при общих CSS-изменениях.
 - Основные команды: `npm run check`, `npm run test`, `npm run build`.
