@@ -132,7 +132,7 @@ async (page) => {
   failSession=true;
   await page.reload();
   await page.getByRole('alert').waitFor();
-  check((await page.getByRole('alert').innerText()).includes('сервером'),'Session error is not actionable');
+  check((await page.getByRole('alert').innerText()).includes('код 503'),'Session error is not actionable');
   failSession=false;
   await page.getByRole('button',{name:'Повторить',exact:true}).click();
   await page.getByRole('heading',{name:'Задачи',exact:true}).waitFor();
