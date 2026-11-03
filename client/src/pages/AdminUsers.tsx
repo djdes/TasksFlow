@@ -639,7 +639,7 @@ export default function AdminUsers() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                         <span className="user-row-avatar" aria-hidden>{getUserInitials(u)}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-foreground break-words">
@@ -687,7 +687,9 @@ export default function AdminUsers() {
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center justify-end gap-1">
+                        {/* Кнопки — отдельной строкой под именем: в узкой колонке (телефон и ПК в две колонки)
+                            они сжимали имя и телефон в столбик по букве. */}
+                        <div className="flex basis-full flex-wrap items-center gap-1 pl-[50px] -ml-2 empty:hidden">
                           {u.canImpersonate && !user.impersonation && (
                             <Button
                               variant="outline"
