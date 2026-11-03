@@ -28,6 +28,13 @@ async (page) => {
       if (label !== 'desktop') { await context.close(); continue; }
       // В очереди «На проверке» всегда есть что показать — в любое время суток.
       await tab.locator('.app-sidebar-count').waitFor();
+      // QR-код входа: объект демо-API, предпросмотр обоих форматов без сервера.
+      await tab.goto(base + '/admin/quick-login');
+      await tab.getByText('Это образец для демо.', { exact: false }).waitFor();
+      await tab.frameLocator('iframe[title="Предпросмотр распечатки"]').getByAltText('QR-код входа в организацию').waitFor();
+      await tab.getByLabel('Стикер 58 × 40 мм', { exact: true }).check();
+      check(await tab.getByRole('button', { name: 'Печатать', exact: true }).isEnabled(), 'demo QR print is disabled');
+      await tab.goto(base + '/dashboard');
       // «Дублировать»: окно открывается (раньше падало — флажок внутри кнопки), срок виден и меняется.
       await tab.getByText(/Илья Кузнецов/).first().click();
       await tab.getByRole('button', { name: /^Дублировать:/ }).first().click({ force: true });

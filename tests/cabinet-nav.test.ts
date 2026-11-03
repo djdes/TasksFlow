@@ -15,28 +15,33 @@ const root = { isAdmin: true, isRoot: true, canManageTasks: true };
 const keys = (role: typeof worker) => cabinetNav(role).map((item) => item.key);
 
 describe("cabinetNav", () => {
+  it("просмотр своих людей открывает «Сотрудники» без права управления компанией", () => {
+    const items = cabinetNav({ ...manager, canViewUsers: true });
+    expect(items.some((item) => item.key === "users")).toBe(true);
+    expect(items.some((item) => ["settings", "billing", "invitations"].includes(item.key))).toBe(false);
+  });
   it("сотруднику — только задачи, история, аккаунт и помощь", () => {
     expect(keys(worker)).toEqual(["tasks", "reports", "account", "help"]);
     expect(cabinetNav(worker).find((i) => i.key === "reports")?.label).toBe("История");
   });
 
-  it("руководителю — ещё очередь проверки, но не разделы компании", () => {
-    expect(keys(manager)).toEqual(["tasks", "verification", "reports", "account", "help"]);
+  it("руководителю — очередь проверки и QR-код входа", () => {
+    expect(keys(manager)).toEqual(["tasks", "verification", "reports", "quick-login", "account", "help"]);
   });
 
   it("роль «Руководитель» — сотрудники и отчёты, но без настроек, приглашений и оплаты", () => {
     const lead = { isAdmin: false, isRoot: false, canManageTasks: true, canManageUsers: true, canVerify: true, canViewReports: true };
-    expect(keys(lead)).toEqual(["tasks", "verification", "reports", "users", "account", "help"]);
+    expect(keys(lead)).toEqual(["tasks", "verification", "reports", "users", "quick-login", "account", "help"]);
     expect(cabinetNav(lead).find((i) => i.key === "reports")?.label).toBe("История и отчёты");
   });
 
   it("роль только с проверкой — очередь проверки без создания задач", () => {
     const checker = { isAdmin: false, isRoot: false, canManageTasks: false, canVerify: true };
-    expect(keys(checker)).toEqual(["tasks", "verification", "reports", "account", "help"]);
+    expect(keys(checker)).toEqual(["tasks", "verification", "reports", "quick-login", "account", "help"]);
   });
 
   it("админу — разделы компании; root-разделы только root", () => {
-    expect(keys(admin)).toEqual(["tasks", "verification", "reports", "users", "invitations", "settings", "billing", "account", "help"]);
+    expect(keys(admin)).toEqual(["tasks", "verification", "reports", "users", "invitations", "settings", "billing", "quick-login", "account", "help"]);
     expect(keys(root)).toContain("companies");
     expect(keys(root)).toContain("banners");
     expect(keys(admin)).not.toContain("companies");
@@ -67,7 +72,7 @@ describe("activeNavKey", () => {
 
 describe("isCabinetPath", () => {
   it("вход, регистрация и приглашение — без меню", () => {
-    for (const path of ["/", "/login", "/register", "/register/company", "/join", "/join/abc"]) {
+    for (const path of ["/", "/login", "/register", "/register/company", "/join", "/join/abc", "/quick-login/abc"]) {
       expect(isCabinetPath(path)).toBe(false);
     }
   });

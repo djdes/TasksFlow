@@ -47,6 +47,8 @@ const VerificationPage = lazy(() => import("@/pages/Verification"));
 const Invitations = lazy(() => import("@/pages/Invitations"));
 const AdminBanners = lazy(() => import("@/pages/AdminBanners"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
+const QuickLogin = lazy(() => import("@/pages/QuickLogin"));
+const QuickLoginPrint = lazy(() => import("@/pages/QuickLoginPrint"));
 const Account = lazy(() => import("@/pages/Account"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const RootCompanies = lazy(() => import("@/pages/RootCompanies"));
@@ -158,6 +160,7 @@ function Router() {
             <Route path="/admin/integrations" component={IntegrationsPage} />
             <Route path="/admin/verification" component={VerificationPage} />
             <Route path="/admin/invitations" component={Invitations} />
+            <Route path="/admin/quick-login" component={QuickLoginPrint} />
             <Route path="/admin/banners" component={AdminBanners} />
             <Route path="/admin/companies" component={RootCompanies} />
             <Route path="/admin/billing" component={Billing} />
@@ -165,6 +168,7 @@ function Router() {
             <Route path="/billing/success" component={Billing} />
             <Route path="/billing/fail" component={Billing} />
             <Route path="/join/:token" component={JoinByInvite} />
+            <Route path="/quick-login/:token" component={QuickLogin} />
             <Route path="/tasks/new" component={CreateTask} />
             <Route path="/tasks/:id/edit" component={EditTask} />
             {/* Старые адреса: сотрудники живут в «Сотрудниках» (вход по телефону и

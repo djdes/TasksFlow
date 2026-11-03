@@ -31,6 +31,7 @@
     "add-companies": "tsx script/add-companies.ts",
     "create-api-keys-table": "tsx script/create-api-keys-table.ts",
     "create-invitations-table": "tsx script/create-invitations-table.ts",
+    "create-company-login-links": "tsx script/create-company-login-links.ts",
     "add-claim-col": "tsx script/_add-claim-col.ts",
     "add-managed-workers-col": "tsx script/_add-managed-workers-col.ts",
     "add-position-col": "tsx script/_add-position-col.ts",

@@ -260,6 +260,7 @@ jobs:
             # читает обязательность отсюда же.
             npm run create-api-keys-table
             npm run create-invitations-table
+            npm run create-company-login-links
             npm run add-claim-col
             npm run add-managed-workers-col
             npm run add-position-col

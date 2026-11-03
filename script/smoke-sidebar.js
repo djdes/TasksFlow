@@ -66,7 +66,7 @@ async (page) => {
       check(await sidebar.locator('.app-sidebar-plan.is-warn').count() === 1, 'plan ending soon is not highlighted');
       const labels = await sidebar.getByRole('navigation', { name: 'Разделы' }).getByRole('link').allInnerTexts();
       const names = labels.map((t) => t.replace(/\s*\d+$/, '').trim());
-      check(JSON.stringify(names) === JSON.stringify(['Задачи', 'На проверке', 'История и отчёты', 'Сотрудники', 'Приглашения', 'Настройки', 'Тариф и оплата', 'Компании и тарифы', 'Промо-баннеры', 'Помощь']), `admin nav ${JSON.stringify(names)}`);
+      check(JSON.stringify(names) === JSON.stringify(['Задачи', 'На проверке', 'История и отчёты', 'Сотрудники', 'Приглашения', 'Настройки', 'Тариф и оплата', 'QR-код для входа', 'Компании и тарифы', 'Промо-баннеры', 'Помощь']), `admin nav ${JSON.stringify(names)}`);
       check(await sidebar.getByRole('link', { name: 'Задачи', exact: true }).getAttribute('aria-current') === 'page', 'Задачи not active on /dashboard');
       await sidebar.getByLabel('2 ждут проверки').waitFor();
       // Вкладка: раздел и число ждущих проверки — видно и в фоне.
@@ -107,9 +107,10 @@ async (page) => {
       await palette.getByRole('combobox', { name: 'Быстрый переход' }).waitFor();
       await tab.keyboard.type('пин');
       const found = await palette.getByRole('option').allInnerTexts();
-      check(found.length === 3 && found[0].includes('Сотрудники') && found[1].includes('Мой аккаунт') && found[2].includes('Добавить сотрудника'), `palette keyword search ${JSON.stringify(found)}`);
+      check(found.length === 4 && found[0].includes('Сотрудники') && found[1].includes('QR-код для входа') && found[2].includes('Мой аккаунт') && found[3].includes('Добавить сотрудника'), `palette keyword search ${JSON.stringify(found)}`);
       await palette.evaluate((el) => Promise.allSettled(el.getAnimations().map((a) => a.finished)));
       await tab.screenshot({ path: 'output/playwright/sidebar-palette.png' });
+      await tab.keyboard.press('ArrowDown');
       await tab.keyboard.press('ArrowDown');
       await tab.keyboard.press('Enter');
       await tab.waitForURL('**/account');

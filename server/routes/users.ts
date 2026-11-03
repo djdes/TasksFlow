@@ -12,6 +12,7 @@ import { newPinSchema, pinSchema } from "@shared/pin";
 import { seatProblem } from "../plan-limits";
 import { accessOf, roleOf } from "../access";
 import { canGrantRole, canManageUser, canSeeWorker } from "@shared/roles";
+import { canImpersonate } from "../impersonation";
 import {
   requireAuth,
   requireUserManager,
@@ -70,13 +71,25 @@ export function registerUserRoutes(app: Express): void {
       const userId = req.session?.userId;
       if (!userId) return res.json(users);
       const me = users.find((u) => u.id === userId);
-      if (!me || me.isAdmin) return res.json(users);
+      if (!me) return res.json([]);
 
       // Роль «Ставит задачи» или «Добавляет сотрудников» — все люди
       // компании; руководитель из WeSetup — свои и он сам; сотрудник — себя.
       const access = await accessOf(me);
-      if (access.manageUsers) return res.json(users);
-      res.json(users.filter((u) => canSeeWorker(access, u.id)));
+      const visible = me.isAdmin || access.manageUsers ? users : users.filter((u) => canSeeWorker(access, u.id));
+      const roles = new Map<number, ReturnType<typeof roleOf>>();
+      const previewAllowed = async (u: User) => {
+        if (req.session.impersonatorId) return false;
+        if (me.isAdmin) return canImpersonate(me, u, { access, role: null });
+        if (u.roleId && !roles.has(u.roleId)) roles.set(u.roleId, roleOf(u));
+        const role = u.roleId ? await roles.get(u.roleId) ?? null : null;
+        return canImpersonate(me, u, { access, role });
+      };
+      // Кнопку показывает сервер: UI не угадывает чужие роли и иерархию.
+      res.json(await Promise.all(visible.map(async (u) => ({
+        ...u,
+        canImpersonate: await previewAllowed(u),
+      }))));
     } catch (err: any) {
       console.error('Error fetching users:', err);
       res.status(500).json({ message: 'Ошибка загрузки пользователей' });

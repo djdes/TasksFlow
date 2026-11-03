@@ -14,6 +14,15 @@ export const errorSchemas = {
 
 export const api = {
   auth: {
+    impersonate: {
+      method: 'POST' as const,
+      path: '/api/auth/impersonate',
+      input: z.object({ userId: z.number().int().positive() }),
+    },
+    stopImpersonating: {
+      method: 'POST' as const,
+      path: '/api/auth/impersonate/stop',
+    },
     login: {
       method: 'POST' as const,
       path: '/api/auth/login',

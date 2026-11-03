@@ -123,6 +123,7 @@ export function registerAuthRoutes(app: Express): void {
         pinResetByEmail: canResetPinByEmail(req),
         access: await accessWithApproval(user),
         notify: parseNotifyPrefs(user.notifyPrefs),
+        ...(req.session.impersonatorId ? { impersonation: { actorId: req.session.impersonatorId, readOnly: true } } : {}),
       });
     } catch (err: any) {
       console.error('Error fetching user:', err);

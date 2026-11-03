@@ -22,6 +22,7 @@ import {
 } from "./routes/common";
 import { registerBannerRoutes } from "./routes/banners";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerQuickLoginRoutes } from "./routes/quick-login";
 import { registerTelegramLinkRoutes } from "./routes/telegram-link";
 import { registerCompanyMeRoutes } from "./routes/company-me";
 import { registerWorkerRoutes } from "./routes/workers";
@@ -33,6 +34,7 @@ import { registerInvitationRoutes } from "./routes/invitations";
 import { registerApiKeyRoutes } from "./routes/api-keys";
 import { registerWesetupRoutes } from "./routes/wesetup";
 import { registerAdminToolRoutes } from "./routes/admin-tools";
+import { guardImpersonation, registerImpersonationRoutes } from "./impersonation";
 
 // Маршруты кабинета и API по разделам — server/routes/*.ts. Порядок вызовов ниже —
 // порядок регистрации в Express: middleware и лимиты стоят перед маршрутами,
@@ -41,6 +43,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  app.use(guardImpersonation);
+  registerImpersonationRoutes(app);
 
   // Глобально оборачиваем res.json, чтобы вырезать чувствительные поля
   // юзера (passwordHash / magicToken) из всех ответов. Ставим первым.
@@ -110,6 +115,7 @@ export async function registerRoutes(
   app.use("/api/users/register", authLimiter);
 
   registerAuthRoutes(app);
+  registerQuickLoginRoutes(app);
 
   registerTelegramLinkRoutes(app);
 

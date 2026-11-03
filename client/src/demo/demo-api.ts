@@ -204,6 +204,9 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     return { json: { ok: true } };
   }
   if (path === "/api/companies/me") return { json: company() };
+  if (path === "/api/quick-login/link") return {
+    json: { companyName: company().name, url: `${window.location.origin}/demo` },
+  };
   if (path === "/api/locations" && method === "GET") return { json: state.locations };
   if (path === "/api/me/telegram") return { json: { connected: false, botConfigured: false } };
   if (path === "/api/client-errors") return { status: 204, text: "" };

@@ -12,6 +12,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { canManageQuickLogin } from "@shared/quick-login";
 
 /**
  * Разделы кабинета — одна модель на всех: меню слева на ПК, меню-шторка на
@@ -26,6 +27,8 @@ export type CabinetRole = {
   canManageTasks: boolean;
   /** Добавляет сотрудников; по умолчанию — только админ. */
   canManageUsers?: boolean;
+  /** Просмотр своих людей без права их редактировать (WeSetup). */
+  canViewUsers?: boolean;
   /** Открывает «На проверке»; по умолчанию — кто ставит задачи. */
   canVerify?: boolean;
   /** История всей компании; по умолчанию — только админ. */
@@ -72,10 +75,11 @@ export function cabinetNav(role: CabinetRole): NavItem[] {
     testId: "menu-reports",
     keywords: "журнал сводка csv премии",
   });
-  if (role.isAdmin || role.canManageUsers) {
+  if (role.isAdmin || role.canManageUsers || role.canViewUsers) {
     items.push({ key: "users", label: "Сотрудники", href: "/admin/users", icon: Users, group: "company", keywords: "люди персонал пин роли права должность руководитель" });
   }
   if (role.isAdmin) {
+    // Остальные разделы компании доступны только администратору.
     items.push(
       { key: "invitations", label: "Приглашения", href: "/admin/invitations", icon: QrCode, group: "company", keywords: "qr ссылка пригласить" },
       {
@@ -89,6 +93,9 @@ export function cabinetNav(role: CabinetRole): NavItem[] {
       },
       { key: "billing", label: "Тариф и оплата", href: "/admin/billing", icon: CreditCard, group: "company", also: ["/billing/"], testId: "menu-billing", keywords: "оплата счёт баланс баллы промокод упд" },
     );
+  }
+  if (canManageQuickLogin({ isAdmin: role.isAdmin, manageTasks: role.canManageTasks, manageUsers: !!role.canManageUsers, verifyTasks: role.canVerify ?? role.canManageTasks })) {
+    items.push({ key: "quick-login", label: "QR-код для входа", href: "/admin/quick-login", icon: QrCode, group: "company", keywords: "qr печать а4 стикер этикетка пин быстрый вход" });
   }
   if (role.isRoot) {
     items.push(
@@ -135,7 +142,7 @@ export function pageTitle(items: readonly NavItem[], path: string, pending = 0):
 /** Страницы без меню кабинета: вход, регистрация, приглашение. */
 export function isCabinetPath(path: string): boolean {
   if (path === "/" || path === "/login") return false;
-  return !/^\/(register|join)(\/|$)/.test(path);
+  return !/^\/(register|join|quick-login)(\/|$)/.test(path);
 }
 
 /** Строка для поиска: нижний регистр, ё → е. */

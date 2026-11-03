@@ -16,6 +16,7 @@ import {
   webhookDeliveries,
   invitations,
   companyRoles,
+  companyLoginLinks,
   type Worker,
   type InsertWorker,
   type Task,
@@ -66,6 +67,9 @@ export interface IStorage {
   createCompany(company: InsertCompany): Promise<Company>;
   getCompanyById(id: number): Promise<Company | undefined>;
   updateCompany(id: number, company: UpdateCompanyData): Promise<Company | undefined>;
+  getCompanyLoginLink(companyId: number): Promise<string | null>;
+  ensureCompanyLoginLink(companyId: number, token: string): Promise<string>;
+  getCompanyIdByLoginToken(token: string): Promise<number | undefined>;
 
   // Users
   getUserByPhone(phone: string): Promise<User | undefined>;
@@ -1465,6 +1469,26 @@ export class DatabaseStorage implements IStorage {
         updatedAt: now,
       })
       .where(eq(webhookDeliveries.id, input.id));
+  }
+
+  async getCompanyLoginLink(companyId: number): Promise<string | null> {
+    const [row] = await db.select().from(companyLoginLinks).where(eq(companyLoginLinks.companyId, companyId));
+    return row?.token ?? null;
+  }
+
+  async ensureCompanyLoginLink(companyId: number, token: string): Promise<string> {
+    // Параллельные запросы сохраняют первый токен: старые распечатки работают.
+    await db.insert(companyLoginLinks).values({ companyId, token })
+      .onDuplicateKeyUpdate({ set: { companyId: sql`${companyLoginLinks.companyId}` } });
+    const saved = await this.getCompanyLoginLink(companyId);
+    if (!saved) throw new Error("Company login link was not saved");
+    return saved;
+  }
+
+  async getCompanyIdByLoginToken(token: string): Promise<number | undefined> {
+    const [row] = await db.select({ companyId: companyLoginLinks.companyId }).from(companyLoginLinks)
+      .where(eq(companyLoginLinks.token, token));
+    return row?.companyId;
   }
 
   // ===================== INVITATIONS =====================

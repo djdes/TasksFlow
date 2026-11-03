@@ -646,6 +646,12 @@ export const webhookDeliveries = mysqlTable("webhook_deliveries", {
 export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
 export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
 
+// Постоянная ссылка входа организации, отдельно от одноразовых приглашений.
+export const companyLoginLinks = mysqlTable("company_login_links", {
+  companyId: int("company_id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+});
+
 // Приглашения сотрудников через QR-код. Админ генерит запись, отдаёт
 // сотруднику QR/ссылку вида /join/<token>. По accept'у создаётся User
 // в companyId приглашения с уже выставленными position/isAdmin.

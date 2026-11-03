@@ -79,6 +79,8 @@ declare module "express-session" {
     userId?: number;
     /** Когда вошли по email (пароль или ссылка из письма). */
     emailAuthAt?: number;
+    /** Вход руководителя для просмотра: userId — сотрудник, исходный вход здесь. */
+    impersonatorId?: number;
   }
 }
 

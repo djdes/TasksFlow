@@ -1,7 +1,7 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
-import { apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { ApiError, apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { forgetThisDevice } from "@/lib/push";
 import { setAppBadge } from "@/lib/pwa";
 import type { UserAccess } from "@shared/roles";
@@ -26,6 +26,7 @@ type User = {
   access?: UserAccess;
   /** Личные настройки уведомлений. */
   notify?: NotifyPrefs;
+  impersonation?: { actorId: number; readOnly: true; unavailable?: boolean };
 } | null;
 
 /** Ответ входа: следующий шаг (ввести или придумать PIN) либо готовая сессия. */
@@ -38,12 +39,21 @@ interface AuthContextType {
   retry: () => void;
   login: (phone: string, pin?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  impersonate: (userId: number) => Promise<void>;
+  stopImpersonating: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  useEffect(() => {
+    const accountChanged = (event: StorageEvent) => {
+      if (event.key === "tf_account_changed") window.location.reload();
+    };
+    window.addEventListener("storage", accountChanged);
+    return () => window.removeEventListener("storage", accountChanged);
+  }, []);
 
   // Получаем текущего пользователя
   const { data: user = null, isLoading, isError, refetch } = useQuery<User>({
@@ -96,8 +106,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Пока сессия жива — отвязать push этого устройства (общий планшет).
     // И убрать число задач с иконки: следующему человеку оно не про него.
     setAppBadge(0);
-    await forgetThisDevice();
+    if (!user?.impersonation) await forgetThisDevice();
     await logoutMutation.mutateAsync();
+  };
+
+  const switchAccount = async (path: string, body: { userId: number } | undefined, destination: string) => {
+    try {
+      await apiRequest("POST", path, body);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      destination = "/login";
+    }
+    try {
+      // Cookie общая для вкладок: остальные кабинеты тоже сбрасывают данные.
+      localStorage.setItem("tf_account_changed", `${Date.now()}-${Math.random()}`);
+    } catch { /* В приватном режиме остаётся перезагрузка текущей вкладки. */ }
+    // Полная навигация уничтожает кэш, открытые диалоги и запросы прежнего
+    // аккаунта. В новом кабинете не мелькнут данные руководителя.
+    window.location.assign(destination);
   };
 
   return (
@@ -109,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retry: () => { void refetch(); },
         login,
         logout,
+        impersonate: (userId) => switchAccount(api.auth.impersonate.path, { userId }, "/dashboard"),
+        stopImpersonating: () => switchAccount(api.auth.stopImpersonating.path, undefined, `/admin/users?user=${user?.id ?? ""}`),
       }}
     >
       {children}

@@ -442,7 +442,7 @@ export function dbRootUsersStore(db: DbLike, storage: StorageLike): RootUsersSto
     async endSessions(id) {
       // express-session хранит JSON.stringify(session) без пробелов: "userId":213 , или }.
       const result = await db.execute(
-        sql`DELETE FROM sessions WHERE data LIKE ${`%"userId":${id},%`} OR data LIKE ${`%"userId":${id}}%`}`,
+        sql`DELETE FROM sessions WHERE data LIKE ${`%"userId":${id},%`} OR data LIKE ${`%"userId":${id}}%`} OR data LIKE ${`%"impersonatorId":${id},%`} OR data LIKE ${`%"impersonatorId":${id}}%`}`,
       );
       await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, id));
       return affected(result);

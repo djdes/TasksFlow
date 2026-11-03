@@ -5,7 +5,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -41,6 +41,7 @@ import { canGrantRole, canManageUser, type CompanyRole } from "@shared/roles";
 const SEARCH_FROM = 6;
 
 type ListUser = {
+  canImpersonate?: boolean;
   id: number;
   phone: string | null;
   name: string | null;
@@ -107,11 +108,11 @@ function RoleSelect({
 
 export default function AdminUsers() {
   const [, setLocation] = useLocation();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, impersonate } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const permissions = usePermissions();
-  const canOpen = permissions.isAdmin || permissions.canManageUsers;
+  const canOpen = permissions.canViewUsers;
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [editName, setEditName] = useState("");
@@ -129,7 +130,7 @@ export default function AdminUsers() {
   const [highlightId, setHighlightId] = useState<number | null>(null);
   const phoneFieldRef = useRef<HTMLDivElement>(null);
   const { data: locations = [] } = useLocations(canOpen);
-  const { data: rolesData } = useRoles(canOpen);
+  const { data: rolesData } = useRoles(permissions.canManageUsers);
   const roles = rolesData?.roles ?? [];
   const roleById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const planInfo = (useWesetupConfiguration().data as { planInfo?: { name: string; maxUsers: number | null; enforced: boolean } } | null)?.planInfo;
@@ -137,6 +138,10 @@ export default function AdminUsers() {
   const canGrant = (grant: "admin" | CompanyRole | null) => !!access && canGrantRole(access, grant);
   /** Руководитель меняет только обычных людей (не админов, не руководителей, не себя). */
   const canEditUser = (u: ListUser) => !!access && canManageUser(access, u, u.roleId ? roleById.get(u.roleId) : null);
+  const impersonateMutation = useMutation({
+    mutationFn: impersonate,
+    onError: (error: Error) => toast({ title: "Не удалось открыть кабинет", description: error.message, variant: "destructive" }),
+  });
 
   // Получаем список пользователей (хук должен быть до early return)
   const { data: users = [], isLoading, isError, refetch } = useQuery<ListUser[]>({
@@ -380,13 +385,15 @@ export default function AdminUsers() {
           <p className="page-subtitle sm:ml-[60px]">
             {permissions.isAdmin
               ? "Кто работает в компании: добавляйте людей, задавайте PIN, должность, роль и точки"
-              : "Добавляйте людей и задавайте им PIN и должность. Админов и других руководителей меняет администратор"}
+              : permissions.canManageUsers
+                ? "Добавляйте людей и задавайте им PIN и должность. Админов и других руководителей меняет администратор"
+                : "Ваши сотрудники: откройте кабинет, чтобы посмотреть сайт от их имени"}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 ${permissions.canManageUsers ? "lg:grid-cols-2" : ""} gap-6`}>
           {/* Форма добавления пользователя */}
-          <div className="content-panel">
+          {permissions.canManageUsers && <div className="content-panel">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
               Добавить сотрудника
@@ -520,7 +527,7 @@ export default function AdminUsers() {
                 </Button>
               </form>
             </Form>
-          </div>
+          </div>}
 
           {/* Список сотрудников */}
           <div className="content-panel">
@@ -681,6 +688,19 @@ export default function AdminUsers() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-1">
+                          {u.canImpersonate && !user.impersonation && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={impersonateMutation.isPending}
+                              onClick={() => impersonateMutation.mutate(u.id)}
+                              aria-label={`Войти как сотрудник: ${label}`}
+                              title="Посмотреть кабинет сотрудника без изменения данных"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" aria-hidden />
+                              {impersonateMutation.isPending && impersonateMutation.variables === u.id ? "Открываем…" : "Войти"}
+                            </Button>
+                          )}
                           {!u.isAdmin && canEditUser(u) && (
                             <Button
                               variant="ghost"

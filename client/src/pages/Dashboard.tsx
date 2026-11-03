@@ -507,7 +507,7 @@ export default function Dashboard() {
           isTaskVisibleToday(t),
       ).length
     : 0;
-  useAppBadge(loadingTasks || tasksError ? null : ownOpenToday);
+  useAppBadge(user?.impersonation || loadingTasks || tasksError ? null : ownOpenToday);
 
   const toggleTaskComplete = async (taskId: number, e?: React.MouseEvent, comment?: string) => {
     if (e) {

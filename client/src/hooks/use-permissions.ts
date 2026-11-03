@@ -28,6 +28,7 @@ export function usePermissions() {
     roleName: access?.roleName ?? "Сотрудник",
     canManageTasks: Boolean(access?.manageTasks),
     canManageUsers: Boolean(access?.manageUsers),
+    canViewUsers: Boolean(access) && (isAdmin || access!.manageUsers || (access!.manageTasks && access!.taskScope !== null)),
     canVerify: Boolean(access?.verifyTasks),
     canViewReports: Boolean(access?.viewReports),
     /** Ведёт задачи всей компании, как админ (фильтр по людям, «Дублировать»). */
