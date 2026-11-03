@@ -12,6 +12,8 @@ type SearchableTask = {
   title?: string | null;
   description?: string | null;
   category?: string | null;
+  /** Подзадачи чек-листа: задача находится и по названию пункта. */
+  checklist?: { title?: string | null }[] | null;
 };
 
 /**
@@ -31,6 +33,7 @@ export function matchTaskBySearch(
     task.description,
     task.category,
     workerName,
+    ...(task.checklist ?? []).map((item) => item?.title),
   ]
     .filter(Boolean)
     .join(" ")

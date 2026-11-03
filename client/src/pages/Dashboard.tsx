@@ -159,6 +159,8 @@ export default function Dashboard() {
   const wesetupConfig = useWesetupConfiguration();
   const wesetupEnabled = !!wesetupConfig.data?.wesetupConfigured;
   const [searchQuery, setSearchQuery] = useState("");
+  // У сотрудника поиск открывается кнопкой в шапке, чтобы не занимать экран.
+  const [searchOpen, setSearchOpen] = useState(false);
   // Таб «Мои задачи» / «Общие задачи смены» / «Все».
   // - personal: задачи лично сотруднику (закрепленные за ним)
   // - shared:   общие журналы смены (приёмки, бракераж, жалобы) —
@@ -380,6 +382,7 @@ export default function Dashboard() {
         title: task.title,
         description: (task as { description?: string | null }).description,
         category: (task as { category?: string | null }).category,
+        checklist: (task as { checklist?: { title?: string | null }[] | null }).checklist,
       },
       getUserName(task.workerId),
       searchQuery,
@@ -390,6 +393,9 @@ export default function Dashboard() {
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
+  // Строка «осталось N из M» у сотрудника не зависит от поиска.
+  const dayTotal = scopeFilteredTasks.length;
+  const dayDone = scopeFilteredTasks.filter(t => t.isCompleted).length;
 
   // Discriminator «это задача на проверку» — для split'а внутри
   // активной секции GroupedTaskList. См. prop `isVerifyTask` там.
@@ -413,6 +419,7 @@ export default function Dashboard() {
   // N (новая задача) — во всём кабинете, в CabinetFrame.
   useKeyboardShortcuts({
     onFocusSearch: () => {
+      setSearchOpen(true);
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
     },
@@ -720,7 +727,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="app-header relative">
         <div className="app-header-content">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Menu button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -731,15 +738,15 @@ export default function Dashboard() {
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
-            {/* Refresh button */}
-            <button
+            {/* Refresh button — сотруднику не нужен: список обновляется сам при возврате в приложение. */}
+            {!simple && <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="header-button"
               aria-label="Обновить"
             >
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
+            </button>}
 
             {/* Title */}
             <div className="min-w-0">
@@ -750,6 +757,22 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
+          {simple && tasks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
+                else setSearchOpen(true);
+              }}
+              className="header-button ml-auto mr-2"
+              aria-label={searchOpen ? "Закрыть поиск" : "Поиск задач"}
+              aria-expanded={searchOpen}
+              data-testid="worker-search-toggle"
+            >
+              {searchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+            </button>
+          )}
 
           {/* Bonus balance for workers — была <div onClick>, что
               недоступно с клавиатуры и не объявляется screen-reader'ом
@@ -863,8 +886,8 @@ export default function Dashboard() {
         {/* Поиск задач — поднят на самый верх (по запросу владельца
             2026-05-05). Раньше прятался ниже фильтров — приходилось
             скроллить чтобы найти. Теперь сразу под header'ом. */}
-        {/* Сотруднику поиск нужен только при длинном списке. */}
-        {tasks.length >= (simple ? 12 : 1) ? (
+        {/* Сотруднику поиск — по кнопке в шапке; ищет и по подзадачам. */}
+        {tasks.length >= 1 && (!simple || searchOpen) ? (
           <div className="search-top">
             <Search className="search-top-icon" />
             <Input
@@ -874,6 +897,7 @@ export default function Dashboard() {
               placeholder="Найти задачу…"
               aria-label="Поиск задач"
               className="search-top-input"
+              autoFocus={simple}
             />
             {searchQuery ? (
               <button
@@ -898,18 +922,18 @@ export default function Dashboard() {
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
             и баланс премии. Заменяет минималистичный progress-card. */}
-        {simple && totalCount > 0 && (
+        {simple && dayTotal > 0 && (
           <div className="worker-today" aria-label="Сегодня">
             <div className="worker-today-row">
               <h2 className="worker-today-title">
                 {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
               </h2>
               <span className="worker-today-count">
-                {isAllCompleted ? "Всё сделано" : `Осталось ${totalCount - completedCount} из ${totalCount}`}
+                {dayDone === dayTotal ? "Всё сделано" : `Осталось ${dayTotal - dayDone} из ${dayTotal}`}
               </span>
             </div>
-            <div className="worker-today-bar" role="progressbar" aria-valuemin={0} aria-valuemax={totalCount} aria-valuenow={completedCount} aria-label="Сделано за сегодня">
-              <span style={{ transform: `scaleX(${progressPercent / 100})` }} />
+            <div className="worker-today-bar" role="progressbar" aria-valuemin={0} aria-valuemax={dayTotal} aria-valuenow={dayDone} aria-label="Сделано за сегодня">
+              <span style={{ transform: `scaleX(${dayDone / dayTotal})` }} />
             </div>
           </div>
         )}

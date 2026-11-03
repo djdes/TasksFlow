@@ -176,6 +176,7 @@
 .worker-progress { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .worker-progress-track { width: 56px; height: 5px; border-radius: 4px; background: hsl(var(--muted)); overflow: hidden; }
 .worker-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, hsl(152 62% 46%), hsl(160 72% 36%)); transform-origin: left; transition: transform 500ms var(--ease-settle); }
+.bonus-badge-text { white-space: nowrap; }
 /* Простой экран сотрудника: дата и «осталось N из M» одной строкой вместо сводки. */
 .worker-today { display: grid; gap: 10px; margin-bottom: 14px; padding: 16px 18px; border: 1px solid hsl(var(--border)); border-radius: 20px; background: hsl(var(--card)); box-shadow: var(--workspace-shadow); }
 .worker-today-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -253,7 +254,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .page-screen .page-icon { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); box-shadow: none; border-radius: 14px; }
 .page-screen .content-panel { background: hsl(var(--card)); box-shadow: var(--workspace-shadow); border-color: hsl(var(--border)); border-radius: 20px; }
 .page-screen :is(input,textarea) { transition: border-color 150ms, box-shadow 150ms; }
-.task-detail-header { background: hsl(var(--primary)); }
+.task-detail-header { background: transparent; }
 .task-detail-header [id] { text-align: left; }
 .task-detail-header p { line-height: 1.6; }
 .app-layout :is(button,a,summary):focus-visible, .page-screen :is(button,a):focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; }

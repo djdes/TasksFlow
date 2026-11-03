@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, MessageSquare, CalendarClock, AlertTriangle, CloudOff } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff } from "lucide-react";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
@@ -360,13 +360,13 @@ export function TaskViewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 border-0">
         {/* Header with gradient */}
-        <div className="task-detail-header bg-gradient-to-r from-primary to-primary/90 text-white px-5 py-4">
+        <div className="task-detail-header px-4 pt-5 pb-0">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white pr-8">
+            <DialogTitle className="text-xl font-bold text-foreground pr-8 leading-snug">
               {currentTask.title}
             </DialogTitle>
             {(currentTask as any).description ? (
-              <DialogDescription className="text-white/80 text-sm mt-1">
+              <DialogDescription className="text-muted-foreground text-[0.9375rem] mt-1.5">
                 {(currentTask as any).description}
               </DialogDescription>
             ) : (
@@ -376,19 +376,19 @@ export function TaskViewDialog({
           </DialogHeader>
 
           {/* Бейджи в шапке: премия и срок */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">
             {hasPrice && (
-              <div className="inline-flex items-center gap-1.5 bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-                <Coins className="w-4 h-4 text-yellow-300" />
+              <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-sm font-semibold">
+                <Coins className="w-4 h-4" />
                 <span>+{(currentTask as any).price} ₽</span>
               </div>
             )}
             {dueStatus.kind !== "none" && (
               <div
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold ${
                   dueStatus.kind === "overdue"
-                    ? "bg-rose-500/90 text-white"
-                    : "bg-white/20 text-white"
+                    ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                    : "bg-muted text-muted-foreground"
                 }`}
                 data-testid="dialog-due-badge"
               >
@@ -413,30 +413,25 @@ export function TaskViewDialog({
             <button
               type="button"
               onClick={() => setIsExamplePhotoFullscreen(true)}
-              className="flex items-center gap-2 w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:border-blue-400/30"
+              className="flex items-center gap-2 w-full px-4 py-3 bg-muted/60 hover:bg-muted rounded-xl transition-colors"
             >
-              <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-200">Посмотреть пример фото</span>
+              <ImageIcon className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium text-foreground">Посмотреть пример фото</span>
             </button>
           )}
 
           {/* Photo upload section — скрываем, если у задачи есть чек-лист
               (там фото идёт по каждому пункту отдельно). */}
           {!hasChecklist && (currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-2xl p-4 border border-orange-200/60 dark:from-orange-500/12 dark:to-amber-500/8 dark:border-orange-400/25">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center dark:from-orange-500/30 dark:to-amber-500/20">
-                    <Camera className="w-4 h-4 text-orange-600 dark:text-orange-300" />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">Фото результата</span>
-                </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-foreground">Фото результата</span>
                 {photoUrls.length === 0 ? (
-                  <span className="text-xs text-orange-600 font-semibold bg-orange-100 px-2.5 py-1 rounded-full dark:bg-orange-500/20 dark:text-orange-300">обязательно</span>
+                  <span className="text-xs text-muted-foreground">нужно для завершения</span>
                 ) : (
-                  <span className="text-xs text-emerald-600 font-semibold bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1 dark:text-emerald-300">
                     <Check className="w-3 h-3" />
-                    {photoUrls.length}/10
+                    {photoUrls.length} из 10
                   </span>
                 )}
               </div>
@@ -462,7 +457,7 @@ export function TaskViewDialog({
                         alt={`Фото ${index + 1}`}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover rounded-xl border-2 border-emerald-400 cursor-pointer hover:opacity-95 transition-all shadow-sm"
+                        className="w-full h-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity"
                         onClick={() => {
                           setFullscreenPhotoIndex(index);
                           setIsPhotoFullscreen(true);
@@ -498,7 +493,7 @@ export function TaskViewDialog({
                   />
                   <label
                     htmlFor="photo-upload"
-                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-orange-300 bg-white/80 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-all active:scale-[0.99] dark:border-orange-400/40 dark:bg-white/5 dark:hover:border-orange-300/60 dark:hover:bg-orange-500/10`}
+                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-border bg-muted/40 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors active:scale-[0.99]`}
                   >
                     {preview ? (
                       <div className="relative w-full h-full">
@@ -515,8 +510,8 @@ export function TaskViewDialog({
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <div className={`${photoUrls.length > 0 ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center dark:from-orange-500/25 dark:to-amber-500/15`}>
-                          <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-orange-500 dark:text-orange-300`} />
+                        <div className={`${photoUrls.length > 0 ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-primary/10 flex items-center justify-center`}>
+                          <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-primary`} />
                         </div>
                         <div className="text-left">
                           <p className="text-sm font-semibold text-foreground">
@@ -536,14 +531,9 @@ export function TaskViewDialog({
 
           {/* Чек-лист (подзадачи): пункт с фото закрывается фото, без фото — касанием */}
           {hasChecklist && (
-            <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl p-4 border border-primary/15">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">Подзадачи</span>
-                </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-foreground">Подзадачи</span>
                 <span
                   className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                     allChecklistDone
@@ -691,23 +681,17 @@ export function TaskViewDialog({
 
           {/* User comment field */}
           {canComplete && !currentTask.isCompleted && (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-4 border border-slate-200/60 dark:from-white/5 dark:to-white/[0.02] dark:border-white/10">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center dark:from-primary/30 dark:to-primary/15">
-                  <MessageSquare className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-foreground">Комментарий</span>
-                  <span className="text-xs text-muted-foreground ml-2">необязательно</span>
-                </div>
-              </div>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-foreground">
+                Комментарий <span className="font-normal text-muted-foreground">— если нужно</span>
+              </span>
               <Textarea
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}
                 placeholder="Напишите комментарий к задаче..."
-                className="min-h-[100px] resize-none bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 rounded-xl text-sm placeholder:text-slate-400 dark:bg-[#161c33] dark:border-white/10 dark:text-foreground dark:placeholder:text-[#6b7395]"
+                className="min-h-[76px] resize-none rounded-xl text-[0.9375rem]"
               />
-            </div>
+            </label>
           )}
 
           {/* Action buttons */}
@@ -722,7 +706,7 @@ export function TaskViewDialog({
                 // Сотрудник никогда не покидает TasksFlow — П-1 спека.
                 <button
                   onClick={() => onComplete()}
-                  className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-slate-100 to-slate-50 hover:from-slate-200 hover:to-slate-100 text-foreground rounded-2xl font-semibold transition-all border border-slate-200 shadow-sm dark:from-white/8 dark:to-white/5 dark:hover:from-white/12 dark:hover:to-white/8 dark:border-white/10"
+                  className="flex items-center justify-center gap-2.5 w-full h-14 bg-muted hover:bg-muted/70 text-foreground rounded-2xl font-semibold transition-colors"
                 >
                   <RotateCcw className="w-5 h-5" />
                   {Boolean((currentTask as { journalLink?: string | null }).journalLink)
@@ -736,22 +720,20 @@ export function TaskViewDialog({
                     (currentTask.requiresPhoto && photoUrls.length === 0) ||
                     (hasChecklist && !allChecklistDone)
                   }
-                  className="flex items-center justify-center gap-2.5 w-full h-14 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white rounded-2xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/30 active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white text-base rounded-2xl font-semibold transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed active:scale-[0.98]"
                 >
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                    <Check className="w-4 h-4" />
-                  </div>
+                  <Check className="w-5 h-5" strokeWidth={2.5} />
                   {hasChecklist && !allChecklistDone
                     ? `Закройте пункты (${checklistDoneCount}/${checklist.length})`
                     : currentTask.requiresPhoto && photoUrls.length === 0
-                      ? "Сначала загрузите фото"
+                      ? "Сначала добавьте фото"
                       : "Завершить задачу"}
                 </button>
               )
             )}
             <button
               onClick={() => onOpenChange(false)}
-              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-2xl font-medium transition-all dark:hover:bg-white/5"
+              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-muted rounded-2xl font-medium transition-colors"
             >
               Закрыть
             </button>

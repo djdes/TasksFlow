@@ -126,3 +126,11 @@ describe("matchTaskBySearch — multi-field combined", () => {
     ).toBe(true);
   });
 });
+
+describe("matchTaskBySearch — подзадачи", () => {
+  it("находит задачу по названию пункта чек-листа", () => {
+    const task = { title: "Витрины: чистота и раскладка", checklist: [{ title: "Протереть стекло" }, { title: "Ценники" }] };
+    expect(matchTaskBySearch(task, null, "ценник")).toBe(true);
+    expect(matchTaskBySearch(task, null, "касса")).toBe(false);
+  });
+});
