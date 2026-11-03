@@ -39,7 +39,6 @@ import { FeedbackToggle } from "@/components/FeedbackToggle";
 import { cabinetNav } from "@/lib/cabinet-nav";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
-import { StreakAchievement } from "@/components/StreakAchievement";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
 import { MotionToggle } from "@/components/MotionToggle";
@@ -124,6 +123,9 @@ export default function Dashboard() {
   // Роль «Ставит задачи» видит главную как админ: все задачи, фильтры по
   // людям и точкам. Руководитель из WeSetup — свои задачи, как раньше.
   const { canManageTasks, canVerify, tasksCompanyWide } = permissions;
+  // Сотрудник (не ставит задачи) видит простой экран: «сегодня» одной
+  // строкой и список дел — без сводки, фильтров, вкладок и стрика.
+  const simple = !canManageTasks;
   const { data: locations = [] } = useLocations(tasksCompanyWide);
   const { data: tasks = [], dataUpdatedAt: tasksUpdatedAt, isLoading: loadingTasks, isError: tasksError, refetch: retryTasks } = useTasks();
   const isMobile = useIsMobile();
@@ -364,7 +366,7 @@ export default function Dashboard() {
     },
     { personal: 0, shared: 0 }
   );
-  const hasSharedTasks = scopeCounts.shared > 0;
+  const hasSharedTasks = !simple && scopeCounts.shared > 0;
 
   // Применяем scope-фильтр (только если табы реально показываются).
   const scopeFilteredTasks =
@@ -583,8 +585,8 @@ export default function Dashboard() {
   };
 
   // ── Фильтры: одни и те же контролы для строки (desktop) и шторки (mobile).
-  const showFilterSelects = tasksCompanyWide || categories.length > 0;
-  const showChips = tasks.length >= 4;
+  const showFilterSelects = !simple && (tasksCompanyWide || categories.length > 0);
+  const showChips = !simple && tasks.length >= 4;
   const showFilterControls = showFilterSelects || showChips;
   const activeFilterCount =
     (filterByCategory !== "all" ? 1 : 0) +
@@ -861,7 +863,8 @@ export default function Dashboard() {
         {/* Поиск задач — поднят на самый верх (по запросу владельца
             2026-05-05). Раньше прятался ниже фильтров — приходилось
             скроллить чтобы найти. Теперь сразу под header'ом. */}
-        {tasks.length >= 1 ? (
+        {/* Сотруднику поиск нужен только при длинном списке. */}
+        {tasks.length >= (simple ? 12 : 1) ? (
           <div className="search-top">
             <Search className="search-top-icon" />
             <Input
@@ -895,7 +898,23 @@ export default function Dashboard() {
         {/* Hero stats: то, что видит сотрудник в первую очередь —
             сколько ещё надо сделать, сколько закрыто, кто опередил,
             и баланс премии. Заменяет минималистичный progress-card. */}
-        {totalCount > 0 && (
+        {simple && totalCount > 0 && (
+          <div className="worker-today" aria-label="Сегодня">
+            <div className="worker-today-row">
+              <h2 className="worker-today-title">
+                {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+              </h2>
+              <span className="worker-today-count">
+                {isAllCompleted ? "Всё сделано" : `Осталось ${totalCount - completedCount} из ${totalCount}`}
+              </span>
+            </div>
+            <div className="worker-today-bar" role="progressbar" aria-valuemin={0} aria-valuemax={totalCount} aria-valuenow={completedCount} aria-label="Сделано за сегодня">
+              <span style={{ transform: `scaleX(${progressPercent / 100})` }} />
+            </div>
+          </div>
+        )}
+
+        {!simple && totalCount > 0 && (
           <StatHero
             isAdmin={tasksCompanyWide}
             totalCount={totalCount}
@@ -940,7 +959,7 @@ export default function Dashboard() {
               <div className="all-done-text">
                 <div className="all-done-title">Молодец!</div>
                 <div className="all-done-subtitle">
-                  Все задачи на сегодня закрыты. Отдыхай или подскажи коллеге.
+                  На сегодня всё сделано.
                 </div>
               </div>
             </motion.div>
@@ -1117,6 +1136,7 @@ export default function Dashboard() {
                 ((t as { claimedByWorkerId?: number | null }).claimedByWorkerId ?? null) !== null
             )}
             isAdmin={canManageTasks}
+            simple={simple}
             groupByWorker={canManageTasks && groupByWorker}
             onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
             getUserInitials={getUserInitials}
@@ -1174,27 +1194,8 @@ export default function Dashboard() {
       {/* FAB-кнопки в Portal — иначе #root scroll-контейнер «прибивает»
           fixed-элементы к концу контента. См. Portal.tsx комментарий. */}
       <Portal>
-        {/* Help-FAB для воркеров — мини-кнопка «?» в правом нижнем
-            углу. Бабушки часто теряются в незнакомом интерфейсе и
-            ищут где спросить — здесь явный ярлык, ведёт на /help.
-            Для админа/руководителя — не показываем, чтобы не путать
-            с FAB «создать задачу». */}
-        {!canManageTasks && (
-          <motion.button
-            onClick={() => setLocation("/help")}
-            className="help-fab"
-            initial={reduced ? false : { scale: .9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={reduced ? { duration: 0 } : { type: "spring", duration: .3, bounce: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: reduced ? 1 : .96 }}
-            aria-label="Помощь"
-            title="Помощь — как пользоваться"
-          >
-            <HelpCircle className="w-6 h-6" />
-          </motion.button>
-        )}
-
+        {/* Помощь у сотрудника — в меню и внизу страницы: плавающая «?»
+            закрывала последнюю задачу. */}
         {/* FAB для admin/manager — spring entrance, pulse-glow,
             tap-springback. Один CTA-якорь для создания задачи.
             Руководитель сможет назначать только своим подчинённым
@@ -1312,9 +1313,6 @@ export default function Dashboard() {
       {/* Streak achievement modal — открывается один раз при достижении
           milestone (7/14/30/60/100/200 дней). Показ воркеру независимо
           от наличия задач сегодня. */}
-      {!canManageTasks ? (
-        <StreakAchievement userId={user?.id ?? null} streakDays={streakDays} />
-      ) : null}
 
       {/* Onboarding tour — 4 шага для впервые-залогиненного воркера.
           После dismiss флаг tf_onboarded_v1=true в localStorage,

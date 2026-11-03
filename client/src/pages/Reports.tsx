@@ -77,7 +77,7 @@ export default function Reports() {
   const search = useSearch();
   const { user, isLoading: authLoading } = useAuth();
   const permissions = usePermissions();
-  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(search).get("tab") === "summary" ? "summary" : "day"));
+  const [tabState, setTab] = useState<Tab>(() => (new URLSearchParams(search).get("tab") === "summary" ? "summary" : "day"));
   const [day, setDay] = useState<string | null>(null);
   const [workerId, setWorkerId] = useState<number | null>(null);
   const [locationId, setLocationId] = useState<number | null>(null);
@@ -88,11 +88,14 @@ export default function Reports() {
   // историю всей компании», руководитель из WeSetup (shared/roles.ts reportScope).
   const reportScope = permissions.access?.reportScope;
   const canPickPeople = !!user && (reportScope === null || (Array.isArray(reportScope) && reportScope.length > 1));
+  // Сотрудник видит только себя: один журнал дня без сводки, вкладок и своего имени.
+  const ownOnly = !!user && !user.isAdmin && !canPickPeople;
   const { data: users = [] } = useUsers();
   const { data: locations = [] } = useLocations(canPickPeople);
   const history = useHistoryDay(day, workerId, locationId);
   const today = history.data?.today ?? null;
   const range = today ? periodRange(period, today) : null;
+  const tab: Tab = ownOnly ? "day" : tabState;
   const summary = useReportSummary(tab === "summary" ? range : null, workerId, locationId);
 
   const names = useMemo(() => new Map(users.map((u) => [u.id, u.name || u.phone || `#${u.id}`])), [users]);
@@ -119,11 +122,11 @@ export default function Reports() {
           </div>
           <div>
             <h1 className="page-title">{user.isAdmin || canPickPeople ? "История и отчёты" : "Моя история"}</h1>
-            <p className="page-subtitle">Кто что сделал — с фото, по дням и по людям{tzLabel ? ` · время: ${tzLabel}` : ""}</p>
+            <p className="page-subtitle">{ownOnly ? "Что вы сделали — по дням" : <>Кто что сделал — с фото, по дням и по людям{tzLabel ? ` · время: ${tzLabel}` : ""}</>}</p>
           </div>
         </div>
 
-        <div className="reports-toolbar">
+        {!ownOnly && <div className="reports-toolbar">
           <div className="reports-tabs" role="tablist" aria-label="Раздел">
             {([["day", "Журнал дня"], ["summary", "Сводка"]] as const).map(([key, title]) => (
               <button
@@ -175,7 +178,7 @@ export default function Reports() {
               </select>
             </label>
           )}
-        </div>
+        </div>}
 
         {tab === "day" ? (
           <section className="content-panel reports-panel" aria-labelledby="reports-day-title" aria-busy={history.isFetching || undefined}>
@@ -237,6 +240,7 @@ export default function Reports() {
                       <PersonDay
                         key={g.workerId}
                         group={g}
+                        bare={ownOnly}
                         onPhoto={(photos, index) => setViewer({ photos, index })}
                       />
                     ))}
@@ -294,10 +298,10 @@ function countStatuses(items: HistoryItem[]) {
   return c;
 }
 
-function PersonDay({ group, onPhoto }: { group: Group; onPhoto: (photos: ViewerPhoto[], index: number) => void }) {
+function PersonDay({ group, bare = false, onPhoto }: { group: Group; bare?: boolean; onPhoto: (photos: ViewerPhoto[], index: number) => void }) {
   return (
     <article className="reports-person-day" aria-label={group.name}>
-      <header>
+      {!bare && <header>
         <span className="reports-avatar" data-tone={avatarTone(group.workerId) ?? undefined} aria-hidden="true">
           {getUserInitials({ name: group.name })}
         </span>
@@ -307,7 +311,7 @@ function PersonDay({ group, onPhoto }: { group: Group; onPhoto: (photos: ViewerP
             {group.done} из {group.total}
           </span>
         )}
-      </header>
+      </header>}
       <ul>
         {group.items.map((it) => {
           const st = STATUS[it.status];

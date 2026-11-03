@@ -89,6 +89,9 @@ type Props = {
    *  выполнить уже нельзя — показываем как «архив», без действий. */
   claimedByOthersTasks?: Task[];
   isAdmin: boolean;
+  /** Простой вид сотрудника: плоский список без разбивки по датам,
+   *  «Сделать» / «Сделано», без категорий на карточке. */
+  simple?: boolean;
   /** Группировка верхнего уровня по сотруднику (вместо по дате).
    *  Полезно админу/руководителю чтобы сразу видеть кто что не сделал.
    *  Воркеру никогда не показываем этот режим. */
@@ -142,6 +145,7 @@ export function GroupedTaskList(props: Props) {
     completedTasks,
     claimedByOthersTasks = [],
     isAdmin,
+    simple = false,
     groupByWorker = false,
     onToggleGroupByWorker,
     getUserInitials,
@@ -370,7 +374,7 @@ export function GroupedTaskList(props: Props) {
                   <span>+{journalBonus} ₽</span>
                 </div>
               )}
-              {categoryValue && (
+              {categoryValue && !simple && (
                 <div className="task-badge category">
                   <Tag className="w-3.5 h-3.5" />
                   <span>{categoryValue}</span>
@@ -513,18 +517,21 @@ export function GroupedTaskList(props: Props) {
 
   function renderDay(
     day: DayGroup,
-    cardRenderer: (task: Task) => JSX.Element = renderTaskCard
+    cardRenderer: (task: Task) => JSX.Element = renderTaskCard,
+    withHeader = true
   ) {
     return (
       <div key={day.dayKey} className="group-day">
-        <div
-          className={`group-day-header ${
-            day.isToday ? "group-day-header--today" : ""
-          }`}
-        >
-          <span className="group-day-label">{day.dayLabel}</span>
-          <span className="group-day-count">{day.tasks.length}</span>
-        </div>
+        {withHeader ? (
+          <div
+            className={`group-day-header ${
+              day.isToday ? "group-day-header--today" : ""
+            }`}
+          >
+            <span className="group-day-label">{day.dayLabel}</span>
+            <span className="group-day-count">{day.tasks.length}</span>
+          </div>
+        ) : null}
         <motion.div
           className="task-list"
           variants={reduced ? undefined : dayContainer}
@@ -547,6 +554,14 @@ export function GroupedTaskList(props: Props) {
         </motion.div>
       </div>
     );
+  }
+
+  /** Простой вид: те же карточки и анимации, но без шапок дней. */
+  function renderFlat(
+    list: Task[],
+    cardRenderer: (task: Task) => JSX.Element = renderTaskCard
+  ) {
+    return renderDay({ dayKey: "flat", dayLabel: "", isToday: true, tasks: list } as DayGroup, cardRenderer, false);
   }
 
   /**
@@ -670,6 +685,12 @@ export function GroupedTaskList(props: Props) {
    */
   function renderActiveTasks(tasksSubset: Task[]) {
     if (tasksSubset.length === 0) return null;
+    const renderPart = (list: Task[]) => simple
+      ? renderFlat(list)
+      : <>{groupTasksByDate(list, "createdAt", undefined, activeTaskDate()).map((g) => renderYearGroup(g))}</>;
+    if (simple && (!isVerifyTask || !tasksSubset.some(isVerifyTask) || tasksSubset.every(isVerifyTask))) {
+      return renderPart(tasksSubset);
+    }
     if (!isVerifyTask) {
       const groups = groupTasksByDate(tasksSubset, "createdAt", undefined, activeTaskDate());
       return <>{groups.map((g) => renderYearGroup(g))}</>;
@@ -690,7 +711,7 @@ export function GroupedTaskList(props: Props) {
             <span className="active-split-label">Что сделать</span>
             <span className="active-split-count">{todoTasks.length}</span>
           </div>
-          {todoGroups.map((g) => renderYearGroup(g))}
+          {simple ? renderPart(todoTasks) : todoGroups.map((g) => renderYearGroup(g))}
         </div>
         <div>
           <div className="active-split-header active-split-header--verify">
@@ -699,7 +720,7 @@ export function GroupedTaskList(props: Props) {
               {verifyTasks.length}
             </span>
           </div>
-          {verifyGroups.map((g) => renderYearGroup(g))}
+          {simple ? renderPart(verifyTasks) : verifyGroups.map((g) => renderYearGroup(g))}
         </div>
       </div>
     );
@@ -789,7 +810,7 @@ export function GroupedTaskList(props: Props) {
     <div className="grouped-task-list">
       <section className="grouped-section">
         <div className="grouped-section-header grouped-section-header--toolbar">
-          <h2 className="grouped-section-title">Активные</h2>
+          <h2 className="grouped-section-title">{simple ? "Сделать" : "Активные"}</h2>
           <span className="grouped-section-count">
             {activeTasks.length}
           </span>
@@ -810,7 +831,7 @@ export function GroupedTaskList(props: Props) {
         </div>
         {showActiveEmpty && !groupByWorker ? (
           <div className="grouped-empty">
-            Все задачи на сегодня закрыты — респект!
+            {simple ? "Ничего не осталось." : "Все задачи на сегодня закрыты — респект!"}
           </div>
         ) : groupByWorker ? (
           renderActiveByWorker()
@@ -830,7 +851,7 @@ export function GroupedTaskList(props: Props) {
               completedOpen ? "" : "group-chevron--collapsed"
             }`}
           />
-          <h2 className="grouped-section-title">Выполненные</h2>
+          <h2 className="grouped-section-title">{simple ? "Сделано" : "Выполненные"}</h2>
           <span className="grouped-section-count">
             {completedTasks.length}
           </span>
@@ -849,6 +870,8 @@ export function GroupedTaskList(props: Props) {
                 <div className="grouped-empty">
                   Выполненных пока нет — будут появляться здесь по дням.
                 </div>
+              ) : simple ? (
+                renderFlat(completedTasks)
               ) : (
                 completedGroups.map((g) => renderYearGroup(g, (task) => renderTaskCard(task, true)))
               )}
@@ -890,6 +913,8 @@ export function GroupedTaskList(props: Props) {
                     Тут появятся задачи, которые забрал другой сотрудник
                     раньше тебя — премию получает первый.
                   </div>
+                ) : simple ? (
+                  renderFlat(claimedByOthersTasks, renderClaimedCard)
                 ) : (
                   claimedGroups.map((g) => renderYearGroup(g, renderClaimedCard))
                 )}

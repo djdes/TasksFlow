@@ -176,6 +176,15 @@
 .worker-progress { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .worker-progress-track { width: 56px; height: 5px; border-radius: 4px; background: hsl(var(--muted)); overflow: hidden; }
 .worker-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, hsl(152 62% 46%), hsl(160 72% 36%)); transform-origin: left; transition: transform 500ms var(--ease-settle); }
+/* Простой экран сотрудника: дата и «осталось N из M» одной строкой вместо сводки. */
+.worker-today { display: grid; gap: 10px; margin-bottom: 14px; padding: 16px 18px; border: 1px solid hsl(var(--border)); border-radius: 20px; background: hsl(var(--card)); box-shadow: var(--workspace-shadow); }
+.worker-today-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.worker-today-title { margin: 0; font-size: 1.0625rem; font-weight: 700; color: hsl(var(--foreground)); }
+.worker-today-title::first-letter { text-transform: uppercase; }
+.worker-today-count { font-size: .9375rem; font-weight: 600; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.worker-today-bar { height: 6px; border-radius: 6px; background: hsl(var(--muted)); overflow: hidden; }
+.worker-today-bar > span { display: block; height: 100%; border-radius: inherit; background: hsl(var(--primary)); transform-origin: left; transition: transform 500ms var(--ease-settle); }
+@media (prefers-reduced-motion: reduce) { .worker-today-bar > span { transition: none; } }
 .app-layout .worker-section-header { border-radius: 12px; transition: background-color 150ms var(--ease-settle); }
 @media (hover: hover) { .app-layout .worker-section-header:hover { background: hsl(var(--muted) / .45); } }
 .app-layout .worker-section-name { color: hsl(var(--foreground)); }
