@@ -1,3 +1,4 @@
+import "../lib/polyfills";
 import { hydrateRoot } from "react-dom/client";
 import { PublicApp } from "./App";
 import { matchRoute } from "./router";
