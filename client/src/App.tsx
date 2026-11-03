@@ -92,13 +92,21 @@ function UploadQueueRunner() {
   return null;
 }
 
+/** Текст ошибки сессии по коду: по нему видно, сеть это, лимит или сервер. */
+function sessionErrorText(status: number | null): string {
+  if (status === 429) return "Слишком много запросов с вашего адреса. Подождите несколько минут и повторите.";
+  if (status && status >= 500) return `Сервер ответил ошибкой (код ${status}). Повторите загрузку через минуту.`;
+  if (status && status >= 400) return `Не удалось проверить вход (код ${status}). Повторите загрузку.`;
+  return "Не удалось связаться с сервером. Проверьте интернет и повторите загрузку.";
+}
+
 function SessionReady({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isError, retry } = useAuth();
+  const { user, isLoading, isError, errorStatus, retry } = useAuth();
   // Ошибка на весь экран — только если сессию ещё ни разу не получили.
   // Сбой фонового перезапроса (возврат во вкладку, деплой с 502) не
   // должен размонтировать открытую форму вместе с введённым телефоном.
   const sessionLoadedOnce = (useQueryClient().getQueryState(["auth", "me"])?.dataUpdatedAt ?? 0) > 0;
-  if (isError && !user && !sessionLoadedOnce) return <div className="page-container py-12"><QueryError onRetry={retry} message="Не удалось связаться с сервером. Повторите загрузку." /></div>;
+  if (isError && !user && !sessionLoadedOnce) return <div className="page-container py-12"><QueryError onRetry={retry} message={sessionErrorText(errorStatus)} /></div>;
   return isLoading ? <PageSkeleton /> : children;
 }
 

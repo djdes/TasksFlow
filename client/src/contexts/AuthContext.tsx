@@ -36,6 +36,8 @@ interface AuthContextType {
   user: User;
   isLoading: boolean;
   isError: boolean;
+  /** HTTP-код последнего сбоя запроса сессии (0 — нет связи), для понятного текста ошибки. */
+  errorStatus: number | null;
   retry: () => void;
   login: (phone: string, pin?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Получаем текущего пользователя
-  const { data: user = null, isLoading, isError, refetch } = useQuery<User>({
+  const { data: user = null, isLoading, isError, error, refetch } = useQuery<User>({
     queryKey: ["auth", "me"],
     queryFn: async ({ signal }) => {
       const response = await fetchOrFriendlyError(api.auth.me.path, {
@@ -139,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isError,
+        errorStatus: error instanceof ApiError ? error.status : error ? 0 : null,
         retry: () => { void refetch(); },
         login,
         logout,
