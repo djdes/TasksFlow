@@ -419,3 +419,19 @@ describe("getQueryFn — on401 поведение", () => {
     ).rejects.toBeInstanceOf(ApiError);
   });
 });
+
+describe("isTransientApiError — когда переспрашивать сессию", () => {
+  it("нет сети, 429 и 5xx (рестарт сервера) — временные", async () => {
+    const { ApiError, isTransientApiError } = await import("../client/src/lib/queryClient");
+    expect(isTransientApiError(new ApiError("нет связи", 0))).toBe(true);
+    expect(isTransientApiError(new ApiError("много запросов", 429))).toBe(true);
+    expect(isTransientApiError(new ApiError("bad gateway", 502))).toBe(true);
+    expect(isTransientApiError(new ApiError("ошибка", 500))).toBe(true);
+  });
+  it("4xx и чужие ошибки — сразу, без повтора", async () => {
+    const { ApiError, isTransientApiError } = await import("../client/src/lib/queryClient");
+    expect(isTransientApiError(new ApiError("запрещено", 403))).toBe(false);
+    expect(isTransientApiError(new ApiError("не найдено", 404))).toBe(false);
+    expect(isTransientApiError(new Error("что-то"))).toBe(false);
+  });
+});

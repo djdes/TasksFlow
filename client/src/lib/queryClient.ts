@@ -12,6 +12,12 @@ export class ApiError extends Error {
   }
 }
 
+/** Сбой, который проходит сам: нет сети (0), перегрузка (429) или сервер 5xx. */
+export function isTransientApiError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  return error.status === 0 || error.status === 429 || error.status >= 500;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;

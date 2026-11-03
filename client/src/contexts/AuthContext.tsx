@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
-import { ApiError, apiRequest, fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
+import { ApiError, apiRequest, fetchOrFriendlyError, isTransientApiError, withTimeout } from "@/lib/queryClient";
 import { forgetThisDevice } from "@/lib/push";
 import { setAppBadge } from "@/lib/pwa";
 import type { UserAccess } from "@shared/roles";
@@ -64,10 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signal: withTimeout(signal, 30_000),
       });
       if (response.status === 401) return null;
-      if (!response.ok) throw new Error("Не удалось проверить сессию");
-      return response.json();
+      if (!response.ok) throw new ApiError("Не удалось проверить сессию", response.status);
+      // Вместо JSON может прийти страница-заглушка прокси во время перезапуска.
+      return response.json().catch(() => { throw new ApiError("Не удалось проверить сессию", 502); });
     },
-    retry: false,
+    // Сразу после входа страница перезагружается и спрашивает сессию. Если в
+    // этот момент сервер перезапускается (деплой, pm2 reload — несколько
+    // секунд 502) или сеть моргнула, раньше человек упирался в экран «Не
+    // удалось связаться с сервером». Временные сбои переспрашиваем под
+    // скелетоном: 1 + 2 + 4 с; ответ «нет доступа» и прочие 4xx — сразу.
+    retry: (failureCount, error) => failureCount < 3 && isTransientApiError(error),
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
   });
 
   // Мутация для логина
