@@ -1540,3 +1540,138 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
   .impersonation-banner { flex-wrap: wrap; padding: 12px 16px; }
   .impersonation-banner > button { width: 100%; }
 }
+
+/* ===== Новая задача: разовая / регулярная, подписи — в placeholder ===== */
+/* minmax(0, 1fr): длинное имя или срок в одну строку не раздвигают форму шире экрана */
+.quick-task-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.quick-task-form > * { min-width: 0; }
+.task-kind-switch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
+  border-radius: 14px; background: hsl(var(--muted) / .7);
+}
+.task-kind-option {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
+  border-radius: 11px; font-size: 15px; font-weight: 600; color: hsl(var(--muted-foreground));
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.task-kind-option svg { width: 17px; height: 17px; }
+.task-kind-option:hover { color: hsl(var(--foreground)); }
+.task-kind-option[aria-checked="true"] { background: hsl(var(--card)); color: hsl(var(--primary)); box-shadow: 0 1px 3px rgb(11 16 36 / .12); }
+.dark .task-kind-option[aria-checked="true"] { background: hsl(var(--background)); }
+.task-kind-option:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.quick-task-title { font-size: 16px; font-weight: 500; }
+.quick-task-hint { margin-top: 6px; font-size: 12.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+.quick-task-hint--error { color: hsl(var(--destructive)); }
+
+/* Поле-кнопка: та же высота, рамка и фон, что у Input.things-input */
+.worker-picker { position: relative; }
+.worker-picker-trigger, .due-quick-field {
+  position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 14px;
+  border: 1px solid hsl(var(--input)); border-radius: 12px; background: hsl(var(--background));
+  font-size: 16px; text-align: left; color: hsl(var(--foreground));
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+@media (min-width: 768px) { .worker-picker-trigger, .due-quick-field { font-size: 14px; } }
+.worker-picker-trigger:focus-visible, .due-quick-field:focus-within { outline: none; border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / .2); }
+.worker-picker-trigger[data-state="open"] { border-color: hsl(var(--primary)); }
+.worker-picker-trigger--invalid { border-color: hsl(var(--destructive)); }
+.worker-picker-icon, .due-quick-icon { width: 18px; height: 18px; flex: none; color: hsl(var(--muted-foreground)); }
+.worker-picker-value, .due-quick-text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.worker-picker-value.is-placeholder, .due-quick-text.is-placeholder { color: hsl(var(--muted-foreground)); }
+.worker-picker-trigger { padding-right: 42px; }
+.worker-picker-chevron { position: absolute; top: 50%; right: 14px; width: 18px; height: 18px; margin-top: -9px; color: hsl(var(--muted-foreground)); transition: transform 160ms ease; }
+.worker-picker-trigger[data-state="open"] .worker-picker-chevron { transform: rotate(180deg); }
+.worker-picker.has-value .worker-picker-trigger { padding-right: 78px; }
+.worker-picker-clear, .due-quick-clear {
+  position: absolute; top: 50%; right: 40px; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin-top: -16px; border-radius: 999px; color: hsl(var(--muted-foreground));
+}
+.due-quick-clear { right: 8px; }
+.worker-picker-clear:hover, .due-quick-clear:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.worker-picker-clear svg, .due-quick-clear svg { width: 16px; height: 16px; }
+
+/* Не выше свободного места: «Готово» всегда на экране, прокручивается список */
+.worker-picker-panel {
+  display: flex; flex-direction: column; gap: 6px; min-width: 260px; max-width: min(520px, calc(100vw - 24px));
+  max-height: min(480px, calc(var(--radix-popover-content-available-height, 480px) - 8px));
+}
+.worker-picker-panel > * { flex: none; }
+.worker-picker-panel > .worker-picker-list { flex: 1 1 auto; min-height: 88px; }
+.worker-picker-search {
+  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px;
+  border-radius: 10px; background: hsl(var(--muted) / .7); color: hsl(var(--muted-foreground));
+}
+.worker-picker-search svg { width: 16px; height: 16px; flex: none; }
+.worker-picker-search input { flex: 1; min-width: 0; background: transparent; outline: none; font-size: 16px; color: hsl(var(--foreground)); }
+@media (min-width: 768px) { .worker-picker-search input { font-size: 14px; } }
+.worker-picker-tools { display: flex; align-items: center; gap: 4px; padding: 2px 4px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.worker-picker-tools > span { flex: 1; }
+.worker-picker-tools b { color: hsl(var(--primary)); font-weight: 650; }
+.worker-picker-tools button { min-height: 32px; padding: 4px 10px; border-radius: 999px; font-weight: 600; color: hsl(var(--primary)); }
+.worker-picker-tools button:hover:not(:disabled) { background: hsl(var(--primary) / .08); }
+.worker-picker-tools button:disabled { color: hsl(var(--muted-foreground)); opacity: .6; }
+.worker-picker-list { display: grid; align-content: start; gap: 2px; overflow-y: auto; overscroll-behavior: contain; }
+.worker-picker-row {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; border-radius: 10px;
+  text-align: left; font-size: 15px; color: hsl(var(--foreground));
+}
+.worker-picker-row:hover { background: hsl(var(--muted) / .6); }
+.worker-picker-row.is-checked { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+.worker-picker-row:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+.worker-picker-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.worker-picker-pos { margin-left: auto; flex: none; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.worker-picker-empty { padding: 16px 8px; text-align: center; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
+.worker-picker-done {
+  min-height: 44px; border-radius: 10px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+  font-size: 15px; font-weight: 600;
+}
+.worker-picker-done:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+/* «Устранить до»: невидимое поле даты поверх подписи открывает системный календарь */
+.due-quick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.due-quick-field.has-value .due-quick-icon { color: hsl(var(--primary)); }
+.due-quick-field.has-value { padding-right: 48px; }
+.due-quick-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.due-quick-input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.due-quick-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.due-quick-chip {
+  min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border));
+  background: hsl(var(--background)); font-size: 13.5px; font-weight: 500; color: hsl(var(--foreground));
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.due-quick-chip:hover { border-color: hsl(var(--primary) / .5); }
+.due-quick-chip[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.due-quick-chip:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+/* Фото проблемы / пример результата */
+.photo-slot-add {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; cursor: pointer;
+  border: 1px dashed hsl(var(--primary) / .45); border-radius: 12px; background: hsl(var(--primary) / .04);
+  color: hsl(var(--primary)); font-size: 15px; font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.photo-slot-add:hover { background: hsl(var(--primary) / .09); border-color: hsl(var(--primary)); }
+.photo-slot-add svg { width: 18px; height: 18px; flex: none; }
+.photo-slot-add small { margin-left: auto; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.photo-slot { display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid hsl(var(--border)); border-radius: 14px; }
+.photo-slot img { width: 64px; height: 64px; flex: none; object-fit: cover; border-radius: 10px; }
+.photo-slot-text { display: grid; gap: 2px; min-width: 0; flex: 1; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.photo-slot-text b { font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
+.photo-slot-remove { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; border-radius: 999px; color: hsl(var(--muted-foreground)); }
+.photo-slot-remove:hover { background: hsl(var(--destructive) / .1); color: hsl(var(--destructive)); }
+.photo-slot-remove svg { width: 18px; height: 18px; }
+
+/* «Ещё»: редкие настройки свёрнуты, в подписи — что уже задано */
+.quick-task-more { border: 1px solid hsl(var(--border) / .8); border-radius: 14px; }
+.quick-task-more-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 14px; text-align: left; border-radius: 14px; }
+.quick-task-more-toggle:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.quick-task-more-toggle > svg { width: 18px; height: 18px; flex: none; color: hsl(var(--muted-foreground)); transition: transform 160ms ease; }
+.quick-task-more-text { display: grid; flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
+.quick-task-more-text small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.quick-task-more-body { display: grid; gap: 14px; padding: 4px 14px 14px; }
+.quick-task-more-body[hidden] { display: none; }
+.quick-task-group { display: grid; gap: 8px; padding-top: 12px; border-top: 1px dashed hsl(var(--border)); }
+.quick-task-caption { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.quick-task-caption svg { width: 16px; height: 16px; }
+.quick-task-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-top: 4px; }
+.quick-task-actions .ui-button { min-height: 48px; }

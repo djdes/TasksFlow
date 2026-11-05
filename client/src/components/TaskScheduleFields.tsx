@@ -22,7 +22,7 @@ type ScheduleValues = {
  * начинается заново»), ниже — дни недели, число месяца, повтор и срок.
  * Срок делает задачу разовой: остальное при нём недоступно.
  */
-export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
+export function TaskScheduleFields({ form, allowDue = true }: { form: UseFormReturn<any>; allowDue?: boolean }) {
   const headingId = useId();
   const weekLabelId = useId();
   // Только свои поля: набор названия задачи эту часть не перерисовывает.
@@ -31,8 +31,9 @@ export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
     name: ["dueDateInput", "weekDays", "monthDay", "isRecurring"],
   }) as [ScheduleValues["dueDateInput"], ScheduleValues["weekDays"], ScheduleValues["monthDay"], ScheduleValues["isRecurring"]];
   // Как при сохранении: только настоящая дата делает задачу разовой.
-  const hasDueDate = parseDueDateInput(dueDateInput) !== null;
-  const summary = describeSchedule({ dueDateInput, weekDays, monthDay, isRecurring });
+  // Без срока (вкладка «Регулярная»): дата, оставшаяся в форме, не в счёт.
+  const hasDueDate = allowDue && parseDueDateInput(dueDateInput) !== null;
+  const summary = describeSchedule({ dueDateInput: allowDue ? dueDateInput : null, weekDays, monthDay, isRecurring });
 
   return (
     <section className="task-schedule" aria-labelledby={headingId}>
@@ -138,13 +139,16 @@ export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
               <p className="task-schedule-hint">
                 {hasDueDate
                   ? "Недоступно: у задачи есть срок, она разовая."
-                  : "В полночь задача снова ждёт выполнения, а вчерашнее — с фото — остаётся в истории. Выключите для разового дела без срока."}
+                  : allowDue
+                    ? "В полночь задача снова ждёт выполнения, а вчерашнее — с фото — остаётся в истории. Выключите для разового дела без срока."
+                    : "В полночь задача снова ждёт выполнения, а вчерашнее — с фото — остаётся в истории. Выключите — и выполненная останется выполненной."}
               </p>
             </div>
           </FormItem>
         )}
       />
 
+      {allowDue && (
       <FormField
         control={form.control}
         name="dueDateInput"
@@ -175,12 +179,21 @@ export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
           </FormItem>
         )}
       />
+      )}
 
+      <RemindAtField form={form} />
+    </section>
+  );
+}
+
+/** «Напомнить в» — общее поле расписания и разовой задачи. */
+export function RemindAtField({ form, className = "task-schedule-field task-schedule-remind" }: { form: UseFormReturn<any>; className?: string }) {
+  return (
       <FormField
         control={form.control}
         name="remindAt"
         render={({ field }) => (
-          <FormItem className="task-schedule-field task-schedule-remind">
+          <FormItem className={className}>
             <FormLabel className="task-schedule-label">
               <BellRing aria-hidden />
               Напомнить в
@@ -209,7 +222,6 @@ export function TaskScheduleFields({ form }: { form: UseFormReturn<any> }) {
           </FormItem>
         )}
       />
-    </section>
   );
 }
 
