@@ -1162,6 +1162,9 @@ export default function Dashboard() {
             isAdmin={canManageTasks}
             simple={simple}
             groupByWorker={canManageTasks && groupByWorker}
+            // Без фильтров в группировке видна вся команда, и новый сотрудник
+            // без задач тоже; с фильтром — только те, у кого нашлось.
+            allWorkerIds={hasActiveFilters ? undefined : users.map((u) => u.id)}
             onToggleGroupByWorker={() => setGroupByWorker((v) => !v)}
             getUserInitials={getUserInitials}
             getUserName={getUserName}

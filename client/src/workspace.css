@@ -158,6 +158,7 @@
 .app-layout .worker-section[open] { background: transparent; box-shadow: none; }
 .app-layout .worker-section-header { min-height: 52px; padding: 10px 12px; }
 .app-layout .worker-section-body { padding: 4px 0 0; }
+.worker-section-empty { margin: 0; padding: 6px 12px 10px; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
 .group-current { display: grid; gap: 16px; }
 .group-current .group-day { border-left: 0; padding-left: 0; }
 .app-layout .group-day-header--today { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); border-color: transparent; }

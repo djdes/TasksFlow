@@ -96,6 +96,9 @@ type Props = {
    *  Полезно админу/руководителю чтобы сразу видеть кто что не сделал.
    *  Воркеру никогда не показываем этот режим. */
   groupByWorker?: boolean;
+  /** Люди, которых показать в группировке по сотруднику даже без активных
+   *  задач (новый сотрудник, всё сделал). Не передан — только люди с задачами. */
+  allWorkerIds?: number[];
   onToggleGroupByWorker?: () => void;
   getUserInitials: (workerId: number | null) => string;
   getUserName: (workerId: number | null) => string;
@@ -147,6 +150,7 @@ export function GroupedTaskList(props: Props) {
     isAdmin,
     simple = false,
     groupByWorker = false,
+    allWorkerIds,
     onToggleGroupByWorker,
     getUserInitials,
     getUserName,
@@ -630,7 +634,9 @@ export function GroupedTaskList(props: Props) {
    * только для подмножества данного воркера. Это то самое «вижу что
    * у Иванова 3, у Петрова 5» из ТЗ.
    *
-   * Сотрудники без задач не показываются. Несortированные (workerId=null)
+   * Сотрудники без задач показываются, если передан allWorkerIds (без
+   * фильтров): руководитель видит всю команду, а не только занятых.
+   * Несortированные (workerId=null)
    * собраны в отдельный «Без исполнителя» — туда видны задачи, у которых
    * админ ещё не назначил воркера (типичный кейс при создании новой).
    */
@@ -642,6 +648,9 @@ export function GroupedTaskList(props: Props) {
       const list = byWorker.get(key) ?? [];
       list.push(t);
       byWorker.set(key, list);
+    }
+    for (const id of allWorkerIds ?? []) {
+      if (!byWorker.has(id)) byWorker.set(id, []);
     }
     const sections = Array.from(byWorker.entries()).map(([key, list]) => ({
       key: String(key),
@@ -675,7 +684,7 @@ export function GroupedTaskList(props: Props) {
       );
     });
     return sections;
-  }, [activeTasks, groupByWorker, getUserName, getUserPosition]);
+  }, [activeTasks, groupByWorker, allWorkerIds, getUserName, getUserPosition]);
 
   /**
    * Рендерит набор активных задач с опциональным split на два sub-блока
@@ -781,7 +790,7 @@ export function GroupedTaskList(props: Props) {
                     </span>
                   ) : null}
                 </span>
-                {!isUnassigned ? (
+                {!isUnassigned && total > 0 ? (
                   <span className="worker-progress" title={`Сделано ${done} из ${total}`}>
                     <span className="worker-progress-track" aria-hidden="true">
                       <span style={{ transform: `scaleX(${total > 0 ? done / total : 0})` }} />
@@ -789,11 +798,18 @@ export function GroupedTaskList(props: Props) {
                     <span className="worker-progress-text">{done}/{total}</span>
                   </span>
                 ) : null}
-                <span className="worker-section-count">
-                  {section.tasks.length}
-                </span>
+                {section.tasks.length > 0 ? (
+                  <span className="worker-section-count">
+                    {section.tasks.length}
+                  </span>
+                ) : null}
               </summary>
               <div className="worker-section-body">
+                {section.tasks.length === 0 ? (
+                  <p className="worker-section-empty">
+                    {done > 0 ? "Всё на сегодня сделано." : "Задач на сегодня нет."}
+                  </p>
+                ) : null}
                 {/* Внутри worker-секции тоже применяем split «Что
                     сделать / На проверке» — admin'у надо видеть кто
                     что делает И кто что должен проверить. */}
