@@ -458,16 +458,27 @@ export function TaskViewDialog({
             </button>
           )}
 
-          {/* Example photo button - shown if examplePhotoUrl exists */}
+          {/* Фото к задаче от руководителя: что и как сделать. Видно сразу, касание — во весь экран. */}
           {(currentTask as any).examplePhotoUrl && (
-            <button
-              type="button"
-              onClick={() => setIsExamplePhotoFullscreen(true)}
-              className="flex items-center gap-2 w-full px-4 py-3 bg-muted/60 hover:bg-muted rounded-xl transition-colors"
-            >
-              <ImageIcon className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium text-foreground">Посмотреть пример фото</span>
-            </button>
+            <div data-testid="task-attached-photo">
+              <span className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <ImageIcon className="h-4 w-4 text-primary" aria-hidden />
+                Фото к задаче
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsExamplePhotoFullscreen(true)}
+                className="block overflow-hidden rounded-xl border border-border"
+                aria-label="Открыть фото к задаче во весь экран"
+              >
+                <img
+                  src={(currentTask as any).examplePhotoUrl}
+                  alt="Фото к задаче"
+                  loading="lazy"
+                  className="max-h-56 w-auto max-w-full object-contain bg-muted/40"
+                />
+              </button>
+            </div>
           )}
 
           {/* Photo upload section — скрываем, если у задачи есть чек-лист

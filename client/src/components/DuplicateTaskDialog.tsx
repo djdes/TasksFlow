@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useCreateTask } from "@/hooks/use-tasks";
-import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { coerceWeekDays } from "@/lib/coerce-week-days";
 import { useUsers } from "@/hooks/use-users";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,11 @@ import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFi
 import { CheckMark } from "@/components/ui/check-mark";
 import { ChecklistEditor, checklistPayload, newChecklistId, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import { itemNeedsPhoto } from "@shared/checklist";
+import { TaskPhotoField } from "@/components/TaskPhotoField";
+import { fileFromUploadedPhoto, uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import type { ChecklistItem } from "@shared/schema";
 import { formatDueDateInput, parseDueDateInput } from "@shared/task-visibility";
-import { Copy, Coins, Tag, FileText, ImagePlus, X, Check } from "lucide-react";
+import { Copy, Coins, Tag, FileText, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -70,6 +71,8 @@ interface Task {
   description?: string | null;
   /** Подзадачи копируются составом: без отметок и фото, с новыми id. */
   checklist?: ChecklistItem[] | null;
+  /** Фото к задаче — копируется в каждую копию. */
+  examplePhotoUrl?: string | null;
 }
 
 /** Пункты исходной задачи → черновик копии: заново, без отметок и фото. */
@@ -95,6 +98,8 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
   const [examplePhotoFile, setExamplePhotoFile] = useState<File | null>(null);
   const [examplePhotoPreview, setExamplePhotoPreview] = useState<string | null>(null);
   const examplePhotoInputRef = useRef<HTMLInputElement>(null);
+  // Фото исходной задачи: копии получают его же, пока его не убрали или не заменили.
+  const [sourcePhotoUrl, setSourcePhotoUrl] = useState<string | null>(null);
 
   // Multi-worker: duplicate one existing task to one OR more employees.
   // Seeded from the source task's workerId on open; admin can add more.
@@ -140,63 +145,34 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         description: task.description || "",
       });
 
-      // Сбрасываем пример фото при открытии (не копируем от исходной задачи)
+      // Фото к задаче копируется вместе с ней (можно убрать или заменить).
       setExamplePhotoFile(null);
-      setExamplePhotoPreview(null);
+      setExamplePhotoPreview(task.examplePhotoUrl || null);
+      setSourcePhotoUrl(task.examplePhotoUrl || null);
       setWorkerIds(task.workerId ? [task.workerId] : []);
       setChecklistItems(checklistCopyDraft(task.checklist));
     }
   }, [task, open, form]);
 
   // Обработчики для примера фото
-  const handleExamplePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Ошибка",
-          description: "Выберите изображение",
-          variant: "destructive",
-        });
-        return;
-      }
-      setExamplePhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setExamplePhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const pickExamplePhoto = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Ошибка", description: "Выберите изображение", variant: "destructive" });
+      return;
     }
+    setExamplePhotoFile(file);
+    setSourcePhotoUrl(null);
+    const reader = new FileReader();
+    reader.onloadend = () => setExamplePhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const removeExamplePhoto = () => {
     setExamplePhotoFile(null);
     setExamplePhotoPreview(null);
+    setSourcePhotoUrl(null);
     if (examplePhotoInputRef.current) {
       examplePhotoInputRef.current.value = "";
-    }
-  };
-
-  const uploadExamplePhoto = async (taskId: number) => {
-    if (!examplePhotoFile) return;
-
-    const formData = new FormData();
-    formData.append("photo", examplePhotoFile);
-
-    try {
-      const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/example-photo`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error("Error uploading example photo:", error);
-      }
-    } catch (error) {
-      console.error("Error uploading example photo:", error);
     }
   };
 
@@ -226,7 +202,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
     };
     let created = 0;
     let failed = 0;
-    let firstCreatedId: number | null = null;
+    const createdIds: number[] = [];
     for (const workerId of workerIds) {
       await new Promise<void>((resolve) => {
         // У каждой копии свои id пунктов: отметки одной копии не задевают другую.
@@ -234,9 +210,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         createTask.mutate({ ...base, workerId, checklist } as any, {
           onSuccess: (createdTask: any) => {
             created += 1;
-            if (firstCreatedId === null && createdTask?.id) {
-              firstCreatedId = createdTask.id;
-            }
+            if (createdTask?.id) createdIds.push(createdTask.id);
             resolve();
           },
           onError: () => {
@@ -246,8 +220,20 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         });
       });
     }
-    if (examplePhotoFile && firstCreatedId !== null) {
-      await uploadExamplePhoto(firstCreatedId);
+    // Фото к задаче — каждой копии: новое или то же, что у исходной.
+    const photo = examplePhotoFile ?? (sourcePhotoUrl ? await fileFromUploadedPhoto(sourcePhotoUrl) : null);
+    let photoFailed = sourcePhotoUrl && !photo ? 1 : 0;
+    if (photo) {
+      for (const taskId of createdIds) {
+        await uploadTaskAttachmentPhoto(taskId, photo).catch(() => { photoFailed += 1; });
+      }
+    }
+    if (photoFailed > 0 && createdIds.length > 0) {
+      toast({
+        title: "Фото не прикрепилось",
+        description: "Копия создана без фото — добавьте его в правке задачи.",
+        variant: "destructive",
+      });
     }
     if (created > 0 && failed === 0) {
       toast({
@@ -438,6 +424,10 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               )}
             />
 
+            <FormItem>
+              <TaskPhotoField previewUrl={examplePhotoPreview} onPick={pickExamplePhoto} onRemove={removeExamplePhoto} />
+            </FormItem>
+
             {/* Подзадачи копируются составом — можно поправить перед созданием. */}
             <FormItem>
               <FormLabel className="flex items-center gap-2">
@@ -466,53 +456,6 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                     </div>
                   </div>
 
-                  {/* Секция примера фото - показывается только если галочка установлена */}
-                  {field.value && (
-                    <div className="pt-2 border-t border-border/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ImagePlus className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Пример фото (необязательно)</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Загрузите пример того, как должна выглядеть выполненная задача
-                      </p>
-
-                      {examplePhotoPreview ? (
-                        <div className="relative inline-block">
-                          <img
-                            src={examplePhotoPreview}
-                            alt="Пример фото"
-                            className="w-24 h-24 object-cover rounded-lg border border-border"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeExamplePhoto}
-                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            ref={examplePhotoInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleExamplePhotoSelect}
-                            className="hidden"
-                            id="duplicate-example-photo-upload"
-                          />
-                          <label
-                            htmlFor="duplicate-example-photo-upload"
-                            className="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-primary/40 bg-primary/5 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/10 transition-all text-sm"
-                          >
-                            <ImagePlus className="w-4 h-4 text-primary" />
-                            <span className="font-medium text-primary">Выбрать фото</span>
-                          </label>
-                        </>
-                      )}
-                    </div>
-                  )}
                 </FormItem>
               )}
             />

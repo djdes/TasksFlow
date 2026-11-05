@@ -61,3 +61,37 @@ export async function sendQueued(item: QueuedUpload): Promise<SendResult> {
     return "retry";
   }
 }
+
+/**
+ * Фото к задаче (поле `examplePhotoUrl`): что и как сделать. Руководитель
+ * прикрепляет его при создании, копировании и правке; сотрудник видит фото
+ * в окне задачи. Сжимаем как фото результата, без подписи временем.
+ */
+export async function uploadTaskAttachmentPhoto(taskId: number, file: File): Promise<string> {
+  const prepared = await preparePhoto(file, { stamp: null });
+  const form = new FormData();
+  form.append("photo", prepared, prepared.name);
+  const res = await fetchOrFriendlyError(`/api/tasks/${taskId}/example-photo`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) throw new ApiError(await errorMessage(res), res.status);
+  const body = await res.json().catch(() => ({}));
+  return typeof body?.examplePhotoUrl === "string" ? body.examplePhotoUrl : "";
+}
+
+/** Уже загруженное фото задачи → файл, чтобы прикрепить его к копии. */
+export async function fileFromUploadedPhoto(url: string): Promise<File | null> {
+  try {
+    const res = await fetch(url, { credentials: "include", signal: AbortSignal.timeout(60_000) });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    const name = url.split("/").pop() || "photo.jpg";
+    return new File([blob], name, { type: blob.type });
+  } catch {
+    return null;
+  }
+}
