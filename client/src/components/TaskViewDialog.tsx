@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight } from "lucide-react";
 import { reviewersLine, type TaskReviewers } from "@shared/reviewers";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,10 @@ import type { Task, ChecklistItem } from "@shared/schema";
 import { allItemsNeedPhoto, itemNeedsPhoto } from "@shared/checklist";
 import { CheckMark } from "@/components/ui/check-mark";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useAwaitingVerification } from "@/hooks/use-verification-queue";
+import { isReviewTask } from "@/lib/task-classification";
 
 interface TaskViewDialogProps {
   task: Task | null;
@@ -68,6 +72,12 @@ export function TaskViewDialog({
     retry: false,
   });
   const reviewersText = reviewerTaskId !== null ? reviewersLine(reviewers.data) : null;
+  // Задача «принять чужую работу» — проверяющему сразу кнопка в «На проверке».
+  const [, setLocation] = useLocation();
+  const { canVerify } = usePermissions();
+  const showReviewLink = open && canVerify && !!currentTask && !currentTask.isCompleted && isReviewTask(currentTask);
+  const reviewQueue = useAwaitingVerification(showReviewLink);
+  const reviewCount = reviewQueue.data?.length ?? 0;
 
   // Получаем массив фотографий из задачи
   const getPhotoUrls = (t: Task | null): string[] => {
@@ -430,6 +440,24 @@ export function TaskViewDialog({
         </div>
 
         <div className="p-4 space-y-4">
+          {showReviewLink && (
+            <button
+              type="button"
+              onClick={() => { onOpenChange(false); setLocation("/admin/verification"); }}
+              className="flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-left transition-colors hover:bg-primary/15"
+              data-testid="task-open-verification"
+            >
+              <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-foreground">Открыть «На проверке»</span>
+                <span className="block text-sm text-muted-foreground">
+                  {reviewQueue.isPending ? "Смотрим, что ждёт…" : reviewCount > 0 ? `Ждут проверки: ${reviewCount}` : "Сейчас ничего не ждёт проверки"}
+                </span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+            </button>
+          )}
+
           {/* Example photo button - shown if examplePhotoUrl exists */}
           {(currentTask as any).examplePhotoUrl && (
             <button

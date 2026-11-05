@@ -64,3 +64,16 @@ export function isToVerify(task: {
 }): boolean {
   return isVerifierTask(task) || isSubmittedFiller(task);
 }
+
+/**
+ * Задача «проверить чужую работу», заведённая руками: «Принять работу
+ * Ларисы», «Проверить выполнение уборки», «Раздел «На проверке»…». В окне
+ * такой задачи проверяющему — кнопка в «На проверке». Обычное «Проверить
+ * срок годности» сюда не попадает: нужно слово про работу или раздел.
+ */
+const REVIEW_TASK_RE = /(при[нм][а-яё]*\s+(работ|задач|выполнен)|провер[а-яё]*\s+(работ|задач|выполнен|фото\s+сотрудник)|«?на проверке»?)/i;
+
+export function isReviewTask(task: { title?: string | null; description?: string | null; journalLink?: string | null }): boolean {
+  if (isVerifierTask(task)) return true;
+  return REVIEW_TASK_RE.test(`${task.title ?? ""} ${task.description ?? ""}`);
+}
