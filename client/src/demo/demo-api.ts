@@ -252,6 +252,12 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
       return { status: 204, text: "" };
     }
   }
+  if ((m = path.match(/^\/api\/tasks\/(\d+)\/reviewers$/))) {
+    // Как на сервере: проверка — когда назначен проверяющий.
+    const task = findTask(Number(m[1]));
+    const verifier = task?.verifierWorkerId ? state.users.find((u) => u.id === task.verifierWorkerId) : null;
+    return { json: { required: !!verifier, names: verifier ? [verifier.name ?? verifier.phone] : [] } };
+  }
   if ((m = path.match(/^\/api\/tasks\/(\d+)\/complete$/))) {
     const task = findTask(Number(m[1]))!;
     if (task.requiresPhoto && task.photoUrls.length === 0) return { status: 400, json: { message: "Необходимо загрузить фото перед завершением" } };

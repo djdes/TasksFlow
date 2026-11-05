@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { parseJsonOrEmpty } from "@/lib/parse-json-or-empty";
@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck } from "lucide-react";
+import { reviewersLine, type TaskReviewers } from "@shared/reviewers";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
@@ -53,6 +54,20 @@ export function TaskViewDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // «Принимает работу: …» — кто примет выполненное. Нет строки — без проверки.
+  const reviewerTaskId = open && currentTask && !currentTask.isCompleted ? currentTask.id : null;
+  const reviewers = useQuery<TaskReviewers>({
+    queryKey: ["/api/tasks", reviewerTaskId, "reviewers"],
+    queryFn: async () => {
+      const res = await fetchOrFriendlyError(`/api/tasks/${reviewerTaskId}/reviewers`, { credentials: "include" });
+      if (!res.ok) throw new Error("reviewers");
+      return res.json();
+    },
+    enabled: reviewerTaskId !== null,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const reviewersText = reviewerTaskId !== null ? reviewersLine(reviewers.data) : null;
 
   // Получаем массив фотографий из задачи
   const getPhotoUrls = (t: Task | null): string[] => {
@@ -374,6 +389,13 @@ export function TaskViewDialog({
               <DialogDescription className="sr-only">Задача: выполнение, фото и детали</DialogDescription>
             )}
           </DialogHeader>
+
+          {reviewersText ? (
+            <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground" data-testid="task-reviewers">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <span>{reviewersText}</span>
+            </p>
+          ) : null}
 
           {/* Бейджи в шапке: премия и срок */}
           <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">

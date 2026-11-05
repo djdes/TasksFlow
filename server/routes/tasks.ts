@@ -8,7 +8,9 @@ import { resolveUploadAbs } from "../uploads-paths";
 import { mergeChecklistProgress } from "@shared/checklist";
 import { isTaskServiceError } from "../services/task-actor";
 import { createTaskForActor } from "../services/task-create";
-import { accessOf } from "../access";
+import { accessOf, accessWithApproval } from "../access";
+import { reviewersFor } from "../push/events";
+import type { TaskReviewers } from "@shared/reviewers";
 import { canAssignTo, canReviewTask, canSeeWorker } from "@shared/roles";
 import {
   requireAuth,
@@ -117,6 +119,35 @@ export function registerTaskRoutes(app: Express): void {
     } catch (err: any) {
       console.error('Error fetching task:', err);
       res.status(500).json({ message: 'Ошибка' });
+    }
+  });
+
+  // Кто примет работу — строка «Принимает работу» в окне задачи.
+  // required: «Готово» уйдёт на проверку (назначен проверяющий или роль
+  // исполнителя этого требует), names — кто может принять.
+  app.get("/api/tasks/:id/reviewers", requireAuthOrApiKey, async (req, res) => {
+    try {
+      const task = await storage.getTask(Number(req.params.id));
+      const companyId = await getCompanyIdFromReq(req);
+      if (!task || !task.companyId || (companyId !== null && task.companyId !== companyId)) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      const users = await storage.getAllUsers(task.companyId);
+      const worker = task.workerId ? users.find((u) => u.id === task.workerId) : undefined;
+      const required = !!task.verifierWorkerId || (!!worker && (await accessWithApproval(worker)).requiresApproval);
+      const reviewers = required ? await reviewersFor(task, users) : [];
+      const body: TaskReviewers = {
+        required,
+        // Админы первыми не идут: сначала назначенный и роли, потом остальные по имени.
+        names: reviewers
+          .filter((u) => u.id !== task.workerId && !u.isRoot)
+          .sort((a, b) => Number(a.isAdmin) - Number(b.isAdmin) || (a.name ?? "").localeCompare(b.name ?? "", "ru"))
+          .map((u) => u.name?.trim() || u.phone || `#${u.id}`),
+      };
+      res.json(body);
+    } catch (err) {
+      console.error("Error fetching task reviewers:", err);
+      res.status(500).json({ message: "Ошибка" });
     }
   });
 
