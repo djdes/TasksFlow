@@ -10,8 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
 import { CheckMark } from "@/components/ui/check-mark";
+import { ChecklistEditor, checklistPayload, newChecklistId, type ChecklistDraftItem } from "@/components/ChecklistEditor";
+import { itemNeedsPhoto } from "@shared/checklist";
+import type { ChecklistItem } from "@shared/schema";
 import { formatDueDateInput, parseDueDateInput } from "@shared/task-visibility";
-import { Copy, Coins, Tag, FileText, ImagePlus, X } from "lucide-react";
+import { Copy, Coins, Tag, FileText, ImagePlus, X, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -65,6 +68,15 @@ interface Task {
   price?: number;
   category?: string | null;
   description?: string | null;
+  /** Подзадачи копируются составом: без отметок и фото, с новыми id. */
+  checklist?: ChecklistItem[] | null;
+}
+
+/** Пункты исходной задачи → черновик копии: заново, без отметок и фото. */
+export function checklistCopyDraft(items: readonly ChecklistItem[] | null | undefined): ChecklistDraftItem[] {
+  return (items ?? [])
+    .filter((it) => it?.title?.trim())
+    .map((it) => ({ id: newChecklistId(), title: it.title, requiresPhoto: itemNeedsPhoto(it), done: false, photoUrls: [] }));
 }
 
 interface DuplicateTaskDialogProps {
@@ -87,6 +99,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
   // Multi-worker: duplicate one existing task to one OR more employees.
   // Seeded from the source task's workerId on open; admin can add more.
   const [workerIds, setWorkerIds] = useState<number[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -131,6 +144,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       setExamplePhotoFile(null);
       setExamplePhotoPreview(null);
       setWorkerIds(task.workerId ? [task.workerId] : []);
+      setChecklistItems(checklistCopyDraft(task.checklist));
     }
   }, [task, open, form]);
 
@@ -215,7 +229,9 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
     let firstCreatedId: number | null = null;
     for (const workerId of workerIds) {
       await new Promise<void>((resolve) => {
-        createTask.mutate({ ...base, workerId } as any, {
+        // У каждой копии свои id пунктов: отметки одной копии не задевают другую.
+        const checklist = checklistPayload(checklistItems.map((it) => ({ ...it, id: newChecklistId() })));
+        createTask.mutate({ ...base, workerId, checklist } as any, {
           onSuccess: (createdTask: any) => {
             created += 1;
             if (firstCreatedId === null && createdTask?.id) {
@@ -421,6 +437,15 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                 </FormItem>
               )}
             />
+
+            {/* Подзадачи копируются составом — можно поправить перед созданием. */}
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-primary" />
+                Подзадачи (чек-лист)
+              </FormLabel>
+              <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
+            </FormItem>
 
             <FormField
               control={form.control}
