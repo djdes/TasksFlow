@@ -130,7 +130,7 @@ async (page) => {
       await tab.getByTestId('due-today').click();
       await tab.getByTestId('task-kind-recurring').click();
       check(await tab.getByTestId('input-due-date').count() === 0, 'срок на регулярной');
-      check(await tab.locator('.photo-slot-add').count() === 0, 'фото проблемы на регулярной');
+      check((await tab.locator('.photo-slot-add').innerText()).includes('Фото к задаче'), 'у регулярной фото — «Фото к задаче»');
       await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Анна' }).click();
       await tab.keyboard.press('Escape');

@@ -298,6 +298,20 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
       return { json: { success: true, photoUrls } };
     }
   }
+  // «Фото к задаче» от руководителя (examplePhotoUrl).
+  if ((m = path.match(/^\/api\/tasks\/(\d+)\/example-photo$/))) {
+    const task = findTask(Number(m[1]))!;
+    if (method === "POST") {
+      const url2 = photoFrom(body);
+      if (!url2) return { status: 400, json: { message: "Фото не получено" } };
+      patchTask(task.id, { examplePhotoUrl: url2 } as any);
+      return { json: { examplePhotoUrl: url2 } };
+    }
+    if (method === "DELETE") {
+      patchTask(task.id, { examplePhotoUrl: null } as any);
+      return { json: { success: true } };
+    }
+  }
   // Пункт без фото — касанием (как POST /api/tasks/:id/checklist/:itemId/done).
   if ((m = path.match(/^\/api\/tasks\/(\d+)\/checklist\/([^/]+)\/done$/)) && method === "POST") {
     const task = findTask(Number(m[1]))!;

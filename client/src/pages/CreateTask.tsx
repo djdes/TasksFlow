@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
 import { WorkerPicker } from "@/components/WorkerPicker";
 import { DueDateQuick, PhotoSlot } from "@/components/QuickTaskFields";
+import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
   ArrowLeft,
@@ -429,28 +430,14 @@ export default function CreateTask() {
     }
   };
 
+  // Фото сжимается как фото результата (общий загрузчик «Фото к задаче»).
   const uploadExamplePhoto = async (taskId: number): Promise<boolean> => {
     if (!examplePhotoFile) return true;
-
-    const formData = new FormData();
-    formData.append("photo", examplePhotoFile);
-
     try {
-      const response = await fetchOrFriendlyError(`/api/tasks/${taskId}/example-photo`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-        signal: AbortSignal.timeout(120_000),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        console.error("Error uploading example photo:", error);
-        return false;
-      }
+      await uploadTaskAttachmentPhoto(taskId, examplePhotoFile);
       return true;
     } catch (error) {
-      console.error("Error uploading example photo:", error);
+      console.error("Error uploading task photo:", error);
       return false;
     }
   };
@@ -601,9 +588,8 @@ export default function CreateTask() {
       // Чек-лист: только непустые пункты; done/фото стартуют пустыми.
       checklist: checklistPayload(checklistItems),
     };
-    // Фото проблемы видно у разовой всегда, пример результата у регулярной —
-    // только при «Закрыть только с фото результата».
-    const withPhoto = !!examplePhotoFile && (once || base.requiresPhoto);
+    // «Фото к задаче» (у разовой — фото проблемы) — к каждой копии.
+    const withPhoto = !!examplePhotoFile;
 
     setSubmitting(true);
     let created = 0;
@@ -911,20 +897,20 @@ export default function CreateTask() {
                   ) : null}
                 </div>
 
+                {/* Одно и то же фото к задаче: у разовой — «что не так», у регулярной — «как надо». */}
+                <PhotoSlot
+                  id="problem-photo-upload"
+                  title={kind === "once" ? "Фото проблемы" : "Фото к задаче"}
+                  hint={kind === "once" ? "Сотрудник увидит его в задаче" : "Что и как сделать — сотрудник увидит в задаче"}
+                  icon={kind === "once" ? Camera : ImagePlus}
+                  preview={examplePhotoPreview}
+                  inputRef={examplePhotoInputRef}
+                  onSelect={handleExamplePhotoSelect}
+                  onRemove={removeExamplePhoto}
+                />
+
                 {kind === "once" ? (
-                  <>
-                    <PhotoSlot
-                      id="problem-photo-upload"
-                      title="Фото проблемы"
-                      hint="Сотрудник увидит его в задаче"
-                      icon={Camera}
-                      preview={examplePhotoPreview}
-                      inputRef={examplePhotoInputRef}
-                      onSelect={handleExamplePhotoSelect}
-                      onRemove={removeExamplePhoto}
-                    />
-                    <DueDateQuick form={form} />
-                  </>
+                  <DueDateQuick form={form} />
                 ) : (
                   <TaskScheduleFields form={form} allowDue={false} />
                 )}
@@ -1012,21 +998,6 @@ export default function CreateTask() {
                             </div>
                           </div>
 
-                          {/* Пример результата — у регулярной; у разовой это место занимает фото проблемы. */}
-                          {field.value && kind === "recurring" && (
-                            <div className="pt-3 border-t border-border/30">
-                              <PhotoSlot
-                                id="example-photo-upload"
-                                title="Пример результата"
-                                hint="Как должно выглядеть сделанное"
-                                icon={ImagePlus}
-                                preview={examplePhotoPreview}
-                                inputRef={examplePhotoInputRef}
-                                onSelect={handleExamplePhotoSelect}
-                                onRemove={removeExamplePhoto}
-                              />
-                            </div>
-                          )}
                         </FormItem>
                       )}
                     />

@@ -458,29 +458,27 @@ export function TaskViewDialog({
             </button>
           )}
 
-          {/* Фото от руководителя: у разовой — фото проблемы, у регулярной — пример результата. */}
+          {/* Фото к задаче от руководителя: что и как сделать. Видно сразу, касание — во весь экран. */}
           {(currentTask as any).examplePhotoUrl && (
-            <button
-              type="button"
-              onClick={() => setIsExamplePhotoFullscreen(true)}
-              className="flex items-center gap-3 w-full p-2 pr-4 bg-muted/60 hover:bg-muted rounded-xl transition-colors text-left"
-              data-testid="task-example-photo"
-            >
-              <img
-                src={(currentTask as any).examplePhotoUrl}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-14 w-14 shrink-0 rounded-lg object-cover"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-foreground">
-                  {currentTask.isRecurring === false ? "Фото к задаче" : "Пример фото"}
-                </span>
-                <span className="block text-xs text-muted-foreground">Нажмите, чтобы открыть</span>
+            <div data-testid="task-attached-photo">
+              <span className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <ImageIcon className="h-4 w-4 text-primary" aria-hidden />
+                Фото к задаче
               </span>
-              <ImageIcon className="w-5 h-5 shrink-0 text-primary" aria-hidden />
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsExamplePhotoFullscreen(true)}
+                className="block overflow-hidden rounded-xl border border-border"
+                aria-label="Открыть фото к задаче во весь экран"
+              >
+                <img
+                  src={(currentTask as any).examplePhotoUrl}
+                  alt="Фото к задаче"
+                  loading="lazy"
+                  className="max-h-56 w-auto max-w-full object-contain bg-muted/40"
+                />
+              </button>
+            </div>
           )}
 
           {/* Photo upload section — скрываем, если у задачи есть чек-лист
