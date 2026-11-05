@@ -458,15 +458,28 @@ export function TaskViewDialog({
             </button>
           )}
 
-          {/* Example photo button - shown if examplePhotoUrl exists */}
+          {/* Фото от руководителя: у разовой — фото проблемы, у регулярной — пример результата. */}
           {(currentTask as any).examplePhotoUrl && (
             <button
               type="button"
               onClick={() => setIsExamplePhotoFullscreen(true)}
-              className="flex items-center gap-2 w-full px-4 py-3 bg-muted/60 hover:bg-muted rounded-xl transition-colors"
+              className="flex items-center gap-3 w-full p-2 pr-4 bg-muted/60 hover:bg-muted rounded-xl transition-colors text-left"
+              data-testid="task-example-photo"
             >
-              <ImageIcon className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium text-foreground">Посмотреть пример фото</span>
+              <img
+                src={(currentTask as any).examplePhotoUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-14 w-14 shrink-0 rounded-lg object-cover"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-foreground">
+                  {currentTask.isRecurring === false ? "Фото к задаче" : "Пример фото"}
+                </span>
+                <span className="block text-xs text-muted-foreground">Нажмите, чтобы открыть</span>
+              </span>
+              <ImageIcon className="w-5 h-5 shrink-0 text-primary" aria-hidden />
             </button>
           )}
 

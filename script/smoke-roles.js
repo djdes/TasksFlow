@@ -173,7 +173,12 @@ async (page) => {
       await tab.getByPlaceholder('Что нужно сделать?').waitFor();
       check(await tab.getByText('Доступ запрещен').count() === 0, 'руководитель с ролью открывает создание задачи');
       await tab.getByPlaceholder('Что нужно сделать?').fill('Принять поставку');
+      // Ответственный — выпадающий список с галочками; «Напомнить в» у разовой — в «Ещё».
+      await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Анна' }).click();
+      await tab.keyboard.press('Escape');
+      check((await tab.getByTestId('worker-picker').innerText()).includes('Анна'), 'выбранный сотрудник не виден в поле');
+      await tab.getByTestId('task-more-toggle').click();
       const remind = tab.getByTestId('input-remind-at');
       await remind.scrollIntoViewIfNeeded();
       await remind.fill('14:00');

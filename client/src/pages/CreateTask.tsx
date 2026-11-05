@@ -13,26 +13,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
-import { CheckMark } from "@/components/ui/check-mark";
+import { TaskScheduleFields, RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
+import { WorkerPicker } from "@/components/WorkerPicker";
+import { DueDateQuick, PhotoSlot } from "@/components/QuickTaskFields";
 import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
   ArrowLeft,
-  User,
   Plus,
-  Coins,
-  Tag,
-  FileText,
   ImagePlus,
-  X,
   BookOpen,
   Sparkles,
-  Check,
   LayoutTemplate,
+  Camera,
+  ChevronDown,
+  ListChecks,
+  Repeat,
+  SlidersHorizontal,
+  Zap,
 } from "lucide-react";
 import { TaskTemplatesDialog } from "@/components/TaskTemplatesDialog";
 import { parseDueDateInput } from "@shared/task-visibility";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -107,6 +108,14 @@ export default function CreateTask() {
 
   const [mode, setMode] = useState<"free" | "journal">("free");
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  // Разовая (по умолчанию) — срок и фото проблемы; регулярная — дни и повтор.
+  // ?kind=recurring открывает сразу регулярную.
+  const [kind, setKind] = useState<"once" | "recurring">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("kind") === "recurring" ? "recurring" : "once",
+  );
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [workersInvalid, setWorkersInvalid] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Страховка: если интеграция не настроена, не даём залипнуть в журнальном режиме.
   useEffect(() => {
@@ -354,6 +363,23 @@ export default function CreateTask() {
   });
 
 
+  // Что уже задано в «Ещё» — подпись у свёрнутого блока, чтобы не забыть о скрытом.
+  const [morePrice, moreCategory, moreRequiresPhoto, moreRemindAt] = useWatch({
+    control: form.control,
+    name: ["price", "category", "requiresPhoto", "remindAt"],
+  });
+  const filledChecklist = checklistItems.filter((i) => i.title.trim()).length;
+  const moreSummary =
+    [
+      filledChecklist ? `чек-лист: ${filledChecklist}` : null,
+      Number(morePrice) > 0 ? `премия ${morePrice} ₽` : null,
+      typeof moreCategory === "string" && moreCategory.trim() ? moreCategory.trim() : null,
+      moreRequiresPhoto ? "фото результата" : null,
+      kind === "once" && moreRemindAt ? `напомнить в ${moreRemindAt}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Чек-лист, премия, категория, фото результата";
+
   // Проверка прав администратора — после всех хуков, иначе React
   // ругается на «Rendered more hooks than during the previous render»,
   // потому что guest-render оборвался бы до использования useEffect и
@@ -403,8 +429,8 @@ export default function CreateTask() {
     }
   };
 
-  const uploadExamplePhoto = async (taskId: number) => {
-    if (!examplePhotoFile) return;
+  const uploadExamplePhoto = async (taskId: number): Promise<boolean> => {
+    if (!examplePhotoFile) return true;
 
     const formData = new FormData();
     formData.append("photo", examplePhotoFile);
@@ -418,11 +444,14 @@ export default function CreateTask() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => null);
         console.error("Error uploading example photo:", error);
+        return false;
       }
+      return true;
     } catch (error) {
       console.error("Error uploading example photo:", error);
+      return false;
     }
   };
 
@@ -549,86 +578,83 @@ export default function CreateTask() {
 
   const onSubmit = async (values: FormValues) => {
     if (freeModeWorkerIds.length === 0) {
-      toast({
-        title: "Не выбран сотрудник",
-        description: "Отметьте хотя бы одного исполнителя",
-        variant: "destructive",
-      });
+      // Подсказка у самого поля, без всплывашки поверх формы.
+      setWorkersInvalid(true);
+      document.querySelector<HTMLElement>('[data-testid="worker-picker"]')?.focus();
       return;
     }
-    // Срок и повторение взаимоисключены: повторяющаяся задача сбрасывается
-    // каждый день и «съела» бы срок, поэтому при заданном сроке форсим разовую.
-    const dueDate = parseDueDateInput(values.dueDateInput);
+    // Разовая: срок (или без срока), без дней и без повтора — сделанная
+    // остаётся сделанной. Регулярная: дни, число и повтор, срока нет.
+    const once = kind === "once";
+    const dueDate = once ? parseDueDateInput(values.dueDateInput) : null;
     const base = {
       title: values.title,
       requiresPhoto: values.requiresPhoto ?? false,
-      weekDays:
-        dueDate !== null
-          ? null
-          : values.weekDays && values.weekDays.length > 0
-            ? values.weekDays
-            : null,
-      monthDay: dueDate !== null ? null : values.monthDay || null,
+      weekDays: !once && values.weekDays && values.weekDays.length > 0 ? values.weekDays : null,
+      monthDay: once ? null : values.monthDay || null,
       dueDate,
       remindAt: remindAtPayload(values.remindAt),
-      isRecurring: dueDate !== null ? false : (values.isRecurring ?? true),
+      isRecurring: once ? false : (values.isRecurring ?? true),
       price: values.price || 0,
       category: values.category || null,
       description: values.description || null,
       // Чек-лист: только непустые пункты; done/фото стартуют пустыми.
       checklist: checklistPayload(checklistItems),
     };
+    // Фото проблемы видно у разовой всегда, пример результата у регулярной —
+    // только при «Закрыть только с фото результата».
+    const withPhoto = !!examplePhotoFile && (once || base.requiresPhoto);
 
-    // Fire one create per selected worker; surface a single summary
-    // toast. Example-photo (if any) is attached to the first task —
-    // attaching to every duplicate would explode storage for no real
-    // gain, and admins typically treat the first as the canonical one.
+    setSubmitting(true);
     let created = 0;
     let failed = 0;
-    let firstCreatedId: number | null = null;
-    for (const workerId of freeModeWorkerIds) {
-      await new Promise<void>((resolve) => {
-        createTask.mutate({ ...base, workerId } as any, {
-          onSuccess: async (createdTask: any) => {
-            created += 1;
-            if (firstCreatedId === null && createdTask?.id) {
-              firstCreatedId = createdTask.id;
-            }
-            resolve();
-          },
-          onError: () => {
-            failed += 1;
-            resolve();
-          },
+    const createdIds: number[] = [];
+    let lastError = "";
+    try {
+      // По задаче на каждого выбранного: у каждого своя копия и своё фото.
+      for (const workerId of freeModeWorkerIds) {
+        try {
+          const task: any = await createTask.mutateAsync({ ...base, workerId } as any);
+          created += 1;
+          if (task?.id) createdIds.push(task.id);
+        } catch (err) {
+          failed += 1;
+          lastError = err instanceof Error ? err.message : "";
+        }
+      }
+      let photoFailed = 0;
+      if (withPhoto) {
+        for (const id of createdIds) {
+          if (!(await uploadExamplePhoto(id))) photoFailed += 1;
+        }
+      }
+
+      if (created > 0 && failed === 0) {
+        toast({
+          title: photoFailed ? "Задача создана без фото" : "Успешно",
+          description: photoFailed
+            ? "Фото не загрузилось — добавьте его в правке задачи"
+            : created === 1
+              ? "Задача создана"
+              : `Создано задач: ${created}`,
+          variant: photoFailed ? "destructive" : "default",
         });
-      });
-    }
-
-    if (examplePhotoFile && firstCreatedId !== null) {
-      await uploadExamplePhoto(firstCreatedId);
-    }
-
-    if (created > 0 && failed === 0) {
-      toast({
-        title: "Успешно",
-        description:
-          created === 1
-            ? "Задача создана"
-            : `Создано задач: ${created}`,
-      });
-      setLocation("/");
-    } else if (created > 0 && failed > 0) {
-      toast({
-        title: "Создано с ошибками",
-        description: `Успешно: ${created}, ошибок: ${failed}`,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось создать задачу",
-        variant: "destructive",
-      });
+        setLocation("/");
+      } else if (created > 0) {
+        toast({
+          title: "Создано с ошибками",
+          description: `Успешно: ${created}, ошибок: ${failed}${lastError ? ` — ${lastError}` : ""}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Ошибка",
+          description: lastError || "Не удалось создать задачу",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -646,19 +672,23 @@ export default function CreateTask() {
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="page-icon">
               <Plus className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="page-title">Новая задача</h1>
-          </div>
-          <p className="page-subtitle sm:ml-[60px]">Создайте новую задачу и назначьте исполнителя</p>
-          <div className="page-header-actions sm:ml-[60px]">
-            <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+            <h1 className="page-title min-w-0 flex-1">Новая задача</h1>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-xl"
+              onClick={() => setTemplatesOpen(true)}
+              aria-label="Из шаблона"
+              title="Из шаблона — готовые задачи на смену для вашей отрасли"
+              data-testid="open-templates"
+            >
               <LayoutTemplate aria-hidden="true" />
-              Из шаблона
             </Button>
-            <span>Готовые задачи на смену для вашей отрасли</span>
           </div>
         </div>
         <TaskTemplatesDialog
@@ -801,285 +831,227 @@ export default function CreateTask() {
             </>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Название</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Что нужно сделать?"
-                      className="things-input"
-                      maxLength={255}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Описание задачи
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Подробное описание задачи..."
-                      className="things-input min-h-[80px] resize-none"
-                      rows={3}
-                      maxLength={5000}
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Необязательно. Сотрудник увидит его, открыв задачу.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormItem>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <FormLabel>
-                  Исполнители ·{" "}
-                  <span className="text-primary">
-                    {freeModeWorkerIds.length}
-                  </span>{" "}
-                  из {users.length}
-                </FormLabel>
-                {users.length > 0 ? (
-                  <div className="flex gap-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="quick-task-form" noValidate>
+                {/* Разовая — «отмыть тут, вот фото»: срок и фото проблемы.
+                    Регулярная — дни недели, число месяца и повтор. */}
+                <div className="task-kind-switch" role="radiogroup" aria-label="Тип задачи">
+                  {([
+                    ["once", "Разовая", Zap],
+                    ["recurring", "Регулярная", Repeat],
+                  ] as const).map(([value, label, Icon]) => (
                     <button
+                      key={value}
                       type="button"
-                      onClick={() =>
-                        setFreeModeWorkerIds(users.map((u) => u.id))
-                      }
-                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
-                      data-testid="select-all-free-workers"
+                      role="radio"
+                      aria-checked={kind === value}
+                      onClick={() => setKind(value)}
+                      className="task-kind-option"
+                      data-testid={`task-kind-${value}`}
                     >
-                      Выбрать всех
+                      <Icon aria-hidden />
+                      {label}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setFreeModeWorkerIds([])}
-                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
-                      data-testid="deselect-all-free-workers"
-                    >
-                      Очистить
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              {users.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                  <User className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-                  <p>Нет пользователей</p>
+                  ))}
                 </div>
-              ) : (
-                <div className="grid max-h-72 gap-1 overflow-y-auto rounded-xl border border-border/50 p-2 sm:grid-cols-2">
-                  {users.map((user) => {
-                    const checked = freeModeWorkerIds.includes(user.id);
-                    return (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() =>
-                          setFreeModeWorkerIds((prev) =>
-                            prev.includes(user.id)
-                              ? prev.filter((id) => id !== user.id)
-                              : [...prev, user.id]
-                          )
-                        }
-                        className={`flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                          checked
-                            ? "bg-primary/10 text-primary"
-                            : "hover:bg-muted/30"
-                        }`}
-                        role="checkbox"
-                        aria-checked={checked}
-                      >
-                        {/* Не radix Checkbox: <button> в <button> — бесконечный цикл. */}
-                        <CheckMark checked={checked} />
-                        <span className="truncate">
-                          {user.name || user.phone}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Каждый выбранный сотрудник получит свою копию задачи.
-              </p>
-            </FormItem>
 
-            {/* Чек-лист (подзадачи) */}
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-primary" />
-                Подзадачи (чек-лист)
-              </FormLabel>
-              <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
-            </FormItem>
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Tag className="w-4 h-4" />
-                    Категория
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Например: Уборка, Готовка, Покупки..."
-                      className="things-input"
-                      maxLength={100}
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Необязательно. Поможет фильтровать задачи по категориям.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Coins className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Стоимость выполнения</FormLabel>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Укажите сумму в рублях, которая будет начислена исполнителю за выполнение задачи
-                  </p>
-                  <FormControl>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        className="things-input w-32"
-                        {...field}
-                      />
-                      <span className="text-sm text-muted-foreground">₽</span>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="requiresPhoto"
-              render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4 space-y-4">
-                  <div className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="cursor-pointer">
-                        Добавить фото результатов
-                      </FormLabel>
-                      <p className="text-xs text-muted-foreground">
-                        Сотрудник не закроет задачу без фото
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Секция загрузки примера фото - показывается только если галочка установлена */}
-                  {field.value && (
-                    <div className="pt-3 border-t border-border/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ImagePlus className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Пример фото (необязательно)</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        Загрузите пример того, как должна выглядеть выполненная задача
-                      </p>
-
-                      {examplePhotoPreview ? (
-                        <div className="relative inline-block">
-                          <img
-                            src={examplePhotoPreview}
-                            alt="Пример фото"
-                            className="w-32 h-32 object-cover rounded-lg border border-border"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeExamplePhoto}
-                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            ref={examplePhotoInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleExamplePhotoSelect}
-                            className="hidden"
-                            id="example-photo-upload"
-                          />
-                          <label
-                            htmlFor="example-photo-upload"
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-dashed border-primary/40 bg-primary/5 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/10 transition-all"
-                          >
-                            <ImagePlus className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-primary">Выбрать фото</span>
-                          </label>
-                        </>
-                      )}
-                    </div>
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          placeholder="Что нужно сделать?"
+                          aria-label="Название"
+                          className="things-input quick-task-title"
+                          maxLength={255}
+                          enterKeyHint="next"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </FormItem>
-              )}
-            />
+                />
 
-            <TaskScheduleFields form={form} />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Описание — необязательно"
+                          aria-label="Описание задачи"
+                          className="things-input min-h-[72px] resize-none"
+                          rows={2}
+                          maxLength={5000}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <div className="flex gap-4 pt-4">
-                <Button 
-                  type="button" 
-                  variant="ghost"
-                  onClick={() => setLocation("/")}
-                  className="flex-1 border border-border/50"
-                >
-                  Отмена
-                </Button>
-                <Button 
-                  type="submit" 
-                  loading={createTask.isPending} loadingLabel="Создание…"
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all"
-                >
-                  Создать
-                </Button>
-              </div>
-            </form>
-          </Form>
+                <div>
+                  <WorkerPicker
+                    users={users}
+                    value={freeModeWorkerIds}
+                    onChange={(ids) => {
+                      setFreeModeWorkerIds(ids);
+                      if (ids.length) setWorkersInvalid(false);
+                    }}
+                    invalid={workersInvalid}
+                  />
+                  {workersInvalid ? (
+                    <p className="quick-task-hint quick-task-hint--error" role="alert">Выберите ответственного</p>
+                  ) : freeModeWorkerIds.length > 1 ? (
+                    <p className="quick-task-hint">Каждый получит свою копию задачи.</p>
+                  ) : null}
+                </div>
+
+                {kind === "once" ? (
+                  <>
+                    <PhotoSlot
+                      id="problem-photo-upload"
+                      title="Фото проблемы"
+                      hint="Сотрудник увидит его в задаче"
+                      icon={Camera}
+                      preview={examplePhotoPreview}
+                      inputRef={examplePhotoInputRef}
+                      onSelect={handleExamplePhotoSelect}
+                      onRemove={removeExamplePhoto}
+                    />
+                    <DueDateQuick form={form} />
+                  </>
+                ) : (
+                  <TaskScheduleFields form={form} allowDue={false} />
+                )}
+
+                <div className="quick-task-more">
+                  <button
+                    type="button"
+                    className="quick-task-more-toggle"
+                    aria-expanded={moreOpen}
+                    aria-controls="quick-task-more"
+                    onClick={() => setMoreOpen((v) => !v)}
+                    data-testid="task-more-toggle"
+                  >
+                    <SlidersHorizontal aria-hidden />
+                    <span className="quick-task-more-text">
+                      Ещё
+                      <small>{moreSummary}</small>
+                    </span>
+                    <ChevronDown aria-hidden className={moreOpen ? "rotate-180" : ""} />
+                  </button>
+
+                  <div id="quick-task-more" hidden={!moreOpen} className="quick-task-more-body">
+                    <div className="quick-task-group">
+                      <p className="quick-task-caption">
+                        <ListChecks aria-hidden />
+                        Чек-лист
+                      </p>
+                      <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                placeholder="Категория: уборка, кухня…"
+                                aria-label="Категория"
+                                className="things-input"
+                                maxLength={100}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                min="0"
+                                placeholder="Премия за выполнение, ₽"
+                                aria-label="Премия за выполнение, ₽"
+                                className="things-input"
+                                {...field}
+                                value={field.value === "0" ? "" : field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="requiresPhoto"
+                      render={({ field }) => (
+                        <FormItem className="quick-task-group">
+                          <div className="flex flex-row items-start gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="cursor-pointer">Закрыть только с фото результата</FormLabel>
+                              <p className="text-xs text-muted-foreground">Без фото сотрудник не отметит задачу выполненной</p>
+                            </div>
+                          </div>
+
+                          {/* Пример результата — у регулярной; у разовой это место занимает фото проблемы. */}
+                          {field.value && kind === "recurring" && (
+                            <div className="pt-3 border-t border-border/30">
+                              <PhotoSlot
+                                id="example-photo-upload"
+                                title="Пример результата"
+                                hint="Как должно выглядеть сделанное"
+                                icon={ImagePlus}
+                                preview={examplePhotoPreview}
+                                inputRef={examplePhotoInputRef}
+                                onSelect={handleExamplePhotoSelect}
+                                onRemove={removeExamplePhoto}
+                              />
+                            </div>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+
+                    {kind === "once" && (
+                      <RemindAtField form={form} className="task-schedule-field quick-task-group" />
+                    )}
+                  </div>
+                </div>
+
+                <div className="quick-task-actions">
+                  <Button type="button" variant="ghost" onClick={() => setLocation("/")} className="border border-border/50">
+                    Отмена
+                  </Button>
+                  <Button
+                    type="submit"
+                    loading={submitting}
+                    loadingLabel="Создание…"
+                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl"
+                  >
+                    Создать
+                  </Button>
+                </div>
+              </form>
+            </Form>
           )}
         </div>
       </div>

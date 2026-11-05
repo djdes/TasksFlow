@@ -104,3 +104,40 @@ export function describeSchedule(input: ScheduleInput, nowSec: number = Math.flo
 
   return { when, repeat, note: notes.length ? notes.join(" ") : null };
 }
+
+/** Date → «YYYY-MM-DD» по локальному календарю (как поле type="date"). */
+export function toDateInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export type DueShortcut = { key: string; label: string; value: string };
+
+/**
+ * Быстрые сроки разовой задачи «Устранить до»: сегодня, завтра,
+ * послезавтра, до конца недели (воскресенье) и до конца месяца.
+ * Совпавшие даты не дублируются: в субботу «послезавтра» и «до конца
+ * недели» — одно и то же воскресенье, остаётся первая кнопка.
+ */
+export function dueShortcuts(now: Date = new Date()): DueShortcut[] {
+  const day = (offset: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+  const toSunday = (7 - now.getDay()) % 7;
+  const all: DueShortcut[] = [
+    { key: "today", label: "Сегодня", value: toDateInputValue(day(0)) },
+    { key: "tomorrow", label: "Завтра", value: toDateInputValue(day(1)) },
+    { key: "after", label: "Послезавтра", value: toDateInputValue(day(2)) },
+    { key: "week", label: "До конца недели", value: toDateInputValue(day(toSunday)) },
+    { key: "month", label: "До конца месяца", value: toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)) },
+  ];
+  const seen = new Set<string>();
+  return all.filter((s) => (seen.has(s.value) ? false : (seen.add(s.value), true)));
+}
+
+/** «7 ноября, пятница» — подпись выбранного срока. Битая строка → null. */
+export function formatDueInput(value: string | null | undefined, now: Date = new Date()): string | null {
+  const sec = parseDueDateInput(value);
+  if (sec === null) return null;
+  const date = new Date(sec * 1000);
+  const year = date.getFullYear() === now.getFullYear() ? "" : ` ${date.getFullYear()}`;
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}${year}, ${WEEKDAYS[date.getDay()]}`;
+}

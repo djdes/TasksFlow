@@ -200,17 +200,26 @@ async (page) => {
       await tab.waitForURL('**/tasks/new');
       check(await sidebar.getByRole('link', { name: /Создать задачу/ }).getAttribute('aria-current') === 'page', 'create action not marked on /tasks/new');
       check(await sidebar.locator('[aria-current="page"]').count() === 1, 'only the create action is current on /tasks/new');
-      // Расписание словами: дни меняют сводку, срок делает задачу разовой и выключает дни.
+      // По умолчанию — разовая: «Устранить до» одной кнопкой, без расписания.
+      check(await tab.getByTestId('task-kind-once').getAttribute('aria-checked') === 'true', 'one-time tab is not the default');
+      check(await tab.getByTestId('schedule-summary').count() === 0, 'schedule shown on the one-time tab');
+      await tab.getByTestId('due-tomorrow').click();
+      check(await tab.getByTestId('due-tomorrow').getAttribute('aria-pressed') === 'true', 'due shortcut not pressed');
+      check(/^\d{4}-\d{2}-\d{2}$/.test(await tab.getByTestId('input-due-date').inputValue()), 'due shortcut did not set a date');
+      await tab.getByRole('button', { name: 'Убрать срок', exact: true }).click();
+      check(await tab.getByTestId('input-due-date').inputValue() === '', 'due date not cleared');
+      await tab.getByTestId('input-due-date').fill('2026-12-30');
+      check((await tab.locator('.due-quick-text').innerText()).startsWith('Устранить до 30 декабря'), 'due label');
+      // Регулярная: расписание словами, дни меняют сводку, срока нет.
+      await tab.getByTestId('task-kind-recurring').click();
+      check(await tab.getByTestId('input-due-date').count() === 0, 'due date on the recurring tab');
       const summary = tab.getByTestId('schedule-summary');
       check((await summary.innerText()).startsWith('Каждый день'), `default schedule ${await summary.innerText()}`);
       for (const day of ['Пн', 'Ср', 'Пт']) await tab.getByRole('button', { name: day, exact: true }).click();
       check((await summary.innerText()).startsWith('По понедельникам, средам и пятницам'), `weekday schedule ${await summary.innerText()}`);
       check(await tab.getByRole('button', { name: 'Пн', exact: true }).getAttribute('aria-pressed') === 'true', 'weekday chip not pressed');
-      await tab.getByTestId('input-due-date').fill('2026-12-30');
-      check((await summary.innerText()).startsWith('Разово, срок — 30 декабря'), `due schedule ${await summary.innerText()}`);
-      check(await tab.getByRole('button', { name: 'Ср', exact: true }).isDisabled(), 'weekdays still active with a due date');
-      await tab.getByRole('button', { name: 'Убрать', exact: true }).click();
-      check((await summary.innerText()).startsWith('По понедельникам'), 'removing due date did not restore weekdays');
+      // Дата, оставшаяся с разовой вкладки, расписание не трогает.
+      check(!(await tab.getByRole('button', { name: 'Ср', exact: true }).isDisabled()), 'weekdays disabled on the recurring tab');
 
       // Страница упала (здесь — неподменённый API оплаты) — меню на месте, уйти можно.
       await tab.goto(base + '/admin/billing');
