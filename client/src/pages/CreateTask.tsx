@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields, RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
+import { RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
 import { WorkerPicker } from "@/components/WorkerPicker";
-import { DueDateQuick, PhotoSlot } from "@/components/QuickTaskFields";
+import { DueDateQuick, PhotoSlot, ScheduleQuick } from "@/components/QuickTaskFields";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
@@ -32,18 +32,13 @@ import {
   BookOpen,
   Sparkles,
   LayoutTemplate,
-  CalendarClock,
   Camera,
   ChevronDown,
-  ClipboardList,
   Coins,
-  ListChecks,
-  MessageCircleQuestion,
   Pencil,
   Repeat,
   SlidersHorizontal,
   Tag,
-  Users,
   Zap,
 } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
@@ -862,8 +857,9 @@ export default function CreateTask() {
                   ))}
                 </div>
 
-                {/* Блоки с цветным значком: что, кто, когда, вопрос, остальное. */}
-                <FormBlock icon={ClipboardList} title="Задача" tone="task">
+                {/* Блоки без заголовков: подписи — в placeholder, смысл — в значках полей.
+                    Что → кто и когда → вопрос → остальное. */}
+                <FormBlock label="Задача" tone="task">
                   <FormField
                     control={form.control}
                     name="title"
@@ -919,7 +915,7 @@ export default function CreateTask() {
                   />
                 </FormBlock>
 
-                <FormBlock icon={Users} title="Исполнитель" tone="people">
+                <FormBlock label="Исполнитель и срок" tone="people">
                   <WorkerPicker
                     users={users}
                     value={freeModeWorkerIds}
@@ -927,7 +923,7 @@ export default function CreateTask() {
                       setFreeModeWorkerIds(ids);
                       if (ids.length) setWorkersInvalid(false);
                     }}
-                    placeholder="Кто выполнит"
+                    placeholder="Исполнитель"
                     invalid={workersInvalid}
                   />
                   {workersInvalid ? (
@@ -935,18 +931,18 @@ export default function CreateTask() {
                   ) : freeModeWorkerIds.length > 1 ? (
                     <p className="quick-task-hint">Каждому — своя копия</p>
                   ) : null}
+                  {kind === "once" ? (
+                    <DueDateQuick form={form} />
+                  ) : (
+                    <>
+                      <ScheduleQuick form={form} />
+                      <RemindAtField form={form} />
+                    </>
+                  )}
                 </FormBlock>
 
-                {kind === "once" ? (
-                  <FormBlock icon={CalendarClock} title="Срок" tone="time">
-                    <DueDateQuick form={form} />
-                  </FormBlock>
-                ) : (
-                  <>
-                    <FormBlock icon={Repeat} title="Расписание" tone="time">
-                      <TaskScheduleFields form={form} allowDue={false} />
-                    </FormBlock>
-                    <FormBlock icon={MessageCircleQuestion} title="Вопрос сотруднику" tone="question">
+                {kind === "recurring" && (
+                    <FormBlock label="Вопрос сотруднику" tone="question">
                       <TaskQuestionsEditor
                         items={questions}
                         onChange={(next) => {
@@ -958,7 +954,6 @@ export default function CreateTask() {
                         <p className="quick-task-hint quick-task-hint--error" role="alert">{questionsInvalid}</p>
                       ) : null}
                     </FormBlock>
-                  </>
                 )}
 
                 {/* «Дополнительно» свёрнуто; число — сколько там уже задано. */}
@@ -971,25 +966,14 @@ export default function CreateTask() {
                     onClick={() => setMoreOpen((v) => !v)}
                     data-testid="task-more-toggle"
                   >
-                    <span className="form-block-icon" aria-hidden>
-                      <SlidersHorizontal />
-                    </span>
+                    <SlidersHorizontal aria-hidden className="form-block-toggle-icon" />
                     <span className="form-block-name">Дополнительно</span>
                     {moreCount > 0 ? <span className="form-block-count" aria-label={`задано: ${moreCount}`}>{moreCount}</span> : null}
                     <ChevronDown aria-hidden className={`form-block-chevron ${moreOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   <div id="quick-task-more" hidden={!moreOpen} className="form-block-body">
-                    <p className="form-sub">
-                      <ListChecks aria-hidden />
-                      Чек-лист
-                    </p>
                     <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
-
-                    <p className="form-sub">
-                      <Coins aria-hidden />
-                      Премия и категория
-                    </p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <FormField
                         control={form.control}

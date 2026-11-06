@@ -100,8 +100,10 @@ async (page) => {
 
       await tab.getByTestId('problem-photo-upload').setInputFiles({ name: 'problem.png', mimeType: 'image/png', buffer: png });
       await tab.locator('.photo-slot img').waitFor();
+      // «Срок до» — одно поле, варианты — по нажатию.
+      await tab.getByTestId('due-trigger').click();
       await tab.getByTestId('due-tomorrow').click();
-      check((await tab.locator('.due-quick .due-quick-text').innerText()).startsWith('Устранить до '), 'срок не подписан');
+      check((await tab.locator('.due-quick .due-quick-text').innerText()).startsWith('Срок до '), 'срок не подписан');
       check(await noOverflow(tab), 'разовая 390: горизонтальная прокрутка');
       await tab.screenshot({ path: `${shots}/quick-task-once-filled-390.png`, fullPage: true });
 
@@ -127,6 +129,7 @@ async (page) => {
     try {
       await tab.goto(base + '/tasks/new');
       await tab.getByPlaceholder('Что сделать?').fill('Протереть витрину');
+      await tab.getByTestId('due-trigger').click();
       await tab.getByTestId('due-today').click();
       await tab.getByTestId('task-kind-recurring').click();
       check(await tab.getByTestId('input-due-date').count() === 0, 'срок на регулярной');
@@ -134,8 +137,11 @@ async (page) => {
       await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Анна' }).click();
       await tab.keyboard.press('Escape');
+      // Расписание — одно поле: дни, число и повтор — по нажатию.
+      await tab.getByTestId('schedule-trigger').click();
       for (const day of ['Пн', 'Ср']) await tab.getByRole('button', { name: day, exact: true }).click();
       check((await tab.getByTestId('schedule-summary').innerText()).startsWith('По понедельникам и средам'), 'сводка расписания');
+      await tab.keyboard.press('Escape');
       await tab.getByTestId('task-more-toggle').click();
       await tab.getByPlaceholder('Премия, ₽').fill('150');
       check((await tab.getByTestId('task-more-toggle').innerText()).includes('1'), '«Дополнительно» не показывает, что задано');

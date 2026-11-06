@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, ListChecks, MessageCircleQuestion, MessageSquare } from "lucide-react";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, MessageCircleQuestion, MessageSquare } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
 import { reviewersLine, type TaskReviewers } from "@shared/reviewers";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
@@ -437,15 +437,21 @@ export function TaskViewDialog({
             )}
           </DialogHeader>
 
-          {reviewersText ? (
-            <p className="mt-2 flex items-start gap-1.5 text-[0.9375rem] text-muted-foreground" data-testid="task-reviewers">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <span>{reviewersText}</span>
-            </p>
-          ) : null}
 
           {/* Бейджи в шапке: премия и срок */}
           <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">
+            {/* Кто примет работу — значком, полная строка — в подсказке. */}
+            {reviewersText ? (
+              <div
+                className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-lg text-sm font-semibold"
+                title={reviewersText}
+                aria-label={reviewersText}
+                data-testid="task-reviewers"
+              >
+                <ShieldCheck className="w-4 h-4" aria-hidden />
+                <span>На проверку</span>
+              </div>
+            ) : null}
             {hasPrice && (
               <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-sm font-semibold">
                 <Coins className="w-4 h-4" />
@@ -497,18 +503,22 @@ export function TaskViewDialog({
 
           {/* Фото к задаче от руководителя: что и как сделать. Видно сразу, касание — во весь экран. */}
           {(currentTask as any).examplePhotoUrl && (
-            <FormBlock icon={ImageIcon} title="Пример" tone="photo" testId="task-attached-photo">
+            <FormBlock label="Пример" tone="photo" testId="task-attached-photo">
               <button
                 type="button"
                 onClick={() => setIsExamplePhotoFullscreen(true)}
-                className="block overflow-hidden rounded-xl border border-border"
+                className="task-example relative block overflow-hidden rounded-xl border border-border"
                 aria-label="Открыть фото к задаче во весь экран"
               >
+                <span className="task-example-badge">
+                  <ImageIcon aria-hidden />
+                  Пример
+                </span>
                 <img
                   src={(currentTask as any).examplePhotoUrl}
                   alt="Фото к задаче"
                   loading="lazy"
-                  className="max-h-56 w-auto max-w-full object-contain bg-muted/40"
+                  className="max-h-40 w-auto max-w-full object-contain bg-muted/40"
                 />
               </button>
             </FormBlock>
@@ -517,12 +527,7 @@ export function TaskViewDialog({
           {/* Photo upload section — скрываем, если у задачи есть чек-лист
               (там фото идёт по каждому пункту отдельно). */}
           {!hasChecklist && (currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
-            <FormBlock
-              icon={Camera}
-              title="Фото результата"
-              tone="photo"
-              aside={photoUrls.length === 0 ? "обязательно" : <span className="text-emerald-600 dark:text-emerald-300">{photoUrls.length} из 10</span>}
-            >
+            <FormBlock label="Фото результата" tone="photo">
 
               {queuedHere > 0 && (
                 <p className="mb-3 flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200" role="status">
@@ -581,7 +586,7 @@ export function TaskViewDialog({
                   />
                   <label
                     htmlFor="photo-upload"
-                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-border bg-muted/40 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors active:scale-[0.99]`}
+                    className={`flex flex-col items-center justify-center w-full h-14 border-2 border-dashed border-border bg-muted/40 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors active:scale-[0.99]`}
                   >
                     {preview ? (
                       <div className="relative w-full h-full">
@@ -602,7 +607,7 @@ export function TaskViewDialog({
                           <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-primary`} />
                         </div>
                         <span className="task-detail-add">
-                          {photoUrls.length > 0 ? 'Ещё фото' : 'Сделать фото'}
+                          {photoUrls.length > 0 ? 'Ещё фото' : 'Фото результата'}
                         </span>
                       </div>
                     )}
@@ -615,7 +620,7 @@ export function TaskViewDialog({
           {/* Свои вопросы («Кто заполняет?»): ответ — из выпадающего списка.
               Пока задача на проверке или закрыта — только ответ, без выбора. */}
           {questionItems.length > 0 && (
-            <FormBlock icon={MessageCircleQuestion} title={questionItems.length > 1 ? "Вопросы" : "Вопрос"} tone="question">
+            <FormBlock label={questionItems.length > 1 ? "Вопросы" : "Вопрос"} tone="question">
               {questionItems.map((item) => {
                 const canAnswer = canComplete && !currentTask.isCompleted && currentTask.verificationStatus !== "submitted";
                 const answering =
@@ -623,6 +628,7 @@ export function TaskViewDialog({
                 return (
                   <div key={item.id} className="task-answer" data-testid="checklist-question">
                     <p className="task-answer-title">
+                      <MessageCircleQuestion aria-hidden className="task-answer-icon" />
                       <span>{item.title}</span>
                       {item.done ? <CheckCircle2 className="task-answer-done" aria-label="Ответ есть" /> : null}
                     </p>
@@ -651,13 +657,8 @@ export function TaskViewDialog({
 
           {/* Чек-лист: пункт с фото закрывается фото, без фото — касанием. */}
           {checkItems.length > 0 && (
-            <FormBlock
-              icon={ListChecks}
-              title="Чек-лист"
-              tone="check"
-              aside={<span className={checkDone === checkItems.length ? "text-emerald-600 dark:text-emerald-300" : undefined}>{checkDone}/{checkItems.length}</span>}
-            >
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <FormBlock label={`Чек-лист: ${checkDone} из ${checkItems.length}`} tone="check">
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-[width] duration-300"
                   style={{ width: `${(checkDone / checkItems.length) * 100}%` }}
@@ -789,15 +790,16 @@ export function TaskViewDialog({
               <Textarea
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}
-                placeholder="Комментарий, если нужно"
+                placeholder="Комментарий"
                 aria-label="Комментарий"
-                className="things-input min-h-[80px] resize-none"
+                rows={1}
+                className="things-input task-comment resize-none"
               />
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex flex-col gap-2.5 pt-2">
+          {/* Кнопка внизу шторки всегда видна — без прокрутки. */}
+          <div className="task-detail-actions">
             {canComplete && (
               currentTask.isCompleted ? (
                 // Журнальные задачи нельзя «вернуть в работу» —
@@ -845,12 +847,15 @@ export function TaskViewDialog({
                 </button>
               )
             )}
-            <button
-              onClick={() => onOpenChange(false)}
-              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-muted rounded-2xl font-medium transition-colors"
-            >
-              Закрыть
-            </button>
+            {/* Закрыть — крестик и свайп; отдельная кнопка — только когда другой нет. */}
+            {!canComplete && (
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-muted rounded-2xl font-medium transition-colors"
+              >
+                Закрыть
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

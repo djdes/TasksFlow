@@ -1760,8 +1760,8 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 
 .form-block {
   --tone: var(--primary);
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0;
-  padding: 16px; border: 1px solid hsl(var(--border) / .7); border-radius: 18px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0;
+  padding: 12px; border: 1px solid hsl(var(--border) / .7); border-radius: 18px;
   background: hsl(var(--card)); box-shadow: 0 1px 2px rgb(16 24 40 / .04);
 }
 .form-block[data-tone="people"] { --tone: 174 62% 38%; }
@@ -1927,3 +1927,61 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .app-layout .task-badge.checklist { background: hsl(152 62% 40% / .12); color: hsl(155 72% 27%); }
 .dark .app-layout .task-badge.checklist { background: hsl(152 62% 40% / .18); color: hsl(152 60% 66%); }
 .task-detail-body > .field-icon-wrap textarea.things-input { background: hsl(var(--card)); }
+
+/* ===== Компактно (06.11.2026): без заголовков блоков, выбор по нажатию =====
+   Смысл блока — в цвете значков полей: задача — индиго, исполнитель —
+   бирюзовый, срок и расписание — янтарный, вопрос — фиолетовый. */
+.form-block[data-tone="task"] .field-icon { color: hsl(var(--primary)); }
+.form-block .worker-picker-icon { color: hsl(174 62% 38%); }
+.form-block .due-quick-icon { color: hsl(30 90% 46%); }
+.form-block[data-tone="more"] .field-icon, .form-block-toggle-icon { color: hsl(220 12% 46%); }
+.form-block-toggle-icon { width: 20px; height: 20px; flex: none; }
+.form-block .form-block-toggle { min-height: 40px; font-size: var(--qf-fs, 16px); font-weight: 600; }
+.form-block[data-tone="question"] .task-question-add { color: hsl(262 60% 50%); border-color: hsl(262 70% 58% / .45); background: hsl(262 70% 58% / .05); }
+.dark .form-block[data-tone="question"] .task-question-add { color: hsl(262 90% 80%); }
+
+/* Поле-кнопка, открывающее список вариантов. */
+.due-quick-field:has(> .pick-trigger) { padding: 0; }
+.pick-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 0 14px; text-align: left; color: inherit; font: inherit; border-radius: inherit; }
+.due-quick-field.has-value > .pick-trigger { padding-right: 48px; }
+.due-quick-field.pick-trigger { padding: 0 14px; }
+.pick-trigger:focus-visible { outline: none; }
+.due-quick-field:has(> .pick-trigger:focus-visible), .due-quick-field.pick-trigger:focus-visible { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / .2); }
+.pick-chevron { width: 18px; height: 18px; flex: none; margin-left: auto; color: hsl(var(--muted-foreground)); }
+.pick-panel { display: grid; gap: 2px; width: var(--radix-popover-trigger-width, 320px); max-width: calc(100vw - 24px); padding: 6px; }
+.pick-row {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border-radius: 12px;
+  text-align: left; font-size: 16px; color: hsl(var(--foreground));
+}
+.pick-row:hover { background: hsl(var(--muted) / .6); }
+.pick-row[aria-pressed="true"] { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-weight: 600; }
+.pick-row:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+.pick-row > span { flex: 1; min-width: 0; }
+.pick-row small { font-size: 15px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.pick-check { width: 18px; height: 18px; flex: none; }
+.pick-row--date { cursor: pointer; border-top: 1px solid hsl(var(--border)); border-radius: 0 0 12px 12px; margin-top: 2px; }
+.pick-row--date > svg { width: 18px; height: 18px; color: hsl(30 90% 46%); }
+.pick-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 6px 0; border-top: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); }
+.pick-days .task-schedule-day { min-height: 42px; border-radius: 10px; font-size: 15px; }
+.pick-select { margin-top: 2px; }
+.pick-panel .toggle-row { min-height: 48px; }
+.pick-checkbox { width: 22px; height: 22px; flex: none; accent-color: hsl(var(--primary)); }
+.pick-panel .worker-picker-done { margin-top: 4px; }
+
+/* Окно задачи: пример фото с отметкой, вопрос со значком, комментарий в одну
+   строку, «Готово» прилипает к низу шторки — до неё не нужно листать. */
+.task-example-badge {
+  position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px;
+  background: rgb(0 0 0 / .55); color: white; font-size: 13px; font-weight: 600;
+}
+.task-example-badge svg { width: 14px; height: 14px; }
+.task-answer-icon { width: 20px; height: 20px; flex: none; color: hsl(262 60% 52%); }
+.dark .task-answer-icon { color: hsl(262 90% 78%); }
+.task-detail-body .task-comment { min-height: 52px; height: 52px; padding-top: 14px; }
+.task-detail-body .task-comment:focus { height: 96px; }
+.task-detail-actions {
+  position: sticky; bottom: 0; z-index: 2; display: grid; gap: 8px;
+  margin: 0 -16px -16px; padding: 10px 16px max(16px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, hsl(var(--background) / 0), hsl(var(--background)) 14px);
+}
+.task-detail-body > :not([hidden]) ~ .task-detail-actions { margin-top: 4px; }
