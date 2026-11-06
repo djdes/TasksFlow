@@ -67,7 +67,7 @@ async (page) => {
     const { context, tab, errors, calls } = await open({ width: 390, height: 844 });
     try {
       await tab.goto(base + '/tasks/new');
-      const title = tab.getByPlaceholder('Что нужно сделать?');
+      const title = tab.getByPlaceholder('Что сделать?');
       await title.waitFor();
       check(await tab.getByTestId('task-kind-once').getAttribute('aria-checked') === 'true', 'разовая не по умолчанию');
       check(await tab.getByRole('button', { name: 'Из шаблона', exact: true }).isVisible(), 'нет иконки шаблонов в шапке');
@@ -78,10 +78,10 @@ async (page) => {
       // Без ответственного — подсказка у поля, запроса нет.
       await title.fill('Отмыть пол у мойки');
       await tab.getByRole('button', { name: 'Создать', exact: true }).click();
-      await tab.getByText('Выберите ответственного').waitFor();
+      await tab.getByText('Выберите исполнителя').waitFor();
       check(created(calls).length === 0, 'задача ушла без ответственного');
 
-      await tab.getByPlaceholder('Описание — необязательно').fill('Лужа под второй мойкой');
+      await tab.getByPlaceholder('Подробности, если нужно').fill('Лужа под второй мойкой');
       await tab.getByTestId('worker-picker').click();
       const search = tab.getByTestId('worker-picker-search');
       await search.waitFor();
@@ -96,7 +96,7 @@ async (page) => {
       await tab.screenshot({ path: `${shots}/quick-task-picker-390.png` });
       await tab.getByRole('button', { name: 'Готово', exact: true }).click();
       check((await tab.getByTestId('worker-picker').innerText()).includes('Анна и Борис'), 'выбранные не видны в поле');
-      check(await tab.getByText('Каждый получит свою копию задачи.').isVisible(), 'нет подсказки про копии');
+      check(await tab.getByText('Каждому — своя копия').isVisible(), 'нет подсказки про копии');
 
       await tab.getByTestId('problem-photo-upload').setInputFiles({ name: 'problem.png', mimeType: 'image/png', buffer: png });
       await tab.locator('.photo-slot img').waitFor();
@@ -126,19 +126,19 @@ async (page) => {
     const { context, tab, errors, calls } = await open({ width: 390, height: 844 });
     try {
       await tab.goto(base + '/tasks/new');
-      await tab.getByPlaceholder('Что нужно сделать?').fill('Протереть витрину');
+      await tab.getByPlaceholder('Что сделать?').fill('Протереть витрину');
       await tab.getByTestId('due-today').click();
       await tab.getByTestId('task-kind-recurring').click();
       check(await tab.getByTestId('input-due-date').count() === 0, 'срок на регулярной');
-      check((await tab.locator('.photo-slot-add').innerText()).includes('Фото к задаче'), 'у регулярной фото — «Фото к задаче»');
+      check((await tab.locator('.photo-slot-add').innerText()).includes('Фото-пример'), 'у регулярной фото — «Фото-пример»');
       await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Анна' }).click();
       await tab.keyboard.press('Escape');
       for (const day of ['Пн', 'Ср']) await tab.getByRole('button', { name: day, exact: true }).click();
       check((await tab.getByTestId('schedule-summary').innerText()).startsWith('По понедельникам и средам'), 'сводка расписания');
       await tab.getByTestId('task-more-toggle').click();
-      await tab.getByPlaceholder('Премия за выполнение, ₽').fill('150');
-      check((await tab.getByTestId('task-more-toggle').innerText()).includes('премия 150 ₽'), 'свёрнутое «Ещё» не показывает премию');
+      await tab.getByPlaceholder('Премия, ₽').fill('150');
+      check((await tab.getByTestId('task-more-toggle').innerText()).includes('1'), '«Дополнительно» не показывает, что задано');
       check(await noOverflow(tab), 'регулярная 390: горизонтальная прокрутка');
       await tab.screenshot({ path: `${shots}/quick-task-recurring-390.png`, fullPage: true });
       await tab.getByRole('button', { name: 'Создать', exact: true }).click();
@@ -156,7 +156,7 @@ async (page) => {
     const { context, tab, errors } = await open(viewport, theme);
     try {
       await tab.goto(base + '/tasks/new');
-      await tab.getByPlaceholder('Что нужно сделать?').waitFor();
+      await tab.getByPlaceholder('Что сделать?').waitFor();
       await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Михаил Шеф Сушеф' }).click();
       await tab.screenshot({ path: `${shots}/quick-task-picker-${name}.png` });

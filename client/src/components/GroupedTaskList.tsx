@@ -12,7 +12,9 @@ import {
   Coins,
   Copy,
   Edit2,
+  ListChecks,
   Lock,
+  MessageCircleQuestion,
   Sparkles,
   Tag,
   Trash2,
@@ -31,6 +33,7 @@ import { DueBadge } from "@/components/DueBadge";
 import { useMotionPreference } from "@/contexts/MotionContext";
 import { usePendingTaskCompletions } from "@/hooks/use-tasks";
 import { avatarTone } from "@/lib/shift-summary";
+import { isQuestionItem } from "@shared/checklist";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -241,8 +244,11 @@ export function GroupedTaskList(props: Props) {
     const categoryValue = (task as unknown as { category?: string })
       .category;
     const requiresPhoto = task.requiresPhoto && !task.photoUrl;
-    const checklistItems =
-      (task as unknown as { checklist?: { done: boolean }[] }).checklist || [];
+    const allItems =
+      (task as unknown as { checklist?: { done: boolean; options?: string[] | null }[] }).checklist || [];
+    // Свои вопросы — отдельным значком, счётчик «2/5» — только у пунктов.
+    const checklistItems = allItems.filter((i) => !isQuestionItem(i));
+    const openQuestion = allItems.some((i) => isQuestionItem(i) && !i.done);
     const checklistTotal = checklistItems.length;
     const checklistDone = checklistItems.filter((i) => i.done).length;
     const weekDays = (task as unknown as { weekDays?: number[] | null })
@@ -371,9 +377,15 @@ export function GroupedTaskList(props: Props) {
                   <span>Фото</span>
                 </div>
               )}
+              {openQuestion && !isCompleted && !isSubmitted && (
+                <div className="task-badge question" title="Нужно выбрать ответ">
+                  <MessageCircleQuestion className="w-3.5 h-3.5" />
+                  <span>Вопрос</span>
+                </div>
+              )}
               {checklistTotal > 0 && !isCompleted && (
-                <div className="task-badge photo">
-                  <Check className="w-3.5 h-3.5" />
+                <div className="task-badge checklist">
+                  <ListChecks className="w-3.5 h-3.5" />
                   <span>{checklistDone}/{checklistTotal}</span>
                 </div>
               )}

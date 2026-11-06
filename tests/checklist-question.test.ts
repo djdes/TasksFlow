@@ -356,7 +356,7 @@ describe("форма: вопросы", async () => {
 
   it("пустой вопрос не мешает, без двух вариантов — подсказка", () => {
     expect(questionsError([{ id: "q", title: " ", options: [] }])).toBeNull();
-    expect(questionsError([{ id: "q", title: "Кто?", options: ["Лариса"] }])).toMatch(/два варианта/);
+    expect(questionsError([{ id: "q", title: "Кто?", options: ["Лариса"] }])).toMatch(/два ответа/);
     expect(questionsError([{ id: "q", title: "", options: ["Лариса", "Галина"] }])).toMatch(/Напишите вопрос/);
     expect(questionsError([{ id: "q", title: "Кто?", options: ["Лариса", "Галина"] }])).toBeNull();
   });

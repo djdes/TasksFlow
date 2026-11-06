@@ -67,9 +67,7 @@ export function describeSchedule(input: ScheduleInput, nowSec: number = Math.flo
     const overdue = getDueStatus(dueSec, nowSec).kind === "overdue";
     return {
       when: `Разово, срок — ${date.getDate()} ${MONTHS[date.getMonth()]}${year}`,
-      repeat: overdue
-        ? "Срок уже прошёл — задача сразу будет с отметкой «Просрочено»"
-        : "Видна сразу; после срока не исчезнет, а получит отметку «Просрочено»",
+      repeat: overdue ? "Срок уже прошёл" : "Видна сразу",
       note: null,
     };
   }
@@ -93,14 +91,12 @@ export function describeSchedule(input: ScheduleInput, nowSec: number = Math.flo
     when = `По ${joinWords(days.map((d) => DATIVE[d]), "и")}`;
   }
 
-  const repeat =
-    input.isRecurring === false
-      ? "Один раз: выполненная так и останется выполненной, заново не начнётся"
-      : "В полночь начинается заново — выполнение с фото остаётся в истории";
+  // Коротко, в два-три слова: сводка стоит над полями и не должна их пересказывать.
+  const repeat = input.isRecurring === false ? "Один раз" : "Обновляется в полночь";
 
   const notes: string[] = [];
-  if (monthDay && !allWeek) notes.push("Совпадает редко: нужны и число, и день недели сразу.");
-  if (monthDay && monthDay > 28) notes.push(`В месяцах без ${monthDay}-го числа задачи не будет.`);
+  if (monthDay && !allWeek) notes.push("Совпадает редко.");
+  if (monthDay && monthDay > 28) notes.push(`${monthDay}-е — не каждый месяц.`);
 
   return { when, repeat, note: notes.length ? notes.join(" ") : null };
 }

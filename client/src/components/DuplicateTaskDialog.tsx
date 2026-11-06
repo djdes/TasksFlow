@@ -300,7 +300,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                   <FormLabel>Название</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Что нужно сделать?"
+                      placeholder="Что сделать?"
                       className="things-input"
                       maxLength={255}
                       {...field}
@@ -392,7 +392,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Каждый выбранный сотрудник получит свою копию задачи.
+                Каждому — своя копия
               </p>
             </FormItem>
 

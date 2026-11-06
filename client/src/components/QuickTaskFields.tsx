@@ -1,6 +1,6 @@
 import { useMemo, type ChangeEvent, type RefObject } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import { CalendarClock, X, type LucideIcon } from "lucide-react";
+import { CalendarClock, Plus, X, type LucideIcon } from "lucide-react";
 import { dueShortcuts, formatDueInput } from "@/lib/task-schedule";
 import { getDueStatus, parseDueDateInput } from "@shared/task-visibility";
 import { cn } from "@/lib/utils";
@@ -147,7 +147,7 @@ export function PhotoSlot({
         <label htmlFor={id} className="photo-slot-add">
           <Icon aria-hidden />
           <span>{title}</span>
-          <small>необязательно</small>
+          <Plus aria-hidden className="photo-slot-plus" />
         </label>
       )}
     </>

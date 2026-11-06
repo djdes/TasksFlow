@@ -170,9 +170,9 @@ async (page) => {
 
       // ---------- 3. Задача со временем напоминания ----------
       await tab.goto(base + '/tasks/new');
-      await tab.getByPlaceholder('Что нужно сделать?').waitFor();
+      await tab.getByPlaceholder('Что сделать?').waitFor();
       check(await tab.getByText('Доступ запрещен').count() === 0, 'руководитель с ролью открывает создание задачи');
-      await tab.getByPlaceholder('Что нужно сделать?').fill('Принять поставку');
+      await tab.getByPlaceholder('Что сделать?').fill('Принять поставку');
       // Ответственный — выпадающий список с галочками; «Напомнить в» у разовой — в «Ещё».
       await tab.getByTestId('worker-picker').click();
       await tab.getByRole('checkbox', { name: 'Анна' }).click();

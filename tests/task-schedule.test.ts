@@ -38,18 +38,18 @@ describe("describeSchedule — когда видна", () => {
 
 describe("describeSchedule — после выполнения и подвохи", () => {
   it("повтор — фото остаются в истории, разовая — не появится", () => {
-    expect(describeSchedule({ isRecurring: true }).repeat).toContain("остаётся в истории");
-    expect(describeSchedule({ isRecurring: false }).repeat).toContain("останется выполненной");
-    expect(describeSchedule({ dueDateInput: "2026-12-02" }, NOW).repeat).toContain("после срока не исчезнет");
-    expect(describeSchedule({ dueDateInput: "2026-01-02" }, NOW).repeat).toContain("Срок уже прошёл");
+    expect(describeSchedule({ isRecurring: true }).repeat).toBe("Обновляется в полночь");
+    expect(describeSchedule({ isRecurring: false }).repeat).toBe("Один раз");
+    expect(describeSchedule({ dueDateInput: "2026-12-02" }, NOW).repeat).toBe("Видна сразу");
+    expect(describeSchedule({ dueDateInput: "2026-01-02" }, NOW).repeat).toBe("Срок уже прошёл");
   });
 
   it("31-е бывает не каждый месяц; число вместе с днём недели — редкость", () => {
-    expect(describeSchedule({ monthDay: "31" }).note).toContain("без 31-го");
+    expect(describeSchedule({ monthDay: "31" }).note).toContain("31-е — не каждый месяц");
     expect(describeSchedule({ monthDay: "10", weekDays: [1] }).note).toContain("редко");
     expect(describeSchedule({ monthDay: "10" }).note).toBeNull();
     const both = describeSchedule({ monthDay: "31", weekDays: [1] }).note ?? "";
     expect(both).toContain("редко");
-    expect(both).toContain("без 31-го");
+    expect(both).toContain("31-е — не каждый месяц");
   });
 });

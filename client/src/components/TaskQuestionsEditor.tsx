@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageCircleQuestion, Plus, X } from "lucide-react";
+import { List, MessageCircleQuestion, Plus, X } from "lucide-react";
 import type { ChecklistItem } from "@shared/schema";
 import { isQuestionItem, MAX_QUESTION_OPTIONS, parseQuestionOptions } from "@shared/checklist";
 import { newChecklistId } from "@/components/ChecklistEditor";
@@ -28,8 +28,8 @@ export function questionsError(drafts: readonly QuestionDraft[]): string | null 
   for (const q of drafts) {
     const title = q.title.trim();
     if (!title && q.options.length === 0) continue;
-    if (!title) return "Напишите вопрос — или уберите его";
-    if (q.options.length < 2) return `Добавьте хотя бы два варианта ответа к вопросу «${title}»`;
+    if (!title) return "Напишите вопрос";
+    if (q.options.length < 2) return `Нужно два ответа минимум: «${title}»`;
   }
   return null;
 }
@@ -78,10 +78,7 @@ export function TaskQuestionsEditor({
     return (
       <button type="button" className="task-question-add" onClick={add} data-testid="task-question-add">
         <MessageCircleQuestion aria-hidden />
-        <span>
-          Свой вопрос
-          <small>Например: «Кто заполняет?» — Лариса, Галина</small>
-        </span>
+        <span>Добавить вопрос</span>
         <Plus aria-hidden className="task-question-add-plus" />
       </button>
     );
@@ -140,11 +137,10 @@ function QuestionBlock({
   return (
     <div className="task-question" data-testid="task-question">
       <div className="task-question-row">
-        <MessageCircleQuestion aria-hidden className="task-question-icon" />
         <input
           value={draft.title}
           onChange={(e) => onChange({ title: e.target.value })}
-          placeholder="Вопрос, например: Кто заполняет?"
+          placeholder="Например: кто заполняет?"
           aria-label={`Вопрос ${n}`}
           maxLength={200}
           className="task-question-title"
@@ -155,6 +151,7 @@ function QuestionBlock({
         </button>
       </div>
       <div className="task-question-options" role="group" aria-label={`Варианты ответа на вопрос ${n}`}>
+        <List aria-hidden className="task-question-options-icon" />
         {draft.options.map((opt) => (
           <span key={opt} className="task-question-chip">
             {opt}
@@ -191,7 +188,7 @@ function QuestionBlock({
               }
             }}
             onBlur={() => pending.trim() && commit(pending)}
-            placeholder={draft.options.length ? "Ещё вариант" : "Варианты ответа через запятую: Лариса, Галина"}
+            placeholder={draft.options.length ? "Ещё ответ" : "Ответы через запятую"}
             aria-label={`Новый вариант ответа на вопрос ${n}`}
             enterKeyHint="done"
             maxLength={100}

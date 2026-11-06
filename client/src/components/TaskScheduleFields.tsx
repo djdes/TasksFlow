@@ -38,11 +38,11 @@ export function TaskScheduleFields({ form, allowDue = true }: { form: UseFormRet
   return (
     <section className="task-schedule" aria-labelledby={headingId}>
       <h3 id={headingId} className="sr-only">Когда задача видна</h3>
+      {/* Сводка одной строкой: когда видна · что после выполнения. */}
       <p className="task-schedule-summary" role="status" aria-live="polite" data-testid="schedule-summary">
-        <CalendarClock aria-hidden className="task-schedule-summary-icon" />
-        <strong>{summary.when}</strong>
-        <span>{summary.repeat}</span>
-        {summary.note && <span className="task-schedule-note">{summary.note}</span>}
+        <strong>{summary.when}</strong>{" "}
+        <span>· {summary.repeat.charAt(0).toLowerCase() + summary.repeat.slice(1)}</span>
+        {summary.note && <span className="task-schedule-note"> {summary.note}</span>}
       </p>
 
       <FormField
@@ -90,11 +90,11 @@ export function TaskScheduleFields({ form, allowDue = true }: { form: UseFormRet
               <FormControl>
                 <SelectTrigger className={`things-input w-full task-schedule-select ${field.value ? "" : "text-muted-foreground"}`}>
                   <CalendarDays aria-hidden className="task-schedule-select-icon" />
-                  <SelectValue placeholder="Число месяца — любое" />
+                  <SelectValue placeholder="Любое число" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="none">Число месяца — любое</SelectItem>
+                <SelectItem value="none">Любое число</SelectItem>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                   <SelectItem key={day} value={day.toString()}>
                     Каждое {day}-е число
@@ -111,17 +111,12 @@ export function TaskScheduleFields({ form, allowDue = true }: { form: UseFormRet
         control={form.control}
         name="isRecurring"
         render={({ field }) => (
-          <FormItem className="task-schedule-check">
+          <FormItem className={`toggle-row ${hasDueDate ? "is-disabled" : ""}`}>
+            <RefreshCw aria-hidden className="toggle-row-icon" />
+            <FormLabel className="toggle-row-label">{hasDueDate ? "Со сроком — один раз" : "Повторять каждый день"}</FormLabel>
             <FormControl>
               <Checkbox checked={hasDueDate ? false : field.value} onCheckedChange={field.onChange} disabled={hasDueDate} />
             </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel className="cursor-pointer flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" aria-hidden />
-                Начинать заново каждый день
-              </FormLabel>
-              {hasDueDate && <p className="task-schedule-hint">Недоступно: у задачи есть срок, она разовая.</p>}
-            </div>
           </FormItem>
         )}
       />
@@ -136,18 +131,15 @@ export function TaskScheduleFields({ form, allowDue = true }: { form: UseFormRet
               type="date"
               value={field.value ?? ""}
               onChange={(v) => field.onChange(v)}
-              placeholder="Или разово — к сроку"
+              placeholder="Разово — к сроку"
               display={(v) => {
                 const text = formatDueInput(v);
-                return text ? `Разово, срок ${text}` : null;
+                return text ? `Срок: ${text}` : null;
               }}
               icon={CalendarClock}
               testId="input-due-date"
               clearLabel="Убрать срок"
             />
-            {field.value ? (
-              <p className="task-schedule-hint">После срока не исчезает, а получает отметку «Просрочено». Дни и повтор отключены.</p>
-            ) : null}
             <FormMessage />
           </FormItem>
         )}
@@ -171,7 +163,7 @@ export function RemindAtField({ form, className = "task-schedule-field" }: { for
               type="time"
               value={field.value ?? ""}
               onChange={(v) => field.onChange(v)}
-              placeholder="Напомнить в… — необязательно"
+              placeholder="Напомнить в…"
               display={(v) => (v ? `Напомнить в ${v}` : null)}
               icon={BellRing}
               testId="input-remind-at"
