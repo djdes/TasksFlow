@@ -101,7 +101,7 @@ async (page) => {
       await tab.getByTestId('problem-photo-upload').setInputFiles({ name: 'problem.png', mimeType: 'image/png', buffer: png });
       await tab.locator('.photo-slot img').waitFor();
       await tab.getByTestId('due-tomorrow').click();
-      check((await tab.locator('.due-quick-text').innerText()).startsWith('Устранить до '), 'срок не подписан');
+      check((await tab.locator('.due-quick .due-quick-text').innerText()).startsWith('Устранить до '), 'срок не подписан');
       check(await noOverflow(tab), 'разовая 390: горизонтальная прокрутка');
       await tab.screenshot({ path: `${shots}/quick-task-once-filled-390.png`, fullPage: true });
 

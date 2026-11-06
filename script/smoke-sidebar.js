@@ -209,7 +209,7 @@ async (page) => {
       await tab.getByRole('button', { name: 'Убрать срок', exact: true }).click();
       check(await tab.getByTestId('input-due-date').inputValue() === '', 'due date not cleared');
       await tab.getByTestId('input-due-date').fill('2026-12-30');
-      check((await tab.locator('.due-quick-text').innerText()).startsWith('Устранить до 30 декабря'), 'due label');
+      check((await tab.locator('.due-quick .due-quick-text').innerText()).startsWith('Устранить до 30 декабря'), 'due label');
       // Регулярная: расписание словами, дни меняют сводку, срока нет.
       await tab.getByTestId('task-kind-recurring').click();
       check(await tab.getByTestId('input-due-date').count() === 0, 'due date on the recurring tab');
