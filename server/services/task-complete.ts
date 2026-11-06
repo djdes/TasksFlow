@@ -27,6 +27,7 @@ import {
 } from "./task-actor";
 import { accessOf, accessWithApproval } from "../access";
 import { isTaskAdmin } from "@shared/roles";
+import { isQuestionItem } from "@shared/checklist";
 
 export type CompleteOutcome =
   /** Задача закрыта, премия начислена. */
@@ -115,6 +116,11 @@ export async function completeTaskForActor({
   // (пункт с фото закрывается фото, без фото — касанием). Задачи без
   // чек-листа не затрагиваются.
   const completeChecklist = task.checklist || [];
+  // Свой вопрос без ответа — называем его, а не только счёт пунктов.
+  const unanswered = completeChecklist.find((it) => isQuestionItem(it) && !it.done);
+  if (unanswered) {
+    throw new TaskServiceError(400, `Ответьте на вопрос «${unanswered.title}»`);
+  }
   if (completeChecklist.length > 0 && !completeChecklist.every((it) => it.done)) {
     const doneCount = completeChecklist.filter((it) => it.done).length;
     throw new TaskServiceError(

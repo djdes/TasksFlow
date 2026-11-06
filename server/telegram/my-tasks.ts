@@ -19,8 +19,8 @@ import { storage } from "../storage";
 import { logger } from "../logger";
 import { isTaskVisibleOn, formatDueBadge } from "@shared/task-visibility";
 import { completeTaskForActor } from "../services/task-complete";
-import { attachChecklistItemPhoto, attachTaskPhoto, setChecklistItemDone } from "../services/task-photo";
-import { itemNeedsPhoto } from "@shared/checklist";
+import { attachChecklistItemPhoto, attachTaskPhoto, setChecklistItemAnswer, setChecklistItemDone } from "../services/task-photo";
+import { isQuestionItem, itemNeedsPhoto } from "@shared/checklist";
 import { isTaskServiceError, type TaskActor } from "../services/task-actor";
 import type { TelegramRuntime } from "./index";
 import type { TgCallbackQuery, TgMessage, TgReplyMarkup } from "./client";
@@ -198,7 +198,7 @@ export async function handleTaskCallback(
   action: Extract<
     CallbackAction,
     | { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" } | { kind: "taskItemDone" }
-    | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
+    | { kind: "taskItemAnswer" } | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
   >,
   query: TgCallbackQuery,
   user: User,
@@ -302,16 +302,24 @@ export async function handleTaskCallback(
     return;
   }
 
-  // Пункт без фото — отмечаем касанием, перерисовываем карточку и, если
-  // это был последний пункт, пробуем закрыть задачу, как после фото.
-  if (action.kind === "taskItemDone") {
+  // Пункт без фото — отмечаем касанием, вопрос — выбранным вариантом;
+  // перерисовываем карточку и, если это был последний пункт, пробуем
+  // закрыть задачу, как после фото.
+  if (action.kind === "taskItemDone" || action.kind === "taskItemAnswer") {
     try {
-      const { task: updated } = await setChecklistItemDone({
-        taskId: task.id,
-        itemId: action.itemId,
-        done: true,
-        actor: { kind: "telegram", userId: user.id },
-      });
+      const actor = { kind: "telegram" as const, userId: user.id };
+      let updated: Task;
+      if (action.kind === "taskItemAnswer") {
+        const item = task.checklist.find((c) => c.id === action.itemId);
+        const option = item?.options?.[action.option];
+        if (!option) {
+          await answer("Варианты ответа поменялись — открой задачу заново", true);
+          return;
+        }
+        ({ task: updated } = await setChecklistItemAnswer({ taskId: task.id, itemId: action.itemId, answer: option, actor }));
+      } else {
+        ({ task: updated } = await setChecklistItemDone({ taskId: task.id, itemId: action.itemId, done: true, actor }));
+      }
       const view = renderTaskCard(updated);
       await runtime.client
         .editMessageText({
@@ -322,7 +330,7 @@ export async function handleTaskCallback(
           reply_markup: view.reply_markup,
         })
         .catch(() => null);
-      await answer("Отмечено");
+      await answer(action.kind === "taskItemAnswer" ? "Ответ записан" : "Отмечено");
       if (updated.checklist.length > 0 && updated.checklist.every((c) => c.done)) {
         await finishAfterPhoto(chatId, task.id, user, runtime, "tap");
       }
@@ -360,10 +368,15 @@ export function checklistLeftText(checklist: Task["checklist"]): string | null {
   const left = checklist.filter((c) => !c.done);
   if (left.length === 0) return null;
   const photo = left.filter(itemNeedsPhoto).length;
-  const tap = left.length - photo;
-  if (tap === 0) return `Осталось сфоткать: ${photo}`;
-  if (photo === 0) return `Осталось отметить: ${tap}`;
-  return `Осталось: сфоткать ${photo}, отметить ${tap}`;
+  const ask = left.filter(isQuestionItem).length;
+  const tap = left.length - photo - ask;
+  const parts = [
+    photo ? ["сфоткать", photo] : null,
+    tap ? ["отметить", tap] : null,
+    ask ? ["ответить", ask] : null,
+  ].filter((p): p is [string, number] => p !== null);
+  if (parts.length === 1) return `Осталось ${parts[0][0]}: ${parts[0][1]}`;
+  return `Осталось: ${parts.map(([what, n]) => `${what} ${n}`).join(", ")}`;
 }
 
 /**
@@ -401,7 +414,15 @@ export function renderTaskCard(task: Task): { text: string; reply_markup: TgRepl
   if (task.checklist.length > 0) {
     lines.push("");
     lines.push("<b>Чек-лист:</b>");
+    const questions = task.checklist.filter(isQuestionItem);
     for (const item of task.checklist) {
+      if (isQuestionItem(item)) {
+        // Свой вопрос: ответ — рядом, номер — чтобы кнопки не путались.
+        const n = questions.length > 1 ? `${questions.indexOf(item) + 1}. ` : "";
+        const answerText = item.answer ? ` — <b>${escapeHtml(item.answer)}</b>` : "";
+        lines.push(`${item.done ? "✅" : "❓"} ${n}${escapeHtml(item.title)}${answerText}`);
+        continue;
+      }
       const photoMark = !item.done && itemNeedsPhoto(item) ? " 📸" : "";
       lines.push(`${item.done ? "✅" : "⬜"} ${escapeHtml(item.title)}${photoMark}`);
     }
@@ -410,6 +431,18 @@ export function renderTaskCard(task: Task): { text: string; reply_markup: TgRepl
     // отмечены все. На проверке и у закрытой задачи пункты уже не меняются.
     const editable = !task.isCompleted && task.verificationStatus !== "submitted";
     for (const item of task.checklist.filter((c) => !c.done && editable)) {
+      if (isQuestionItem(item)) {
+        // По кнопке на вариант, по два в ряд; при нескольких вопросах — с номером.
+        const n = questions.length > 1 ? `${questions.indexOf(item) + 1}. ` : "";
+        const row: { text: string; callback_data: string }[] = [];
+        (item.options ?? []).forEach((opt, option) => {
+          const btn = itemButton(`${n}${opt.slice(0, 30)}`, { kind: "taskItemAnswer", taskId: task.id, itemId: item.id, option });
+          if (btn) row.push(btn[0]);
+          if (row.length === 2) keyboard.push(row.splice(0));
+        });
+        if (row.length) keyboard.push(row);
+        continue;
+      }
       const row = itemNeedsPhoto(item)
         ? itemButton(`📸 ${item.title.slice(0, 30)}`, { kind: "taskItemPhoto", taskId: task.id, itemId: item.id })
         : itemButton(`✅ ${item.title.slice(0, 30)}`, { kind: "taskItemDone", taskId: task.id, itemId: item.id });

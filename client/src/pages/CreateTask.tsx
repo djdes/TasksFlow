@@ -19,6 +19,12 @@ import { DueDateQuick, PhotoSlot } from "@/components/QuickTaskFields";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
+  TaskQuestionsEditor,
+  mergeChecklistAndQuestions,
+  questionsError,
+  type QuestionDraft,
+} from "@/components/TaskQuestionsEditor";
+import {
   ArrowLeft,
   Plus,
   ImagePlus,
@@ -99,6 +105,9 @@ export default function CreateTask() {
   // Чек-лист (подзадачи): админ задаёт заголовки пунктов и где нужно фото.
   // done/фото заполняет сотрудник. Пусто → обычная задача.
   const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
+  // Свой вопрос регулярной задачи: «Кто заполняет?» → «Лариса», «Галина».
+  const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+  const [questionsInvalid, setQuestionsInvalid] = useState<string | null>(null);
 
   // ──── WeSetup journal mode ────
   // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
@@ -573,6 +582,12 @@ export default function CreateTask() {
     // Разовая: срок (или без срока), без дней и без повтора — сделанная
     // остаётся сделанной. Регулярная: дни, число и повтор, срока нет.
     const once = kind === "once";
+    const questionsProblem = once ? null : questionsError(questions);
+    if (questionsProblem) {
+      setQuestionsInvalid(questionsProblem);
+      document.querySelector<HTMLElement>('[data-testid="task-questions"] input')?.focus();
+      return;
+    }
     const dueDate = once ? parseDueDateInput(values.dueDateInput) : null;
     const base = {
       title: values.title,
@@ -586,7 +601,8 @@ export default function CreateTask() {
       category: values.category || null,
       description: values.description || null,
       // Чек-лист: только непустые пункты; done/фото стартуют пустыми.
-      checklist: checklistPayload(checklistItems),
+      // У регулярной к нему добавляются свои вопросы (пункты с вариантами).
+      checklist: once ? checklistPayload(checklistItems) : mergeChecklistAndQuestions(checklistPayload(checklistItems), questions),
     };
     // «Фото к задаче» (у разовой — фото проблемы) — к каждой копии.
     const withPhoto = !!examplePhotoFile;
@@ -683,7 +699,7 @@ export default function CreateTask() {
           onCreated={() => setLocation("/")}
         />
 
-        <div className="content-panel">
+        <div className="content-panel quick-task-panel">
           {/* Mode toggle: Free vs Journal — только если настроена интеграция WeSetup */}
           {wesetupEnabled && (
           <div className="mb-6 flex flex-col gap-2 sm:flex-row">
@@ -912,7 +928,23 @@ export default function CreateTask() {
                 {kind === "once" ? (
                   <DueDateQuick form={form} />
                 ) : (
-                  <TaskScheduleFields form={form} allowDue={false} />
+                  <>
+                    <TaskScheduleFields form={form} allowDue={false} />
+                    <div>
+                      <TaskQuestionsEditor
+                        items={questions}
+                        onChange={(next) => {
+                          setQuestions(next);
+                          if (questionsInvalid) setQuestionsInvalid(questionsError(next));
+                        }}
+                      />
+                      {questionsInvalid ? (
+                        <p className="quick-task-hint quick-task-hint--error" role="alert">{questionsInvalid}</p>
+                      ) : questions.length > 0 ? (
+                        <p className="quick-task-hint">Сотрудник выберет ответ из списка — без ответа задачу не закрыть. Ответ попадёт в отчёт за день.</p>
+                      ) : null}
+                    </div>
+                  </>
                 )}
 
                 <div className="quick-task-more">

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { HistoryItem, HistoryStatus, PersonSummary } from "@shared/history";
 import { dayOfWeek, shiftDay, TIMEZONE_OPTIONS, utcOffsetLabel } from "@shared/day";
+import { checklistAnswers } from "@shared/checklist";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useUsers } from "@/hooks/use-users";
@@ -318,6 +319,7 @@ function PersonDay({ group, bare = false, onPhoto }: { group: Group; bare?: bool
           const Icon = st.icon;
           const photos = photosOf(it);
           const checklistDone = it.checklist ? it.checklist.filter((c) => c.done).length : 0;
+          const answers = checklistAnswers(it.checklist);
           return (
             <li key={it.key} className="reports-item" data-status={it.status}>
               <Icon className={`reports-item-icon ${st.tone}`} aria-hidden="true" />
@@ -332,6 +334,13 @@ function PersonDay({ group, bare = false, onPhoto }: { group: Group; bare?: bool
                   {it.category && <span>{it.category}</span>}
                   {it.price > 0 && <span>+{rub(it.price)}</span>}
                 </p>
+                {answers.length > 0 && (
+                  <p className="reports-item-answers">
+                    {answers.map((a) => (
+                      <span key={a.question}>{a.question} <b>{a.answer}</b></span>
+                    ))}
+                  </p>
+                )}
               </div>
               {photos.length > 0 && (
                 <div className="reports-thumbs">

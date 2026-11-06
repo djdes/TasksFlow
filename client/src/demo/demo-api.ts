@@ -2,7 +2,7 @@ import type { Task } from "@shared/schema";
 import { dayInZone, daysBetween, isDay, shiftDay } from "@shared/day";
 import { DEFAULT_NOTIFY, DEFAULT_PREFS, type NotifyPrefs } from "@shared/notify";
 import { NO_PERMISSIONS, type CompanyRole } from "@shared/roles";
-import { mergeChecklistProgress } from "@shared/checklist";
+import { isQuestionItem, mergeChecklistProgress, normalizeNewChecklist, validAnswer } from "@shared/checklist";
 import { DEFAULT_PHOTO_SETTINGS } from "@shared/photo-settings";
 import { PLANS } from "@shared/plans";
 import { DEFAULT_PRICES, type BillingInfo } from "@shared/billing";
@@ -229,7 +229,7 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
       createdAt: now(),
       verificationStatus: null,
       verifierWorkerId: null,
-      checklist: Array.isArray(body?.checklist) ? body.checklist : [],
+      checklist: Array.isArray(body?.checklist) ? normalizeNewChecklist(body.checklist) ?? [] : [],
       weekDays: body?.weekDays ?? null,
       isRecurring: body?.isRecurring ?? true,
     } as Task;
@@ -261,6 +261,8 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
   if ((m = path.match(/^\/api\/tasks\/(\d+)\/complete$/))) {
     const task = findTask(Number(m[1]))!;
     if (task.requiresPhoto && task.photoUrls.length === 0) return { status: 400, json: { message: "Необходимо загрузить фото перед завершением" } };
+    const unanswered = task.checklist.find((c) => isQuestionItem(c) && !c.done);
+    if (unanswered) return { status: 400, json: { message: `Ответьте на вопрос «${unanswered.title}»` } };
     if (task.checklist.length > 0 && !task.checklist.every((c) => c.done)) {
       return { status: 400, json: { message: `Отметьте все пункты чек-листа (${task.checklist.filter((c) => c.done).length}/${task.checklist.length})` } };
     }
@@ -323,6 +325,25 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
       return { status: 409, json: { message: "Задача уже закрыта или на проверке — пункты не меняются" } };
     }
     const checklist = task.checklist.map((c) => (c.id === itemId ? { ...c, done: Boolean(body?.done) } : c));
+    return { json: { task: patchTask(task.id, { checklist }) } };
+  }
+  // Свой вопрос — выбор варианта (как POST /api/tasks/:id/checklist/:itemId/answer).
+  if ((m = path.match(/^\/api\/tasks\/(\d+)\/checklist\/([^/]+)\/answer$/)) && method === "POST") {
+    const task = findTask(Number(m[1]))!;
+    const itemId = decodeURIComponent(m[2]);
+    const item = task.checklist.find((c) => c.id === itemId);
+    if (!item) return { status: 404, json: { message: "Пункт чек-листа не найден" } };
+    if (!isQuestionItem(item)) return { status: 400, json: { message: "У этого пункта нет вариантов ответа" } };
+    const answer = body?.answer == null ? null : validAnswer(item, body.answer);
+    if (body?.answer != null && answer === null) return { status: 400, json: { message: "Такого варианта ответа нет — выберите из списка" } };
+    if (task.isCompleted || task.verificationStatus === "submitted") {
+      return { status: 409, json: { message: "Задача уже закрыта или на проверке — пункты не меняются" } };
+    }
+    const checklist = task.checklist.map((c) => {
+      if (c.id !== itemId) return c;
+      const { answer: _old, ...rest } = c;
+      return answer === null ? { ...rest, done: false } : { ...rest, answer, done: true };
+    });
     return { json: { task: patchTask(task.id, { checklist }) } };
   }
   if ((m = path.match(/^\/api\/tasks\/(\d+)\/checklist\/([^/]+)\/photo$/))) {

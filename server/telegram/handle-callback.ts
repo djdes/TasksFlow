@@ -68,6 +68,7 @@ export async function handleCallback(
     action.kind === "taskPhoto" ||
     action.kind === "taskItemPhoto" ||
     action.kind === "taskItemDone" ||
+    action.kind === "taskItemAnswer" ||
     action.kind === "tasksRefresh" ||
     action.kind === "workerMenu" ||
     action.kind === "workerTasks"
@@ -117,7 +118,7 @@ async function dispatch(
   action: Exclude<
     CallbackAction,
     | { kind: "taskOpen" } | { kind: "taskPhoto" } | { kind: "taskItemPhoto" } | { kind: "taskItemDone" }
-    | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
+    | { kind: "taskItemAnswer" } | { kind: "tasksRefresh" } | { kind: "workerMenu" } | { kind: "workerTasks" }
   >,
   draft: Draft,
   user: User,

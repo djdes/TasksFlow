@@ -20,7 +20,7 @@ import {
 } from "./task-actor";
 import { accessOf } from "../access";
 import { isTaskAdmin } from "@shared/roles";
-import { itemNeedsPhoto } from "@shared/checklist";
+import { isQuestionItem, itemNeedsPhoto, validAnswer } from "@shared/checklist";
 
 /** Общая часть: найти задачу, проверить компанию и права исполнителя. */
 async function loadTaskForPhoto(
@@ -125,6 +125,9 @@ export async function attachChecklistItemPhoto({
   if (idx === -1) {
     throw new TaskServiceError(404, "Пункт чек-листа не найден");
   }
+  if (isQuestionItem(checklist[idx])) {
+    throw new TaskServiceError(400, "Это вопрос — выберите ответ из списка");
+  }
   if ((checklist[idx].photoUrls?.length ?? 0) >= 5) {
     throw new TaskServiceError(400, "Достигнут лимит фото на пункт (5)");
   }
@@ -169,20 +172,80 @@ export async function setChecklistItemDone({
   if (idx === -1) {
     throw new TaskServiceError(404, "Пункт чек-листа не найден");
   }
+  if (isQuestionItem(checklist[idx])) {
+    // Вопрос закрывается только ответом; «снять» — то же, что убрать ответ.
+    if (done) throw new TaskServiceError(400, "Это вопрос — выберите ответ из списка");
+    return setChecklistItemAnswer({ taskId, itemId, answer: null, actor });
+  }
   if (itemNeedsPhoto(checklist[idx])) {
     throw new TaskServiceError(400, "К этому пункту нужно фото");
   }
+  assertItemsEditable(task);
+  if (Boolean(checklist[idx].done) === done) {
+    return { task };
+  }
+
+  const newChecklist = checklist.map((it, i) => (i === idx ? { ...it, done } : it));
+  const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
+  if (!updatedTask) {
+    throw new TaskServiceError(500, "Ошибка обновления задачи");
+  }
+
+  publishToCompany(updatedTask.companyId, { type: "tasks", taskId });
+  return { task: updatedTask };
+}
+
+/** Выполненную и отправленную на проверку задачу пункты не меняют. */
+function assertItemsEditable(task: Task): void {
   if (task.isCompleted) {
     throw new TaskServiceError(409, "Задача уже выполнена — пункты не меняются");
   }
   if (task.verificationStatus === "submitted") {
     throw new TaskServiceError(409, "Задача на проверке — пункты не меняются, пока её не примут или не вернут");
   }
-  if (Boolean(checklist[idx].done) === done) {
+}
+
+/**
+ * Ответ на свой вопрос задачи («Кто заполняет?» → «Лариса»): засчитывается
+ * только один из вариантов, и пункт становится выполненным. null — убрать
+ * ответ, вопрос снова ждёт. Права и запреты — как у отметки пункта.
+ */
+export async function setChecklistItemAnswer({
+  taskId,
+  itemId,
+  answer,
+  actor,
+}: {
+  taskId: number;
+  itemId: string;
+  answer: string | null;
+  actor: TaskActor;
+}): Promise<{ task: Task }> {
+  const task = await loadTaskForPhoto(taskId, actor);
+
+  const checklist = task.checklist || [];
+  const idx = checklist.findIndex((it) => it.id === itemId);
+  if (idx === -1) {
+    throw new TaskServiceError(404, "Пункт чек-листа не найден");
+  }
+  const item = checklist[idx];
+  if (!isQuestionItem(item)) {
+    throw new TaskServiceError(400, "У этого пункта нет вариантов ответа");
+  }
+  const value = answer === null ? null : validAnswer(item, answer);
+  if (answer !== null && value === null) {
+    throw new TaskServiceError(400, "Такого варианта ответа нет — выберите из списка");
+  }
+  assertItemsEditable(task);
+  if ((item.answer ?? null) === value && Boolean(item.done) === (value !== null)) {
     return { task };
   }
 
-  const newChecklist = checklist.map((it, i) => (i === idx ? { ...it, done } : it));
+  const newChecklist = checklist.map((it, i) => {
+    if (i !== idx) return it;
+    const { answer: _old, ...rest } = it;
+    return value === null ? { ...rest, done: false } : { ...rest, answer: value, done: true };
+  });
   const updatedTask = await storage.updateTask(taskId, { checklist: newChecklist });
   if (!updatedTask) {
     throw new TaskServiceError(500, "Ошибка обновления задачи");

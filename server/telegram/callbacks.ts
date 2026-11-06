@@ -39,6 +39,8 @@ export type CallbackAction =
   | { kind: "taskPhoto"; taskId: number }
   | { kind: "taskItemPhoto"; taskId: number; itemId: string }
   | { kind: "taskItemDone"; taskId: number; itemId: string }
+  /** Свой вопрос задачи: выбрать вариант ответа по его номеру. */
+  | { kind: "taskItemAnswer"; taskId: number; itemId: string; option: number }
   | { kind: "tasksRefresh" }
   /** Групповое меню: чьи задачи показать и задачи конкретного сотрудника. */
   | { kind: "workerMenu" }
@@ -85,6 +87,8 @@ function encodeAction(a: CallbackAction): string {
     case "taskPhoto": return `tp:${a.taskId}`;
     case "taskItemPhoto": return `ti:${a.taskId}:${a.itemId}`;
     case "taskItemDone": return `td:${a.taskId}:${a.itemId}`;
+    // Номер варианта до id пункта: id может содержать «:».
+    case "taskItemAnswer": return `ta:${a.taskId}:${a.option}:${a.itemId}`;
     case "tasksRefresh": return "tr";
     case "workerMenu": return "wm";
     case "workerTasks": return `wt:${a.workerId}`;
@@ -191,6 +195,11 @@ export function parseCallback(data: string | undefined): CallbackAction | null {
       return op === "ti"
         ? { kind: "taskItemPhoto", taskId: t, itemId }
         : { kind: "taskItemDone", taskId: t, itemId };
+    }
+    case "ta": {
+      const t = num(1), option = num(2), itemId = parts.slice(3).join(":");
+      if (t === null || option === null || !itemId || itemId.length > 64) return null;
+      return { kind: "taskItemAnswer", taskId: t, itemId, option };
     }
     case "tr":
       return { kind: "tasksRefresh" };

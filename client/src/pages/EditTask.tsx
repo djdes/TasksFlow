@@ -15,11 +15,19 @@ import { ArrowLeft, Edit, Coins, Tag, FileText, Check } from "lucide-react";
 import { TaskPhotoField } from "@/components/TaskPhotoField";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistDraftFrom, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
+import {
+  TaskQuestionsEditor,
+  mergeChecklistAndQuestions,
+  questionDraftsFrom,
+  questionsError,
+  withoutQuestions,
+  type QuestionDraft,
+} from "@/components/TaskQuestionsEditor";
 import { parseDueDateInput, formatDueDateInput } from "@shared/task-visibility";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { coerceWeekDays } from "@/lib/coerce-week-days";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -59,9 +67,11 @@ const formSchema = insertTaskSchema.extend({
 
 type FormValues = z.input<typeof formSchema>;
 
-/** Состав чек-листа для сравнения: id, название и «нужно фото», без отметок. */
-function checklistShape(items: readonly { id: string; title: string; requiresPhoto?: boolean }[] | null): string {
-  return JSON.stringify((items ?? []).map((it) => [it.id, it.title.trim(), it.requiresPhoto !== false]));
+/** Состав чек-листа для сравнения: id, название, «нужно фото» и варианты вопроса, без отметок. */
+function checklistShape(
+  items: readonly { id: string; title: string; requiresPhoto?: boolean; options?: readonly string[] | null }[] | null,
+): string {
+  return JSON.stringify((items ?? []).map((it) => [it.id, it.title.trim(), it.requiresPhoto !== false, it.options ?? null]));
 }
 
 export default function EditTask() {
@@ -82,6 +92,9 @@ export default function EditTask() {
   // Чек-лист: состав пунктов и «нужно фото». Отметки и фото исполнителя
   // сервер сохранит сам (mergeChecklistProgress), даже если форма устарела.
   const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
+  // Свои вопросы («Кто заполняет?») — пункты чек-листа с вариантами ответа.
+  const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+  const [questionsInvalid, setQuestionsInvalid] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,6 +112,9 @@ export default function EditTask() {
       remindAt: "",
     },
   });
+  // Вопросы — у регулярной задачи (без срока); уже заданные видны всегда.
+  const [watchRecurring, watchDue] = useWatch({ control: form.control, name: ["isRecurring", "dueDateInput"] });
+  const showQuestions = questions.length > 0 || (watchRecurring !== false && parseDueDateInput(watchDue) === null);
 
 
   // Обновляем форму когда задача загружена
@@ -123,7 +139,8 @@ export default function EditTask() {
 
       // Устанавливаем текущее пример фото если есть
       setCurrentExamplePhoto((task as any).examplePhotoUrl || null);
-      setChecklistItems(checklistDraftFrom(task.checklist));
+      setChecklistItems(checklistDraftFrom(withoutQuestions(task.checklist)));
+      setQuestions(questionDraftsFrom(task.checklist));
     }
   }, [task, form]);
 
@@ -200,7 +217,14 @@ export default function EditTask() {
 
   const onSubmit = (values: FormValues) => {
     if (!id) return;
+    const questionsProblem = questionsError(questions);
+    if (questionsProblem) {
+      setQuestionsInvalid(questionsProblem);
+      document.querySelector<HTMLElement>('[data-testid="task-questions"] input')?.focus();
+      return;
+    }
     const dueDate = parseDueDateInput(values.dueDateInput);
+    const nextChecklist = mergeChecklistAndQuestions(checklistPayload(checklistItems), questions);
     const taskData = {
       id: Number(id),
       title: values.title,
@@ -222,8 +246,8 @@ export default function EditTask() {
       description: values.description || null,
       // Чек-лист шлём, только если поменяли состав: иначе сохранение формы
       // зря перезаписывало бы пункты.
-      ...(checklistShape(checklistPayload(checklistItems)) !== checklistShape(task?.checklist ?? null)
-        ? { checklist: checklistPayload(checklistItems) }
+      ...(checklistShape(nextChecklist) !== checklistShape(task?.checklist ?? null)
+        ? { checklist: nextChecklist }
         : {}),
     };
     updateTask.mutate(
@@ -467,6 +491,23 @@ export default function EditTask() {
             </FormItem>
 
             <TaskScheduleFields form={form} />
+
+            {showQuestions && (
+              <div>
+                <TaskQuestionsEditor
+                  items={questions}
+                  onChange={(next) => {
+                    setQuestions(next);
+                    if (questionsInvalid) setQuestionsInvalid(questionsError(next));
+                  }}
+                />
+                {questionsInvalid ? (
+                  <p className="quick-task-hint quick-task-hint--error" role="alert">{questionsInvalid}</p>
+                ) : questions.length > 0 ? (
+                  <p className="quick-task-hint">Сотрудник выберет ответ из списка — без ответа задачу не закрыть.</p>
+                ) : null}
+              </div>
+            )}
 
               <div className="flex gap-4 pt-4">
                 <Button 

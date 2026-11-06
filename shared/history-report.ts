@@ -8,6 +8,7 @@ import type { ChecklistItem, Task, TaskHistoryRow, User } from "./schema";
 import type { DaySummary, HistoryItem, HistoryStatus, PersonSummary } from "./history";
 import { dayInZone, dayOfMonth, dayOfWeek, startOfDayInZone, timeInZone } from "./day";
 import { isTaskVisibleOn } from "./task-visibility";
+import { checklistAnswers } from "./checklist";
 
 function parseArray<T>(json: string | null): T[] {
   if (!json) return [];
@@ -212,7 +213,7 @@ export function buildCsv(
   absoluteUrl: (path: string) => string,
 ): string {
   const byId = new Map(users.map((u) => [u.id, u]));
-  const header = ["Дата", "Сотрудник", "Телефон", "Задача", "Категория", "Статус", "Время", "Премия, ₽", "Фото"];
+  const header = ["Дата", "Сотрудник", "Телефон", "Задача", "Категория", "Статус", "Время", "Премия, ₽", "Фото", "Ответы"];
   const lines = [header.map(csvCell).join(";")];
   for (const it of items) {
     const u = it.workerId != null ? byId.get(it.workerId) : undefined;
@@ -228,6 +229,8 @@ export function buildCsv(
         it.time ?? "",
         it.price || "",
         photos.map(absoluteUrl).join(" "),
+        // Свои вопросы задачи: «Кто заполняет?: Лариса».
+        checklistAnswers(it.checklist).map((a) => `${a.question}: ${a.answer}`).join("; "),
       ]
         .map(csvCell)
         .join(";"),

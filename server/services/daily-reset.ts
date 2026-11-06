@@ -34,6 +34,7 @@ import {
   zoneOrDefault,
 } from "@shared/day";
 import { isTaskVisibleOn } from "@shared/task-visibility";
+import { resetChecklistItem } from "@shared/checklist";
 
 export type ResetTask = Pick<
   Task,
@@ -75,7 +76,7 @@ function photosOf(task: ResetTask): string[] {
 }
 
 function hasChecklistProgress(items: ChecklistItem[] | null | undefined): items is ChecklistItem[] {
-  return !!items && items.some((it) => it.done || (it.photoUrls?.length ?? 0) > 0);
+  return !!items && items.some((it) => it.done || it.answer || (it.photoUrls?.length ?? 0) > 0);
 }
 
 /**
@@ -165,7 +166,8 @@ export function planDailyReset(
 }
 
 function checklistReset(id: number, items: ChecklistItem[]): ChecklistReset {
-  return { id, checklist: items.map((it) => ({ ...it, done: false, photoUrls: [] })) };
+  // Ответ на свой вопрос тоже сбрасывается: завтра на него отвечают заново.
+  return { id, checklist: items.map(resetChecklistItem) };
 }
 
 // ---------------------------------------------------------------------------
