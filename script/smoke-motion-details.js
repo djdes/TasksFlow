@@ -18,20 +18,20 @@ async (page) => {
   const before=await page.locator('#root').evaluate(el=>el.scrollTop);
   await dialog.hover();
   await page.mouse.wheel(0,550);
-  await dialog.getByRole('button',{name:'Завершить задачу',exact:true}).scrollIntoViewIfNeeded();
+  await dialog.getByRole('button',{name:'Готово',exact:true}).scrollIntoViewIfNeeded();
   check(await page.locator('#root').evaluate(el=>el.scrollTop)===before,'Background scrolled under sheet');
   check(await dialog.evaluate(el=>el.scrollTop)>0,'Long sheet content does not scroll');
-  check(await dialog.getByRole('button',{name:'Завершить задачу',exact:true}).evaluate(el=>{
+  check(await dialog.getByRole('button',{name:'Готово',exact:true}).evaluate(el=>{
     const r=el.getBoundingClientRect();
     const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
     return top===el || el.contains(top);
   }),'Sheet action is covered after scrolling');
   await dialog.evaluate(el=>{ el.scrollTop=el.scrollHeight; });
-  const actionBox=await dialog.getByRole('button',{name:'Завершить задачу',exact:true}).boundingBox();
+  const actionBox=await dialog.getByRole('button',{name:'Готово',exact:true}).boundingBox();
   check(actionBox.y>=0 && actionBox.y+actionBox.height<=844,'Empty overscroll area hides the sheet action');
   await page.screenshot({path:'output/playwright/mobile-task-scrolled.png'});
   await page.setViewportSize({width:390,height:460});
-  const input=dialog.getByPlaceholder('Напишите комментарий к задаче...');
+  const input=dialog.getByPlaceholder('Комментарий, если нужно');
   if(await input.count()) {
     await input.fill('Проверка доступности при открытой клавиатуре');
     await input.scrollIntoViewIfNeeded();

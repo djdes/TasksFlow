@@ -16,12 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight } from "lucide-react";
-import { reviewersLine, type TaskReviewers } from "@shared/reviewers";
+import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, MessageCircleQuestion, MessageSquare } from "lucide-react";
+import { FormBlock } from "@/components/FormBlock";
+import type { TaskReviewers } from "@shared/reviewers";
+import { useAuth } from "@/contexts/AuthContext";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
-import { allItemsNeedPhoto, itemNeedsPhoto } from "@shared/checklist";
+import { allItemsNeedPhoto, isQuestionItem, itemNeedsPhoto } from "@shared/checklist";
 import { CheckMark } from "@/components/ui/check-mark";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -58,7 +60,8 @@ export function TaskViewDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // «Принимает работу: …» — кто примет выполненное. Нет строки — без проверки.
+  // Примет ли выполненное руководитель: тогда кнопка — «Отправить руководителю»,
+  // а не «Готово», и отдельная плашка о проверке не нужна.
   const reviewerTaskId = open && currentTask && !currentTask.isCompleted ? currentTask.id : null;
   const reviewers = useQuery<TaskReviewers>({
     queryKey: ["/api/tasks", reviewerTaskId, "reviewers"],
@@ -71,7 +74,10 @@ export function TaskViewDialog({
     staleTime: 60_000,
     retry: false,
   });
-  const reviewersText = reviewerTaskId !== null ? reviewersLine(reviewers.data) : null;
+  const goesToReview = reviewerTaskId !== null && Boolean(reviewers.data?.required);
+  // Отправленная на проверку: исполнителю — «У руководителя», проверяющему — «Ждёт проверки».
+  const { user: me } = useAuth();
+  const submittedLabel = currentTask && me && currentTask.workerId === me.id ? "У руководителя" : "Ждёт проверки";
   // Задача «принять чужую работу» — проверяющему сразу кнопка в «На проверке».
   const [, setLocation] = useLocation();
   const { canVerify } = usePermissions();
@@ -100,6 +106,12 @@ export function TaskViewDialog({
   const checklistAllPhoto = allItemsNeedPhoto(checklist);
   const checklistDoneCount = checklist.filter((i) => i.done).length;
   const allChecklistDone = hasChecklist && checklistDoneCount === checklist.length;
+  // Свои вопросы («Кто заполняет?») — пункты с вариантами ответа: отдельный
+  // блок над чек-листом, без счётчика и полосы.
+  const questionItems = checklist.filter(isQuestionItem);
+  const checkItems = checklist.filter((i) => !isQuestionItem(i));
+  const checkDone = checkItems.filter((i) => i.done).length;
+  const leftOnlyQuestions = hasChecklist && !allChecklistDone && checklist.every((i) => i.done || isQuestionItem(i));
   const checklistFileInputRef = useRef<HTMLInputElement>(null);
   const checklistUploadItemIdRef = useRef<string | null>(null);
 
@@ -308,6 +320,34 @@ export function TaskViewDialog({
     },
   });
 
+  // Свой вопрос: выбранный вариант сразу уходит на сервер (как отметка пункта).
+  const answerQuestionMutation = useMutation({
+    mutationFn: async ({ itemId, answer }: { itemId: string; answer: string | null }) => {
+      if (!currentTask) throw new Error("Задача не выбрана");
+      const response = await fetchOrFriendlyError(
+        `/api/tasks/${currentTask.id}/checklist/${encodeURIComponent(itemId)}/answer`,
+        {
+          method: "POST",
+          credentials: "include",
+          signal: AbortSignal.timeout(30_000),
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({ answer }),
+        },
+      );
+      const text = await response.text();
+      const d = parseJsonOrEmpty(text);
+      if (!response.ok) throw new Error((d.message as string | undefined) || "Не удалось сохранить ответ");
+      return d as { task: Task };
+    },
+    onSuccess: async (data) => {
+      if (data.task) { setCurrentTask(data.task); onTaskUpdate?.(data.task); }
+      await queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка", description: error.message || "Не удалось сохранить ответ", variant: "destructive" });
+    },
+  });
+
   const openChecklistPhotoPicker = (itemId: string) => {
     checklistUploadItemIdRef.current = itemId;
     checklistFileInputRef.current?.click();
@@ -367,7 +407,9 @@ export function TaskViewDialog({
     if (hasChecklist && !allChecklistDone) {
       toast({
         title: "Не всё готово",
-        description: `Закройте все пункты чек-листа${checklistAllPhoto ? " с фото" : ""} (${checklistDoneCount}/${checklist.length})`,
+        description: leftOnlyQuestions
+          ? "Выберите ответ на вопрос"
+          : `Отметьте пункты${checklistAllPhoto ? " фото" : ""}: ${checkDone}/${checkItems.length}`,
         variant: "destructive",
       });
       return;
@@ -391,7 +433,7 @@ export function TaskViewDialog({
               {currentTask.title}
             </DialogTitle>
             {(currentTask as any).description ? (
-              <DialogDescription className="text-muted-foreground text-[0.9375rem] mt-1.5">
+              <DialogDescription className="text-muted-foreground text-base mt-1.5">
                 {(currentTask as any).description}
               </DialogDescription>
             ) : (
@@ -400,12 +442,6 @@ export function TaskViewDialog({
             )}
           </DialogHeader>
 
-          {reviewersText ? (
-            <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground" data-testid="task-reviewers">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <span>{reviewersText}</span>
-            </p>
-          ) : null}
 
           {/* Бейджи в шапке: премия и срок */}
           <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">
@@ -439,7 +475,7 @@ export function TaskViewDialog({
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="task-detail-body p-4 space-y-4">
           {showReviewLink && (
             <button
               type="button"
@@ -460,42 +496,31 @@ export function TaskViewDialog({
 
           {/* Фото к задаче от руководителя: что и как сделать. Видно сразу, касание — во весь экран. */}
           {(currentTask as any).examplePhotoUrl && (
-            <div data-testid="task-attached-photo">
-              <span className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <ImageIcon className="h-4 w-4 text-primary" aria-hidden />
-                Фото к задаче
-              </span>
+            <FormBlock label="Пример" tone="photo" testId="task-attached-photo">
               <button
                 type="button"
                 onClick={() => setIsExamplePhotoFullscreen(true)}
-                className="block overflow-hidden rounded-xl border border-border"
+                className="task-example relative block overflow-hidden rounded-xl border border-border"
                 aria-label="Открыть фото к задаче во весь экран"
               >
+                <span className="task-example-badge">
+                  <ImageIcon aria-hidden />
+                  Пример
+                </span>
                 <img
                   src={(currentTask as any).examplePhotoUrl}
                   alt="Фото к задаче"
                   loading="lazy"
-                  className="max-h-56 w-auto max-w-full object-contain bg-muted/40"
+                  className="max-h-40 w-auto max-w-full object-contain bg-muted/40"
                 />
               </button>
-            </div>
+            </FormBlock>
           )}
 
           {/* Photo upload section — скрываем, если у задачи есть чек-лист
               (там фото идёт по каждому пункту отдельно). */}
           {!hasChecklist && (currentTask.requiresPhoto === true || (currentTask.requiresPhoto as any) === 1) && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-foreground">Фото результата</span>
-                {photoUrls.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">нужно для завершения</span>
-                ) : (
-                  <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1 dark:text-emerald-300">
-                    <Check className="w-3 h-3" />
-                    {photoUrls.length} из 10
-                  </span>
-                )}
-              </div>
+            <FormBlock label="Фото результата" tone="photo">
 
               {queuedHere > 0 && (
                 <p className="mb-3 flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200" role="status">
@@ -554,7 +579,7 @@ export function TaskViewDialog({
                   />
                   <label
                     htmlFor="photo-upload"
-                    className={`flex flex-col items-center justify-center w-full ${photoUrls.length > 0 ? 'h-16' : 'h-28'} border-2 border-dashed border-border bg-muted/40 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors active:scale-[0.99]`}
+                    className={`flex flex-col items-center justify-center w-full h-14 border-2 border-dashed border-border bg-muted/40 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors active:scale-[0.99]`}
                   >
                     {preview ? (
                       <div className="relative w-full h-full">
@@ -574,45 +599,66 @@ export function TaskViewDialog({
                         <div className={`${photoUrls.length > 0 ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-primary/10 flex items-center justify-center`}>
                           <Camera className={`${photoUrls.length > 0 ? 'w-5 h-5' : 'w-6 h-6'} text-primary`} />
                         </div>
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-foreground">
-                            {photoUrls.length > 0 ? 'Добавить ещё' : 'Добавить фото'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {photoUrls.length > 0 ? `осталось ${10 - photoUrls.length}` : photoSettings.cameraOnly ? 'откроется камера' : 'камера или галерея'}
-                          </p>
-                        </div>
+                        <span className="task-detail-add">
+                          {photoUrls.length > 0 ? 'Ещё фото' : 'Фото результата'}
+                        </span>
                       </div>
                     )}
                   </label>
                 </div>
               )}
-            </div>
+            </FormBlock>
           )}
 
-          {/* Чек-лист (подзадачи): пункт с фото закрывается фото, без фото — касанием */}
-          {hasChecklist && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-foreground">Подзадачи</span>
-                <span
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    allChecklistDone
-                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
-                      : "bg-primary/10 text-primary"
-                  }`}
-                >
-                  {checklistDoneCount}/{checklist.length}
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-3">
+          {/* Свои вопросы («Кто заполняет?»): ответ — из выпадающего списка.
+              Пока задача на проверке или закрыта — только ответ, без выбора. */}
+          {questionItems.length > 0 && (
+            <FormBlock label={questionItems.length > 1 ? "Вопросы" : "Вопрос"} tone="question">
+              {questionItems.map((item) => {
+                const canAnswer = canComplete && !currentTask.isCompleted && currentTask.verificationStatus !== "submitted";
+                const answering =
+                  answerQuestionMutation.isPending && answerQuestionMutation.variables?.itemId === item.id;
+                return (
+                  <div key={item.id} className="task-answer" data-testid="checklist-question">
+                    <p className="task-answer-title">
+                      <MessageCircleQuestion aria-hidden className="task-answer-icon" />
+                      <span>{item.title}</span>
+                      {item.done ? <CheckCircle2 className="task-answer-done" aria-label="Ответ есть" /> : null}
+                    </p>
+                    {canAnswer ? (
+                      <select
+                        value={item.answer ?? ""}
+                        disabled={answering}
+                        onChange={(e) => answerQuestionMutation.mutate({ itemId: item.id, answer: e.target.value || null })}
+                        aria-label={item.title}
+                        className={cn("task-answer-select", !item.answer && "is-empty")}
+                        data-testid="checklist-question-select"
+                      >
+                        <option value="">Выберите ответ</option>
+                        {(item.options ?? []).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className={cn("task-answer-value", !item.answer && "is-empty")}>{item.answer ?? "Ответа нет"}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </FormBlock>
+          )}
+
+          {/* Чек-лист: пункт с фото закрывается фото, без фото — касанием. */}
+          {checkItems.length > 0 && (
+            <FormBlock label={`Чек-лист: ${checkDone} из ${checkItems.length}`} tone="check">
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
                 <div
-                  className="h-full bg-primary rounded-full transition-[width] duration-300"
-                  style={{ width: `${(checklistDoneCount / checklist.length) * 100}%` }}
+                  className="h-full bg-emerald-500 rounded-full transition-[width] duration-300"
+                  style={{ width: `${(checkDone / checkItems.length) * 100}%` }}
                 />
               </div>
               <div className="space-y-2">
-                {checklist.map((item) => {
+                {checkItems.map((item) => {
                   const itemPhotos = item.photoUrls || [];
                   const busy =
                     uploadChecklistPhotoMutation.isPending &&
@@ -623,7 +669,7 @@ export function TaskViewDialog({
                     <CheckMark
                       checked={Boolean(item.done)}
                       className={cn(
-                        "w-6 h-6 rounded-md border-2 [&>svg]:w-3.5 [&>svg]:h-3.5",
+                        "w-7 h-7 rounded-lg border-2 [&>svg]:w-4 [&>svg]:h-4",
                         item.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30",
                       )}
                     />
@@ -641,10 +687,9 @@ export function TaskViewDialog({
                     const label = (
                       <>
                         {mark}
-                        <span className={`flex-1 text-sm ${item.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                        <span className={`task-check-title ${item.done ? "is-done" : ""}`}>
                           {item.title}
                         </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">без фото</span>
                       </>
                     );
                     return canToggle ? (
@@ -676,11 +721,7 @@ export function TaskViewDialog({
                       }`}
                     >
                       {mark}
-                      <span
-                        className={`flex-1 text-sm ${
-                          item.done ? "text-muted-foreground line-through" : "text-foreground"
-                        }`}
-                      >
+                      <span className={`task-check-title ${item.done ? "is-done" : ""}`}>
                         {item.title}
                       </span>
                       {item.done && itemPhotos[0] ? (
@@ -709,7 +750,7 @@ export function TaskViewDialog({
                             type="button"
                             onClick={() => openChecklistPhotoPicker(item.id)}
                             disabled={busy}
-                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 disabled:opacity-60 active:scale-[0.98] transition"
+                            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 rounded-xl bg-primary text-primary-foreground text-[0.9375rem] font-semibold px-3.5 disabled:opacity-60 active:scale-[0.98] transition"
                           >
                             {busy ? (
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -732,31 +773,26 @@ export function TaskViewDialog({
                 onChange={handleChecklistFileSelect}
                 className="hidden"
               />
-              <p className="mt-3 text-xs text-muted-foreground">
-                {checklistAllPhoto
-                  ? "Отметьте каждый пункт фото — тогда задачу можно завершить."
-                  : "Отметьте все пункты: где нужно — фото, остальные касанием. Тогда задачу можно завершить."}
-              </p>
-            </div>
+            </FormBlock>
           )}
 
           {/* User comment field */}
-          {canComplete && !currentTask.isCompleted && (
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-foreground">
-                Комментарий <span className="font-normal text-muted-foreground">— если нужно</span>
-              </span>
+          {canComplete && !currentTask.isCompleted && currentTask.verificationStatus !== "submitted" && (
+            <div className="field-icon-wrap">
+              <MessageSquare aria-hidden className="field-icon" />
               <Textarea
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}
-                placeholder="Напишите комментарий к задаче..."
-                className="min-h-[76px] resize-none rounded-xl text-[0.9375rem]"
+                placeholder="Комментарий"
+                aria-label="Комментарий"
+                rows={1}
+                className="things-input task-comment resize-none"
               />
-            </label>
+            </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex flex-col gap-2.5 pt-2">
+          {/* Кнопка внизу шторки всегда видна — без прокрутки. */}
+          <div className="task-detail-actions">
             {canComplete && (
               currentTask.isCompleted ? (
                 // Журнальные задачи нельзя «вернуть в работу» —
@@ -774,6 +810,16 @@ export function TaskViewDialog({
                     ? "Изменить данные"
                     : "Вернуть в работу"}
                 </button>
+              ) : currentTask.verificationStatus === "submitted" ? (
+                // Уже отправлена: второе «Завершить» ничего бы не сделало.
+                <div
+                  role="status"
+                  className="flex items-center justify-center gap-2 w-full min-h-14 px-4 rounded-2xl bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200 font-semibold text-center"
+                  data-testid="task-submitted-status"
+                >
+                  <Clock className="w-5 h-5 shrink-0" aria-hidden />
+                  {submittedLabel}
+                </div>
               ) : (
                 <button
                   onClick={handleComplete}
@@ -785,19 +831,26 @@ export function TaskViewDialog({
                 >
                   <Check className="w-5 h-5" strokeWidth={2.5} />
                   {hasChecklist && !allChecklistDone
-                    ? `Закройте пункты (${checklistDoneCount}/${checklist.length})`
+                    ? leftOnlyQuestions
+                      ? "Выберите ответ"
+                      : `Отметьте пункты ${checkDone}/${checkItems.length}`
                     : currentTask.requiresPhoto && photoUrls.length === 0
-                      ? "Сначала добавьте фото"
-                      : "Завершить задачу"}
+                      ? "Нужно фото"
+                      : goesToReview
+                        ? "Отправить руководителю"
+                        : "Готово"}
                 </button>
               )
             )}
-            <button
-              onClick={() => onOpenChange(false)}
-              className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-muted rounded-2xl font-medium transition-colors"
-            >
-              Закрыть
-            </button>
+            {/* Закрыть — крестик и свайп; отдельная кнопка — только когда другой нет. */}
+            {!canComplete && (
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-muted rounded-2xl font-medium transition-colors"
+              >
+                Закрыть
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

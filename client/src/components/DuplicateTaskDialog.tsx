@@ -10,7 +10,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
 import { CheckMark } from "@/components/ui/check-mark";
 import { ChecklistEditor, checklistPayload, newChecklistId, type ChecklistDraftItem } from "@/components/ChecklistEditor";
-import { itemNeedsPhoto } from "@shared/checklist";
+import { isQuestionItem, itemNeedsPhoto } from "@shared/checklist";
+import {
+  TaskQuestionsEditor,
+  mergeChecklistAndQuestions,
+  questionDraftsFrom,
+  questionsError,
+  type QuestionDraft,
+} from "@/components/TaskQuestionsEditor";
 import { TaskPhotoField } from "@/components/TaskPhotoField";
 import { fileFromUploadedPhoto, uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import type { ChecklistItem } from "@shared/schema";
@@ -78,7 +85,7 @@ interface Task {
 /** Пункты исходной задачи → черновик копии: заново, без отметок и фото. */
 export function checklistCopyDraft(items: readonly ChecklistItem[] | null | undefined): ChecklistDraftItem[] {
   return (items ?? [])
-    .filter((it) => it?.title?.trim())
+    .filter((it) => it?.title?.trim() && !isQuestionItem(it))
     .map((it) => ({ id: newChecklistId(), title: it.title, requiresPhoto: itemNeedsPhoto(it), done: false, photoUrls: [] }));
 }
 
@@ -105,6 +112,9 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
   // Seeded from the source task's workerId on open; admin can add more.
   const [workerIds, setWorkerIds] = useState<number[]>([]);
   const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
+  // Свои вопросы копируются с вариантами, без ответа.
+  const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+  const [questionsInvalid, setQuestionsInvalid] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -151,6 +161,8 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       setSourcePhotoUrl(task.examplePhotoUrl || null);
       setWorkerIds(task.workerId ? [task.workerId] : []);
       setChecklistItems(checklistCopyDraft(task.checklist));
+      setQuestions(questionDraftsFrom(task.checklist));
+      setQuestionsInvalid(null);
     }
   }, [task, open, form]);
 
@@ -185,6 +197,11 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       });
       return;
     }
+    const questionsProblem = questionsError(questions);
+    if (questionsProblem) {
+      setQuestionsInvalid(questionsProblem);
+      return;
+    }
     // Как в создании задачи: срок делает её разовой и отменяет дни и повтор.
     const dueDate = parseDueDateInput(values.dueDateInput);
     const base = {
@@ -206,7 +223,10 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
     for (const workerId of workerIds) {
       await new Promise<void>((resolve) => {
         // У каждой копии свои id пунктов: отметки одной копии не задевают другую.
-        const checklist = checklistPayload(checklistItems.map((it) => ({ ...it, id: newChecklistId() })));
+        const checklist = mergeChecklistAndQuestions(
+          checklistPayload(checklistItems.map((it) => ({ ...it, id: newChecklistId() }))),
+          questions.map((q) => ({ ...q, id: newChecklistId() })),
+        );
         createTask.mutate({ ...base, workerId, checklist } as any, {
           onSuccess: (createdTask: any) => {
             created += 1;
@@ -280,7 +300,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                   <FormLabel>Название</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Что нужно сделать?"
+                      placeholder="Что сделать?"
                       className="things-input"
                       maxLength={255}
                       {...field}
@@ -372,7 +392,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Каждый выбранный сотрудник получит свою копию задачи.
+                Каждому — своя копия
               </p>
             </FormItem>
 
@@ -436,6 +456,21 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               </FormLabel>
               <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
             </FormItem>
+
+            {questions.length > 0 && (
+              <div>
+                <TaskQuestionsEditor
+                  items={questions}
+                  onChange={(next) => {
+                    setQuestions(next);
+                    if (questionsInvalid) setQuestionsInvalid(questionsError(next));
+                  }}
+                />
+                {questionsInvalid ? (
+                  <p className="quick-task-hint quick-task-hint--error" role="alert">{questionsInvalid}</p>
+                ) : null}
+              </div>
+            )}
 
             <FormField
               control={form.control}

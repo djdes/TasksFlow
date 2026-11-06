@@ -69,7 +69,7 @@ async (page) => {
         if (!(await shown(card))) await tab.getByRole('button', { name: /^Выполненные/ }).first().click();
         await card.click();
         const view = tab.getByRole('dialog');
-        await view.getByText('Подзадачи').waitFor();
+        await view.getByRole('region', { name: /^Чек-лист/ }).waitFor();
         return view;
       };
       let cleaning = await openCleaning();

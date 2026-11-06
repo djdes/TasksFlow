@@ -8,10 +8,13 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   Coins,
   Copy,
   Edit2,
+  ListChecks,
   Lock,
+  MessageCircleQuestion,
   Sparkles,
   Tag,
   Trash2,
@@ -30,6 +33,7 @@ import { DueBadge } from "@/components/DueBadge";
 import { useMotionPreference } from "@/contexts/MotionContext";
 import { usePendingTaskCompletions } from "@/hooks/use-tasks";
 import { avatarTone } from "@/lib/shift-summary";
+import { isQuestionItem } from "@shared/checklist";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -89,8 +93,9 @@ type Props = {
    *  выполнить уже нельзя — показываем как «архив», без действий. */
   claimedByOthersTasks?: Task[];
   isAdmin: boolean;
-  /** Простой вид сотрудника: плоский список без разбивки по датам,
-   *  «Сделать» / «Сделано», без категорий на карточке. */
+  /** Простой вид сотрудника: один плоский список строками во всю ширину —
+   *  без заголовков, разбивки по датам и «На проверке» (отправленные —
+   *  в конце, с пометкой на карточке), ниже — свёрнутое «Сделано». */
   simple?: boolean;
   /** Группировка верхнего уровня по сотруднику (вместо по дате).
    *  Полезно админу/руководителю чтобы сразу видеть кто что не сделал.
@@ -239,8 +244,11 @@ export function GroupedTaskList(props: Props) {
     const categoryValue = (task as unknown as { category?: string })
       .category;
     const requiresPhoto = task.requiresPhoto && !task.photoUrl;
-    const checklistItems =
-      (task as unknown as { checklist?: { done: boolean }[] }).checklist || [];
+    const allItems =
+      (task as unknown as { checklist?: { done: boolean; options?: string[] | null }[] }).checklist || [];
+    // Свои вопросы — отдельным значком, счётчик «2/5» — только у пунктов.
+    const checklistItems = allItems.filter((i) => !isQuestionItem(i));
+    const openQuestion = allItems.some((i) => isQuestionItem(i) && !i.done);
     const checklistTotal = checklistItems.length;
     const checklistDone = checklistItems.filter((i) => i.done).length;
     const weekDays = (task as unknown as { weekDays?: number[] | null })
@@ -257,6 +265,11 @@ export function GroupedTaskList(props: Props) {
       task as unknown as { rejectReason?: string | null }
     ).rejectReason;
     const isReturned = verificationStatus === "rejected" && !!rejectReason;
+    // Сотрудник уже нажал «Готово», задача ждёт решения проверяющего.
+    // Видно на самой карточке: часики вместо пустого кружка и пометка.
+    const isSubmitted = !isCompleted && verificationStatus === "submitted";
+    // Сотрудник сам отправил — «У руководителя»; руководителю — «Ждёт проверки».
+    const submittedLabel = simple ? "У руководителя" : "Ждёт проверки";
     const isPendingCheck = !isCompleted && pendingCompletions.has(task.id);
     const isChecked = isCompleted || isPendingCheck;
     const monthDay = (task as unknown as { monthDay?: number | null })
@@ -292,7 +305,7 @@ export function GroupedTaskList(props: Props) {
     return (
       <div
         key={task.id}
-        className={`task-card ${isCompleted ? "completed" : ""} ${isReturned ? "task-card--returned" : ""}`}
+        className={`task-card ${isCompleted ? "completed" : ""} ${isReturned ? "task-card--returned" : ""} ${isSubmitted ? "task-card--submitted" : ""}`}
         onClick={() => onTaskClick(task)}
       >
         {isReturned && (
@@ -308,11 +321,11 @@ export function GroupedTaskList(props: Props) {
               if (isPendingCheck) { e.stopPropagation(); return; }
               onToggleComplete(task.id, e);
             }}
-            className={`task-checkbox ${isChecked ? "checked" : ""} ${isPendingCheck ? "task-checkbox--fresh" : ""}`}
-            aria-label={`${isPendingCheck ? "Отмечаем выполнение" : isCompleted ? "Вернуть в работу" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
+            className={`task-checkbox ${isChecked ? "checked" : ""} ${isPendingCheck ? "task-checkbox--fresh" : ""} ${isSubmitted && !isChecked ? "task-checkbox--submitted" : ""}`}
+            aria-label={`${isPendingCheck ? "Отмечаем выполнение" : isCompleted ? "Вернуть в работу" : isSubmitted ? `${submittedLabel}, открыть` : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
             aria-busy={isPendingCheck || undefined}
           >
-            {isChecked && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+            {isChecked ? <Check className="w-4 h-4 text-white" strokeWidth={3} /> : isSubmitted ? <Clock className="w-4 h-4" strokeWidth={2.5} aria-hidden /> : null}
           </button>
 
           <div className="task-content">
@@ -323,6 +336,12 @@ export function GroupedTaskList(props: Props) {
             </h3>
 
             <div className="task-meta">
+              {isSubmitted && (
+                <div className="task-badge review">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{submittedLabel}</span>
+                </div>
+              )}
               {isAdmin && showAssignee && task.workerId && (
                 <div className="worker-info" title={getUserName(task.workerId)}>
                   <div className="worker-avatar" data-tone={avatarTone(task.workerId) ?? undefined}>
@@ -360,9 +379,15 @@ export function GroupedTaskList(props: Props) {
                   <span>Фото</span>
                 </div>
               )}
+              {openQuestion && !isCompleted && !isSubmitted && (
+                <div className="task-badge question" title="Нужно выбрать ответ">
+                  <MessageCircleQuestion className="w-3.5 h-3.5" />
+                  <span>Вопрос</span>
+                </div>
+              )}
               {checklistTotal > 0 && !isCompleted && (
-                <div className="task-badge photo">
-                  <Check className="w-3.5 h-3.5" />
+                <div className="task-badge checklist">
+                  <ListChecks className="w-3.5 h-3.5" />
                   <span>{checklistDone}/{checklistTotal}</span>
                 </div>
               )}
@@ -694,11 +719,13 @@ export function GroupedTaskList(props: Props) {
    */
   function renderActiveTasks(tasksSubset: Task[]) {
     if (tasksSubset.length === 0) return null;
-    const renderPart = (list: Task[]) => simple
-      ? renderFlat(list)
-      : <>{groupTasksByDate(list, "createdAt", undefined, activeTaskDate()).map((g) => renderYearGroup(g))}</>;
-    if (simple && (!isVerifyTask || !tasksSubset.some(isVerifyTask) || tasksSubset.every(isVerifyTask))) {
-      return renderPart(tasksSubset);
+    // Сотруднику — один список без подзаголовков: «На проверке» тоже его
+    // задачи (просьба владельца 06.11.2026). Отправленные на проверку —
+    // в конце, с пометкой на карточке; сначала то, что ещё сделать.
+    if (simple) {
+      const submitted = (t: Task) =>
+        (t as { verificationStatus?: string | null }).verificationStatus === "submitted";
+      return renderFlat([...tasksSubset.filter((t) => !submitted(t)), ...tasksSubset.filter(submitted)]);
     }
     if (!isVerifyTask) {
       const groups = groupTasksByDate(tasksSubset, "createdAt", undefined, activeTaskDate());
@@ -720,7 +747,7 @@ export function GroupedTaskList(props: Props) {
             <span className="active-split-label">Что сделать</span>
             <span className="active-split-count">{todoTasks.length}</span>
           </div>
-          {simple ? renderPart(todoTasks) : todoGroups.map((g) => renderYearGroup(g))}
+          {todoGroups.map((g) => renderYearGroup(g))}
         </div>
         <div>
           <div className="active-split-header active-split-header--verify">
@@ -729,7 +756,7 @@ export function GroupedTaskList(props: Props) {
               {verifyTasks.length}
             </span>
           </div>
-          {simple ? renderPart(verifyTasks) : verifyGroups.map((g) => renderYearGroup(g))}
+          {verifyGroups.map((g) => renderYearGroup(g))}
         </div>
       </div>
     );
@@ -823,10 +850,12 @@ export function GroupedTaskList(props: Props) {
   }
 
   return (
-    <div className="grouped-task-list">
-      <section className="grouped-section">
+    <div className={`grouped-task-list ${simple ? "grouped-task-list--simple" : ""}`}>
+      <section className="grouped-section" aria-label={simple ? "Задачи" : undefined}>
+        {/* Сотруднику заголовок «Сделать» не нужен: список и так — его задачи. */}
+        {!simple && (
         <div className="grouped-section-header grouped-section-header--toolbar">
-          <h2 className="grouped-section-title">{simple ? "Сделать" : "Активные"}</h2>
+          <h2 className="grouped-section-title">Активные</h2>
           <span className="grouped-section-count">
             {activeTasks.length}
           </span>
@@ -845,10 +874,14 @@ export function GroupedTaskList(props: Props) {
             </button>
           ) : null}
         </div>
+        )}
         {showActiveEmpty && !groupByWorker ? (
+          // Сотруднику пустоту объясняет баннер «Молодец!» над списком.
+          simple ? null : (
           <div className="grouped-empty">
-            {simple ? "Ничего не осталось." : "Все задачи на сегодня закрыты — респект!"}
+            Все задачи на сегодня закрыты — респект!
           </div>
+          )
         ) : groupByWorker ? (
           renderActiveByWorker()
         ) : (

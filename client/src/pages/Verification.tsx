@@ -37,6 +37,7 @@ import {
   reviewHotkey,
 } from "@/lib/verification-review";
 import type { Task } from "@shared/schema";
+import { isQuestionItem } from "@shared/checklist";
 
 /**
  * «На проверке» — рабочее место проверяющего. Одна задача крупно:
@@ -453,7 +454,10 @@ export default function VerificationPage() {
                       <li key={item.id} data-done={item.done || undefined}>
                         {item.done ? <Check aria-hidden="true" /> : <Circle aria-hidden="true" />}
                         <span>{item.title}</span>
-                        {proof.kind === "photos" ? (
+                        {isQuestionItem(item) ? (
+                          // Свой вопрос — показываем ответ сотрудника.
+                          <span className="verify-checklist-answer">{item.answer ?? "нет ответа"}</span>
+                        ) : proof.kind === "photos" ? (
                           <span className="verify-checklist-photos"><Camera aria-hidden="true" />{proof.count}</span>
                         ) : proof.kind === "no-photo-needed" ? (
                           <span className="verify-checklist-photos">фото не нужно</span>

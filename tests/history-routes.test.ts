@@ -208,10 +208,11 @@ describe("GET /api/reports/export.csv", () => {
     const body = r.body as string;
     expect(body.charCodeAt(0)).toBe(0xfeff);
     const [header, row] = body.slice(1).split("\r\n");
-    expect(header).toBe("Дата;Сотрудник;Телефон;Задача;Категория;Статус;Время;Премия, ₽;Фото");
+    expect(header).toBe("Дата;Сотрудник;Телефон;Задача;Категория;Статус;Время;Премия, ₽;Фото;Ответы");
     expect(row).toContain("23.10.2026;Анна;8 (999) 000-00-10;");
     expect(row).toContain(`"'=HYPERLINK(""x"")"`);
-    expect(row).toMatch(/;Выполнено;10:30;100;https?:\/\/[^;]+\/uploads\/a\.jpg$/);
+    // Последняя колонка «Ответы» пустая: у задачи нет своих вопросов.
+    expect(row).toMatch(/;Выполнено;10:30;100;https?:\/\/[^;]+\/uploads\/a\.jpg;$/);
   });
 });
 

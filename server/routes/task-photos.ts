@@ -10,6 +10,7 @@ import {
   attachTaskPhoto,
   attachChecklistItemPhoto,
   setChecklistItemDone,
+  setChecklistItemAnswer,
 } from "../services/task-photo";
 import {
   upload,
@@ -136,6 +137,29 @@ export function registerTaskPhotoRoutes(app: Express): void {
       }
       console.error("Error marking checklist item:", e);
       return res.status(500).json({ message: "Не удалось отметить пункт" });
+    }
+  });
+
+  // Свой вопрос задачи: выбрать ответ из вариантов (null — убрать ответ).
+  app.post("/api/tasks/:id/checklist/:itemId/answer", requireAuth, async (req, res) => {
+    const parsed = z.object({ answer: z.string().trim().min(1).max(100).nullable() }).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Нужно поле answer: один из вариантов ответа или null", field: "answer" });
+    }
+    try {
+      const { task } = await setChecklistItemAnswer({
+        taskId: Number(req.params.id),
+        itemId: String(req.params.itemId),
+        answer: parsed.data.answer,
+        actor: actorFromReq(req),
+      });
+      return res.json({ task });
+    } catch (e: any) {
+      if (isTaskServiceError(e)) {
+        return res.status(e.status).json({ message: e.message });
+      }
+      console.error("Error answering checklist question:", e);
+      return res.status(500).json({ message: "Не удалось сохранить ответ" });
     }
   });
 

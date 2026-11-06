@@ -66,20 +66,20 @@ export function ChecklistEditor({
   const filled = items.filter((it) => it.title.trim()).length;
 
   return (
-    <div className="space-y-2" data-testid="checklist-editor">
+    <div className="checklist-editor" data-testid="checklist-editor">
       {items.map((it, i) => {
         const photoLabel = it.requiresPhoto
           ? `Пункт ${i + 1}: нужно фото. Нажмите, чтобы отмечать без фото`
           : `Пункт ${i + 1}: без фото. Нажмите, чтобы требовать фото`;
         return (
-          <div key={it.id} className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-5 shrink-0 text-center">{i + 1}.</span>
+          <div key={it.id} className="checklist-editor-row">
+            <span className="checklist-editor-num" aria-hidden="true">{i + 1}</span>
             <Input
               value={it.title}
               onChange={(e) => update(it.id, { title: e.target.value })}
-              placeholder="Например: холодильник"
+              placeholder="Пункт"
               maxLength={200}
-              className="flex-1 min-w-0"
+              className="things-input flex-1 min-w-0"
               aria-label={`Пункт ${i + 1}`}
             />
             <Button
@@ -92,7 +92,7 @@ export function ChecklistEditor({
               title={it.requiresPhoto ? "Нужно фото" : "Без фото — отметка касанием"}
               data-testid="checklist-photo-toggle"
               className={cn(
-                "shrink-0",
+                "checklist-editor-btn shrink-0",
                 it.requiresPhoto
                   ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                   : "text-muted-foreground",
@@ -106,7 +106,7 @@ export function ChecklistEditor({
               size="icon"
               onClick={() => onChange(items.filter((x) => x.id !== it.id))}
               aria-label={`Удалить пункт ${i + 1}`}
-              className="shrink-0 text-muted-foreground hover:text-destructive"
+              className="checklist-editor-btn shrink-0 text-muted-foreground hover:text-destructive"
             >
               <X className="w-4 h-4" aria-hidden="true" />
             </Button>
@@ -117,17 +117,20 @@ export function ChecklistEditor({
         type="button"
         variant="outline"
         onClick={() => onChange([...items, { id: newChecklistId(), title: "", requiresPhoto: true }])}
-        className="w-full"
+        className="checklist-editor-add"
         disabled={items.length >= MAX_CHECKLIST_ITEMS}
       >
-        <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+        <Plus className="w-5 h-5" aria-hidden="true" />
         Добавить пункт
       </Button>
-      <p className="text-xs text-muted-foreground">
-        Необязательно. Сотрудник закроет задачу, когда отметит все пункты. <Camera className="inline w-3.5 h-3.5 -mt-0.5" aria-label="Камера" /> — пункт
-        закрывается только фото; нажмите на камеру, чтобы пункт отмечался касанием, без фото.
-        {filled > 0 ? ` Сейчас с фото: ${withPhoto} из ${filled}.` : ""}
-      </p>
+      {/* Легенда значков вместо абзаца: камера — пункт закрывается фото, перечёркнутая — касанием. */}
+      {items.length > 0 && (
+        <p className="checklist-editor-legend">
+          <span><Camera aria-hidden="true" /> с фото</span>
+          <span><CameraOff aria-hidden="true" /> без фото</span>
+          {filled > 0 ? <span className="sr-only">{`С фото: ${withPhoto} из ${filled}.`}</span> : null}
+        </p>
+      )}
     </div>
   );
 }

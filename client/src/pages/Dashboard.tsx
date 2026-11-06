@@ -393,9 +393,6 @@ export default function Dashboard() {
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
-  // Строка «осталось N из M» у сотрудника не зависит от поиска.
-  const dayTotal = scopeFilteredTasks.length;
-  const dayDone = scopeFilteredTasks.filter(t => t.isCompleted).length;
 
   // Discriminator «это задача на проверку» — для split'а внутри
   // активной секции GroupedTaskList. См. prop `isVerifyTask` там.
@@ -538,6 +535,13 @@ export default function Dashboard() {
 
     if (task.isCompleted) {
       uncompleteTask.mutate(taskId);
+      return;
+    }
+
+    // Уже отправлена на проверку: повторное «готово» ничего не даст —
+    // открываем задачу, там видно, что она ждёт решения.
+    if ((task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
+      handleTaskClick(task);
       return;
     }
 
@@ -723,7 +727,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="app-layout">
+    // data-simple — экран сотрудника: дата на подложке, задачи строками во всю ширину.
+    <div className="app-layout" data-simple={simple || undefined}>
       {/* Header */}
       <header className="app-header relative">
         <div className="app-header-content">
@@ -912,31 +917,20 @@ export default function Dashboard() {
           </div>
         ) : null}
 
+        {/* Сотруднику — только дата на подложке: без полосы прогресса и
+            «осталось N из M» (просьба владельца 06.11.2026), сразу задачи. */}
+        {simple && (
+          <h2 className="worker-day">
+            {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+          </h2>
+        )}
+
         {/* «На проверке» баннер — для админа/руководителя. Раньше
             очередь была inline-блоком над списком задач, и заведующая
             путалась «это мои задачи или те что я проверяю». Теперь
             компактный prominent-баннер ведёт на отдельный экран
             /admin/verification. */}
         {canVerify ? <VerificationBanner /> : null}
-
-        {/* Hero stats: то, что видит сотрудник в первую очередь —
-            сколько ещё надо сделать, сколько закрыто, кто опередил,
-            и баланс премии. Заменяет минималистичный progress-card. */}
-        {simple && dayTotal > 0 && (
-          <div className="worker-today" aria-label="Сегодня">
-            <div className="worker-today-row">
-              <h2 className="worker-today-title">
-                {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
-              </h2>
-              <span className="worker-today-count">
-                {dayDone === dayTotal ? "Всё сделано" : `Осталось ${dayTotal - dayDone} из ${dayTotal}`}
-              </span>
-            </div>
-            <div className="worker-today-bar" role="progressbar" aria-valuemin={0} aria-valuemax={dayTotal} aria-valuenow={dayDone} aria-label="Сделано за сегодня">
-              <span style={{ transform: `scaleX(${dayDone / dayTotal})` }} />
-            </div>
-          </div>
-        )}
 
         {!simple && totalCount > 0 && (
           <StatHero

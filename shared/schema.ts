@@ -415,12 +415,22 @@ export const insertWorkerSchema = createInsertSchema(workers).pick({
 // Пункт чек-листа (подзадача). Пункт с фото (requiresPhoto нет или true)
 // отмечается только загрузкой фото, без фото (false) — касанием; это
 // проверяется на сервере в эндпоинтах пункта (services/task-photo.ts).
+// С вариантами (options) пункт — свой вопрос («Кто заполняет?» → «Лариса»,
+// «Галина»): закрывается выбором ответа (answer), фото не нужно
+// (shared/checklist.ts, POST /api/tasks/:id/checklist/:itemId/answer).
 export const checklistItemSchema = z.object({
   id: z.string().min(1).max(64),
   title: z.string().trim().min(1, "Название пункта обязательно").max(200),
   done: z.boolean().optional().default(false),
   photoUrls: z.array(z.string()).optional().default([]),
   requiresPhoto: z.boolean().optional(),
+  options: z
+    .array(z.string().trim().min(1, "Пустой вариант ответа").max(100, "Вариант ответа — до 100 символов"))
+    .min(2, "У вопроса нужно хотя бы два варианта ответа")
+    .max(20, "У вопроса — до 20 вариантов ответа")
+    .refine((list) => new Set(list.map((v) => v.toLocaleLowerCase("ru"))).size === list.length, "Варианты ответа повторяются")
+    .optional(),
+  answer: z.string().max(100).nullable().optional(),
 });
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 

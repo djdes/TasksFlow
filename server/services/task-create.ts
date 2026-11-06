@@ -17,6 +17,7 @@ import {
 } from "./task-actor";
 import { accessOf } from "../access";
 import { canAssignTo } from "@shared/roles";
+import { normalizeNewChecklist } from "@shared/checklist";
 
 export type CreateTaskParams = {
   /** Уже провалидированный insertTaskSchema payload. */
@@ -71,6 +72,8 @@ export async function createTaskForActor({
 
   const task = await storage.createTask({
     ...input,
+    // У вопроса засчитывается только ответ из его вариантов.
+    checklist: normalizeNewChecklist(input.checklist),
     companyId,
   });
 

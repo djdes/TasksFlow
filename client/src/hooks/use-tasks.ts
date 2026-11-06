@@ -170,8 +170,8 @@ export function useCompleteTask() {
       // говорим прямо, что задача ещё не закрыта и премия придёт после «Принять».
       if ((task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
         toast({
-          title: "Отправлено на проверку",
-          description: (task as { price?: number | null }).price ? "Премия начислится, когда руководитель примет задачу" : "Руководитель посмотрит и примет задачу",
+          title: "Отправлено руководителю",
+          description: (task as { price?: number | null }).price ? "Премия — после проверки" : undefined,
         });
       }
     },

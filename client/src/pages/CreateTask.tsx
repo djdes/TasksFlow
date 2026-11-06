@@ -13,12 +13,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TaskScheduleFields, RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
+import { RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields";
 import { WorkerPicker } from "@/components/WorkerPicker";
-import { DueDateQuick, PhotoSlot } from "@/components/QuickTaskFields";
+import { DueDateQuick, PhotoSlot, ScheduleQuick } from "@/components/QuickTaskFields";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
+  TaskQuestionsEditor,
+  mergeChecklistAndQuestions,
+  questionsError,
+  type QuestionDraft,
+} from "@/components/TaskQuestionsEditor";
+import {
+  AlignLeft,
   ArrowLeft,
   Plus,
   ImagePlus,
@@ -27,11 +34,14 @@ import {
   LayoutTemplate,
   Camera,
   ChevronDown,
-  ListChecks,
+  Coins,
+  Pencil,
   Repeat,
   SlidersHorizontal,
+  Tag,
   Zap,
 } from "lucide-react";
+import { FormBlock } from "@/components/FormBlock";
 import { TaskTemplatesDialog } from "@/components/TaskTemplatesDialog";
 import { parseDueDateInput } from "@shared/task-visibility";
 import { useForm, useWatch } from "react-hook-form";
@@ -99,6 +109,9 @@ export default function CreateTask() {
   // Чек-лист (подзадачи): админ задаёт заголовки пунктов и где нужно фото.
   // done/фото заполняет сотрудник. Пусто → обычная задача.
   const [checklistItems, setChecklistItems] = useState<ChecklistDraftItem[]>([]);
+  // Свой вопрос регулярной задачи: «Кто заполняет?» → «Лариса», «Галина».
+  const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+  const [questionsInvalid, setQuestionsInvalid] = useState<string | null>(null);
 
   // ──── WeSetup journal mode ────
   // Журнальный режим показываем ТОЛЬКО если у компании настроена интеграция
@@ -364,22 +377,19 @@ export default function CreateTask() {
   });
 
 
-  // Что уже задано в «Ещё» — подпись у свёрнутого блока, чтобы не забыть о скрытом.
+  // Сколько уже задано в «Дополнительно» — число у свёрнутого блока, чтобы не забыть о скрытом.
   const [morePrice, moreCategory, moreRequiresPhoto, moreRemindAt] = useWatch({
     control: form.control,
     name: ["price", "category", "requiresPhoto", "remindAt"],
   });
   const filledChecklist = checklistItems.filter((i) => i.title.trim()).length;
-  const moreSummary =
-    [
-      filledChecklist ? `чек-лист: ${filledChecklist}` : null,
-      Number(morePrice) > 0 ? `премия ${morePrice} ₽` : null,
-      typeof moreCategory === "string" && moreCategory.trim() ? moreCategory.trim() : null,
-      moreRequiresPhoto ? "фото результата" : null,
-      kind === "once" && moreRemindAt ? `напомнить в ${moreRemindAt}` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || "Чек-лист, премия, категория, фото результата";
+  const moreCount = [
+    filledChecklist > 0,
+    Number(morePrice) > 0,
+    typeof moreCategory === "string" && moreCategory.trim() !== "",
+    Boolean(moreRequiresPhoto),
+    kind === "once" && Boolean(moreRemindAt),
+  ].filter(Boolean).length;
 
   // Проверка прав администратора — после всех хуков, иначе React
   // ругается на «Rendered more hooks than during the previous render»,
@@ -573,6 +583,12 @@ export default function CreateTask() {
     // Разовая: срок (или без срока), без дней и без повтора — сделанная
     // остаётся сделанной. Регулярная: дни, число и повтор, срока нет.
     const once = kind === "once";
+    const questionsProblem = once ? null : questionsError(questions);
+    if (questionsProblem) {
+      setQuestionsInvalid(questionsProblem);
+      document.querySelector<HTMLElement>('[data-testid="task-questions"] input')?.focus();
+      return;
+    }
     const dueDate = once ? parseDueDateInput(values.dueDateInput) : null;
     const base = {
       title: values.title,
@@ -586,7 +602,8 @@ export default function CreateTask() {
       category: values.category || null,
       description: values.description || null,
       // Чек-лист: только непустые пункты; done/фото стартуют пустыми.
-      checklist: checklistPayload(checklistItems),
+      // У регулярной к нему добавляются свои вопросы (пункты с вариантами).
+      checklist: once ? checklistPayload(checklistItems) : mergeChecklistAndQuestions(checklistPayload(checklistItems), questions),
     };
     // «Фото к задаче» (у разовой — фото проблемы) — к каждой копии.
     const withPhoto = !!examplePhotoFile;
@@ -683,7 +700,7 @@ export default function CreateTask() {
           onCreated={() => setLocation("/")}
         />
 
-        <div className="content-panel">
+        <div className={`content-panel ${mode === "free" ? "quick-task-panel" : ""}`}>
           {/* Mode toggle: Free vs Journal — только если настроена интеграция WeSetup */}
           {wesetupEnabled && (
           <div className="mb-6 flex flex-col gap-2 sm:flex-row">
@@ -840,47 +857,65 @@ export default function CreateTask() {
                   ))}
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="Что нужно сделать?"
-                          aria-label="Название"
-                          className="things-input quick-task-title"
-                          maxLength={255}
-                          enterKeyHint="next"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Блоки без заголовков: подписи — в placeholder, смысл — в значках полей.
+                    Что → кто и когда → вопрос → остальное. */}
+                <FormBlock label="Задача" tone="task">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem className="field-icon-wrap">
+                        <Pencil aria-hidden className="field-icon" />
+                        <FormControl>
+                          <Input
+                            placeholder="Что сделать?"
+                            aria-label="Название"
+                            className="things-input quick-task-title"
+                            maxLength={255}
+                            enterKeyHint="next"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Описание — необязательно"
-                          aria-label="Описание задачи"
-                          className="things-input min-h-[72px] resize-none"
-                          rows={2}
-                          maxLength={5000}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem className="field-icon-wrap">
+                        <AlignLeft aria-hidden className="field-icon" />
+                        <FormControl>
+                          <Textarea
+                            placeholder="Подробности, если нужно"
+                            aria-label="Описание задачи"
+                            className="things-input min-h-[80px] resize-none"
+                            rows={2}
+                            maxLength={5000}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div>
+                  {/* Одно и то же фото к задаче: у разовой — «что не так», у регулярной — «как надо». */}
+                  <PhotoSlot
+                    id="problem-photo-upload"
+                    title={kind === "once" ? "Фото проблемы" : "Фото-пример"}
+                    hint="Увидит сотрудник"
+                    icon={kind === "once" ? Camera : ImagePlus}
+                    preview={examplePhotoPreview}
+                    inputRef={examplePhotoInputRef}
+                    onSelect={handleExamplePhotoSelect}
+                    onRemove={removeExamplePhoto}
+                  />
+                </FormBlock>
+
+                <FormBlock label="Исполнитель и срок" tone="people">
                   <WorkerPicker
                     users={users}
                     value={freeModeWorkerIds}
@@ -888,72 +923,74 @@ export default function CreateTask() {
                       setFreeModeWorkerIds(ids);
                       if (ids.length) setWorkersInvalid(false);
                     }}
+                    placeholder="Исполнитель"
                     invalid={workersInvalid}
                   />
                   {workersInvalid ? (
-                    <p className="quick-task-hint quick-task-hint--error" role="alert">Выберите ответственного</p>
+                    <p className="quick-task-hint quick-task-hint--error" role="alert">Выберите исполнителя</p>
                   ) : freeModeWorkerIds.length > 1 ? (
-                    <p className="quick-task-hint">Каждый получит свою копию задачи.</p>
+                    <p className="quick-task-hint">Каждому — своя копия</p>
                   ) : null}
-                </div>
+                  {kind === "once" ? (
+                    <DueDateQuick form={form} />
+                  ) : (
+                    <>
+                      <ScheduleQuick form={form} />
+                      <RemindAtField form={form} />
+                    </>
+                  )}
+                </FormBlock>
 
-                {/* Одно и то же фото к задаче: у разовой — «что не так», у регулярной — «как надо». */}
-                <PhotoSlot
-                  id="problem-photo-upload"
-                  title={kind === "once" ? "Фото проблемы" : "Фото к задаче"}
-                  hint={kind === "once" ? "Сотрудник увидит его в задаче" : "Что и как сделать — сотрудник увидит в задаче"}
-                  icon={kind === "once" ? Camera : ImagePlus}
-                  preview={examplePhotoPreview}
-                  inputRef={examplePhotoInputRef}
-                  onSelect={handleExamplePhotoSelect}
-                  onRemove={removeExamplePhoto}
-                />
-
-                {kind === "once" ? (
-                  <DueDateQuick form={form} />
-                ) : (
-                  <TaskScheduleFields form={form} allowDue={false} />
+                {kind === "recurring" && (
+                    <FormBlock label="Вопрос сотруднику" tone="question">
+                      <TaskQuestionsEditor
+                        items={questions}
+                        onChange={(next) => {
+                          setQuestions(next);
+                          if (questionsInvalid) setQuestionsInvalid(questionsError(next));
+                        }}
+                      />
+                      {questionsInvalid ? (
+                        <p className="quick-task-hint quick-task-hint--error" role="alert">{questionsInvalid}</p>
+                      ) : null}
+                    </FormBlock>
                 )}
 
-                <div className="quick-task-more">
+                {/* «Дополнительно» свёрнуто; число — сколько там уже задано. */}
+                <section className="form-block" data-tone="more" aria-label="Дополнительно">
                   <button
                     type="button"
-                    className="quick-task-more-toggle"
+                    className="form-block-title form-block-toggle"
                     aria-expanded={moreOpen}
                     aria-controls="quick-task-more"
                     onClick={() => setMoreOpen((v) => !v)}
                     data-testid="task-more-toggle"
                   >
-                    <SlidersHorizontal aria-hidden />
-                    <span className="quick-task-more-text">
-                      Ещё
-                      <small>{moreSummary}</small>
-                    </span>
-                    <ChevronDown aria-hidden className={moreOpen ? "rotate-180" : ""} />
+                    <SlidersHorizontal aria-hidden className="form-block-toggle-icon" />
+                    <span className="form-block-name">Дополнительно</span>
+                    {moreCount > 0 ? <span className="form-block-count" aria-label={`задано: ${moreCount}`}>{moreCount}</span> : null}
+                    <ChevronDown aria-hidden className={`form-block-chevron ${moreOpen ? "rotate-180" : ""}`} />
                   </button>
 
-                  <div id="quick-task-more" hidden={!moreOpen} className="quick-task-more-body">
-                    <div className="quick-task-group">
-                      <p className="quick-task-caption">
-                        <ListChecks aria-hidden />
-                        Чек-лист
-                      </p>
-                      <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
-                    </div>
-
+                  <div id="quick-task-more" hidden={!moreOpen} className="form-block-body">
+                    <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
                     <div className="grid gap-3 sm:grid-cols-2">
                       <FormField
                         control={form.control}
-                        name="category"
+                        name="price"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="field-icon-wrap">
+                            <Coins aria-hidden className="field-icon" />
                             <FormControl>
                               <Input
-                                placeholder="Категория: уборка, кухня…"
-                                aria-label="Категория"
+                                type="number"
+                                inputMode="numeric"
+                                min="0"
+                                placeholder="Премия, ₽"
+                                aria-label="Премия, ₽"
                                 className="things-input"
-                                maxLength={100}
                                 {...field}
+                                value={field.value === "0" ? "" : field.value}
                               />
                             </FormControl>
                             <FormMessage />
@@ -962,19 +999,17 @@ export default function CreateTask() {
                       />
                       <FormField
                         control={form.control}
-                        name="price"
+                        name="category"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="field-icon-wrap">
+                            <Tag aria-hidden className="field-icon" />
                             <FormControl>
                               <Input
-                                type="number"
-                                inputMode="numeric"
-                                min="0"
-                                placeholder="Премия за выполнение, ₽"
-                                aria-label="Премия за выполнение, ₽"
+                                placeholder="Категория"
+                                aria-label="Категория"
                                 className="things-input"
+                                maxLength={100}
                                 {...field}
-                                value={field.value === "0" ? "" : field.value}
                               />
                             </FormControl>
                             <FormMessage />
@@ -987,26 +1022,19 @@ export default function CreateTask() {
                       control={form.control}
                       name="requiresPhoto"
                       render={({ field }) => (
-                        <FormItem className="quick-task-group">
-                          <div className="flex flex-row items-start gap-3 space-y-0">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel className="cursor-pointer">Закрыть только с фото результата</FormLabel>
-                              <p className="text-xs text-muted-foreground">Без фото сотрудник не отметит задачу выполненной</p>
-                            </div>
-                          </div>
-
+                        <FormItem className="toggle-row">
+                          <Camera aria-hidden className="toggle-row-icon" />
+                          <FormLabel className="toggle-row-label">Нужно фото результата</FormLabel>
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
 
-                    {kind === "once" && (
-                      <RemindAtField form={form} className="task-schedule-field quick-task-group" />
-                    )}
+                    {kind === "once" && <RemindAtField form={form} />}
                   </div>
-                </div>
+                </section>
 
                 <div className="quick-task-actions">
                   <Button type="button" variant="ghost" onClick={() => setLocation("/")} className="border border-border/50">
