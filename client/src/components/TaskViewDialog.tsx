@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, MessageCircleQuestion, MessageSquare } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
-import { reviewersLine, type TaskReviewers } from "@shared/reviewers";
+import type { TaskReviewers } from "@shared/reviewers";
+import { useAuth } from "@/contexts/AuthContext";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
 import { Textarea } from "@/components/ui/textarea";
 import type { Task, ChecklistItem } from "@shared/schema";
@@ -59,7 +60,8 @@ export function TaskViewDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // «Проверяет: …» — кто примет выполненное. Нет строки — без проверки.
+  // Примет ли выполненное руководитель: тогда кнопка — «Отправить руководителю»,
+  // а не «Готово», и отдельная плашка о проверке не нужна.
   const reviewerTaskId = open && currentTask && !currentTask.isCompleted ? currentTask.id : null;
   const reviewers = useQuery<TaskReviewers>({
     queryKey: ["/api/tasks", reviewerTaskId, "reviewers"],
@@ -72,7 +74,10 @@ export function TaskViewDialog({
     staleTime: 60_000,
     retry: false,
   });
-  const reviewersText = reviewerTaskId !== null ? reviewersLine(reviewers.data) : null;
+  const goesToReview = reviewerTaskId !== null && Boolean(reviewers.data?.required);
+  // Отправленная на проверку: исполнителю — «У руководителя», проверяющему — «Ждёт проверки».
+  const { user: me } = useAuth();
+  const submittedLabel = currentTask && me && currentTask.workerId === me.id ? "У руководителя" : "Ждёт проверки";
   // Задача «принять чужую работу» — проверяющему сразу кнопка в «На проверке».
   const [, setLocation] = useLocation();
   const { canVerify } = usePermissions();
@@ -440,18 +445,6 @@ export function TaskViewDialog({
 
           {/* Бейджи в шапке: премия и срок */}
           <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">
-            {/* Кто примет работу — значком, полная строка — в подсказке. */}
-            {reviewersText ? (
-              <div
-                className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-lg text-sm font-semibold"
-                title={reviewersText}
-                aria-label={reviewersText}
-                data-testid="task-reviewers"
-              >
-                <ShieldCheck className="w-4 h-4" aria-hidden />
-                <span>На проверку</span>
-              </div>
-            ) : null}
             {hasPrice && (
               <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-sm font-semibold">
                 <Coins className="w-4 h-4" />
@@ -825,7 +818,7 @@ export function TaskViewDialog({
                   data-testid="task-submitted-status"
                 >
                   <Clock className="w-5 h-5 shrink-0" aria-hidden />
-                  На проверке
+                  {submittedLabel}
                 </div>
               ) : (
                 <button
@@ -843,7 +836,9 @@ export function TaskViewDialog({
                       : `Отметьте пункты ${checkDone}/${checkItems.length}`
                     : currentTask.requiresPhoto && photoUrls.length === 0
                       ? "Нужно фото"
-                      : "Готово"}
+                      : goesToReview
+                        ? "Отправить руководителю"
+                        : "Готово"}
                 </button>
               )
             )}

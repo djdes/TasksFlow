@@ -268,6 +268,8 @@ export function GroupedTaskList(props: Props) {
     // Сотрудник уже нажал «Готово», задача ждёт решения проверяющего.
     // Видно на самой карточке: часики вместо пустого кружка и пометка.
     const isSubmitted = !isCompleted && verificationStatus === "submitted";
+    // Сотрудник сам отправил — «У руководителя»; руководителю — «Ждёт проверки».
+    const submittedLabel = simple ? "У руководителя" : "Ждёт проверки";
     const isPendingCheck = !isCompleted && pendingCompletions.has(task.id);
     const isChecked = isCompleted || isPendingCheck;
     const monthDay = (task as unknown as { monthDay?: number | null })
@@ -320,7 +322,7 @@ export function GroupedTaskList(props: Props) {
               onToggleComplete(task.id, e);
             }}
             className={`task-checkbox ${isChecked ? "checked" : ""} ${isPendingCheck ? "task-checkbox--fresh" : ""} ${isSubmitted && !isChecked ? "task-checkbox--submitted" : ""}`}
-            aria-label={`${isPendingCheck ? "Отмечаем выполнение" : isCompleted ? "Вернуть в работу" : isSubmitted ? "На проверке, открыть" : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
+            aria-label={`${isPendingCheck ? "Отмечаем выполнение" : isCompleted ? "Вернуть в работу" : isSubmitted ? `${submittedLabel}, открыть` : isJournal ? "Открыть журнал" : "Выполнить задачу"}: ${task.title}`}
             aria-busy={isPendingCheck || undefined}
           >
             {isChecked ? <Check className="w-4 h-4 text-white" strokeWidth={3} /> : isSubmitted ? <Clock className="w-4 h-4" strokeWidth={2.5} aria-hidden /> : null}
@@ -335,9 +337,9 @@ export function GroupedTaskList(props: Props) {
 
             <div className="task-meta">
               {isSubmitted && (
-                <div className="task-badge review" title="Ждёт решения проверяющего">
+                <div className="task-badge review">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>На проверке</span>
+                  <span>{submittedLabel}</span>
                 </div>
               )}
               {isAdmin && showAssignee && task.workerId && (

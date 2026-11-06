@@ -460,7 +460,7 @@ export function renderTaskCard(task: Task): { text: string; reply_markup: TgRepl
   if (task.isCompleted) {
     lines.push("\n✅ Задача закрыта");
   } else if (task.verificationStatus === "submitted") {
-    lines.push("\n🕓 Отправлено на проверку");
+    lines.push("\n🕓 Отправлено руководителю");
   }
 
   keyboard.push([
