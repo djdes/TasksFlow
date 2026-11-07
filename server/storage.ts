@@ -17,6 +17,8 @@ import {
   invitations,
   companyRoles,
   companyLoginLinks,
+  userLoginLinks,
+  userPinReveal,
   type Worker,
   type InsertWorker,
   type Task,
@@ -70,6 +72,13 @@ export interface IStorage {
   getCompanyLoginLink(companyId: number): Promise<string | null>;
   ensureCompanyLoginLink(companyId: number, token: string): Promise<string>;
   getCompanyIdByLoginToken(token: string): Promise<number | undefined>;
+  getUserLoginLink(userId: number): Promise<{ token: string; createdAt: number } | null>;
+  setUserLoginLink(userId: number, token: string, createdBy: number | null): Promise<void>;
+  deleteUserLoginLink(userId: number): Promise<void>;
+  getUserIdByLoginLinkToken(token: string): Promise<number | undefined>;
+  getPinReveal(userId: number): Promise<{ pinEncrypted: string; setAt: number } | null>;
+  setPinReveal(userId: number, pinEncrypted: string, setBy: number | null): Promise<void>;
+  clearPinReveal(userId: number): Promise<void>;
 
   // Users
   getUserByPhone(phone: string): Promise<User | undefined>;
@@ -528,6 +537,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setUserPin(id: number, pinHash: string | null): Promise<User | undefined> {
+    // Сохранённый для «Посмотреть PIN» PIN — только тот, что задал руководитель
+    // сейчас; любая смена его стирает (маршрут руководителя запишет новый).
+    await this.clearPinReveal(id);
     await db
       .update(users)
       .set({
@@ -766,6 +778,9 @@ export class DatabaseStorage implements IStorage {
   async deleteUser(id: number): Promise<void> {
     // Обнуляем workerId у всех задач этого пользователя
     await db.update(tasks).set({ workerId: null }).where(eq(tasks.workerId, id));
+    // Личный QR входа и сохранённый PIN удалённого человека — тоже.
+    await db.delete(userLoginLinks).where(eq(userLoginLinks.userId, id)).catch(() => {});
+    await this.clearPinReveal(id);
     // Удаляем пользователя
     await db.delete(users).where(eq(users.id, id));
   }
@@ -1489,6 +1504,44 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.select({ companyId: companyLoginLinks.companyId }).from(companyLoginLinks)
       .where(eq(companyLoginLinks.token, token));
     return row?.companyId;
+  }
+
+  async getUserLoginLink(userId: number): Promise<{ token: string; createdAt: number } | null> {
+    const [row] = await db.select().from(userLoginLinks).where(eq(userLoginLinks.userId, userId));
+    return row ? { token: row.token, createdAt: row.createdAt } : null;
+  }
+
+  async setUserLoginLink(userId: number, token: string, createdBy: number | null): Promise<void> {
+    // Новый QR заменяет старый: прежняя распечатка сразу перестаёт пускать.
+    const createdAt = Math.floor(Date.now() / 1000);
+    await db.insert(userLoginLinks).values({ userId, token, createdAt, createdBy })
+      .onDuplicateKeyUpdate({ set: { token, createdAt, createdBy } });
+  }
+
+  async deleteUserLoginLink(userId: number): Promise<void> {
+    await db.delete(userLoginLinks).where(eq(userLoginLinks.userId, userId));
+  }
+
+  async getUserIdByLoginLinkToken(token: string): Promise<number | undefined> {
+    const [row] = await db.select({ userId: userLoginLinks.userId }).from(userLoginLinks)
+      .where(eq(userLoginLinks.token, token));
+    return row?.userId;
+  }
+
+  async getPinReveal(userId: number): Promise<{ pinEncrypted: string; setAt: number } | null> {
+    const [row] = await db.select().from(userPinReveal).where(eq(userPinReveal.userId, userId));
+    return row ? { pinEncrypted: row.pinEncrypted, setAt: row.setAt } : null;
+  }
+
+  async setPinReveal(userId: number, pinEncrypted: string, setBy: number | null): Promise<void> {
+    const setAt = Math.floor(Date.now() / 1000);
+    await db.insert(userPinReveal).values({ userId, pinEncrypted, setBy, setAt })
+      .onDuplicateKeyUpdate({ set: { pinEncrypted, setBy, setAt } });
+  }
+
+  async clearPinReveal(userId: number): Promise<void> {
+    // Без таблицы (миграция не прошла) смена PIN всё равно должна работать.
+    await db.delete(userPinReveal).where(eq(userPinReveal.userId, userId)).catch(() => {});
   }
 
   // ===================== INVITATIONS =====================

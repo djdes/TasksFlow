@@ -13,6 +13,8 @@ import { seatProblem } from "../plan-limits";
 import { accessOf, roleOf } from "../access";
 import { canGrantRole, canManageUser, canSeeWorker } from "@shared/roles";
 import { canImpersonate } from "../impersonation";
+import { openPin, sealPin } from "../pin-reveal";
+import { recordAudit } from "../audit-log";
 import {
   requireAuth,
   requireUserManager,
@@ -29,6 +31,17 @@ export const ADMIN_PIN_OWN_ONLY = "PIN администратора меняет
 export const NOT_YOUR_PEOPLE = "Админов и других руководителей меняет только администратор";
 
 /** Сотрудник своей компании или null — для смены PIN руководителем. */
+/** Запомнить PIN от руководителя для «Посмотреть PIN» (server/pin-reveal.ts). */
+async function rememberPin(userId: number, pin: string, setBy: number | null): Promise<void> {
+  // Не получилось запомнить — PIN всё равно задан; посмотреть его будет нельзя.
+  try {
+    const sealed = sealPin(pin);
+    if (sealed) await storage.setPinReveal(userId, sealed, setBy);
+  } catch (err) {
+    console.warn("[pin-reveal] не удалось сохранить PIN для просмотра", err instanceof Error ? err.message : err);
+  }
+}
+
 export async function findCompanyUser(req: Request, userId: number) {
   if (!Number.isInteger(userId) || userId <= 0) return null;
   const target = await storage.getUserById(userId);
@@ -266,6 +279,8 @@ export function registerUserRoutes(app: Express): void {
         // шлют — такой сотрудник придумает его при первом входе.
         ...(input.pin ? { pinHash: hashPin(input.pin) } : {}),
       });
+      // PIN от руководителя можно будет посмотреть в «Сотрудниках».
+      if (input.pin) await rememberPin(user.id, input.pin, req.session?.userId ?? null);
 
       res.status(201).json(user);
     } catch (err: any) {
@@ -291,6 +306,7 @@ export function registerUserRoutes(app: Express): void {
       if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
       if (!(await canTouchUser(req, target))) return res.status(403).json({ message: NOT_YOUR_PEOPLE });
       const updated = await storage.setUserPin(target.id, hashPin(pin));
+      await rememberPin(target.id, pin, req.session?.userId ?? null);
       void notifyPinEvent(target, "Руководитель задал вам новый PIN для входа в TasksFlow.");
       res.json(updated ?? target);
     } catch (err: any) {
@@ -299,6 +315,28 @@ export function registerUserRoutes(app: Express): void {
       }
       console.error("Error setting user PIN:", err);
       res.status(500).json({ message: "Не удалось задать PIN" });
+    }
+  });
+
+  // «Посмотреть PIN»: только PIN, заданный руководителем. Свой PIN
+  // сотрудника не хранится — тогда pin: null и reason: "self".
+  app.get("/api/users/:id/pin", requireUserManager, async (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    try {
+      if (req.session.impersonatorId) return res.status(403).json({ message: "В режиме просмотра PIN не показывается" });
+      const target = await findCompanyUser(req, Number(req.params.id));
+      if (!target) return res.status(404).json({ message: "Пользователь не найден" });
+      if (target.isAdmin) return res.status(403).json({ message: ADMIN_PIN_OWN_ONLY });
+      if (!(await canTouchUser(req, target))) return res.status(403).json({ message: NOT_YOUR_PEOPLE });
+      if (!target.pinHash) return res.json({ pin: null, reason: "none" });
+      const saved = await storage.getPinReveal(target.id);
+      const pin = saved ? openPin(saved.pinEncrypted) : null;
+      if (!pin) return res.json({ pin: null, reason: "self" });
+      void recordAudit({ companyId: target.companyId, actorWorkerId: req.session.userId ?? null, taskId: null, action: "user.pin_viewed", payload: { userId: target.id } }).catch(() => {});
+      res.json({ pin, reason: null, setAt: saved?.setAt ?? null });
+    } catch (err) {
+      console.error("Error revealing user PIN:", err);
+      res.status(500).json({ message: "Не удалось показать PIN" });
     }
   });
 

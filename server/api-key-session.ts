@@ -17,6 +17,7 @@ import { extractBearerKey } from "./api-key-crypto";
 const KEY_DENIED = [
   "/api/auth", // вход, выход, свой профиль и удаление аккаунта
   "/api/quick-login/by-token", // вход по QR — только cookie-сессия
+  "/api/user-login", // личный QR входа — только cookie-сессия
   "/api/account", // свои email, пароль, уведомления
   "/api/me", // свой Telegram
   "/api/push", // подписки устройства

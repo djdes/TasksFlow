@@ -86,6 +86,8 @@ function demoBilling(): BillingInfo {
   };
 }
 const me = () => state.users.find((u) => u.id === state.meId)!;
+/** PIN, заданные руководителем в демо (для «Посмотреть PIN»). */
+const demoPins = new Map<number, string>();
 const isAdmin = () => me().isAdmin;
 
 /** Сменить роль: админ ↔ сотрудник (Анна). */
@@ -391,14 +393,29 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
   if (path === "/api/users" && method === "POST") {
     const user = { ...state.users[1], id: state.nextId++, name: body?.name || null, phone: body?.phone, bonusBalance: 0, hasPin: !!body?.pin, locationId: null, position: body?.position ?? null, isAdmin: body?.role === "admin", roleId: body?.role === "admin" ? null : body?.roleId ?? null };
     state.users.push(user);
+    if (typeof body?.pin === "string") demoPins.set(user.id, body.pin);
     return { status: 201, json: user };
   }
   if ((m = path.match(/^\/api\/users\/(\d+)(\/[a-z-]+)?$/))) {
     const user = state.users.find((u) => u.id === Number(m![1]));
     if (!user) return { status: 404, json: { message: "Пользователь не найден" } };
     const tail = m[2] ?? "";
+    // «Посмотреть PIN»: в демо помним PIN, заданный в этой вкладке.
+    if (tail === "/pin" && method === "GET") {
+      const pin = demoPins.get(user.id) ?? null;
+      return { json: { pin, reason: pin ? null : user.hasPin ? "self" : "none" } };
+    }
+    // Личный QR входа: в демо ссылка для примера, по ней не войти.
+    if (tail === "/login-link") {
+      if (method === "DELETE") return { json: { url: null, createdAt: null } };
+      return { json: { url: `${location.origin}/login/qr/${"0".repeat(64 - String(user.id).length)}${user.id}`, createdAt: now() } };
+    }
     if (tail === "/location") user.locationId = body?.locationId ?? null;
-    else if (tail === "/pin") user.hasPin = method === "POST";
+    else if (tail === "/pin") {
+      user.hasPin = method === "POST";
+      if (method === "POST" && typeof body?.pin === "string") demoPins.set(user.id, body.pin);
+      else demoPins.delete(user.id);
+    }
     else if (tail === "/reset-balance") user.bonusBalance = 0;
     else if (method === "PUT") {
       Object.assign(user, { phone: body?.phone ?? user.phone, name: body?.name ?? user.name });

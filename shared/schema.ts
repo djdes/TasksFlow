@@ -662,6 +662,24 @@ export const companyLoginLinks = mysqlTable("company_login_links", {
   token: varchar("token", { length: 64 }).notNull().unique(),
 });
 
+// Личный QR входа сотрудника: user_id → токен (shared/user-login-link.ts).
+// Один действующий QR на человека; новый QR заменяет старый.
+export const userLoginLinks = mysqlTable("user_login_links", {
+  userId: int("user_id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  createdAt: int("created_at").notNull(),
+  createdBy: int("created_by"),
+});
+
+// PIN, заданный руководителем, — зашифрованным, чтобы его можно было
+// посмотреть (server/pin-reveal.ts). Смена PIN стирает строку.
+export const userPinReveal = mysqlTable("user_pin_reveal", {
+  userId: int("user_id").primaryKey(),
+  pinEncrypted: varchar("pin_encrypted", { length: 255 }).notNull(),
+  setBy: int("set_by"),
+  setAt: int("set_at").notNull(),
+});
+
 // Приглашения сотрудников через QR-код. Админ генерит запись, отдаёт
 // сотруднику QR/ссылку вида /join/<token>. По accept'у создаётся User
 // в companyId приглашения с уже выставленными position/isAdmin.

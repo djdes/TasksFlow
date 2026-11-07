@@ -141,7 +141,7 @@ export function pageTitle(items: readonly NavItem[], path: string, pending = 0):
 
 /** Страницы без меню кабинета: вход, регистрация, приглашение. */
 export function isCabinetPath(path: string): boolean {
-  if (path === "/" || path === "/login") return false;
+  if (path === "/" || path === "/login" || path.startsWith("/login/")) return false;
   return !/^\/(register|join|quick-login)(\/|$)/.test(path);
 }
 

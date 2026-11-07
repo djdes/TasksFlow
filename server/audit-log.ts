@@ -19,6 +19,11 @@ import { eq, and, gt, inArray, desc } from "drizzle-orm";
 export type AuditAction =
   | "auth.impersonation_started"
   | "auth.impersonation_stopped"
+  | "auth.login_link_used"
+  | "user.login_link_created"
+  | "user.login_link_renewed"
+  | "user.login_link_revoked"
+  | "user.pin_viewed"
   | "task.created"
   | "task.updated"
   | "task.deleted"

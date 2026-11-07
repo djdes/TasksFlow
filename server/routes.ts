@@ -23,6 +23,7 @@ import {
 import { registerBannerRoutes } from "./routes/banners";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerQuickLoginRoutes } from "./routes/quick-login";
+import { registerUserLoginLinkRoutes } from "./routes/user-login-links";
 import { registerTelegramLinkRoutes } from "./routes/telegram-link";
 import { registerCompanyMeRoutes } from "./routes/company-me";
 import { registerWorkerRoutes } from "./routes/workers";
@@ -116,6 +117,7 @@ export async function registerRoutes(
 
   registerAuthRoutes(app);
   registerQuickLoginRoutes(app);
+  registerUserLoginLinkRoutes(app);
 
   registerTelegramLinkRoutes(app);
 

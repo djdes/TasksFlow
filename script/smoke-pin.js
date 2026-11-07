@@ -93,6 +93,8 @@ async (page) => {
     if (path === '/api/auth/me') return { json: admin };
     if (path === '/api/users' && method === 'GET') return { json: list };
     if (path === '/api/users' && method === 'POST') { created.push(body); return { status: 201, json: { ...worker, id: 9, ...body } }; }
+    // «Посмотреть PIN» (GET): свой PIN сотрудника не показывается.
+    if (/^\/api\/users\/\d+\/pin$/.test(path) && method === 'GET') return { json: { pin: null, reason: 'self' } };
     if (/^\/api\/users\/\d+\/pin$/.test(path)) { pinCalls.push({ path, method, body }); return { json: { ...worker, hasPin: method === 'POST' } }; }
     return null;
   }, async (p) => {

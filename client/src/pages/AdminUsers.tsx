@@ -5,7 +5,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye, QrCode } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -25,6 +25,7 @@ import { fetchOrFriendlyError, withTimeout } from "@/lib/queryClient";
 import { PhoneInput } from "@/components/PhoneInput";
 import { AdminPinField } from "@/components/AdminPinField";
 import { PinShareNote, UserPinPanel } from "@/components/UserPinPanel";
+import { UserLoginQrDialog } from "@/components/UserLoginQr";
 import { LocationsPanel, UserLocationSelect } from "@/components/LocationsPanel";
 import { useLocations } from "@/hooks/use-locations";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
@@ -119,6 +120,8 @@ export default function AdminUsers() {
   const [editPosition, setEditPosition] = useState("");
   const [editRole, setEditRole] = useState("employee");
   const [pinUserId, setPinUserId] = useState<number | null>(null);
+  // Личный QR входа (UserLoginQrDialog).
+  const [qrUser, setQrUser] = useState<{ id: number; name?: string | null; phone?: string | null } | null>(null);
   const [created, setCreated] = useState<{ phone: string; pin: string } | null>(null);
   const [query, setQuery] = useState("");
   const [confirm, setConfirm] = useState<{ kind: "delete" | "reset"; user: ListUser } | null>(null);
@@ -714,9 +717,25 @@ export default function AdminUsers() {
                               }}
                               className="text-xs"
                               aria-label={`PIN: ${label}`}
-                              title="PIN для входа"
+                              title="Посмотреть или задать PIN"
+                              data-testid={`user-pin-${u.id}`}
                             >
-                              <KeyRound className="w-3.5 h-3.5" />
+                              <KeyRound className="w-3.5 h-3.5 mr-1" aria-hidden />
+                              PIN
+                            </Button>
+                          )}
+                          {!u.isAdmin && canEditUser(u) && u.id !== user.id && !user.impersonation && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setQrUser(u)}
+                              className="text-xs"
+                              aria-label={`QR для входа: ${label}`}
+                              title="QR-код: сотрудник сканирует и сразу входит"
+                              data-testid={`user-qr-${u.id}`}
+                            >
+                              <QrCode className="w-3.5 h-3.5 mr-1" aria-hidden />
+                              QR
                             </Button>
                           )}
                           {canEditUser(u) && (!u.isAdmin || (permissions.isAdmin && u.id !== user.id)) && (
@@ -772,6 +791,9 @@ export default function AdminUsers() {
           {permissions.isAdmin && <LocationsPanel />}
         </div>
       </div>
+      {qrUser && (
+        <UserLoginQrDialog user={qrUser} open onOpenChange={(open) => { if (!open) setQrUser(null); }} />
+      )}
       {confirm && (() => {
         const who = personLabel(confirm.user);
         const isDelete = confirm.kind === "delete";

@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy } from "lucide-react";
 import { generatePin, pinProblem } from "@shared/pin";
 import { api } from "@shared/routes";
 import { Button } from "@/components/ui/button";
 import { AdminPinField } from "@/components/AdminPinField";
 import { apiRequest } from "@/lib/queryClient";
+
+/** Ответ GET /api/users/:id/pin: PIN от руководителя или почему его не показать. */
+export type RevealedPin = { pin: string | null; reason: "none" | "self" | null; setAt?: number | null };
 import { useToast } from "@/hooks/use-toast";
 
 type PinUser = {
@@ -43,8 +46,8 @@ export function PinShareNote({ phone, pin, onDone }: { phone?: string | null; pi
   return (
     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3" role="status">
       <p className="text-sm text-foreground">
-        PIN <span className="font-mono text-base font-semibold tracking-[0.2em]">{pin}</span> — сообщите его сотруднику.
-        Позже его не будет видно.
+        PIN <span className="font-mono text-base font-semibold tracking-[0.2em]" data-testid="shared-pin">{pin}</span> — сообщите его сотруднику.
+        Посмотреть его снова можно по кнопке с ключом.
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={copy}>
@@ -92,6 +95,15 @@ export function UserPinPanel({ user, onClose }: { user: PinUser; onClose: () => 
   });
 
   const busy = setPinMutation.isPending || clearMutation.isPending;
+  // Текущий PIN — сразу при открытии: задавать новый, чтобы просто подсказать, не нужно.
+  const current = useQuery<RevealedPin>({
+    queryKey: ["/api/users", user.id, "pin"],
+    queryFn: async () => (await apiRequest("GET", `/api/users/${user.id}/pin`)).json(),
+    enabled: !!user.hasPin && !saved,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
 
   if (saved) return <PinShareNote phone={user.phone} pin={saved} onDone={onClose} />;
 
@@ -108,8 +120,25 @@ export function UserPinPanel({ user, onClose }: { user: PinUser; onClose: () => 
 
   return (
     <form onSubmit={submit} className="space-y-3">
+      {user.hasPin ? (
+        <div data-testid="current-pin">
+          {current.isPending ? (
+            <p className="text-sm text-muted-foreground">Смотрим текущий PIN…</p>
+          ) : current.isError ? (
+            <p className="text-sm text-destructive">{(current.error as Error).message || "Не удалось показать PIN"}</p>
+          ) : current.data?.pin ? (
+            <PinShareNote phone={user.phone} pin={current.data.pin} />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Сотрудник сам придумал или сменил PIN — посмотреть его нельзя. Задайте новый ниже.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">PIN ещё не задан — задайте его ниже.</p>
+      )}
       <label htmlFor={`user-pin-${user.id}`} className="block text-xs text-muted-foreground">
-        Новый PIN для входа
+        {user.hasPin ? "Или задайте новый PIN" : "Новый PIN для входа"}
       </label>
       <AdminPinField
         id={`user-pin-${user.id}`}
@@ -121,7 +150,6 @@ export function UserPinPanel({ user, onClose }: { user: PinUser; onClose: () => 
         disabled={busy}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        autoFocus
       />
       {error && (
         <p id={errorId} className="text-sm text-destructive">

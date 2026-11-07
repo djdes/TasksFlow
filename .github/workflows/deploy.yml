@@ -261,6 +261,7 @@ jobs:
             npm run create-api-keys-table
             npm run create-invitations-table
             npm run create-company-login-links
+            npm run create-user-login-tables
             npm run add-claim-col
             npm run add-managed-workers-col
             npm run add-position-col

@@ -48,6 +48,7 @@ const Invitations = lazy(() => import("@/pages/Invitations"));
 const AdminBanners = lazy(() => import("@/pages/AdminBanners"));
 const JoinByInvite = lazy(() => import("@/pages/JoinByInvite"));
 const QuickLogin = lazy(() => import("@/pages/QuickLogin"));
+const LoginByQr = lazy(() => import("@/pages/LoginByQr"));
 const QuickLoginPrint = lazy(() => import("@/pages/QuickLoginPrint"));
 const Account = lazy(() => import("@/pages/Account"));
 const Reports = lazy(() => import("@/pages/Reports"));
@@ -154,6 +155,8 @@ function Router() {
           <Switch>
             <Route path="/" component={Login} />
             <Route path="/login" component={Login} />
+            {/* Личный QR входа сотрудника (shared/user-login-link.ts) */}
+            <Route path="/login/qr/:token" component={LoginByQr} />
             <Route path="/account" component={Account} />
             <Route path="/reports" component={Reports} />
             <Route path="/register" component={Register} />
