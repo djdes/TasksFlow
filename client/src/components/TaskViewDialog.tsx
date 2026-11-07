@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, MessageCircleQuestion, MessageSquare } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
+import { SpeakButton } from "@/components/VoiceButtons";
+import { taskSpeechText } from "@/lib/speech";
 import type { TaskReviewers } from "@shared/reviewers";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDueStatus, formatDueBadge } from "@shared/task-visibility";
@@ -445,6 +447,8 @@ export function TaskViewDialog({
 
           {/* Бейджи в шапке: премия и срок */}
           <div className="mt-3 flex flex-wrap items-center gap-2 empty:hidden">
+            {/* Прочитать задачу вслух — тем, кому трудно читать с экрана. */}
+            <SpeakButton text={taskSpeechText(currentTask)} />
             {hasPrice && (
               <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-sm font-semibold">
                 <Coins className="w-4 h-4" />

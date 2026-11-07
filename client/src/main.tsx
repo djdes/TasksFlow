@@ -4,11 +4,14 @@ import App from "./App";
 import { installErrorReporting } from "./lib/error-reporting";
 import { enterDemo, isDemo } from "./demo/demo-mode";
 import { registerServiceWorker } from "./lib/pwa";
+import { applyReadingPrefs } from "./lib/reading-prefs";
 import "./index.css";
 import "./motion.css";
 import "./workspace.css";
 
 async function start() {
+  // «Крупный текст» и «Контраст» — до первого рендера, без мигания мелким текстом.
+  applyReadingPrefs();
   // /demo — кабинет без регистрации: API отвечает из памяти браузера.
   if (window.location.pathname === "/demo") {
     enterDemo();

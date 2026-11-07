@@ -9,6 +9,7 @@ import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/h
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { matchTaskBySearch } from "@/lib/task-search";
 import { signedOutPath, useAppBadge } from "@/lib/pwa";
 import { plural } from "@/lib/i18n";
@@ -42,6 +43,7 @@ import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
 import { MotionToggle } from "@/components/MotionToggle";
+import { ReadingToggles } from "@/components/ReadingToggles";
 import { QueryError } from "@/components/QueryError";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useIsMobile } from "@/hooks/use-media-query";
@@ -557,7 +559,24 @@ export default function Dashboard() {
       return;
     }
 
-    completeTask.mutate({ id: taskId, comment });
+    // Галочка в списке — 5 секунд на «Отменить»: случайное касание не страшно.
+    completeTask.mutate(
+      { id: taskId, comment, quiet: true },
+      {
+        onSuccess: (done) => {
+          const submitted = (done as { verificationStatus?: string | null }).verificationStatus === "submitted";
+          toast({
+            title: submitted ? "Отправлено руководителю" : "Готово",
+            duration: 5000,
+            action: (
+              <ToastAction altText="Отменить выполнение" onClick={() => uncompleteTask.mutate(taskId)} data-testid="undo-complete">
+                Отменить
+              </ToastAction>
+            ),
+          });
+        },
+      },
+    );
     // Тактильный + аудио feedback для воркера — физическое
     // подтверждение «отметка прошла». Срабатывает только если
     // включено в меню (по умолчанию да). Опт-ин чтобы не раздражать
@@ -855,6 +874,7 @@ export default function Dashboard() {
               );
             })}
             <div className="dropdown-divider" />
+            <ReadingToggles />
             <MotionToggle />
             <FeedbackToggle />
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
