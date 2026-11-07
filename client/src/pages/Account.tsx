@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TelegramSection } from "@/components/TelegramSection";
 import { MotionToggle } from "@/components/MotionToggle";
+import { ReadingToggles } from "@/components/ReadingToggles";
 import { FeedbackToggle } from "@/components/FeedbackToggle";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { plural } from "@/lib/i18n";
@@ -157,6 +158,7 @@ export default function Account() {
             </div>
             <div className="account-appearance">
               <ThemeSwitcher />
+              <ReadingToggles />
               <MotionToggle />
               <FeedbackToggle />
             </div>

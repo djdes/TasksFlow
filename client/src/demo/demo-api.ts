@@ -276,6 +276,10 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
   }
   if ((m = path.match(/^\/api\/tasks\/(\d+)\/uncomplete$/))) {
     const task = findTask(Number(m[1]))!;
+    // «Отменить» после отправки руководителю — задача снова у сотрудника.
+    if (!task.isCompleted && task.verificationStatus === "submitted") {
+      return { json: patchTask(task.id, { verificationStatus: "pending" }) };
+    }
     if (task.isCompleted) credit(task.workerId, -task.price);
     return { json: patchTask(task.id, { isCompleted: false, completedAt: null }) };
   }

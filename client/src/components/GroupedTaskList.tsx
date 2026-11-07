@@ -1,6 +1,7 @@
 import { forwardRef, useMemo, useState } from "react";
 import { AnimatePresence, motion, useIsPresent, type HTMLMotionProps, type Variants } from "framer-motion";
 import {
+  BellRing,
   BookOpen,
   Calendar,
   CalendarDays,
@@ -34,6 +35,7 @@ import { useMotionPreference } from "@/contexts/MotionContext";
 import { usePendingTaskCompletions } from "@/hooks/use-tasks";
 import { avatarTone } from "@/lib/shift-summary";
 import { isQuestionItem } from "@shared/checklist";
+import { sortByUrgency } from "@/lib/task-suggestions";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -268,6 +270,7 @@ export function GroupedTaskList(props: Props) {
     // Сотрудник уже нажал «Готово», задача ждёт решения проверяющего.
     // Видно на самой карточке: часики вместо пустого кружка и пометка.
     const isSubmitted = !isCompleted && verificationStatus === "submitted";
+    const remindAt = (task as { remindAt?: string | null }).remindAt ?? null;
     // Сотрудник сам отправил — «У руководителя»; руководителю — «Ждёт проверки».
     const submittedLabel = simple ? "У руководителя" : "Ждёт проверки";
     const isPendingCheck = !isCompleted && pendingCompletions.has(task.id);
@@ -412,6 +415,13 @@ export function GroupedTaskList(props: Props) {
               {/* Срок видят все: это информация для исполнителя, а не
                   админская настройка расписания. */}
               {!isCompleted && <DueBadge dueDate={(task as any).dueDate} />}
+              {/* Своё время задачи — колокольчик и «09:30», без слов. */}
+              {!isCompleted && !isSubmitted && remindAt && (
+                <div className="task-badge remind" title={`Напомнит в ${remindAt}`}>
+                  <BellRing className="w-3.5 h-3.5" />
+                  <span>{remindAt}</span>
+                </div>
+              )}
               {isAdmin && weekDays && weekDays.length > 0 && (
                 <div className="task-badge schedule">
                   <Calendar className="w-3.5 h-3.5" />
@@ -720,12 +730,10 @@ export function GroupedTaskList(props: Props) {
   function renderActiveTasks(tasksSubset: Task[]) {
     if (tasksSubset.length === 0) return null;
     // Сотруднику — один список без подзаголовков: «На проверке» тоже его
-    // задачи (просьба владельца 06.11.2026). Отправленные на проверку —
-    // в конце, с пометкой на карточке; сначала то, что ещё сделать.
+    // задачи (просьба владельца 06.11.2026). Сверху срочное: просрочено,
+    // срок сегодня, потом по времени напоминания; отправленные — в конце.
     if (simple) {
-      const submitted = (t: Task) =>
-        (t as { verificationStatus?: string | null }).verificationStatus === "submitted";
-      return renderFlat([...tasksSubset.filter((t) => !submitted(t)), ...tasksSubset.filter(submitted)]);
+      return renderFlat(sortByUrgency(tasksSubset as (Task & { dueDate?: number | null; remindAt?: string | null })[]));
     }
     if (!isVerifyTask) {
       const groups = groupTasksByDate(tasksSubset, "createdAt", undefined, activeTaskDate());

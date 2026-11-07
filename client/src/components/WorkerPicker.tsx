@@ -3,6 +3,7 @@ import { ChevronDown, Search, UserRound, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CheckMark } from "@/components/ui/check-mark";
 import { cn } from "@/lib/utils";
+import { orderByRecent, readRecentWorkers, rememberRecentWorkers } from "@/lib/task-suggestions";
 
 export type PickerUser = { id: number; name?: string | null; phone?: string | null; position?: string | null };
 
@@ -51,7 +52,13 @@ export function WorkerPicker({
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const selected = useMemo(() => users.filter((u) => value.includes(u.id)), [users, value]);
-  const visible = useMemo(() => filterPickerUsers(users, query), [users, query]);
+  // Недавно выбранные — сверху (пока ищут — как нашлось). Порядок меняется
+  // только после закрытия списка, чтобы строки не прыгали под пальцем.
+  const [recent, setRecent] = useState(readRecentWorkers);
+  const visible = useMemo(
+    () => (query.trim() ? filterPickerUsers(users, query) : orderByRecent(users, recent)),
+    [users, query, recent],
+  );
   const toggle = (id: number) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
 
   return (
@@ -59,7 +66,11 @@ export function WorkerPicker({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setQuery("");
+        if (!next) {
+          setQuery("");
+          rememberRecentWorkers(value);
+          setRecent(readRecentWorkers());
+        }
       }}
     >
       <div className={cn("worker-picker", selected.length > 0 && "has-value")}>
@@ -145,7 +156,16 @@ export function WorkerPicker({
             })
           )}
         </div>
-        <button type="button" className="worker-picker-done" onClick={() => setOpen(false)}>
+        <button
+          type="button"
+          className="worker-picker-done"
+          onClick={() => {
+            setOpen(false);
+            setQuery("");
+            rememberRecentWorkers(value);
+            setRecent(readRecentWorkers());
+          }}
+        >
           Готово
         </button>
       </PopoverContent>

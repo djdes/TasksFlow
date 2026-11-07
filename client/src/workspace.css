@@ -1985,3 +1985,84 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
   background: linear-gradient(to bottom, hsl(var(--background) / 0), hsl(var(--background)) 14px);
 }
 .task-detail-body > :not([hidden]) ~ .task-detail-actions { margin-top: 4px; }
+
+/* ===== Крупный текст (html[data-text="large"], «Меню» и «Мой аккаунт») =====
+   Для тех, кто плохо видит: rem-размеры Tailwind растут через корень, а
+   места с размером в px — списки задач, окно задачи и форма — отдельно. */
+html[data-text="large"] { font-size: 112.5%; }
+html[data-text="large"] :is(.quick-task-form, .task-detail-body) { --qf-fs: 20px; }
+html[data-text="large"] .quick-task-form :is(.things-input, .worker-picker-trigger, .due-quick-field) { min-height: 56px; }
+html[data-text="large"] .quick-task-form input.things-input { height: 56px; }
+html[data-text="large"] .app-layout .task-title { font-size: 17px; }
+html[data-text="large"] .app-layout .grouped-task-list--simple .task-title { font-size: 21px; line-height: 1.3; }
+html[data-text="large"] .app-layout .task-badge { font-size: 13px; }
+html[data-text="large"] .app-layout .grouped-task-list--simple .task-badge { font-size: 15px; padding: 5px 10px; }
+html[data-text="large"] .app-layout .grouped-task-list--simple .task-checkbox { width: 36px; height: 36px; border-radius: 11px; }
+html[data-text="large"] .app-layout .grouped-task-list--simple .task-checkbox svg { width: 20px; height: 20px; }
+html[data-text="large"] .worker-day { height: 32px; font-size: 26px; line-height: 32px; }
+html[data-text="large"] .app-layout[data-simple] { --band-h: 128px; }
+html[data-text="large"] .app-layout[data-simple]:has(.search-top) { --band-h: 192px; }
+html[data-text="large"] .task-answer-title { font-size: 21px; }
+html[data-text="large"] .task-answer-icon { width: 24px; height: 24px; }
+html[data-text="large"] :is(.pick-row, .worker-picker-row) { min-height: 52px; font-size: 19px; }
+html[data-text="large"] .pick-row small { font-size: 17px; }
+html[data-text="large"] .task-schedule-day { font-size: 18px; }
+html[data-text="large"] .task-question-chip { font-size: 18px; }
+html[data-text="large"] .dropdown-item { font-size: 18px; }
+html[data-text="large"] .task-detail-actions button { font-size: 19px; min-height: 60px; }
+@media (max-width: 767px) {
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-main { grid-template-columns: 36px minmax(0, 1fr); }
+}
+@media (min-width: 1024px) {
+  html[data-text="large"] .app-layout[data-simple] { --band-h: 144px; }
+  html[data-text="large"] .app-layout[data-simple]:has(.search-top) { --band-h: 208px; }
+}
+
+/* ===== Контраст (html[data-contrast="high"]) =====
+   Серый текст темнее, рамки полей и строк чётче — в обеих темах. */
+html[data-contrast="high"] { --muted-foreground: 220 16% 26%; --border: 220 12% 70%; --input: 220 12% 58%; }
+html.dark[data-contrast="high"] { --muted-foreground: 220 16% 84%; --border: 222 25% 45%; --input: 222 25% 55%; }
+html[data-contrast="high"] :is(input, textarea)::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
+html[data-contrast="high"] .app-layout .task-checkbox:not(.checked):not(.task-checkbox--submitted) { border-color: hsl(var(--foreground) / .7); }
+html[data-contrast="high"] .app-layout .grouped-task-list--simple .task-card { border-color: hsl(var(--border)); }
+html[data-contrast="high"] .app-layout .task-badge.photo { color: hsl(28 90% 26%); }
+html[data-contrast="high"] .app-layout .task-badge.price, html[data-contrast="high"] .app-layout .task-badge.checklist { color: hsl(155 80% 20%); }
+html[data-contrast="high"] .app-layout .task-badge.review { color: hsl(28 90% 26%); }
+html[data-contrast="high"] .app-layout .task-badge.question { color: hsl(262 70% 36%); }
+html.dark[data-contrast="high"] .app-layout .task-badge:is(.photo, .review) { color: hsl(40 100% 78%); }
+html.dark[data-contrast="high"] .app-layout .task-badge:is(.price, .checklist) { color: hsl(152 70% 76%); }
+html.dark[data-contrast="high"] .app-layout .task-badge.question { color: hsl(262 100% 88%); }
+/* Время напоминания на карточке — синий колокольчик. */
+.app-layout .task-badge.remind { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-variant-numeric: tabular-nums; }
+.dark .app-layout .task-badge.remind { background: hsl(var(--primary) / .2); color: hsl(230 100% 84%); }
+
+/* «Слушать» в окне задачи и микрофон в поле «Что сделать?». */
+.task-speak {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 10px;
+  background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-size: 15px; font-weight: 600;
+}
+.task-speak svg { width: 18px; height: 18px; }
+.task-speak.is-on { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.task-speak:focus-visible, .voice-input:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.field-icon-wrap.has-voice :is(input).things-input { padding-right: 52px; }
+.voice-input {
+  position: absolute; right: 6px; top: 6px; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 10px; color: hsl(var(--primary)); background: transparent; transition: background-color 150ms ease;
+}
+html[data-text="large"] .voice-input { top: 8px; }
+.voice-input:hover { background: hsl(var(--primary) / .1); }
+.voice-input svg { width: 20px; height: 20px; }
+.voice-input.is-on { background: hsl(var(--destructive)); color: white; animation: tf-voice-pulse 1.2s ease-in-out infinite; }
+@keyframes tf-voice-pulse { 50% { box-shadow: 0 0 0 6px hsl(var(--destructive) / .2); } }
+@media (prefers-reduced-motion: reduce) { .voice-input.is-on { animation: none; } }
+html[data-motion="reduced"] .voice-input.is-on { animation: none; }
+
+/* Готовые вопросы: «Кто заполняет?», «Всё в порядке?» — одно касание. */
+.task-question-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.task-question-preset {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid hsl(262 70% 58% / .4);
+  background: hsl(262 70% 58% / .06); color: hsl(262 60% 46%); font-size: 15px; font-weight: 600;
+}
+.task-question-preset:hover { background: hsl(262 70% 58% / .12); }
+.dark .task-question-preset { color: hsl(262 90% 82%); }
+html[data-text="large"] .task-question-preset { font-size: 17px; min-height: 46px; }

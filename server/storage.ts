@@ -191,6 +191,10 @@ export interface IStorage {
    */
   transitionTaskToCompleted(id: number): Promise<boolean>;
   transitionTaskToUncompleted(id: number): Promise<boolean>;
+  // withdrawSubmission: сотрудник передумал сразу после «Готово» (кнопка
+  // «Отменить»): 'submitted' → 'pending', задача снова у него. Атомарно:
+  // если проверяющий успел принять или вернуть — ничего не меняется.
+  withdrawSubmission(id: number): Promise<boolean>;
 
   // Phase 1 двухстадийной верификации.
   //
@@ -1253,6 +1257,19 @@ export class DatabaseStorage implements IStorage {
       .update(tasks)
       .set({ isCompleted: false, completedAt: null })
       .where(and(eq(tasks.id, id), eq(tasks.isCompleted, true)));
+    const header = Array.isArray(result) ? result[0] : result;
+    const affected =
+      header && typeof header === "object" && "affectedRows" in header
+        ? (header as { affectedRows: number }).affectedRows
+        : 0;
+    return affected > 0;
+  }
+
+  async withdrawSubmission(id: number): Promise<boolean> {
+    const result = await db
+      .update(tasks)
+      .set({ verificationStatus: "pending", submittedValues: null })
+      .where(and(eq(tasks.id, id), eq(tasks.isCompleted, false), eq(tasks.verificationStatus, "submitted")));
     const header = Array.isArray(result) ? result[0] : result;
     const affected =
       header && typeof header === "object" && "affectedRows" in header

@@ -138,6 +138,20 @@ export function registerTaskStatusRoutes(app: Express): void {
         return res.status(403).json({ message: "Нет прав для изменения задачи" });
       }
 
+      // «Отменить» сразу после «Готово», когда задача ушла руководителю:
+      // забираем с проверки (submitted → pending). Премия ещё не начислена,
+      // журнал WeSetup не тронут — откатывать нечего.
+      if (!task.isCompleted && task.verificationStatus === "submitted") {
+        await storage.withdrawSubmission(taskId);
+        const fresh = await storage.getTask(taskId);
+        if (!fresh) {
+          return res.status(500).json({ message: "Ошибка обновления задачи" });
+        }
+        const { publishToCompany } = await import("../live-events");
+        publishToCompany(fresh.companyId, { type: "tasks", taskId });
+        return res.json(fresh);
+      }
+
       // Atomic isCompleted=true → false. Раньше: read+if+write
       // pattern → два concurrent /uncomplete оба видели true и оба
       // вычитали price из баланса. Теперь только один из них пройдёт

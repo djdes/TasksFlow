@@ -141,7 +141,8 @@ export function useCompleteTask() {
 
   return useMutation({
     mutationKey: COMPLETE_TASK_MUTATION_KEY,
-    mutationFn: async ({ id, comment }: { id: number; comment?: string }) => {
+    // quiet — уведомление покажет вызывающий (галочка в списке: с «Отменить»).
+    mutationFn: async ({ id, comment }: { id: number; comment?: string; quiet?: boolean }) => {
       // useCompleteTask — самый горячий путь воркера: каждое нажатие
       // «Готово». 35s — server timeout 30s + 5s round-trip (на journal-
       // задачах internally делает upstream WeSetup).
@@ -158,7 +159,7 @@ export function useCompleteTask() {
       }
       return api.tasks.complete.responses[200].parse(await res.json());
     },
-    onSuccess: (task) => {
+    onSuccess: (task, vars) => {
       // Короткий отклик телефона: системный в iOS-приложении, вибрация на Android.
       haptic("success");
       // Карточка уходит в «Выполненные» сразу, до перезапроса списка —
@@ -168,7 +169,7 @@ export function useCompleteTask() {
       queryClient.invalidateQueries({ queryKey: [api.tasks.get.path, task.id] });
       // Ушла на проверку (назначенный проверяющий или роль сотрудника):
       // говорим прямо, что задача ещё не закрыта и премия придёт после «Принять».
-      if ((task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
+      if (!vars.quiet && (task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
         toast({
           title: "Отправлено руководителю",
           description: (task as { price?: number | null }).price ? "Премия — после проверки" : undefined,

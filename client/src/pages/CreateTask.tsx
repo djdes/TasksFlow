@@ -42,6 +42,9 @@ import {
   Zap,
 } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
+import { VoiceInputButton } from "@/components/VoiceButtons";
+import { useTasks } from "@/hooks/use-tasks";
+import { shortNames, titleSuggestions } from "@/lib/task-suggestions";
 import { TaskTemplatesDialog } from "@/components/TaskTemplatesDialog";
 import { parseDueDateInput } from "@shared/task-visibility";
 import { useForm, useWatch } from "react-hook-form";
@@ -96,6 +99,9 @@ export default function CreateTask() {
   const { canManageTasks, isAdmin } = usePermissions();
   const createTask = useCreateTask();
   const { data: users = [], dataUpdatedAt: usersUpdatedAt, isLoading: usersLoading, isError: usersError, refetch: retryUsers } = useUsers();
+  // Подсказки названия — из прошлых задач компании (чаще ставят — выше).
+  const { data: pastTasks } = useTasks();
+  const titleHints = useMemo(() => titleSuggestions(pastTasks ?? []), [pastTasks]);
   const { toast } = useToast();
   const [examplePhotoFile, setExamplePhotoFile] = useState<File | null>(null);
   const [examplePhotoPreview, setExamplePhotoPreview] = useState<string | null>(null);
@@ -105,6 +111,12 @@ export default function CreateTask() {
   // workers; submit loops the create mutation once per worker so each
   // gets their own task instance (same pattern as journal-mode batch).
   const [freeModeWorkerIds, setFreeModeWorkerIds] = useState<number[]>([]);
+  // «Кто заполняет?» одним касанием: имена выбранных исполнителей (двое и
+  // больше), иначе — вся команда.
+  const presetNames = useMemo(() => {
+    const picked = users.filter((u) => freeModeWorkerIds.includes(u.id));
+    return shortNames(picked.length >= 2 ? picked : users);
+  }, [users, freeModeWorkerIds]);
 
   // Чек-лист (подзадачи): админ задаёт заголовки пунктов и где нужно фото.
   // done/фото заполняет сотрудник. Пусто → обычная задача.
@@ -864,7 +876,7 @@ export default function CreateTask() {
                     control={form.control}
                     name="title"
                     render={({ field }) => (
-                      <FormItem className="field-icon-wrap">
+                      <FormItem className="field-icon-wrap has-voice">
                         <Pencil aria-hidden className="field-icon" />
                         <FormControl>
                           <Input
@@ -873,9 +885,24 @@ export default function CreateTask() {
                             className="things-input quick-task-title"
                             maxLength={255}
                             enterKeyHint="next"
+                            list="task-title-suggestions"
+                            autoComplete="off"
                             {...field}
                           />
                         </FormControl>
+                        {/* Надиктовать вместо набора: текст дописывается к уже набранному. */}
+                        <VoiceInputButton
+                          label="Сказать задачу голосом"
+                          onText={(text) => {
+                            const cur = String(form.getValues("title") ?? "").trim();
+                            form.setValue("title", (cur ? `${cur} ${text}` : text).slice(0, 255), { shouldDirty: true, shouldValidate: true });
+                          }}
+                        />
+                        <datalist id="task-title-suggestions">
+                          {titleHints.map((t) => (
+                            <option key={t} value={t} />
+                          ))}
+                        </datalist>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -944,6 +971,7 @@ export default function CreateTask() {
                 {kind === "recurring" && (
                     <FormBlock label="Вопрос сотруднику" tone="question">
                       <TaskQuestionsEditor
+                        presetNames={presetNames}
                         items={questions}
                         onChange={(next) => {
                           setQuestions(next);

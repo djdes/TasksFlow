@@ -3,6 +3,7 @@ import { List, MessageCircleQuestion, Plus, X } from "lucide-react";
 import type { ChecklistItem } from "@shared/schema";
 import { isQuestionItem, MAX_QUESTION_OPTIONS, parseQuestionOptions } from "@shared/checklist";
 import { newChecklistId } from "@/components/ChecklistEditor";
+import { questionPresets, type QuestionPreset } from "@/lib/task-suggestions";
 
 export const MAX_TASK_QUESTIONS = 5;
 
@@ -66,10 +67,14 @@ export function mergeChecklistAndQuestions(
 export function TaskQuestionsEditor({
   items,
   onChange,
+  presetNames = [],
 }: {
   items: QuestionDraft[];
   onChange: (next: QuestionDraft[]) => void;
+  /** Имена для готового «Кто заполняет?» — исполнители или вся команда. */
+  presetNames?: readonly string[];
 }) {
+  const presets = questionPresets(presetNames);
   const update = (id: string, patch: Partial<QuestionDraft>) =>
     onChange(items.map((q) => (q.id === id ? { ...q, ...patch } : q)));
   const add = () => onChange([...items, { id: newChecklistId(), title: "", options: [] }]);
@@ -90,6 +95,7 @@ export function TaskQuestionsEditor({
         <QuestionBlock
           key={q.id}
           index={i}
+          presets={presets}
           draft={q}
           onChange={(patch) => update(q.id, patch)}
           onRemove={() => onChange(items.filter((x) => x.id !== q.id))}
@@ -107,11 +113,13 @@ export function TaskQuestionsEditor({
 
 function QuestionBlock({
   index,
+  presets,
   draft,
   onChange,
   onRemove,
 }: {
   index: number;
+  presets: readonly QuestionPreset[];
   draft: QuestionDraft;
   onChange: (patch: Partial<QuestionDraft>) => void;
   onRemove: () => void;
@@ -150,6 +158,22 @@ function QuestionBlock({
           <X aria-hidden />
         </button>
       </div>
+      {/* Пустой вопрос — готовые варианты в одно касание. */}
+      {!draft.title.trim() && draft.options.length === 0 && presets.length > 0 && (
+        <div className="task-question-presets" role="group" aria-label="Готовые вопросы">
+          {presets.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              className="task-question-preset"
+              onClick={() => onChange({ title: p.title, options: p.options.slice(0, MAX_QUESTION_OPTIONS) })}
+              data-testid={`question-preset-${p.key}`}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="task-question-options" role="group" aria-label={`Варианты ответа на вопрос ${n}`}>
         <List aria-hidden className="task-question-options-icon" />
         {draft.options.map((opt) => (
