@@ -134,8 +134,8 @@ async (page) => {
     return null;
   }, async (p) => {
     await p.goto(base + '/register/company?phone=%2B79990000001');
-    await p.getByPlaceholder('ИП Иванов Иван').fill('Кафе «Ромашка»');
-    await p.getByPlaceholder('admin@company.ru').fill('owner@example.com');
+    await p.getByPlaceholder('Название компании').fill('Кафе «Ромашка»');
+    await p.getByPlaceholder('Email для уведомлений').fill('owner@example.com');
     await p.getByRole('button', { name: 'Далее — придумать PIN' }).click();
     await p.getByText('Отметьте согласие, чтобы продолжить').waitFor();
     await p.getByRole('checkbox').first().check();

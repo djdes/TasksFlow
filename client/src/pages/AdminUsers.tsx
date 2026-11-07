@@ -420,11 +420,12 @@ export default function AdminUsers() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem ref={phoneFieldRef}>
-                      <FormLabel>Номер телефона</FormLabel>
+                      <FormLabel className="sr-only">Номер телефона</FormLabel>
                       <FormControl>
                         <PhoneInput
                           value={field.value}
                           onChange={field.onChange}
+                          placeholder="Телефон сотрудника"
                           className="things-input"
                         />
                       </FormControl>
@@ -438,10 +439,10 @@ export default function AdminUsers() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Имя (необязательно)</FormLabel>
+                      <FormLabel className="sr-only">Имя (необязательно)</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Например, Анна Петрова"
+                          placeholder="Имя — например, Анна Петрова"
                           className="things-input"
                           {...field}
                         />
@@ -457,10 +458,10 @@ export default function AdminUsers() {
                     name="position"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Должность</FormLabel>
+                        <FormLabel className="sr-only">Должность</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Например, Повар"
+                            placeholder="Должность — например, повар"
                             className="things-input"
                             maxLength={120}
                             {...field}
@@ -476,7 +477,7 @@ export default function AdminUsers() {
                     name="role"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="new-user-role">Роль</FormLabel>
+                        <FormLabel htmlFor="new-user-role" className="sr-only">Роль</FormLabel>
                         <RoleSelect
                           id="new-user-role"
                           value={field.value}
@@ -502,7 +503,7 @@ export default function AdminUsers() {
                   name="pin"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PIN для входа</FormLabel>
+                      <FormLabel className="sr-only">PIN для входа</FormLabel>
                       <FormControl>
                         <AdminPinField value={field.value} onChange={field.onChange} />
                       </FormControl>

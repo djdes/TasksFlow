@@ -109,14 +109,13 @@ export default function JoinByInvite() {
     <AuthShell title="Регистрация по приглашению" subtitle={subtitle}>
       <form onSubmit={onDetails} className="login-form !gap-4">
         <div className="space-y-2">
-          <Label htmlFor="join-name" className="text-sm font-semibold">Ваше имя</Label>
-          <Input id="join-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={1} maxLength={255} autoComplete="name" className={fieldClass} />
+          <Label htmlFor="join-name" className="sr-only">Ваше имя</Label>
+          <Input id="join-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={1} maxLength={255} autoComplete="name" placeholder="Ваше имя" className={fieldClass} />
           {fieldError?.field === "name" && <p className="text-sm text-destructive">{fieldError.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-semibold">Телефон</Label>
-          <PhoneInput value={phone} onChange={setPhone} className={`${fieldClass} text-lg font-medium tracking-wider`} />
+          <PhoneInput value={phone} onChange={setPhone} placeholder="Ваш телефон" className={`${fieldClass} text-lg font-medium tracking-wider`} />
           {fieldError?.field === "phone" && <p className="text-sm text-destructive">{fieldError.message}</p>}
         </div>
 

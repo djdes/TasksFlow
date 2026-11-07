@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import {
   formatPhoneInput,
   shouldBlockPhoneKey,
@@ -9,7 +9,10 @@ import {
 interface PhoneInputProps {
   value: string;
   onChange: (value: string) => void;
+  /** Подпись поля: видна placeholder'ом, пока номер не начали вводить. */
   placeholder?: string;
+  /** Для экранного диктора, если подпись отличается от placeholder. */
+  "aria-label"?: string;
   className?: string;
   autoFocus?: boolean;
 }
@@ -21,7 +24,11 @@ interface PhoneInputProps {
  * было использовать в JoinByInvite и других местах.
  */
 export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
-  ({ value, onChange, placeholder = "xxx xxx xx xx", className, autoFocus }, ref) => {
+  ({ value, onChange, placeholder = "Телефон", className, autoFocus, "aria-label": ariaLabel }, ref) => {
+    // Подписей над полями нет: пока номер пуст и поле не в фокусе, вместо «+7»
+    // показываем placeholder («Ваш телефон»). В форме значение остаётся «+7».
+    const [focused, setFocused] = useState(false);
+    const empty = value.replace(/\D/g, "").length <= 1;
     return (
       <Input
         ref={ref}
@@ -37,13 +44,15 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         autoComplete="tel"
         enterKeyHint="go"
         placeholder={placeholder}
+        aria-label={ariaLabel ?? placeholder}
         autoFocus={autoFocus}
         className={
           className ??
           "h-16 text-2xl font-semibold tracking-wider border-2 border-border rounded-2xl px-6 focus:border-primary focus:ring-primary focus:ring-2 transition-all bg-card shadow-sm"
         }
-        value={value}
+        value={empty && !focused ? "" : value}
         onChange={(e) => onChange(formatPhoneInput(e.target.value))}
+        onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           const cursor = (e.target as HTMLInputElement).selectionStart ?? 0;
           if (shouldBlockPhoneKey({ key: e.key, cursor })) {
@@ -51,6 +60,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           }
         }}
         onFocus={(e) => {
+          setFocused(true);
           const input = e.currentTarget;
           if (shouldResetPhoneCursor(value)) {
             requestAnimationFrame(() => {

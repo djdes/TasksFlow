@@ -165,11 +165,9 @@ export default function Login() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-base font-semibold text-foreground mb-2 block">
-                  Телефон
-                </FormLabel>
+                <FormLabel className="sr-only">Телефон</FormLabel>
                 <FormControl>
-                  <PhoneInput value={field.value} onChange={field.onChange} className="login-phone h-14 rounded-2xl border-2 border-border bg-card px-5 text-xl font-semibold tracking-wide md:text-xl" />
+                  <PhoneInput value={field.value} onChange={field.onChange} placeholder="Ваш телефон" className="login-phone h-14 rounded-2xl border-2 border-border bg-card px-5 text-xl font-semibold tracking-wide md:text-xl" />
                 </FormControl>
                 <FormMessage className="text-sm mt-2" />
               </FormItem>

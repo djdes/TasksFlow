@@ -285,19 +285,18 @@ export default function Invitations() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="inv-position">Должность (необязательно)</Label>
+              <Label htmlFor="inv-position" className="sr-only">Должность (необязательно)</Label>
               <Input
                 id="inv-position"
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
-                placeholder="Например, Кассир"
+                placeholder="Должность — например, кассир"
                 maxLength={120}
               />
             </div>
             <div className="space-y-2">
-              <Label>Роль</Label>
               <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Роль">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -87,9 +87,9 @@ export default function RegisterUser() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Ваш телефон</FormLabel>
+                <FormLabel className="sr-only">Ваш телефон</FormLabel>
                 <FormControl>
-                  <PhoneInput value={field.value} onChange={field.onChange} className={`${fieldClass} text-lg font-medium tracking-wider`} />
+                  <PhoneInput value={field.value} onChange={field.onChange} placeholder="Ваш телефон" className={`${fieldClass} text-lg font-medium tracking-wider`} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>
@@ -100,9 +100,9 @@ export default function RegisterUser() {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Ваше имя</FormLabel>
+                <FormLabel className="sr-only">Ваше имя</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Иван Иванов" className={fieldClass} maxLength={255} autoComplete="name" autoCapitalize="words" {...field} />
+                  <Input type="text" placeholder="Ваше имя" className={fieldClass} maxLength={255} autoComplete="name" autoCapitalize="words" {...field} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>
@@ -113,9 +113,9 @@ export default function RegisterUser() {
             name="adminPhone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Телефон руководителя</FormLabel>
+                <FormLabel className="sr-only">Телефон руководителя</FormLabel>
                 <FormControl>
-                  <PhoneInput value={field.value} onChange={field.onChange} className={`${fieldClass} text-lg font-medium tracking-wider`} />
+                  <PhoneInput value={field.value} onChange={field.onChange} placeholder="Телефон руководителя" className={`${fieldClass} text-lg font-medium tracking-wider`} />
                 </FormControl>
                 <p className="text-xs text-muted-foreground mt-1">Номер администратора вашей компании в TasksFlow</p>
                 <FormMessage className="text-sm mt-1" />

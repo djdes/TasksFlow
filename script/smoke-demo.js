@@ -42,8 +42,12 @@ async (page) => {
       await dup.getByText('Когда задача видна').waitFor();
       await dup.getByTestId('input-due-date').fill('2026-12-30');
       check((await dup.getByTestId('schedule-summary').innerText()).startsWith('Разово, срок — 30 декабря'), 'duplicate due date summary');
-      await dup.getByRole('checkbox', { name: /Анна Петрова/ }).click();
-      check(await dup.getByRole('checkbox', { name: /Анна Петрова/ }).getAttribute('aria-checked') === 'true', 'duplicate worker toggle');
+      // Исполнители — выпадающий список с поиском, как в «Новой задаче».
+      await dup.getByTestId('worker-picker').click();
+      const annaRow = tab.getByRole('checkbox', { name: /Анна Петрова/ });
+      await annaRow.click();
+      check(await annaRow.getAttribute('aria-checked') === 'true', 'duplicate worker toggle');
+      await tab.keyboard.press('Escape');
       await tab.keyboard.press('Escape');
       await dup.waitFor({ state: 'hidden' });
       check(await tab.getByText('Что-то пошло не так').count() === 0, 'duplicate dialog crashed the page');

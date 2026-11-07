@@ -82,9 +82,9 @@ export default function RegisterCompany() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Ваш телефон</FormLabel>
+                <FormLabel className="sr-only">Ваш телефон</FormLabel>
                 <FormControl>
-                  <PhoneInput value={field.value} onChange={field.onChange} className={`${fieldClass} text-lg font-medium tracking-wider`} />
+                  <PhoneInput value={field.value} onChange={field.onChange} placeholder="Ваш телефон" className={`${fieldClass} text-lg font-medium tracking-wider`} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>
@@ -95,9 +95,9 @@ export default function RegisterCompany() {
             name="companyName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Название компании</FormLabel>
+                <FormLabel className="sr-only">Название компании</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="ИП Иванов Иван" className={fieldClass} maxLength={255} autoComplete="organization" {...field} />
+                  <Input type="text" placeholder="Название компании" className={fieldClass} maxLength={255} autoComplete="organization" {...field} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>
@@ -108,9 +108,9 @@ export default function RegisterCompany() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">Email для уведомлений</FormLabel>
+                <FormLabel className="sr-only">Email для уведомлений</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="admin@company.ru" className={fieldClass} maxLength={255} autoComplete="email" inputMode="email" {...field} />
+                  <Input type="email" placeholder="Email для уведомлений" className={fieldClass} maxLength={255} autoComplete="email" inputMode="email" {...field} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>
@@ -121,11 +121,9 @@ export default function RegisterCompany() {
             name="adminName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold text-foreground">
-                  Ваше имя <span className="text-muted-foreground font-normal">(необязательно)</span>
-                </FormLabel>
+                <FormLabel className="sr-only">Ваше имя (необязательно)</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Иван Иванов" className={fieldClass} maxLength={255} autoComplete="name" autoCapitalize="words" {...field} />
+                  <Input type="text" placeholder="Ваше имя — если хотите" className={fieldClass} maxLength={255} autoComplete="name" autoCapitalize="words" {...field} />
                 </FormControl>
                 <FormMessage className="text-sm mt-1" />
               </FormItem>

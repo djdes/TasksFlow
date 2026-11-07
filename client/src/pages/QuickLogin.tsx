@@ -83,7 +83,7 @@ export default function QuickLogin() {
         </>}
         <Button type="button" variant="ghost" className="w-full" disabled={login.isPending} onClick={() => choose(null)}>Выбрать другого сотрудника</Button>
       </form> : <div className="space-y-4">
-        <div className="space-y-2"><Label htmlFor="employee-search">Найдите себя</Label><Input id="employee-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Имя или должность" autoComplete="off" /></div>
+        <div className="space-y-2"><Label htmlFor="employee-search" className="sr-only">Найдите себя</Label><Input id="employee-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найдите себя: имя или должность" autoComplete="off" /></div>
         {!directory.data?.users.length ? <p className="text-sm text-muted-foreground">В организации пока нет сотрудников. Обратитесь к руководителю.</p>
           : !filtered.length ? <p role="status" className="text-sm text-muted-foreground">Никого не нашли. Проверьте имя или очистите поиск.</p>
           : <ul className="divide-y divide-border">{filtered.map((person) => <li key={person.id}>

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
-import { ArrowLeft, Edit, Coins, Tag, FileText, Check } from "lucide-react";
+import { ArrowLeft, Edit, Coins, Check } from "lucide-react";
 import { TaskPhotoField } from "@/components/TaskPhotoField";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import { ChecklistEditor, checklistDraftFrom, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
@@ -105,7 +105,7 @@ export default function EditTask() {
       weekDays: null,
       monthDay: undefined,
       isRecurring: true,
-      price: "0",
+      price: "",
       category: "",
       description: "",
       dueDateInput: "",
@@ -130,7 +130,7 @@ export default function EditTask() {
         weekDays: weekDaysArray,
         monthDay: (task as any).monthDay ? (task as any).monthDay.toString() : undefined,
         isRecurring: (task as any).isRecurring ?? true,
-        price: (task as any).price ? (task as any).price.toString() : "0",
+        price: (task as any).price ? (task as any).price.toString() : "",
         category: (task as any).category || "",
         description: (task as any).description || "",
         dueDateInput: formatDueDateInput((task as any).dueDate),
@@ -318,9 +318,10 @@ export default function EditTask() {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Название</FormLabel>
                   <FormControl>
                     <Input
+                      placeholder="Что сделать?"
+                      aria-label="Название"
                       className="things-input"
                       maxLength={255}
                       {...field}
@@ -336,22 +337,16 @@ export default function EditTask() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Описание задачи
-                  </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Подробное описание задачи..."
+                      placeholder="Подробности, если нужно"
+                      aria-label="Описание задачи"
                       className="things-input min-h-[80px] resize-none"
                       rows={3}
                       maxLength={5000}
                       {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Необязательно. Сотрудник увидит его, открыв задачу.
-                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -372,14 +367,13 @@ export default function EditTask() {
               name="workerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Исполнитель</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value?.toString()}
                   >
                     <FormControl>
-                      <SelectTrigger className="things-input w-full">
-                        <SelectValue placeholder="Выберите сотрудника" />
+                      <SelectTrigger className="things-input w-full" aria-label="Исполнитель">
+                        <SelectValue placeholder="Исполнитель" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -406,21 +400,15 @@ export default function EditTask() {
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Tag className="w-4 h-4" />
-                    Категория
-                  </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Например: Уборка, Готовка, Покупки..."
+                      placeholder="Категория — если нужно"
+                      aria-label="Категория"
                       className="things-input"
                       maxLength={100}
                       {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Необязательно. Поможет фильтровать задачи по категориям.
-                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -430,24 +418,19 @@ export default function EditTask() {
               control={form.control}
               name="price"
               render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Coins className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Стоимость выполнения</FormLabel>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Укажите сумму в рублях, которая будет начислена исполнителю за выполнение задачи
-                  </p>
+                <FormItem>
                   <FormControl>
                     <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden />
                       <Input
                         type="number"
                         min="0"
-                        placeholder="0"
-                        className="things-input w-32"
+                        inputMode="numeric"
+                        placeholder="Премия за выполнение, ₽"
+                        aria-label="Премия за выполнение, ₽"
+                        className="things-input"
                         {...field}
                       />
-                      <span className="text-sm text-muted-foreground">₽</span>
                     </div>
                   </FormControl>
                   <FormMessage />

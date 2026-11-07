@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskScheduleFields, remindAtPayload } from "@/components/TaskScheduleFields";
-import { CheckMark } from "@/components/ui/check-mark";
 import { ChecklistEditor, checklistPayload, newChecklistId, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import { isQuestionItem, itemNeedsPhoto } from "@shared/checklist";
 import {
@@ -18,11 +17,12 @@ import {
   questionsError,
   type QuestionDraft,
 } from "@/components/TaskQuestionsEditor";
+import { WorkerPicker } from "@/components/WorkerPicker";
 import { TaskPhotoField } from "@/components/TaskPhotoField";
 import { fileFromUploadedPhoto, uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
 import type { ChecklistItem } from "@shared/schema";
 import { formatDueDateInput, parseDueDateInput } from "@shared/task-visibility";
-import { Copy, Coins, Tag, FileText, Check } from "lucide-react";
+import { Copy, Coins, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -127,7 +127,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
       isRecurring: true,
       dueDateInput: "",
       remindAt: "",
-      price: "0",
+      price: "",
       category: "",
       description: "",
     },
@@ -150,7 +150,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
         // Срок видно и можно сменить: копия просроченной задачи иначе сразу была бы просрочена.
         dueDateInput: formatDueDateInput(task.dueDate),
         remindAt: task.remindAt ?? "",
-        price: task.price ? task.price.toString() : "0",
+        price: task.price ? task.price.toString() : "",
         category: task.category || "",
         description: task.description || "",
       });
@@ -297,10 +297,10 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Название</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Что сделать?"
+                      aria-label="Название"
                       className="things-input"
                       maxLength={255}
                       {...field}
@@ -316,13 +316,10 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-sm">
-                    <FileText className="w-4 h-4" />
-                    Описание задачи
-                  </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Подробное описание задачи..."
+                      placeholder="Подробности, если нужно"
+                      aria-label="Описание задачи"
                       className="things-input min-h-[80px] resize-none"
                       rows={3}
                       maxLength={5000}
@@ -335,65 +332,9 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
             />
 
             <FormItem>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <FormLabel>
-                  Исполнители ·{" "}
-                  <span className="text-primary">{workerIds.length}</span> из{" "}
-                  {users.length}
-                </FormLabel>
-                {users.length > 0 ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setWorkerIds(users.map((u) => u.id))}
-                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
-                    >
-                      Выбрать всех
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWorkerIds([])}
-                      className="rounded-full border border-border/60 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/30"
-                    >
-                      Очистить
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <div className="grid max-h-60 gap-1 overflow-y-auto rounded-xl border border-border/50 p-2 sm:grid-cols-2">
-                {users.map((user) => {
-                  const checked = workerIds.includes(user.id);
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      onClick={() =>
-                        setWorkerIds((prev) =>
-                          prev.includes(user.id)
-                            ? prev.filter((id) => id !== user.id)
-                            : [...prev, user.id]
-                        )
-                      }
-                      className={`flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                        checked
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted/30"
-                      }`}
-                      role="checkbox"
-                      aria-checked={checked}
-                    >
-                      {/* Не radix Checkbox: <button> в <button> — бесконечный цикл, окно падало. */}
-                      <CheckMark checked={checked} />
-                      <span className="truncate">
-                        {user.name || user.phone}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Каждому — своя копия
-              </p>
+              {/* Как в «Новой задаче»: выпадающий список с поиском и галочками. */}
+              <WorkerPicker users={users} value={workerIds} onChange={setWorkerIds} placeholder="Исполнители" />
+              {workerIds.length > 1 ? <p className="quick-task-hint">Каждому — своя копия</p> : null}
             </FormItem>
 
             <FormField
@@ -401,13 +342,10 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-sm">
-                    <Tag className="w-4 h-4" />
-                    Категория
-                  </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Например: Уборка, Готовка..."
+                      placeholder="Категория — если нужно"
+                      aria-label="Категория"
                       className="things-input"
                       maxLength={100}
                       {...field}
@@ -422,21 +360,19 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               control={form.control}
               name="price"
               render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel className="text-sm font-medium">Стоимость выполнения</FormLabel>
-                  </div>
+                <FormItem>
                   <FormControl>
                     <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden />
                       <Input
                         type="number"
                         min="0"
-                        placeholder="0"
-                        className="things-input w-32"
+                        inputMode="numeric"
+                        placeholder="Премия за выполнение, ₽"
+                        aria-label="Премия за выполнение, ₽"
+                        className="things-input"
                         {...field}
                       />
-                      <span className="text-sm text-muted-foreground">₽</span>
                     </div>
                   </FormControl>
                   <FormMessage />
