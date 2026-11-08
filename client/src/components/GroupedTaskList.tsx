@@ -36,6 +36,7 @@ import { usePendingTaskCompletions } from "@/hooks/use-tasks";
 import { avatarTone } from "@/lib/shift-summary";
 import { isQuestionItem } from "@shared/checklist";
 import { sortByUrgency } from "@/lib/task-suggestions";
+import { getDueStatus } from "@shared/task-visibility";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
 
@@ -134,6 +135,8 @@ type Props = {
    *  Работает в обоих режимах: по дате (groupByWorker=false) и
    *  внутри каждой worker-секции (groupByWorker=true). */
   isVerifyTask?: (task: Task) => boolean;
+  /** Задачи, появившиеся с прошлого захода сотрудника, — значок «Новая». */
+  newIds?: ReadonlySet<number>;
 };
 
 /**
@@ -170,6 +173,7 @@ export function GroupedTaskList(props: Props) {
     onDelete,
     searchQuery,
     isVerifyTask,
+    newIds,
   } = props;
   const shortName = getUserShortName ?? getUserName;
 
@@ -271,6 +275,13 @@ export function GroupedTaskList(props: Props) {
     // Видно на самой карточке: часики вместо пустого кружка и пометка.
     const isSubmitted = !isCompleted && verificationStatus === "submitted";
     const remindAt = (task as { remindAt?: string | null }).remindAt ?? null;
+    // Цвет срочности у сотрудника: просрочено — красная полоска, сегодня — янтарная.
+    const dueKind = !isCompleted && !isSubmitted ? getDueStatus((task as { dueDate?: number | null }).dueDate ?? null).kind : "none";
+    const isNew = simple && !isCompleted && Boolean(newIds?.has(task.id));
+    // Фото-пример миниатюрой справа: задачу узнают без чтения.
+    const examplePhoto = simple && !isCompleted
+      ? ((task as { examplePhotoUrls?: string[] | null }).examplePhotoUrls?.[0] ?? (task as { examplePhotoUrl?: string | null }).examplePhotoUrl ?? null)
+      : null;
     // Сотрудник сам отправил — «У руководителя»; руководителю — «Ждёт проверки».
     const submittedLabel = simple ? "У руководителя" : "Ждёт проверки";
     const isPendingCheck = !isCompleted && pendingCompletions.has(task.id);
@@ -308,7 +319,7 @@ export function GroupedTaskList(props: Props) {
     return (
       <div
         key={task.id}
-        className={`task-card ${isCompleted ? "completed" : ""} ${isReturned ? "task-card--returned" : ""} ${isSubmitted ? "task-card--submitted" : ""}`}
+        className={`task-card ${isCompleted ? "completed" : ""} ${isReturned ? "task-card--returned" : ""} ${isSubmitted ? "task-card--submitted" : ""} ${dueKind === "overdue" ? "task-card--overdue" : dueKind === "today" ? "task-card--due-today" : ""}`}
         onClick={() => onTaskClick(task)}
       >
         {isReturned && (
@@ -339,6 +350,12 @@ export function GroupedTaskList(props: Props) {
             </h3>
 
             <div className="task-meta">
+              {isNew && (
+                <div className="task-badge new">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Новая</span>
+                </div>
+              )}
               {isSubmitted && (
                 <div className="task-badge review">
                   <Clock className="w-3.5 h-3.5" />
@@ -456,6 +473,8 @@ export function GroupedTaskList(props: Props) {
               </div>
             )}
           </div>
+
+          {examplePhoto && <img className="task-thumb" src={examplePhoto} alt="" loading="lazy" decoding="async" />}
 
           <div className="task-trailing flex items-center">
             {isAdmin ? (

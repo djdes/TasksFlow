@@ -17,11 +17,13 @@ import { RemindAtField, remindAtPayload } from "@/components/TaskScheduleFields"
 import { WorkerPicker } from "@/components/WorkerPicker";
 import { DueDateQuick, PhotoSlot, ScheduleQuick } from "@/components/QuickTaskFields";
 import { uploadTaskAttachmentPhoto } from "@/lib/photo-upload";
-import { ChecklistEditor, checklistPayload, type ChecklistDraftItem } from "@/components/ChecklistEditor";
+import { ChecklistEditor, checklistPayload, newChecklistId, type ChecklistDraftItem } from "@/components/ChecklistEditor";
 import {
   TaskQuestionsEditor,
   mergeChecklistAndQuestions,
+  questionDraftsFrom,
   questionsError,
+  withoutQuestions,
   type QuestionDraft,
 } from "@/components/TaskQuestionsEditor";
 import {
@@ -34,6 +36,7 @@ import {
   LayoutTemplate,
   Camera,
   ChevronDown,
+  History,
   Coins,
   Pencil,
   Repeat,
@@ -71,6 +74,9 @@ import {
 } from "@shared/wesetup-journal-mode";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { DRAFT_KEY, draftHasContent, dueFromTitle, findLastTaskByTitle, parseDraft, pastTaskPreset } from "@/lib/task-smart";
+import { itemNeedsPhoto } from "@shared/checklist";
 
 const formSchema = insertTaskSchema.extend({
   workerId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
@@ -403,6 +409,125 @@ export default function CreateTask() {
     kind === "once" && Boolean(moreRemindAt),
   ].filter(Boolean).length;
 
+  // ── «Как в прошлый раз»: та же задача уже ставилась — подставим её настройки.
+  const watchedTitle = (useWatch({ control: form.control, name: "title" }) as string | undefined) ?? "";
+  const lastSame = useMemo(() => findLastTaskByTitle(pastTasks ?? [], watchedTitle), [pastTasks, watchedTitle]);
+  const [appliedPastId, setAppliedPastId] = useState<number | null>(null);
+  const applyPastTask = () => {
+    if (!lastSame) return;
+    const p = pastTaskPreset(lastSame);
+    setKind(p.kind);
+    const opts = { shouldDirty: true } as const;
+    form.setValue("description", p.description, opts);
+    form.setValue("requiresPhoto", p.requiresPhoto, opts);
+    form.setValue("price", p.price, opts);
+    form.setValue("category", p.category, opts);
+    form.setValue("weekDays", p.weekDays, opts);
+    form.setValue("monthDay", p.monthDay, opts);
+    form.setValue("isRecurring", p.isRecurring, opts);
+    form.setValue("remindAt", p.remindAt, opts);
+    if (freeModeWorkerIds.length === 0 && p.workerId && users.some((u) => u.id === p.workerId)) {
+      setFreeModeWorkerIds([p.workerId]);
+      setWorkersInvalid(false);
+    }
+    setChecklistItems(
+      withoutQuestions(p.checklist).map((it) => ({ id: newChecklistId(), title: it.title, requiresPhoto: itemNeedsPhoto(it), done: false, photoUrls: [] })),
+    );
+    setQuestions(questionDraftsFrom(p.checklist).map((q) => ({ ...q, id: newChecklistId() })));
+    setAppliedPastId(lastSame.id);
+  };
+
+  // ── Срок из названия: «завтра», «к пятнице» — «Срок до» ставится сам. Свой
+  // срок, выбранный руками, не трогаем; убрали слово — убираем и срок.
+  const lastAutoDue = useRef<string | null>(null);
+  useEffect(() => {
+    if (kind !== "once") return;
+    const current = String(form.getValues("dueDateInput") ?? "");
+    const auto = dueFromTitle(watchedTitle);
+    if (auto && auto !== current && (current === "" || current === lastAutoDue.current)) {
+      form.setValue("dueDateInput", auto, { shouldDirty: true });
+      lastAutoDue.current = auto;
+    } else if (!auto && lastAutoDue.current && current === lastAutoDue.current) {
+      form.setValue("dueDateInput", "", { shouldDirty: true });
+      lastAutoDue.current = null;
+    }
+  }, [watchedTitle, kind, form]);
+
+  // ── Черновик: недописанная задача живёт на устройстве до «Создать» или «Отмена».
+  const draftReady = useRef(false);
+  const [draftTick, setDraftTick] = useState(0);
+  useEffect(() => {
+    const sub = form.watch(() => setDraftTick((n) => n + 1));
+    return () => sub.unsubscribe();
+  }, [form]);
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* приватный режим */
+    }
+  }, []);
+  const resetToEmpty = () => {
+    clearDraft();
+    form.reset();
+    setKind("once");
+    setFreeModeWorkerIds([]);
+    setChecklistItems([]);
+    setQuestions([]);
+    lastAutoDue.current = null;
+  };
+  useEffect(() => {
+    if (draftReady.current || usersLoading) return;
+    draftReady.current = true;
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(DRAFT_KEY);
+    } catch {
+      return;
+    }
+    const d = parseDraft(raw, Math.floor(Date.now() / 1000));
+    if (!d) return;
+    setKind(d.kind);
+    form.reset({ ...form.getValues(), ...d.values });
+    setFreeModeWorkerIds(d.workerIds.filter((id) => users.some((u) => u.id === id)));
+    setChecklistItems(d.checklist.map((c) => ({ ...c, done: false, photoUrls: [] })));
+    setQuestions(d.questions);
+    toast({
+      title: "Черновик восстановлен",
+      action: (
+        <ToastAction altText="Очистить черновик" onClick={resetToEmpty}>
+          Очистить
+        </ToastAction>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usersLoading]);
+  useEffect(() => {
+    if (!draftReady.current) return;
+    const timer = setTimeout(() => {
+      const v = form.getValues();
+      const draft = {
+        savedAt: Math.floor(Date.now() / 1000),
+        kind,
+        values: {
+          title: v.title, description: v.description, dueDateInput: v.dueDateInput, remindAt: v.remindAt,
+          weekDays: v.weekDays, monthDay: v.monthDay, isRecurring: v.isRecurring, price: v.price,
+          category: v.category, requiresPhoto: v.requiresPhoto,
+        },
+        workerIds: freeModeWorkerIds,
+        checklist: checklistItems.map((c) => ({ id: c.id, title: c.title, requiresPhoto: c.requiresPhoto })),
+        questions,
+      };
+      try {
+        if (draftHasContent(draft)) localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* приватный режим — без черновика */
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [draftTick, kind, freeModeWorkerIds, checklistItems, questions, form]);
+
   // Проверка прав администратора — после всех хуков, иначе React
   // ругается на «Rendered more hooks than during the previous render»,
   // потому что guest-render оборвался бы до использования useEffect и
@@ -654,6 +779,7 @@ export default function CreateTask() {
               : `Создано задач: ${created}`,
           variant: photoFailed ? "destructive" : "default",
         });
+        clearDraft();
         setLocation("/");
       } else if (created > 0) {
         toast({
@@ -903,6 +1029,12 @@ export default function CreateTask() {
                             <option key={t} value={t} />
                           ))}
                         </datalist>
+                        {lastSame && appliedPastId !== lastSame.id && (
+                          <button type="button" className="past-task-chip" onClick={applyPastTask} data-testid="past-task-apply">
+                            <History aria-hidden />
+                            Как в прошлый раз
+                          </button>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -912,7 +1044,7 @@ export default function CreateTask() {
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem className="field-icon-wrap">
+                      <FormItem className="field-icon-wrap has-voice">
                         <AlignLeft aria-hidden className="field-icon" />
                         <FormControl>
                           <Textarea
@@ -924,6 +1056,13 @@ export default function CreateTask() {
                             {...field}
                           />
                         </FormControl>
+                        <VoiceInputButton
+                          label="Подробности голосом"
+                          onText={(text) => {
+                            const cur = String(form.getValues("description") ?? "").trim();
+                            form.setValue("description", (cur ? `${cur} ${text}` : text).slice(0, 5000), { shouldDirty: true });
+                          }}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1065,7 +1204,16 @@ export default function CreateTask() {
                 </section>
 
                 <div className="quick-task-actions">
-                  <Button type="button" variant="ghost" onClick={() => setLocation("/")} className="border border-border/50">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      // «Отмена» — задачу не ставим, черновик не нужен.
+                      clearDraft();
+                      setLocation("/");
+                    }}
+                    className="border border-border/50"
+                  >
                     Отмена
                   </Button>
                   <Button

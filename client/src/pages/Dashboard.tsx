@@ -10,6 +10,9 @@ import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { SpeakButton, VoiceInputButton } from "@/components/VoiceButtons";
+import { listSpeechText, newTaskIds, nextTaskAfter } from "@/lib/task-smart";
+import { sortByUrgency } from "@/lib/task-suggestions";
 import { matchTaskBySearch } from "@/lib/task-search";
 import { signedOutPath, useAppBadge } from "@/lib/pwa";
 import { plural } from "@/lib/i18n";
@@ -436,6 +439,27 @@ export default function Dashboard() {
     );
   const streakDays = useStreak(user?.id, ownCompletedToday);
 
+  // «Новая»: задачи сотрудника, появившиеся после прошлого захода (время
+  // захода — на устройстве). Первый заход ничего не отмечает.
+  const [seenBefore, setSeenBefore] = useState<number | null>(null);
+  const seenInit = useRef(false);
+  useEffect(() => {
+    if (!user || !simple || seenInit.current) return;
+    seenInit.current = true;
+    const key = `tf_tasks_seen_${user.id}`;
+    try {
+      const prev = Number(localStorage.getItem(key));
+      setSeenBefore(prev > 0 ? prev : null);
+      localStorage.setItem(key, String(Math.floor(Date.now() / 1000)));
+    } catch {
+      /* приватный режим — без «Новая» */
+    }
+  }, [user, simple]);
+  const newIds = useMemo(
+    () => (simple ? newTaskIds(tasks.filter((t) => t.workerId === user?.id), seenBefore) : undefined),
+    [simple, tasks, user?.id, seenBefore],
+  );
+
   /**
    * Открыть журнальную форму ВНУТРИ TasksFlow.
    *
@@ -598,6 +622,28 @@ export default function Dashboard() {
     }
     if (selectedTask.isCompleted) {
       uncompleteTask.mutate(selectedTask.id);
+    } else if (simple) {
+      // Сотруднику — «Дальше»: одно касание открывает следующую задачу по срочности.
+      const doneId = selectedTask.id;
+      const snapshot = scopeFilteredTasks;
+      completeTask.mutate(
+        { id: doneId, comment, quiet: true },
+        {
+          onSuccess: (done) => {
+            const submitted = (done as { verificationStatus?: string | null }).verificationStatus === "submitted";
+            const next = nextTaskAfter(snapshot as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[], doneId);
+            toast({
+              title: submitted ? "Отправлено руководителю" : "Готово",
+              duration: 6000,
+              action: next ? (
+                <ToastAction altText="Следующая задача" onClick={() => handleTaskClick(next)} data-testid="next-task">
+                  Дальше
+                </ToastAction>
+              ) : undefined,
+            });
+          },
+        },
+      );
     } else {
       completeTask.mutate({ id: selectedTask.id, comment });
     }
@@ -924,6 +970,8 @@ export default function Dashboard() {
               className="search-top-input"
               autoFocus={simple}
             />
+            {/* Найти голосом — без клавиатуры. */}
+            <VoiceInputButton label="Найти голосом" className="voice-input--inline" onText={(text) => setSearchQuery(text)} />
             {searchQuery ? (
               <button
                 type="button"
@@ -940,9 +988,23 @@ export default function Dashboard() {
         {/* Сотруднику — только дата на подложке: без полосы прогресса и
             «осталось N из M» (просьба владельца 06.11.2026), сразу задачи. */}
         {simple && (
-          <h2 className="worker-day">
-            {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
-          </h2>
+          <div className="worker-day-row">
+            <h2 className="worker-day">
+              {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+            </h2>
+            {/* «Слушать список»: задачи на сегодня вслух, по срочности. */}
+            <SpeakButton
+              compact
+              label="Слушать список"
+              text={listSpeechText(
+                sortByUrgency(
+                  scopeFilteredTasks.filter(
+                    (t) => !t.isCompleted && (t as { verificationStatus?: string | null }).verificationStatus !== "submitted",
+                  ) as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[],
+                ).map((t) => t.title),
+              )}
+            />
+          </div>
         )}
 
         {/* «На проверке» баннер — для админа/руководителя. Раньше
@@ -1198,6 +1260,7 @@ export default function Dashboard() {
             // задачи на «Что сделать» (filler todo) и «На проверке»
             // (verifier + submitted-filler) с маленькими подзаголовками.
             isVerifyTask={isToVerify}
+            newIds={newIds}
           />
         )}
 

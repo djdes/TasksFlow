@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OfflineBar } from "@/components/OfflineBar";
 import { isTypingTarget } from "@/hooks/use-keyboard-shortcuts";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAwaitingVerification } from "@/hooks/use-verification-queue";
@@ -116,6 +117,7 @@ export function CabinetFrame({ children }: { children: ReactNode }) {
           уйти в другой раздел; смена адреса сбрасывает ошибку. */}
       <div className="cabinet-main" id="cabinet-content">
         <ImpersonationBanner />
+        <OfflineBar />
         <ErrorBoundary key={location}>{children}</ErrorBoundary>
       </div>
       {inCabinet && <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />}

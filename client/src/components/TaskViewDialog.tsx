@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, CheckCircle2, Trash2, RotateCcw, Camera, Check, Coins, ImageIcon, CalendarClock, AlertTriangle, CloudOff, ShieldCheck, ChevronRight, Clock, MessageCircleQuestion, MessageSquare } from "lucide-react";
 import { FormBlock } from "@/components/FormBlock";
-import { SpeakButton } from "@/components/VoiceButtons";
+import { SpeakButton, VoiceInputButton } from "@/components/VoiceButtons";
 import { taskSpeechText } from "@/lib/speech";
 import type { TaskReviewers } from "@shared/reviewers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -782,8 +782,12 @@ export function TaskViewDialog({
 
           {/* User comment field */}
           {canComplete && !currentTask.isCompleted && currentTask.verificationStatus !== "submitted" && (
-            <div className="field-icon-wrap">
+            <div className="field-icon-wrap has-voice">
               <MessageSquare aria-hidden className="field-icon" />
+              <VoiceInputButton
+                label="Комментарий голосом"
+                onText={(text) => setUserComment((cur) => (cur.trim() ? `${cur.trim()} ${text}` : text))}
+              />
               <Textarea
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * «Слушать» в окне задачи: телефон читает задачу вслух — тем, кому трудно
  * читать мелкий текст. Повторное касание — стоп. Без поддержки — не видна.
  */
-export function SpeakButton({ text }: { text: string }) {
+export function SpeakButton({ text, compact = false, label = "Слушать" }: { text: string; compact?: boolean; label?: string }) {
   const [supported] = useState(canSpeak);
   const [speaking, setSpeaking] = useState(false);
   // Окно закрыли посреди чтения — замолкаем.
@@ -16,8 +16,10 @@ export function SpeakButton({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className={cn("task-speak", speaking && "is-on")}
+      className={cn("task-speak", compact && "task-speak--compact", speaking && "is-on")}
       aria-pressed={speaking}
+      aria-label={compact ? (speaking ? "Остановить чтение" : label) : undefined}
+      title={compact ? label : undefined}
       onClick={() => {
         if (speaking) {
           stopSpeaking();
@@ -30,7 +32,7 @@ export function SpeakButton({ text }: { text: string }) {
       data-testid="task-speak"
     >
       {speaking ? <Square aria-hidden /> : <Volume2 aria-hidden />}
-      <span>{speaking ? "Стоп" : "Слушать"}</span>
+      {!compact && <span>{speaking ? "Стоп" : label}</span>}
     </button>
   );
 }
@@ -39,7 +41,7 @@ export function SpeakButton({ text }: { text: string }) {
  * Микрофон в поле: надиктовать вместо набора. Распознанный текст уходит в
  * onText; пока слушает — кнопка красная. Без поддержки — не видна.
  */
-export function VoiceInputButton({ onText, label = "Сказать голосом" }: { onText: (text: string) => void; label?: string }) {
+export function VoiceInputButton({ onText, label = "Сказать голосом", className }: { onText: (text: string) => void; label?: string; className?: string }) {
   const [Ctor] = useState(recognitionCtor);
   const [listening, setListening] = useState(false);
   const rec = useRef<SpeechRecognitionLike | null>(null);
@@ -70,7 +72,7 @@ export function VoiceInputButton({ onText, label = "Сказать голосо�
   return (
     <button
       type="button"
-      className={cn("voice-input", listening && "is-on")}
+      className={cn("voice-input", className, listening && "is-on")}
       aria-label={listening ? "Остановить запись" : label}
       aria-pressed={listening}
       title={label}
