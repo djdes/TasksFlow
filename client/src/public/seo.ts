@@ -6,7 +6,9 @@
  */
 import type { MatchedRoute } from "./router";
 import { clusterTitle } from "./clusters";
-import type { BlogIndexData, ArticleData, LegalData, PostFull } from "./types";
+import type { BlogIndexData, ArticleData, LegalData, LandingData, PostFull } from "./types";
+import { DEFAULT_PRICES, priceFor, type PlanPrice } from "@shared/billing";
+import { PLANS } from "@shared/plans";
 
 export const SITE_NAME = "TasksFlow";
 const DEFAULT_DESCRIPTION =
@@ -72,7 +74,34 @@ export function organizationLd(origin: string) {
   };
 }
 
-export function softwareApplicationLd(origin: string) {
+/**
+ * Тарифы в разметке: «Бесплатный» (0 ₽) и платные по месячной цене из биллинга.
+ * Цены берутся из тех же данных, что и страница, — сниппет не расходится с сайтом.
+ */
+export function softwareApplicationLd(origin: string, prices: readonly PlanPrice[] = DEFAULT_PRICES) {
+  const offers: Record<string, unknown>[] = [
+    { "@type": "Offer", name: PLANS.start.name, price: "0", priceCurrency: "RUB", url: `${origin}/` },
+  ];
+  for (const id of ["team", "business"] as const) {
+    const month = priceFor(prices, id, 1);
+    if (month === null) continue;
+    offers.push({
+      "@type": "Offer",
+      name: PLANS[id].name,
+      price: String(month),
+      priceCurrency: "RUB",
+      url: `${origin}/`,
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: String(month),
+        priceCurrency: "RUB",
+        billingDuration: 1,
+        billingIncrement: 1,
+        unitCode: "MON",
+      },
+    });
+  }
+  const paid = offers.slice(1).map((o) => Number(o.price));
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -80,7 +109,17 @@ export function softwareApplicationLd(origin: string) {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, iOS, Android",
     url: origin,
-    offers: { "@type": "Offer", price: "0", priceCurrency: "RUB" },
+    offers:
+      paid.length > 0
+        ? {
+            "@type": "AggregateOffer",
+            priceCurrency: "RUB",
+            lowPrice: "0",
+            highPrice: String(Math.max(...paid)),
+            offerCount: offers.length,
+            offers,
+          }
+        : offers[0],
   };
 }
 
@@ -136,7 +175,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: "TasksFlow — контроль задач для выездных и линейных сотрудников",
         description: DEFAULT_DESCRIPTION,
         canonical: `${origin}/`,
-        jsonLdBlocks: [organizationLd(origin), softwareApplicationLd(origin)],
+        jsonLdBlocks: [organizationLd(origin), softwareApplicationLd(origin, (data as LandingData | undefined)?.prices ?? undefined)],
       });
 
     case "blog-index": {
