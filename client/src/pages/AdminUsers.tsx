@@ -26,6 +26,7 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { AdminPinField } from "@/components/AdminPinField";
 import { PinShareNote, UserPinPanel } from "@/components/UserPinPanel";
 import { UserLoginQrDialog } from "@/components/UserLoginQr";
+import { AppDownloadQrButton } from "@/components/AppDownloadQr";
 import { LocationsPanel, UserLocationSelect } from "@/components/LocationsPanel";
 import { useLocations } from "@/hooks/use-locations";
 import { useWesetupConfiguration } from "@/hooks/use-wesetup";
@@ -384,6 +385,7 @@ export default function AdminUsers() {
               <Users className="w-6 h-6 text-primary-foreground" />
             </div>
             <h1 className="page-title">Сотрудники</h1>
+            <div className="ml-auto"><AppDownloadQrButton /></div>
           </div>
           <p className="page-subtitle sm:ml-[60px]">
             {permissions.isAdmin
