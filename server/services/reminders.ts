@@ -342,11 +342,11 @@ async function sendSlot(slot: NotifySlot, ctx: Ctx, tasks: Task[]): Promise<numb
       }
     } else if (slot === "evening" && open.length > 0) {
       const list = open.map((i) => byId.get(i.taskId)!).filter(Boolean);
-      if (ch.tg) await ch.via(() => sender.sendTaskList!(user.tgChatId!, list, `⏰ <b>Осталось сделать: ${open.length}</b>`));
+      if (ch.tg) await ch.via(() => sender.sendTaskList!(user.tgChatId!, list, `⏰ <b>Перед уходом проверьте невыполненные задачи: ${open.length}</b>`));
       if (ch.push) {
         await ch.via(() =>
           sender.push!(user.id, {
-            title: `Осталось сделать: ${open.length}`,
+            title: `Перед уходом: не сделано задач — ${open.length}`,
             body: listBody(list.map((t) => t.title)),
             url: "/dashboard",
             tag: "evening",

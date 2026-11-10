@@ -69,7 +69,7 @@ const company = (extra: Partial<ReminderCompany> = {}): ReminderCompany => ({
 });
 
 describe("расписание напоминаний", () => {
-  it("по умолчанию 08:30, 18:00 и 20:30; мусор в БД — тоже по умолчанию", () => {
+  it("по умолчанию 08:30, 16:30 и 20:30; мусор в БД — тоже по умолчанию", () => {
     expect(parseNotifySettings(null)).toEqual(DEFAULT_NOTIFY);
     expect(parseNotifySettings('{"morning":"25:00"}')).toEqual(DEFAULT_NOTIFY);
     // Старая запись без дней и «ночи» — каждый день, ночь с 22:00.
@@ -155,7 +155,7 @@ describe("рассылка", () => {
     const runs = await runReminders(store, sender, msk(18, 0), { reportUrl: "x" });
     expect(runs).toEqual([{ companyId: 1, slot: "evening", sent: 1 }]);
     expect(vi.mocked(sender.sendTaskList).mock.calls[0][0]).toBe(1011);
-    expect(vi.mocked(sender.sendTaskList).mock.calls[0][2]).toContain("Осталось сделать: 1");
+    expect(vi.mocked(sender.sendTaskList).mock.calls[0][2]).toContain("Перед уходом проверьте невыполненные задачи: 1");
   });
 
   it("итоги — админу по всем, руководителю по своим, сотруднику — нет", async () => {

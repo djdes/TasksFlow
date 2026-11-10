@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const SLOT_TEXT: Record<NotifySlot, { title: string; hint: string }> = {
   morning: { title: "Утренняя сводка", hint: "Всем: сотруднику — его задачи на день, руководителю и админу — ещё сводка по команде" },
-  evening: { title: "Вечером — что осталось", hint: "Только тем, у кого что-то не сделано" },
+  evening: { title: "Перед уходом — что не сделано", hint: "Только тем, у кого остались невыполненные задачи" },
   digest: { title: "Итоги дня", hint: "Админу и руководителям — по их людям" },
 };
 

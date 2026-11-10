@@ -127,7 +127,7 @@ async (page) => {
     await page.goto(base + '/admin/settings');
     await page.getByText('Расписание дня').waitFor();
     await page.locator('.schedule-settings select').selectOption('Asia/Vladivostok');
-    await page.getByRole('checkbox', { name: /Вечером/ }).check();
+    await page.getByRole('checkbox', { name: /Перед уходом/ }).check();
     await page.getByLabel('Время: Утренняя сводка').fill('07:45');
     // Дни напоминаний: сервер их не прислал (старый) — по умолчанию все; «Только будни».
     check(await page.locator('.schedule-day[aria-pressed="true"]').count() === 7, 'all 7 days on by default');
@@ -142,7 +142,7 @@ async (page) => {
     await page.getByRole('button', { name: 'Сохранить расписание' }).click();
     await page.waitForTimeout(400);
     const n = puts[0]?.notify ?? {};
-    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && n.morning === '07:45' && n.evening === '18:00' && n.digest === '20:30' && JSON.stringify(n.days) === '[1,2,3,4,5]' && n.quietFrom === '23:00' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
+    check(puts.length === 1 && puts[0].timezone === 'Asia/Vladivostok' && n.morning === '07:45' && n.evening === '16:30' && n.digest === '20:30' && JSON.stringify(n.days) === '[1,2,3,4,5]' && n.quietFrom === '23:00' && puts[0].email === undefined, `PUT ${JSON.stringify(puts)}`);
     // Ночь длиннее 14 часов — кнопка выключена, объяснение рядом.
     await page.getByLabel('Не беспокоить с').fill('12:00');
     check(await page.getByRole('alert').filter({ hasText: 'длиннее 14 часов' }).count() === 1, 'long night warning');
