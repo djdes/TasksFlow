@@ -14,6 +14,7 @@ import { FeatureBento } from "../landing/FeatureBento";
 import { CompareSlider } from "../landing/CompareSlider";
 import type { LandingData } from "../types";
 import { PLAN_FEATURES, PLANS, type PlanId } from "@shared/plans";
+import { LANDING_FAQ as FAQ } from "../landing-faq";
 import { DEFAULT_PRICES, formatRub, monthlyRate, promotionDiscountRub, type PlanPrice, type PricePromotion } from "@shared/billing";
 
 const BEFORE = [
@@ -84,13 +85,6 @@ function priceAnswer(prices: readonly PlanPrice[], promotion: PricePromotion | n
 }
 
 const BUSINESS_SUBJECT = `TasksFlow ${PLANS.business.name}: подключение сети точек`;
-
-const FAQ = [
-  { q: "Нужно ли что-то устанавливать?", a: "Нет. TasksFlow открывается в браузере и на телефоне. Регистрация — за секунду: введите телефон или email." },
-  { q: "А сотрудникам сложно разобраться?", a: "Нет. Сотрудник видит простой список задач на день, отмечает «готово» и прикладывает фото. Учить никого не нужно." },
-  { q: "Как сотрудники входят?", a: "По телефону без пароля или по QR-коду от руководителя — в один тап." },
-  { q: "Подходит для выездных бригад?", a: "Да, для этого и создано: фото-отчёты с объекта, задачи на день, контроль без звонков." },
-];
 
 function SectionHead({ eyebrow, title, lead, align = "center" }: { eyebrow: string; title: ReactNode; lead?: string; align?: "center" | "left" }) {
   return (
