@@ -9,7 +9,7 @@ import { clusterTitle } from "./clusters";
 import type { BlogIndexData, ArticleData, LegalData, PostFull } from "./types";
 
 export const SITE_NAME = "TasksFlow";
-const DEFAULT_DESCRIPTION =
+export const DEFAULT_DESCRIPTION =
   "TasksFlow — постановка и контроль задач для выездных и линейных сотрудников: " +
   "чек-листы, фотоотчёты, повторяющиеся задачи, бонусы и KPI. Запуск за день.";
 

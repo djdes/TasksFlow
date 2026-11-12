@@ -3,6 +3,7 @@
  *   GET /og/:slug.svg  — обложка статьи (SVG)
  *   GET /sitemap.xml   — карта сайта (лендинг + блог + категории + статьи)
  *   GET /robots.txt    — robots + ссылка на sitemap
+ *   GET /llms.txt      — описание сайта для ИИ-помощников (server/llms-txt.ts)
  *
  * Регистрируются и в dev, и в prod (вызываются из vite.ts / static.ts).
  */
@@ -12,6 +13,7 @@ import { coverSvg } from "./og-cover";
 import { CLUSTERS } from "@shared/blog-clusters";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { LEGAL_DOCS } from "../client/src/public/legal";
+import { buildLlmsTxt } from "./llms-txt";
 
 export function setupPublicAssets(app: Express): void {
   // Обложка статьи. :slug.svg — slug + расширение.
@@ -71,6 +73,15 @@ export function setupPublicAssets(app: Express): void {
         .join("\n") +
       `\n</urlset>\n`;
     res.status(200).set({ "Content-Type": "application/xml; charset=utf-8" }).end(xml);
+  });
+
+  // Без этого маршрута адрес отдавал оболочку кабинета (HTML с кодом 200).
+  app.get("/llms.txt", (req: Request, res: Response) => {
+    const body = buildLlmsTxt(getPublicTasksflowBaseUrl(req), getAllPosts());
+    res
+      .status(200)
+      .set({ "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" })
+      .end(body);
   });
 
   app.get("/robots.txt", (req: Request, res: Response) => {
