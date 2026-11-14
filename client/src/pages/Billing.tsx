@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { PLAN_FEATURES, PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import {
+  bestSavingsMonths,
   daysLabel,
   formatRub,
   INVOICE_VALID_DAYS,
@@ -30,6 +31,7 @@ import {
   OFFER_PATH,
   ORDER_STATUS_LABEL,
   periodLabel,
+  periodSavings,
   planAfterPayment,
   priceBreakdown,
   priceFor,
@@ -357,6 +359,7 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
     isPaidPlan(info.plan.id) && purchasable.includes(info.plan.id) ? info.plan.id : purchasable[0] ?? null;
   const [plan, setPlan] = useState<PaidPlanId | null>(initialPlan);
   const available = plan ? monthsFor(info.prices, plan) : [];
+  const bestPeriod = plan ? bestSavingsMonths(info.prices, plan) : null;
   const [months, setMonths] = useState<BillingMonths | null>(() => {
     if (!initialPlan) return null;
     const list = monthsFor(info.prices, initialPlan);
@@ -645,10 +648,24 @@ function Checkout({ info, defaultRecurring, initialPromo }: { info: BillingInfo;
           <div className="billing-periods" role="radiogroup" aria-labelledby="billing-period-label">
             {available.map((m) => {
               const p = withPromotion(priceFor(info.prices, plan, m)!);
+              const saving = periodSavings(info.prices, plan, m, withPromotion);
+              const best = saving !== null && m === bestPeriod;
               return (
-                <button key={m} type="button" role="radio" aria-checked={months === m} className="billing-period" onClick={() => setMonths(m)}>
-                  <span>{periodLabel(m)}</span>
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  aria-checked={months === m}
+                  className="billing-period"
+                  data-best={best || undefined}
+                  onClick={() => setMonths(m)}
+                >
+                  <span className="billing-period-head">
+                    <span>{periodLabel(m)}</span>
+                    {saving && <span className="billing-period-badge">−{saving.percent}%</span>}
+                  </span>
                   <small>{m === 1 ? formatRub(p) : `${formatRub(p)} · ${formatRub(Math.round(p / m))}/мес`}</small>
+                  {saving && <small className="billing-period-saving">{best ? "Выгоднее всего · " : ""}экономия {formatRub(saving.rub)}</small>}
                 </button>
               );
             })}
