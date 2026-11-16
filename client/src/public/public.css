@@ -27,6 +27,33 @@
   }
 }
 
+/* Первый экран главной — без ожидания бандла. Раньше заголовок, подзаголовок
+   и форма регистрации героя были скрыты, пока не загрузится JS и
+   IntersectionObserver не поставит .in: на телефоне текст появлялся через
+   ~5,5 с при FCP ~3,3 с, а заголовок и есть LCP главной (Core Web Vitals).
+   Теперь герой проявляется CSS-анимацией с первой отрисовки, с теми же
+   сдвигом, длительностью и задержками; конечное состояние совпадает с .in.
+   Остальные секции по-прежнему проявляются при прокрутке. */
+@keyframes tf-hero-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.reveal-ready .hero .hero-copy > [data-reveal],
+.reveal-ready .hero .hero-copy + [data-reveal] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+  animation: tf-hero-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.reveal-ready .hero .hero-copy > .hero-title { animation-delay: 60ms; }
+.reveal-ready .hero .hero-copy > .hero-lead { animation-delay: 120ms; }
+.reveal-ready .hero .hero-copy + [data-reveal] { animation-delay: 140ms; }
+.reveal-ready .hero .hero-copy > #start { animation-delay: 180ms; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready .hero .hero-copy > [data-reveal],
+  .reveal-ready .hero .hero-copy + [data-reveal] { animation: none; }
+}
+
 /* ---------- Плавание орбов hero ---------- */
 @keyframes orbFloatA {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
