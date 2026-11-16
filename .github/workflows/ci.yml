@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest = 26.04 с 11.2026: Playwright 1.56 не ставит там Chromium
     timeout-minutes: 25
 
     steps:
