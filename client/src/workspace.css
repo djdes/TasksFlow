@@ -2190,3 +2190,27 @@ html[data-motion="reduced"] .bonus-gain { animation: bonus-gain-fade 2.2s linear
 .task-bonus-estimate { display: grid; gap: 2px; padding: 10px 14px; border-radius: 12px; background: hsl(45 100% 60% / .12); font-size: 14px; }
 .task-bonus-estimate b { font-size: 18px; font-weight: 800; }
 .task-bonus-estimate small { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+
+/* Сотрудник: «Начните с этой задачи» — первое, что видно под подложкой */
+.worker-start {
+  display: flex; align-items: center; gap: 14px; width: 100%; margin: 0 0 14px; padding: 14px 16px; text-align: left;
+  border-radius: 18px; background: hsl(var(--card)); color: hsl(var(--foreground));
+  box-shadow: 0 10px 28px -14px hsl(var(--primary) / .55), 0 0 0 1px hsl(var(--primary) / .18);
+  position: relative; z-index: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.worker-start:hover { box-shadow: 0 14px 30px -14px hsl(var(--primary) / .65), 0 0 0 1px hsl(var(--primary) / .35); }
+.worker-start:active { transform: scale(.99); }
+.worker-start:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.worker-start-icon {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 46px; height: 46px; border-radius: 999px;
+  background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 6px 16px -6px hsl(var(--primary) / .8);
+}
+.worker-start-icon svg { margin-left: 2px; }
+.worker-start-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.worker-start-text small { font-size: 13px; color: hsl(var(--muted-foreground)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.worker-start-text small::first-letter { text-transform: uppercase; }
+.worker-start-text b { font-size: 17px; font-weight: 700; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.worker-start-arrow { width: 22px; height: 22px; flex: none; color: hsl(var(--primary)); }
+html[data-text="large"] .worker-start-text b { font-size: 19px; }
+@media (max-width: 767px) { .app-layout[data-simple] .worker-start { width: auto; margin: 0 12px 14px; } }

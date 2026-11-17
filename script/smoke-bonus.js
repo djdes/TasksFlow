@@ -87,6 +87,10 @@ async (page) => {
       check(await tab.locator('.task-card', { hasText: 'Вынести мусор' }).locator('.task-reward--wait').count() === 1, 'на проверке — не «ждёт»');
       check(await tab.locator('.task-card', { hasText: 'Разобрать поставку' }).getByTestId('task-reward').count() === 0, 'премия у задачи без премии');
       check((await tab.getByTestId('bonus-badge').innerText()).includes('120'), 'баланс в шапке');
+      // Сразу понятно, что делать сегодня: «Сегодня · 2 задачи» и «Начните с…».
+      check((await tab.getByTestId('worker-today-title').innerText()) === 'Сегодня · 2 задачи', `заголовок: ${await tab.getByTestId('worker-today-title').innerText()}`);
+      const start = tab.getByTestId('worker-start');
+      check(await start.isVisible() && (await start.innerText()).includes('Начните с этой задачи'), 'нет «Начните с этой задачи»');
       await tab.waitForTimeout(1500);
       check(await noOverflow(tab), 'сотрудник 390: горизонтальная прокрутка');
       await tab.screenshot({ path: `${shots}/bonus-worker-390.png` });
@@ -106,12 +110,29 @@ async (page) => {
     }
   }
 
+  // ---------- 1б. Баланс 0 и задач с премией нет — баланс всё равно сверху ----------
+  {
+    const { context, tab, errors, state } = await open(person(7, 'Анна', { bonusBalance: 0, access: workerAccess }), { width: 360, height: 780 });
+    try {
+      state.tasks = [task(4, 'Разобрать поставку', { price: 0 })];
+      await tab.goto(base + '/dashboard');
+      await tab.locator('.task-card', { hasText: 'Разобрать поставку' }).waitFor();
+      const badge = tab.getByTestId('bonus-badge');
+      check(await badge.isVisible(), 'баланс 0 ₽ не показан сверху');
+      check((await badge.innerText()).replace(/\s/g, '') === '0₽', `баланс: ${await badge.innerText()}`);
+      check(errors.length === 0, `баланс 0: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
   // ---------- 2. Тёмная 360 и ПК ----------
   for (const [viewport, theme, name] of [[{ width: 360, height: 780 }, 'dark', 'dark-360'], [{ width: 1280, height: 900 }, 'light', '1280']]) {
     const { context, tab, errors } = await open(worker, viewport, theme);
     try {
       await tab.goto(base + '/dashboard');
       await tab.locator('.task-card', { hasText: 'Протереть витрину' }).getByTestId('task-reward').waitFor();
+      check(await tab.getByTestId('bonus-badge').isVisible(), `${name}: баланс не виден сверху`);
       check(await noOverflow(tab), `${name}: горизонтальная прокрутка`);
       await tab.screenshot({ path: `${shots}/bonus-worker-${name}.png` });
       check(errors.length === 0, `${name}: ${errors.join('; ')}`);

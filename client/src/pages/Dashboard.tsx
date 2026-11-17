@@ -73,6 +73,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  Play,
   ChevronDown,
   Camera,
   Check,
@@ -397,6 +398,14 @@ export default function Dashboard() {
     ),
   );
 
+  // Сотруднику: что ещё сделать сегодня, самое срочное первым (не сделано и не на проверке).
+  const workerTodo = simple
+    ? sortByUrgency(
+        scopeFilteredTasks.filter(
+          (t) => !t.isCompleted && (t as { verificationStatus?: string | null }).verificationStatus !== "submitted",
+        ) as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[],
+      )
+    : [];
   const completedCount = filteredTasks.filter(t => t.isCompleted).length;
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -859,12 +868,8 @@ export default function Dashboard() {
               как нажимаемое. Меняем на <button>, чтобы VoiceOver/TalkBack
               корректно произносили «кнопка, подробнее о премии», а
               Tab/Enter работали для пользователей без мыши. */}
-          {/* Премия в шапке — только если она вообще релевантна сотруднику:
-              есть начисленный баланс ИЛИ есть задача с премией (price>0).
-              Нет задач с премией и баланс 0 → блок не показываем. */}
-          {!user.isAdmin &&
-            (((user as any).bonusBalance ?? 0) > 0 ||
-              tasks.some((t) => ((t.price as number | null | undefined) ?? 0) > 0)) && (
+          {/* Баланс премии сотрудника — всегда, даже 0 ₽: видно, что копится. */}
+          {!user.isAdmin && (
               <button
                 type="button"
                 className={`bonus-badge${bonusGain ? " bonus-badge--gain" : ""}`}
@@ -1002,26 +1007,38 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        {/* Сотруднику — только дата на подложке: без полосы прогресса и
-            «осталось N из M» (просьба владельца 06.11.2026), сразу задачи. */}
+        {/* Сотруднику сразу ясно, что делать сегодня: сколько задач на сегодня
+            и кнопка «Начните с…» — самая срочная. Без полосы прогресса и
+            «осталось N из M» (просьба владельца 06.11.2026). */}
         {simple && (
           <div className="worker-day-row">
-            <h2 className="worker-day">
-              {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+            <h2 className="worker-day" data-testid="worker-today-title">
+              {workerTodo.length > 0
+                ? `Сегодня · ${workerTodo.length} ${plural(workerTodo.length, "задача", "задачи", "задач")}`
+                : tasks.length > 0
+                  ? "Сегодня всё сделано"
+                  : new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
             </h2>
             {/* «Слушать список»: задачи на сегодня вслух, по срочности. */}
-            <SpeakButton
-              compact
-              label="Слушать список"
-              text={listSpeechText(
-                sortByUrgency(
-                  scopeFilteredTasks.filter(
-                    (t) => !t.isCompleted && (t as { verificationStatus?: string | null }).verificationStatus !== "submitted",
-                  ) as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[],
-                ).map((t) => t.title),
-              )}
-            />
+            <SpeakButton compact label="Слушать список" text={listSpeechText(workerTodo.map((t) => t.title))} />
           </div>
+        )}
+        {simple && workerTodo.length > 0 && !searchQuery && (
+          <button
+            type="button"
+            className="worker-start"
+            onClick={() => handleTaskClick(workerTodo[0])}
+            data-testid="worker-start"
+          >
+            <span className="worker-start-icon" aria-hidden>
+              <Play className="w-5 h-5" fill="currentColor" />
+            </span>
+            <span className="worker-start-text">
+              <small>Начните с этой задачи</small>
+              <b>{workerTodo[0].title}</b>
+            </span>
+            <ChevronRight className="worker-start-arrow" aria-hidden />
+          </button>
         )}
 
         {/* «На проверке» баннер — для админа/руководителя. Раньше
