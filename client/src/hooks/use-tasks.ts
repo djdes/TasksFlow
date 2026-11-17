@@ -167,6 +167,10 @@ export function useCompleteTask() {
       queryClient.setQueryData<Task[]>([api.tasks.list.path], (list) => applyCompletionToList(list, task));
       queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.tasks.get.path, task.id] });
+      // Премия начислена — баланс в шапке обновится и покажет «+N ₽».
+      if (((task as { price?: number | null }).price ?? 0) > 0) {
+        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      }
       // Ушла на проверку (назначенный проверяющий или роль сотрудника):
       // говорим прямо, что задача ещё не закрыта и премия придёт после «Принять».
       if (!vars.quiet && (task as { verificationStatus?: string | null }).verificationStatus === "submitted") {
@@ -218,6 +222,8 @@ export function useUncompleteTask() {
       return data;
     },
     onSuccess: (task) => {
+      // Вернули в работу — премию списали: баланс в шапке тоже.
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
       if (task?.id) {
         queryClient.invalidateQueries({ queryKey: [api.tasks.get.path, task.id] });

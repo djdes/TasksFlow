@@ -409,6 +409,19 @@ export default function CreateTask() {
     kind === "once" && Boolean(moreRemindAt),
   ].filter(Boolean).length;
 
+  // Премия компании по умолчанию: подставляем в пустое поле один раз, не
+  // перебивая то, что человек ввёл сам или вернул из черновика.
+  const companyBonus = wesetupConfig.data?.taskBonus ?? 0;
+  const bonusApplied = useRef(false);
+  useEffect(() => {
+    if (bonusApplied.current || companyBonus <= 0) return;
+    bonusApplied.current = true;
+    const current = form.getValues("price");
+    if (!form.getFieldState("price").isDirty && (!current || current === "0")) {
+      form.setValue("price", String(companyBonus));
+    }
+  }, [companyBonus, form]);
+
   // ── «Как в прошлый раз»: та же задача уже ставилась — подставим её настройки.
   const watchedTitle = (useWatch({ control: form.control, name: "title" }) as string | undefined) ?? "";
   const lastSame = useMemo(() => findLastTaskByTitle(pastTasks ?? [], watchedTitle), [pastTasks, watchedTitle]);
@@ -1202,6 +1215,22 @@ export default function CreateTask() {
                     {kind === "once" && <RemindAtField form={form} />}
                   </div>
                 </section>
+
+                {Number(morePrice) > 0 && (
+                  <button
+                    type="button"
+                    className="form-bonus-note"
+                    onClick={() => setMoreOpen(true)}
+                    data-testid="form-bonus-note"
+                  >
+                    <Coins aria-hidden />
+                    <span>
+                      За выполнение — премия <b>+{Number(morePrice)} ₽</b>
+                      {freeModeWorkerIds.length > 1 ? " каждому" : ""}
+                    </span>
+                    <small>изменить</small>
+                  </button>
+                )}
 
                 <div className="quick-task-actions">
                   <Button

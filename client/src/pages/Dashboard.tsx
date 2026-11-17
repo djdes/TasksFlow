@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
+import { useBonusGain } from "@/hooks/use-bonus-gain";
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
@@ -221,6 +222,8 @@ export default function Dashboard() {
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
   const completeTask = useCompleteTask();
+  // Прибавка премии для анимации у баланса в шапке.
+  const bonusGain = useBonusGain(user && !user.isAdmin ? ((user as { bonusBalance?: number }).bonusBalance ?? 0) : null);
   const uncompleteTask = useUncompleteTask();
 
   useEffect(() => {
@@ -589,8 +592,15 @@ export default function Dashboard() {
       {
         onSuccess: (done) => {
           const submitted = (done as { verificationStatus?: string | null }).verificationStatus === "submitted";
+          const price = (done as { price?: number | null }).price ?? 0;
           toast({
-            title: submitted ? "Отправлено руководителю" : "Готово",
+            title: submitted ? "Отправлено руководителю" : price > 0 ? `Готово · премия +${price} ₽` : "Готово",
+            description:
+              price > 0
+                ? submitted
+                  ? `Премия +${price} ₽ — после проверки`
+                  : `На балансе ${((user as { bonusBalance?: number } | null)?.bonusBalance ?? 0) + price} ₽`
+                : undefined,
             duration: 5000,
             action: (
               <ToastAction altText="Отменить выполнение" onClick={() => uncompleteTask.mutate(taskId)} data-testid="undo-complete">
@@ -857,12 +867,19 @@ export default function Dashboard() {
               tasks.some((t) => ((t.price as number | null | undefined) ?? 0) > 0)) && (
               <button
                 type="button"
-                className="bonus-badge"
+                className={`bonus-badge${bonusGain ? " bonus-badge--gain" : ""}`}
                 onClick={() => setIsBonusInfoOpen(true)}
+                data-testid="bonus-badge"
                 aria-label="Премия — подробнее"
               >
                 <Coins className="w-5 h-5 text-yellow-300" />
-                <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
+                <span className="bonus-badge-text" key={bonusGain?.key ?? "balance"}>{(user as any).bonusBalance ?? 0} ₽</span>
+                {/* Выполнил задачу с премией — «+30 ₽» взлетает над балансом. */}
+                {bonusGain && (
+                  <span className="bonus-gain" key={bonusGain.key} role="status" data-testid="bonus-gain">
+                    +{bonusGain.gain} ₽
+                  </span>
+                )}
               </button>
             )}
           <div className="header-desktop-actions">

@@ -2111,3 +2111,82 @@ html[data-text="large"] .worker-day-row { height: 32px; }
   background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 15px; font-weight: 600;
 }
 .offline-bar svg { width: 18px; height: 18px; }
+
+/* ===== Премия за задачу: «+30 ₽» справа у карточки ===== */
+.task-reward {
+  display: inline-flex; align-items: center; gap: 4px; flex: none; align-self: center;
+  min-height: 34px; padding: 0 12px 0 9px; border-radius: 999px;
+  background: linear-gradient(135deg, hsl(45 100% 60%), hsl(36 96% 52%));
+  color: hsl(30 80% 16%); font-weight: 800; font-size: 15px; line-height: 1; letter-spacing: -.01em;
+  box-shadow: 0 6px 16px -6px hsl(36 96% 45% / .65), inset 0 1px 0 hsl(0 0% 100% / .45);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.task-reward-icon { width: 16px; height: 16px; flex: none; }
+.task-reward-cur { font-weight: 700; font-size: 13px; opacity: .85; }
+/* На проверке — та же премия, но спокойнее: придёт после «Принять». */
+.task-reward--wait { background: hsl(42 96% 56% / .18); color: hsl(32 80% 30%); box-shadow: inset 0 0 0 1px hsl(38 92% 50% / .45); }
+/* Выполнена — «получено»: зелёная, без блеска. */
+.task-reward--earned { background: hsl(var(--emerald) / .14); color: hsl(155 72% 27%); box-shadow: none; }
+.dark .task-reward--wait { color: hsl(42 96% 70%); }
+.dark .task-reward--earned { background: hsl(var(--emerald) / .2); color: hsl(152 60% 66%); }
+html[data-text="large"] .task-reward { font-size: 17px; min-height: 38px; }
+@media (max-width: 767px) {
+  .app-layout .task-main:has(.task-reward) { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .app-layout .grouped-task-list--simple .task-main:has(.task-reward) { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .app-layout .grouped-task-list--simple .task-main:has(.task-reward):has(.task-thumb) { grid-template-columns: 32px minmax(0, 1fr) auto 52px; }
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-main:has(.task-reward) { grid-template-columns: 36px minmax(0, 1fr) auto; }
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-main:has(.task-reward):has(.task-thumb) { grid-template-columns: 36px minmax(0, 1fr) auto 56px; }
+  .app-layout .task-main:has(.task-reward) .task-trailing { grid-column: 2 / -1; }
+  .task-reward { min-height: 30px; padding: 0 10px 0 8px; font-size: 14px; }
+}
+
+/* Баланс в шапке: прибавка взлетает «+30 ₽», сумма коротко подпрыгивает */
+.bonus-badge { position: relative; }
+.bonus-gain {
+  position: absolute; left: 50%; top: -6px; translate: -50% 0; z-index: 5; pointer-events: none;
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  background: linear-gradient(135deg, hsl(45 100% 60%), hsl(36 96% 52%)); color: hsl(30 80% 16%);
+  font-size: 14px; font-weight: 800; box-shadow: 0 8px 20px -6px hsl(36 96% 40% / .7);
+  animation: bonus-gain-rise 2.2s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes bonus-gain-rise {
+  0% { opacity: 0; transform: translateY(10px) scale(.7); }
+  14% { opacity: 1; transform: translateY(-14px) scale(1.08); }
+  24% { transform: translateY(-18px) scale(1); }
+  78% { opacity: 1; transform: translateY(-26px); }
+  100% { opacity: 0; transform: translateY(-38px); }
+}
+.bonus-badge--gain { animation: bonus-badge-pop 600ms cubic-bezier(.22, 1, .36, 1); }
+.bonus-badge--gain .bonus-badge-text { animation: bonus-text-pop 600ms cubic-bezier(.22, 1, .36, 1); display: inline-block; }
+@keyframes bonus-badge-pop { 0% { transform: scale(1); } 35% { transform: scale(1.12); box-shadow: 0 0 0 6px hsl(45 100% 60% / .35); } 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(45 100% 60% / 0); } }
+@keyframes bonus-text-pop { 0% { transform: translateY(6px); opacity: .3; } 100% { transform: none; opacity: 1; } }
+/* Меньше движения: без полёта — сумма просто видна пару секунд над балансом. */
+html[data-motion="reduced"] .bonus-gain { animation: bonus-gain-fade 2.2s linear both; transform: translateY(-26px); }
+@keyframes bonus-gain-fade { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .bonus-gain { animation: bonus-gain-fade 2.2s linear both; transform: translateY(-26px); }
+  .bonus-badge--gain, .bonus-badge--gain .bonus-badge-text { animation: none; }
+}
+
+/* Форма задачи: строка «За выполнение — премия +30 ₽» над кнопками */
+.form-bonus-note {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 14px; text-align: left;
+  border-radius: 12px; background: hsl(45 100% 60% / .14); color: hsl(var(--foreground)); font-size: 14px;
+  box-shadow: inset 0 0 0 1px hsl(40 95% 50% / .35);
+}
+.form-bonus-note svg { width: 18px; height: 18px; flex: none; color: hsl(36 96% 42%); }
+.form-bonus-note span { flex: 1; min-width: 0; }
+.form-bonus-note b { font-weight: 800; color: hsl(32 85% 30%); }
+.dark .form-bonus-note b { color: hsl(42 96% 66%); }
+.form-bonus-note small { font-size: 12.5px; color: hsl(var(--primary)); font-weight: 600; }
+.form-bonus-note:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+/* Настройки: «Премия за задачу» */
+.task-bonus-row { display: grid; gap: 12px; align-items: center; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .task-bonus-row { grid-template-columns: 260px minmax(0, 1fr); } }
+.task-bonus-input { display: flex; align-items: center; gap: 10px; }
+.task-bonus-input input { max-width: 140px; font-size: 18px; font-weight: 700; }
+.task-bonus-input span { font-size: 14px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.task-bonus-estimate { display: grid; gap: 2px; padding: 10px 14px; border-radius: 12px; background: hsl(45 100% 60% / .12); font-size: 14px; }
+.task-bonus-estimate b { font-size: 18px; font-weight: 800; }
+.task-bonus-estimate small { font-size: 12.5px; color: hsl(var(--muted-foreground)); }

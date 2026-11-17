@@ -103,6 +103,8 @@ export function demoRole(): "admin" | "worker" {
   return state.meId === 1 ? "admin" : "worker";
 }
 
+// Премия за задачу по умолчанию в демо — меняется в «Настройках».
+let demoTaskBonus = 30;
 const company = () => ({
   id: 1,
   name: "Кофейня «Демо»",
@@ -115,6 +117,7 @@ const company = () => ({
   planUntil: null,
   notify: DEFAULT_NOTIFY,
   photo: DEFAULT_PHOTO_SETTINGS,
+  taskBonus: demoTaskBonus,
   planInfo: { ...PLANS.business, until: null, enforced: false },
   wesetupConfigured: false,
 });
@@ -204,6 +207,10 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     exitDemo();
     setTimeout(() => window.location.assign("/"), 0);
     return { json: { ok: true } };
+  }
+  if (path === "/api/companies/me/task-bonus" && method === "PUT") {
+    demoTaskBonus = Number(body?.amount) || 0;
+    return { json: { taskBonus: demoTaskBonus, open: 0, credited: 0 } };
   }
   if (path === "/api/companies/me") return { json: company() };
   if (path === "/api/quick-login/link") return {

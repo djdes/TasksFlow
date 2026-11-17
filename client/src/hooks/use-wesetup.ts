@@ -13,6 +13,8 @@ type CompanyPublic = {
   name?: string;
   wesetupConfigured?: boolean;
   photo?: PhotoSettings;
+  /** Премия за задачу по умолчанию, ₽ (0 — нет). */
+  taskBonus?: number;
   /** Действующий тариф (истёкший — «Бесплатный») и срок оплаченного. */
   planInfo?: { id: PlanId; name: string; until: number | null };
 } | null;

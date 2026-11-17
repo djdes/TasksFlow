@@ -171,6 +171,8 @@ export interface IStorage {
   getTask(id: number): Promise<Task | undefined>;
   createTask(task: InsertTask & { companyId?: number }): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
+  /** Премия по умолчанию задачам компании без премии; см. реализацию. */
+  applyTaskBonus(companyId: number, amount: number): Promise<{ open: number; credited: number }>;
   deleteTask(id: number): Promise<void>;
   claimSiblingTasks(args: {
     sourceTaskId: number;
@@ -1252,6 +1254,53 @@ export class DatabaseStorage implements IStorage {
    * уходил в минус. Теперь только один вызов получает affected>0
    * и вычитает.
    */
+  /**
+   * Поставить премию задачам компании, у которых её нет.
+   *
+   *   • невыполненные (и «на проверке») — просто price: начислится при
+   *     выполнении или «Принять», как у любой задачи с премией;
+   *   • регулярные, уже отмеченные сегодня, — price и сразу начисление
+   *     исполнителю. Иначе такая задача осталась бы без премии навсегда,
+   *     а «Вернуть в работу» списало бы премию, которой не было.
+   *
+   * Разовые выполненные (история) не трогаем — задним числом не платим.
+   * Всё в одной транзакции: баланс и price меняются вместе.
+   */
+  async applyTaskBonus(companyId: number, amount: number): Promise<{ open: number; credited: number }> {
+    if (!Number.isInteger(amount) || amount <= 0) return { open: 0, credited: 0 };
+    const noBonus = or(eq(tasks.price, 0), isNull(tasks.price));
+    return db.transaction(async (tx) => {
+      const openRes = await tx
+        .update(tasks)
+        .set({ price: amount })
+        .where(and(eq(tasks.companyId, companyId), eq(tasks.isCompleted, false), noBonus));
+      const header = Array.isArray(openRes) ? openRes[0] : openRes;
+      const open = header && typeof header === "object" && "affectedRows" in header ? Number((header as { affectedRows: number }).affectedRows) : 0;
+
+      const done = await tx
+        .select({ id: tasks.id, workerId: tasks.workerId })
+        .from(tasks)
+        .where(and(eq(tasks.companyId, companyId), eq(tasks.isCompleted, true), eq(tasks.isRecurring, true), noBonus));
+      let credited = 0;
+      for (const t of done) {
+        const res = await tx
+          .update(tasks)
+          .set({ price: amount })
+          .where(and(eq(tasks.id, t.id), eq(tasks.isCompleted, true), noBonus));
+        const h = Array.isArray(res) ? res[0] : res;
+        const changed = h && typeof h === "object" && "affectedRows" in h ? Number((h as { affectedRows: number }).affectedRows) : 0;
+        if (changed > 0 && t.workerId) {
+          await tx
+            .update(users)
+            .set({ bonusBalance: sql`COALESCE(${users.bonusBalance}, 0) + ${amount}` })
+            .where(eq(users.id, t.workerId));
+          credited++;
+        }
+      }
+      return { open, credited };
+    });
+  }
+
   async transitionTaskToUncompleted(id: number): Promise<boolean> {
     const result = await db
       .update(tasks)
