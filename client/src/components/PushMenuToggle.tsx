@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { BellRing, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
-import { usePushState } from "@/lib/push";
-import { detectPlatform } from "@/lib/pwa";
+import { readDeviceInfo, usePushState } from "@/lib/push";
 
 /**
  * «Уведомления на телефоне» в меню: включить — браузер спросит разрешение
@@ -21,8 +20,8 @@ export function PushMenuToggle({ onNavigate }: { onNavigate?: () => void }) {
   if (push.status === "loading" || push.status === "unsupported" || push.status === "server-off") return null;
 
   const on = push.status === "on";
-  const needsHelp = push.status === "needs-install" || push.status === "denied";
-  const platform = typeof navigator === "undefined" ? "other" : detectPlatform(navigator.userAgent, navigator.maxTouchPoints || 0);
+  const needsHelp = push.status === "needs-install" || push.status === "denied" || push.status === "ios-update";
+  const device = readDeviceInfo();
 
   return (
     <>
@@ -49,7 +48,11 @@ export function PushMenuToggle({ onNavigate }: { onNavigate?: () => void }) {
           <span className="font-medium block">Уведомления на телефоне</span>
           {needsHelp && (
             <small className="block text-xs text-amber-700 dark:text-amber-300">
-              {push.status === "needs-install" ? "Не включены — нужна иконка на экране «Домой»" : "Запрещены в настройках — как разрешить"}
+              {push.status === "needs-install"
+                ? "Открыто в браузере — нужно открыть с иконки"
+                : push.status === "ios-update"
+                  ? `iOS ${device.iosVersion ?? ""} — нужно обновить iPhone`
+                  : "Запрещены в настройках — как разрешить"}
             </small>
           )}
         </span>
@@ -63,18 +66,33 @@ export function PushMenuToggle({ onNavigate }: { onNavigate?: () => void }) {
       {needsHelp && helpOpen && (
         <div className="push-menu-help" data-testid="menu-push-help" onClick={(e) => e.stopPropagation()}>
           {push.status === "needs-install" ? (
+            <>
+              <p className="push-menu-help-note">
+                Сейчас TasksFlow открыт <b>в браузере</b>, а не как приложение. Если вы открыли с иконки, но вверху или внизу видна строка с адресом tasksflow.ru — иконка открывает сайт в браузере. Удалите её и добавьте заново:
+              </p>
+              <ol>
+                <li>
+                  Откройте tasksflow.ru в <b>Safari</b>, нажмите <b>«Поделиться»</b> — квадрат со стрелкой вверх.
+                </li>
+                <li>
+                  <b>«На экран Домой»</b>. Если есть переключатель <b>«Открыть как веб-приложение»</b> — включите его. Затем «Добавить».
+                </li>
+                <li>
+                  Откройте TasksFlow <b>с новой иконки</b> — адресной строки не будет. Войдите и включите здесь «Уведомления на телефоне» — iPhone спросит разрешение.
+                </li>
+              </ol>
+            </>
+          ) : push.status === "ios-update" ? (
             <ol>
               <li>
-                Нажмите <b>«Поделиться»</b> — квадрат со стрелкой вверх внизу Safari.
+                На этом iPhone iOS {device.iosVersion ?? "старой версии"}: уведомления от веб-приложений работают с <b>iOS 16.4</b>.
               </li>
               <li>
-                Выберите <b>«На экран Домой»</b> → «Добавить».
+                Обновите iPhone: <b>Настройки → Основные → Обновление ПО</b>.
               </li>
-              <li>
-                Откройте TasksFlow <b>с этой иконки</b>, войдите и включите здесь «Уведомления на телефоне» — iPhone спросит разрешение.
-              </li>
+              <li>Пока не обновили — привяжите Telegram-бота в «Мой аккаунт»: напоминания придут туда.</li>
             </ol>
-          ) : platform === "ios" ? (
+          ) : device.ios ? (
             <ol>
               <li>
                 Откройте <b>Настройки</b> iPhone → <b>Уведомления</b>.
@@ -95,6 +113,10 @@ export function PushMenuToggle({ onNavigate }: { onNavigate?: () => void }) {
               <li>Вернитесь сюда и включите «Уведомления на телефоне».</li>
             </ol>
           )}
+          <p className="push-menu-help-tech" data-testid="menu-push-tech">
+            Для поддержки: {device.ios ? `iPhone, iOS ${device.iosVersion ?? "?"}` : "не iPhone"} · {device.standalone ? "с иконки" : "в браузере"}
+            {device.otherIosBrowser ? " (не Safari)" : ""} · уведомления в браузере: {device.webPush ? "есть" : "нет"}
+          </p>
           <button
             type="button"
             className="push-menu-help-link"

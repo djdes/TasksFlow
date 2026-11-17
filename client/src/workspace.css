@@ -2258,3 +2258,5 @@ html[data-text="large"] .worker-start-text b { font-size: 19px; }
 .push-menu-help ol { display: grid; gap: 6px; padding-left: 18px; list-style: decimal; }
 .push-menu-help b { font-weight: 650; }
 .push-menu-help-link { margin-top: 8px; min-height: 36px; font-size: 13px; font-weight: 600; color: hsl(var(--primary)); }
+.push-menu-help-note { margin-bottom: 8px; }
+.push-menu-help-tech { margin-top: 8px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }

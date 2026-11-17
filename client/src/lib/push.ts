@@ -8,8 +8,49 @@ import { detectPlatform, nativeBridge } from "./pwa";
  *   iOS-приложение — APNs через мост WebViewController (push.register);
  *   Safari на iPhone без установки — только после «На экран Домой».
  */
-export type PushSupport = "web" | "native-ios" | "ios-needs-install" | "unsupported";
-export type PushStatus = "loading" | "unsupported" | "needs-install" | "server-off" | "denied" | "off" | "on";
+export type PushSupport = "web" | "native-ios" | "ios-needs-install" | "ios-update" | "unsupported";
+export type PushStatus = "loading" | "unsupported" | "needs-install" | "ios-update" | "server-off" | "denied" | "off" | "on";
+
+/** Что умеет это устройство — для выбора подсказки и строки «для поддержки». */
+export type DeviceInfo = {
+  ios: boolean;
+  /** «18.1» из User-Agent; null — не iPhone или не распознали. */
+  iosVersion: string | null;
+  /** Открыто с иконки на экране «Домой» (без адресной строки). */
+  standalone: boolean;
+  /** Есть Notification, PushManager и service worker. */
+  webPush: boolean;
+  /** Не Safari на iPhone: Chrome, Firefox, Яндекс… */
+  otherIosBrowser: boolean;
+};
+
+export function readDeviceInfo(): DeviceInfo {
+  const ua = navigator.userAgent;
+  const ios = detectPlatform(ua, navigator.maxTouchPoints || 0) === "ios";
+  const m = /OS (\d+)[_.](\d+)/.exec(ua);
+  return {
+    ios,
+    iosVersion: ios && m ? `${m[1]}.${m[2]}` : null,
+    standalone:
+      (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches) ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    webPush: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+    otherIosBrowser: ios && /CriOS|FxiOS|EdgiOS|YaBrowser|OPiOS/.test(ua),
+  };
+}
+
+/**
+ * Чистая классификация (тесты — tests/push-support.test.ts):
+ *   есть Web Push → web;
+ *   iPhone с иконки, но Web Push нет → старая iOS (нужна 16.4+) — раньше тут
+ *   ошибочно говорили «добавьте на экран Домой», хотя человек уже открыл с иконки;
+ *   iPhone во вкладке браузера → ios-needs-install.
+ */
+export function classifyPushSupport(d: Pick<DeviceInfo, "ios" | "standalone" | "webPush">): Exclude<PushSupport, "native-ios"> {
+  if (d.webPush) return "web";
+  if (d.ios) return d.standalone ? "ios-update" : "ios-needs-install";
+  return "unsupported";
+}
 
 type JsonInit = { method: "POST" | "DELETE"; body?: unknown };
 
@@ -28,11 +69,8 @@ async function json<T>(url: string, init?: JsonInit): Promise<T> {
 export function pushSupport(): PushSupport {
   if (typeof window === "undefined") return "unsupported";
   if (nativeBridge()) return "native-ios";
-  const hasWebPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-  if (hasWebPush) return "web";
-  // Safari на iPhone даёт Web Push только установленному на экран «Домой» сайту.
-  if (detectPlatform(navigator.userAgent, navigator.maxTouchPoints || 0) === "ios") return "ios-needs-install";
-  return "unsupported";
+  // Safari на iPhone даёт Web Push только установленному на экран «Домой» сайту (iOS 16.4+).
+  return classifyPushSupport(readDeviceInfo());
 }
 
 function base64UrlToBytes(value: string): Uint8Array {
@@ -54,6 +92,7 @@ async function readStatus(config: PushConfig): Promise<PushStatus> {
   const support = pushSupport();
   if (support === "unsupported") return "unsupported";
   if (support === "ios-needs-install") return "needs-install";
+  if (support === "ios-update") return "ios-update";
   if (support === "native-ios") {
     if (!config.apns.enabled) return "server-off";
     const status = (await nativeBridge()!.call("push.status")) as NativePushStatus;
@@ -167,7 +206,8 @@ export async function disablePush(): Promise<void> {
  * получать уведомления предыдущего. Не дольше 2 секунд — выход важнее.
  */
 export async function forgetThisDevice(): Promise<void> {
-  if (pushSupport() === "unsupported" || pushSupport() === "ios-needs-install") return;
+  const support = pushSupport();
+  if (support === "unsupported" || support === "ios-needs-install" || support === "ios-update") return;
   await Promise.race([disablePush().catch(() => {}), new Promise((r) => setTimeout(r, 2000))]);
 }
 
