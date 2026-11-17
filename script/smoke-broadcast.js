@@ -144,6 +144,61 @@ async (page) => {
     }
   }
 
+  // ---------- 4. iPhone в Safari: «Уведомления на телефоне» раскрывает шаги, а не уводит в аккаунт ----------
+  {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block',
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1',
+    });
+    await context.addInitScript(() => {
+      localStorage.setItem('tf_onboarded_v1', 'true');
+      // Safari на iPhone во вкладке: ни Notification, ни PushManager.
+      delete window.Notification;
+      delete window.PushManager;
+    });
+    const tab = await context.newPage();
+    tab.setDefaultTimeout(10000);
+    const errors = [];
+    tab.on('pageerror', (e) => errors.push(e.message));
+    await tab.route('**/api/**', (route) => {
+      const p = new URL(route.request().url()).pathname;
+      if (p === '/api/auth/me') return route.fulfill({ json: worker });
+      if (p === '/api/users') return route.fulfill({ json: people });
+      if (p === '/api/tasks') return route.fulfill({ json: [task] });
+      if (p === '/api/push/config') return route.fulfill({ json: { web: { enabled: true, publicKey: 'BCYEmp1hk_80I1M2-FtEbDgNzXdPmkQ-c3FH5a7f2hYvmuWLhZQxB1T6n9A0JP-uq86Ij54jVi8mOZ9BeeS-6LM' }, apns: { enabled: false } } });
+      if (p === '/api/app/info') return route.fulfill({ json: { android: { apk: null, playUrl: null, rustoreUrl: null }, ios: { appStoreUrl: null } } });
+      if (p === '/api/me/telegram') return route.fulfill({ json: { connected: false, botConfigured: false } });
+      if (p === '/api/companies/me') return route.fulfill({ json: { id: 1, name: 'Кафе', wesetupConfigured: false, photo: { stamp: true, cameraOnly: false } } });
+      if (p === '/api/events') return route.fulfill({ status: 204, body: '' });
+      return route.fulfill({ json: [] });
+    });
+    try {
+      await tab.goto(base + '/dashboard');
+      await tab.locator('.task-card').first().waitFor();
+      await tab.locator('button[aria-expanded]').first().click();
+      const toggle = tab.getByTestId('menu-push-toggle');
+      await toggle.waitFor();
+      check((await toggle.innerText()).includes('нужна иконка на экране «Домой»'), `iPhone: ${await toggle.innerText()}`);
+      await toggle.click();
+      const help = tab.getByTestId('menu-push-help');
+      await help.waitFor();
+      check((await help.innerText()).includes('На экран Домой'), 'iPhone: нет шагов');
+      check(new URL(tab.url()).pathname === '/dashboard', `iPhone: ушли на ${tab.url()}`);
+      await help.scrollIntoViewIfNeeded();
+      await tab.screenshot({ path: `${shots}/broadcast-iphone-help-390.png` });
+      await help.getByRole('button', { name: 'Подробнее в «Мой аккаунт»' }).click();
+      await tab.waitForURL('**/account*');
+      await tab.locator('#app').waitFor();
+      await tab.waitForTimeout(300);
+      await tab.screenshot({ path: `${shots}/broadcast-iphone-account-390.png` });
+      const top = await tab.locator('#app').evaluate((el) => el.getBoundingClientRect().top);
+      check(top < 300, `аккаунт: блок уведомлений не наверху (${Math.round(top)}px)`);
+      check(errors.length === 0, `iPhone: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'admin header bell → all + preset + send body + delivered/unreachable, lead 390/dark-360 via menu: own people only, users page button, no button for worker', failures };
+  return { checks: 'admin header bell → all + preset + send body + delivered/unreachable, lead 390/dark-360 via menu: own people only, users page button, no button for worker, iPhone push help inline + account scroll', failures };
 }

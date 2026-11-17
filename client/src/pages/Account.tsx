@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +30,13 @@ export default function Account() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // /account#app, #notifications — сразу к нужному блоку, а не к началу страницы.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const timer = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [email, setEmail] = useState(user?.email ?? "");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -151,6 +158,9 @@ export default function Account() {
         </div>
 
         <div className="page-sections">
+          {/* Установка на это устройство и push на нём — первым: за этим сюда чаще всего и приходят. */}
+          <AppDeviceCard />
+
           <section className="content-panel account-section">
             <div className="section-title">
               <Palette className="w-5 h-5 text-primary" />
@@ -166,9 +176,6 @@ export default function Account() {
 
           {/* PIN — пароль входа по телефону */}
           <ChangePinCard />
-
-          {/* Установка на это устройство и push на нём */}
-          <AppDeviceCard />
 
           {/* Что присылать: новые задачи, напоминания, проверка, письма */}
           <NotifyPrefsCard />

@@ -2252,3 +2252,9 @@ html[data-text="large"] .worker-start-text b { font-size: 19px; }
 .broadcast-silent { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 12px; background: hsl(40 95% 55% / .14); font-size: 13.5px; color: hsl(30 85% 30%); }
 .dark .broadcast-silent { color: hsl(42 96% 70%); }
 .broadcast-silent svg { width: 17px; height: 17px; flex: none; margin-top: 1px; }
+
+/* Меню: подсказка, как включить уведомления, — прямо под пунктом */
+.push-menu-help { margin: 0 12px 8px; padding: 12px 14px; border-radius: 12px; background: hsl(40 95% 55% / .12); font-size: 13.5px; line-height: 1.45; color: hsl(var(--foreground)); }
+.push-menu-help ol { display: grid; gap: 6px; padding-left: 18px; list-style: decimal; }
+.push-menu-help b { font-weight: 650; }
+.push-menu-help-link { margin-top: 8px; min-height: 36px; font-size: 13px; font-weight: 600; color: hsl(var(--primary)); }
