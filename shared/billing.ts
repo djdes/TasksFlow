@@ -92,6 +92,41 @@ export function monthlyRate(prices: readonly PlanPrice[], plan: PaidPlanId): num
 }
 
 /**
+ * Выгода длинного срока против помесячной оплаты: «12 месяцев · −17%, выгода 1 980 ₽».
+ * Только если у тарифа есть месячная цена и длинный срок дешевле хотя бы на 1 %:
+ * сравнивать «с самым выгодным сроком» (как monthlyRate) нечестно — выгоды не было бы.
+ * Акция в процентах уменьшает обе цены одинаково, поэтому её можно применить снаружи
+ * к обеим суммам через `applyPromo`.
+ */
+export function periodSavings(
+  prices: readonly PlanPrice[],
+  plan: PaidPlanId,
+  months: number,
+  applyPromo: (rub: number) => number = (rub) => rub,
+): { percent: number; rub: number } | null {
+  if (months <= 1) return null;
+  const monthly = priceFor(prices, plan, 1);
+  const total = priceFor(prices, plan, months);
+  if (monthly === null || total === null || monthly <= 0) return null;
+  const full = applyPromo(monthly) * months;
+  const paid = applyPromo(total);
+  const rub = Math.round(full - paid);
+  if (full <= 0 || rub <= 0) return null;
+  const percent = Math.floor((rub / full) * 100);
+  return percent >= 1 ? { percent, rub } : null;
+}
+
+/** Самый выгодный срок тарифа (наибольший процент экономии) — для метки «Выгоднее всего». */
+export function bestSavingsMonths(prices: readonly PlanPrice[], plan: PaidPlanId): BillingMonths | null {
+  let best: { months: BillingMonths; percent: number } | null = null;
+  for (const m of monthsFor(prices, plan)) {
+    const s = periodSavings(prices, plan, m);
+    if (s && (!best || s.percent > best.percent)) best = { months: m, percent: s.percent };
+  }
+  return best?.months ?? null;
+}
+
+/**
  * +N календарных месяцев к моменту (unix sec). Число месяца сохраняется,
  * а если его нет (31 января + 1 месяц) — последний день месяца.
  */
