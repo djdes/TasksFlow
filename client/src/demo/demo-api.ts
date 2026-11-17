@@ -208,6 +208,17 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     setTimeout(() => window.location.assign("/"), 0);
     return { json: { ok: true } };
   }
+  // «Уведомление сотрудникам»: в демо «доходит» всем, кроме одного — видно, как выглядит предупреждение.
+  if (path === "/api/notifications/send" && method === "POST") {
+    const ids: number[] = Array.isArray(body?.userIds) ? body.userIds : [];
+    const people = state.users.filter((u) => ids.includes(u.id)).map((u) => ({ id: u.id, name: u.name || u.phone || `#${u.id}` }));
+    return {
+      json: {
+        delivered: people.slice(0, Math.max(1, people.length - 1)).map((p) => ({ ...p, channels: ["push"] })),
+        unreachable: people.length > 1 ? [{ ...people[people.length - 1], channels: [] }] : [],
+      },
+    };
+  }
   if (path === "/api/companies/me/task-bonus" && method === "PUT") {
     demoTaskBonus = Number(body?.amount) || 0;
     return { json: { taskBonus: demoTaskBonus, open: 0, credited: 0 } };

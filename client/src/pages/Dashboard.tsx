@@ -73,6 +73,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  BellRing,
   Play,
   ChevronDown,
   Camera,
@@ -107,6 +108,7 @@ import {
 
 // Шаблоны нужны только новой компании с пустым списком: грузим отдельным
 // чанком при первом открытии, а не в main-бандле каждого сотрудника.
+import { BroadcastDialog, notifiableUsers } from "@/components/BroadcastDialog";
 const TaskTemplatesDialog = lazy(() =>
   import("@/components/TaskTemplatesDialog").then((m) => ({ default: m.TaskTemplatesDialog })),
 );
@@ -189,6 +191,8 @@ export default function Dashboard() {
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // «Уведомление сотрудникам» — руководитель или админ пишет своим людям.
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
   // На телефоне фильтры живут в шторке, на экране — только кнопка.
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -889,6 +893,18 @@ export default function Dashboard() {
             )}
           <div className="header-desktop-actions">
             <span className="header-wordmark"><BrandMark onColor className="header-wordmark-mark" />TasksFlow</span>
+            {canManageTasks && (
+              <button
+                type="button"
+                className="header-broadcast"
+                onClick={() => setIsBroadcastOpen(true)}
+                aria-label="Уведомление сотрудникам"
+                title="Уведомление сотрудникам"
+                data-testid="header-broadcast"
+              >
+                <BellRing className="w-4 h-4" />
+              </button>
+            )}
             {canManageTasks && <button type="button" className="header-create ui-button" onClick={() => setLocation("/tasks/new")}><Plus className="w-4 h-4" />Создать задачу</button>}
           </div>
         </div>
@@ -914,6 +930,20 @@ export default function Dashboard() {
               >
                 <Plus className="w-5 h-5 text-primary" />
                 <span className="font-medium">Создать задачу</span>
+              </button>
+            )}
+            {canManageTasks && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsBroadcastOpen(true);
+                }}
+                data-testid="menu-broadcast"
+              >
+                <BellRing className="w-5 h-5 text-primary" />
+                <span className="font-medium">Уведомление сотрудникам</span>
               </button>
             )}
             {cabinetNav(permissions).map((item) => {
@@ -1415,6 +1445,9 @@ export default function Dashboard() {
         }}
       />
 
+      {canManageTasks && (
+        <BroadcastDialog open={isBroadcastOpen} onOpenChange={setIsBroadcastOpen} users={notifiableUsers(users, permissions.access)} />
+      )}
       {canManageTasks && templatesMounted ? (
         <Suspense fallback={null}>
           <TaskTemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />

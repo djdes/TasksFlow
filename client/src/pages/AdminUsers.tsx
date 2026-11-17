@@ -5,7 +5,8 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye, QrCode } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye, QrCode, BellRing } from "lucide-react";
+import { BroadcastDialog, notifiableUsers } from "@/components/BroadcastDialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -114,6 +115,7 @@ export default function AdminUsers() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const permissions = usePermissions();
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const canOpen = permissions.canViewUsers;
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editPhone, setEditPhone] = useState("");
@@ -394,6 +396,15 @@ export default function AdminUsers() {
                 ? "Добавляйте людей и задавайте им PIN и должность. Админов и других руководителей меняет администратор"
                 : "Ваши сотрудники: откройте кабинет, чтобы посмотреть сайт от их имени"}
           </p>
+          {permissions.canManageTasks && (
+            <div className="page-header-actions sm:ml-[60px]">
+              <Button type="button" variant="outline" size="sm" onClick={() => setBroadcastOpen(true)} data-testid="users-broadcast">
+                <BellRing className="w-4 h-4" aria-hidden />
+                Уведомление сотрудникам
+              </Button>
+              <span>Придёт на телефон и в Telegram</span>
+            </div>
+          )}
         </div>
 
         <div className={`grid grid-cols-1 ${permissions.canManageUsers ? "lg:grid-cols-2" : ""} gap-6`}>
@@ -817,6 +828,9 @@ export default function AdminUsers() {
           />
         );
       })()}
+      {permissions.canManageTasks && (
+        <BroadcastDialog open={broadcastOpen} onOpenChange={setBroadcastOpen} users={notifiableUsers(users, permissions.access)} />
+      )}
     </div>
   );
 }
