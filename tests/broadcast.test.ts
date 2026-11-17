@@ -37,20 +37,32 @@ function app(deps: any) {
 describe("broadcast()", () => {
   it("push и Telegram, без связи — отдельно; Telegram с экранированием", async () => {
     const tg = vi.fn(async () => true);
-    const push = vi.fn(async (id: number) => id === 11);
-    const r = await broadcast(boss, [anna, boris, vera], "Проверьте <задачи>", { push, telegram: tg, dashboardUrl: "https://x/dashboard" });
+    const out = (o: Partial<Record<"devices" | "sent" | "removed" | "failed" | "skipped", number>>) => ({ devices: 0, sent: 0, removed: 0, failed: 0, skipped: 0, ...o });
+    const push = vi.fn(async (id: number) => (id === 11 ? out({ devices: 1, sent: 1 }) : out({})));
+    const r = await broadcast(boss, [anna, boris, vera], "Проверьте <задачи>", { push, devices: async () => new Map(), telegram: tg, dashboardUrl: "https://x/dashboard" });
     expect(r.delivered).toEqual([
       { id: 10, name: "Анна", channels: ["telegram"] },
       { id: 11, name: "Борис", channels: ["push"] },
     ]);
-    expect(r.unreachable).toEqual([{ id: 12, name: "Вера", channels: [] }]);
+    expect(r.unreachable).toEqual([{ id: 12, name: "Вера", channels: [], reason: "no-device", telegram: false }]);
     expect(tg).toHaveBeenCalledWith(555, "📣 <b>Денис</b>\nПроверьте &lt;задачи&gt;", "https://x/dashboard");
     expect(push.mock.calls[0][1]).toMatchObject({ title: "Денис", body: "Проверьте <задачи>", url: "/dashboard" });
   });
 
   it("упавший канал не роняет рассылку", async () => {
-    const r = await broadcast(boss, [anna], "Текст", { push: async () => { throw new Error("x"); }, telegram: async () => { throw new Error("y"); }, dashboardUrl: "" });
-    expect(r.unreachable.map((u) => u.id)).toEqual([10]);
+    const r = await broadcast(boss, [anna], "Текст", { push: async () => { throw new Error("x"); }, devices: async () => new Map(), telegram: async () => { throw new Error("y"); }, dashboardUrl: "" });
+    expect(r.unreachable.map((u) => [u.id, u.reason])).toEqual([[10, "push-failed"]]);
+  });
+});
+
+describe("reasonOf — почему не дошло", () => {
+  it("нет устройств, отписалось, сервис не принял, транспорт выключен", async () => {
+    const { reasonOf } = await import("../shared/broadcast");
+    const o = { devices: 0, sent: 0, removed: 0, failed: 0, skipped: 0 };
+    expect(reasonOf(o)).toBe("no-device");
+    expect(reasonOf({ ...o, devices: 1, removed: 1 })).toBe("device-gone");
+    expect(reasonOf({ ...o, devices: 2, removed: 1, failed: 1 })).toBe("push-failed");
+    expect(reasonOf({ ...o, devices: 1, skipped: 1 })).toBe("push-off");
   });
 });
 
@@ -65,7 +77,12 @@ describe("canNotify", () => {
 });
 
 describe("POST /api/notifications/send", () => {
-  const deps = { push: vi.fn(async () => true), telegram: null, dashboardUrl: "" };
+  const deps = {
+    push: vi.fn(async () => ({ devices: 1, sent: 1, removed: 0, failed: 0, skipped: 0 })),
+    devices: vi.fn(async () => new Map([[10, 2]])),
+    telegram: null,
+    dashboardUrl: "",
+  };
   beforeEach(() => {
     resetBroadcastLimit();
     deps.push.mockClear();
@@ -81,6 +98,21 @@ describe("POST /api/notifications/send", () => {
     expect(res.status).toBe(200);
     expect(res.body.delivered.map((u: any) => u.id)).toEqual([10, 11]);
     expect(deps.push).toHaveBeenCalledTimes(2);
+  });
+
+  it("reach: у кого сколько устройств и Telegram — только свои люди", async () => {
+    const admin = await request(app(deps)).get("/api/notifications/reach");
+    expect(admin.status).toBe(200);
+    expect(admin.body).toEqual([
+      { id: 2, devices: 0, telegram: false },
+      { id: 10, devices: 2, telegram: true },
+      { id: 11, devices: 0, telegram: false },
+      { id: 12, devices: 0, telegram: false },
+    ]);
+    const lead = await request(app(deps)).get("/api/notifications/reach").set("x-user", "2");
+    expect(lead.body.map((r: any) => r.id)).toEqual([10]);
+    const worker = await request(app(deps)).get("/api/notifications/reach").set("x-user", "10");
+    expect(worker.status).toBe(403);
   });
 
   it("руководитель — только своим", async () => {

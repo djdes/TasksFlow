@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { fetchOrFriendlyError } from "@/lib/queryClient";
 import { BellRing, CheckCircle2, Search, Send, TriangleAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { filterPickerUsers, type PickerUser } from "@/components/WorkerPicker";
 import { apiRequest } from "@/lib/queryClient";
 import { plural } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { BROADCAST_PRESETS, BROADCAST_TEXT_MAX, type BroadcastResult } from "@shared/broadcast";
+import { BROADCAST_PRESETS, BROADCAST_TEXT_MAX, REASON_TEXT, type BroadcastReach, type BroadcastResult } from "@shared/broadcast";
 import { canAssignTo, type UserAccess } from "@shared/roles";
 
 const nameOf = (u: PickerUser) => u.name || u.phone || `#${u.id}`;
@@ -47,6 +48,22 @@ export function BroadcastDialog({
   }, [open]);
 
   const visible = useMemo(() => filterPickerUsers(users, query), [users, query]);
+  // Как каждый получает уведомления — видно до отправки.
+  const reachQuery = useQuery<BroadcastReach[]>({
+    queryKey: ["/api/notifications/reach"],
+    enabled: open,
+    staleTime: 30_000,
+    queryFn: async ({ signal }) => {
+      const res = await fetchOrFriendlyError("/api/notifications/reach", { credentials: "include", signal });
+      if (!res.ok) throw new Error("reach");
+      return res.json();
+    },
+  });
+  const reach = useMemo(() => new Map((reachQuery.data ?? []).map((r) => [r.id, r])), [reachQuery.data]);
+  const silent = ids.filter((id) => {
+    const r = reach.get(id);
+    return r && r.devices === 0 && !r.telegram;
+  }).length;
   const allSelected = users.length > 0 && ids.length === users.length;
   const toggle = (id: number) => setIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
@@ -93,15 +110,18 @@ export function BroadcastDialog({
               <div className="broadcast-result-block is-warn" data-testid="broadcast-unreachable">
                 <p>
                   <TriangleAlert aria-hidden />
-                  Не дошло: {result.unreachable.length} — уведомления не включены
+                  Не дошло: {result.unreachable.length}
                 </p>
                 <ul>
                   {result.unreachable.map((u) => (
-                    <li key={u.id}>{u.name}</li>
+                    <li key={u.id}>
+                      {u.name}
+                      {u.reason && <small>— {REASON_TEXT[u.reason]}</small>}
+                    </li>
                   ))}
                 </ul>
                 <small>
-                  Скажите им лично. Чтобы приходило: на iPhone — добавить TasksFlow на экран «Домой» и включить уведомления в «Мой аккаунт»; на любом телефоне — привязать Telegram-бота.
+                  Разрешения в настройках телефона мало: сотруднику нужно открыть TasksFlow → «Мой аккаунт» → «Уведомления» → «Включить» (на iPhone — сначала добавить TasksFlow на экран «Домой»). Надёжнее всего — привязать Telegram-бота там же. Сейчас скажите им лично.
                 </small>
               </div>
             )}
@@ -163,13 +183,20 @@ export function BroadcastDialog({
                       >
                         <CheckMark checked={checked} />
                         <span className="worker-picker-name">{nameOf(u)}</span>
-                        {u.position && <span className="worker-picker-pos">{u.position}</span>}
+                        <ReachTag reach={reach.get(u.id)} />
                       </button>
                     );
                   })
                 )}
               </div>
             </div>
+
+            {silent > 0 && (
+              <p className="broadcast-silent" role="status">
+                <TriangleAlert aria-hidden />
+                {silent === 1 ? "У одного из выбранных" : `У ${silent} из выбранных`} уведомления не включены — им не придёт.
+              </p>
+            )}
 
             <div className="broadcast-presets" role="group" aria-label="Готовые тексты">
               {BROADCAST_PRESETS.map((p) => (
@@ -213,4 +240,12 @@ export function BroadcastDialog({
 export function notifiableUsers<T extends PickerUser>(users: readonly T[], access: UserAccess | null): T[] {
   if (!access || (!access.isAdmin && !access.manageTasks)) return [];
   return users.filter((u) => u.id !== access.userId && canAssignTo(access, u.id));
+}
+
+/** «📱 2 · Telegram» / «нет уведомлений» у человека в списке «Кому». */
+function ReachTag({ reach }: { reach: BroadcastReach | undefined }) {
+  if (!reach) return null;
+  if (reach.devices === 0 && !reach.telegram) return <span className="broadcast-reach is-off">нет уведомлений</span>;
+  const parts = [reach.devices > 0 ? (reach.devices === 1 ? "телефон" : `устройств: ${reach.devices}`) : null, reach.telegram ? "Telegram" : null].filter(Boolean);
+  return <span className="broadcast-reach">{parts.join(" · ")}</span>;
 }

@@ -215,7 +215,7 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     return {
       json: {
         delivered: people.slice(0, Math.max(1, people.length - 1)).map((p) => ({ ...p, channels: ["push"] })),
-        unreachable: people.length > 1 ? [{ ...people[people.length - 1], channels: [] }] : [],
+        unreachable: people.length > 1 ? [{ ...people[people.length - 1], channels: [], reason: "no-device", telegram: false }] : [],
       },
     };
   }

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { ApiError, apiRequest, fetchOrFriendlyError, isTransientApiError, withTimeout } from "@/lib/queryClient";
-import { forgetThisDevice } from "@/lib/push";
+import { forgetThisDevice, syncPushSubscription } from "@/lib/push";
 import { setAppBadge } from "@/lib/pwa";
 import type { UserAccess } from "@shared/roles";
 import type { NotifyPrefs } from "@shared/notify";
@@ -78,6 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: (failureCount, error) => failureCount < 3 && isTransientApiError(error),
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
   });
+
+  // Уведомления «включены», а сервер подписку потерял — тихо восстановить.
+  // В режиме «вошёл как» не трогаем: подписка этого телефона — не того человека.
+  const syncUserId = user && !user.impersonation ? user.id : null;
+  useEffect(() => {
+    if (!syncUserId) return;
+    void syncPushSubscription(syncUserId).catch(() => {});
+  }, [syncUserId]);
 
   // Мутация для логина
   const loginMutation = useMutation({

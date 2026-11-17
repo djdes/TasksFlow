@@ -101,6 +101,46 @@ export async function enablePush(): Promise<void> {
   await json("/api/push/subscriptions", { method: "POST", body: { kind: "web", subscription: sub.toJSON() } });
 }
 
+const SYNC_KEY = "tf_push_synced";
+const SYNC_EVERY_MS = 6 * 3600 * 1000;
+
+/**
+ * Тихо напомнить серверу подписку этого устройства — при каждом входе в
+ * кабинет, не чаще раза в 6 часов. Уведомления в телефоне разрешены, а
+ * сервер подписку потерял (устройство на время отписалось, общий планшет
+ * перешёл к другому, ошибки доставки) — человек считает, что «всё
+ * включено», а ничего не приходит. Разрешение уже дано — нового вопроса
+ * браузер не задаёт; не дано — ничего не делаем.
+ */
+export async function syncPushSubscription(userId: number): Promise<void> {
+  if (pushSupport() !== "web" || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try {
+    const last = JSON.parse(localStorage.getItem(SYNC_KEY) || "null") as { userId: number; at: number } | null;
+    if (last && last.userId === userId && Date.now() - last.at < SYNC_EVERY_MS) return;
+  } catch {
+    /* битое значение — синхронизируем */
+  }
+  const config = await json<PushConfig>("/api/push/config");
+  if (!config.web.enabled || !config.web.publicKey) return;
+  const reg = await swRegistration();
+  if (!reg) return;
+  await navigator.serviceWorker.ready;
+  const key = base64UrlToBytes(config.web.publicKey);
+  let sub = await reg.pushManager.getSubscription();
+  const current = sub?.options?.applicationServerKey;
+  if (sub && current && new Uint8Array(current).join() !== key.join()) {
+    await sub.unsubscribe().catch(() => {});
+    sub = null;
+  }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as BufferSource });
+  await json("/api/push/subscriptions", { method: "POST", body: { kind: "web", subscription: sub.toJSON() } });
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ userId, at: Date.now() }));
+  } catch {
+    /* приватный режим — синхронизируем при следующем входе */
+  }
+}
+
 /** Выключить на этом устройстве. Сервер забывает подписку, браузер — тоже. */
 export async function disablePush(): Promise<void> {
   const support = pushSupport();
@@ -109,6 +149,11 @@ export async function disablePush(): Promise<void> {
     localStorage.removeItem(NATIVE_FLAG);
     if (token) await json("/api/push/subscriptions", { method: "DELETE", body: { token } });
     return;
+  }
+  try {
+    localStorage.removeItem(SYNC_KEY);
+  } catch {
+    /* нет хранилища — не страшно */
   }
   const reg = await swRegistration();
   const sub = await reg?.pushManager.getSubscription();

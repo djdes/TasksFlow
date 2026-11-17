@@ -38,11 +38,12 @@ async (page) => {
       if (p === '/api/companies/me') return route.fulfill({ json: { id: 1, name: 'Кафе', planInfo: { id: 'team', name: 'Стандарт', maxUsers: 30, locations: false, until: null, enforced: true }, photo: { stamp: true, cameraOnly: false }, wesetupConfigured: false, taskBonus: 0 } });
       if (p === '/api/tasks') return route.fulfill({ json: [task] });
       if (p === '/api/roles') return route.fulfill({ json: { roles: [], employeeApproval: false } });
+      if (p === '/api/notifications/reach') return route.fulfill({ json: people.filter((u) => u.id !== me.id).map((u) => ({ id: u.id, devices: u.id === 3 ? 1 : 0, telegram: u.id === 4 })) });
       if (p === '/api/notifications/send') {
         const pick = people.filter((u) => body.userIds.includes(u.id));
-        return route.fulfill({ json: { delivered: pick.slice(0, -1).map((u) => ({ id: u.id, name: u.name, channels: u.id === 3 ? ['push', 'telegram'] : ['push'] })), unreachable: pick.slice(-1).map((u) => ({ id: u.id, name: u.name, channels: [] })) } });
+        return route.fulfill({ json: { delivered: pick.slice(0, -1).map((u) => ({ id: u.id, name: u.name, channels: u.id === 3 ? ['push', 'telegram'] : ['push'] })), unreachable: pick.slice(-1).map((u) => ({ id: u.id, name: u.name, channels: [], reason: 'no-device', telegram: false })) } });
       }
-      if (p === '/api/push/config') return route.fulfill({ json: { web: { enabled: false, publicKey: null }, apns: { enabled: false } } });
+      if (p === '/api/push/config') return route.fulfill({ json: { web: { enabled: true, publicKey: 'BCYEmp1hk_80I1M2-FtEbDgNzXdPmkQ-c3FH5a7f2hYvmuWLhZQxB1T6n9A0JP-uq86Ij54jVi8mOZ9BeeS-6LM' }, apns: { enabled: false } } });
       if (p === '/api/me/telegram') return route.fulfill({ json: { connected: false, botConfigured: false } });
       if (p === '/api/app/info') return route.fulfill({ json: { android: { apk: null, playUrl: null, rustoreUrl: null }, ios: { appStoreUrl: null } } });
       if (p === '/api/events') return route.fulfill({ status: 204, body: '' });
@@ -63,8 +64,14 @@ async (page) => {
       check(await dialog.getByRole('checkbox', { name: 'Денис' }).count() === 0, 'себе писать нельзя');
       check(await dialog.getByRole('checkbox').count() === 4, `админ видит ${await dialog.getByRole('checkbox').count()}, ждали 4`);
       check(await dialog.getByTestId('broadcast-send').isDisabled(), 'отправка без людей и текста');
+      // Состояние связи видно заранее: у Веры нет уведомлений.
+      const vera = dialog.getByRole('checkbox', { name: 'Вера' });
+      await vera.locator('.broadcast-reach.is-off').waitFor();
+      check((await dialog.getByRole('checkbox', { name: 'Анна' }).innerText()).includes('телефон'), 'у Анны не видно телефона');
+      check((await dialog.getByRole('checkbox', { name: 'Борис' }).innerText()).includes('Telegram'), 'у Бориса не видно Telegram');
       await dialog.getByTestId('broadcast-all').click();
       await dialog.getByRole('button', { name: 'Проверьте невыполненные задачи перед уходом' }).click();
+      check((await dialog.innerText()).includes('уведомления не включены — им не придёт'), 'нет предупреждения до отправки');
       check(await dialog.getByTestId('broadcast-text').inputValue() === 'Проверьте невыполненные задачи перед уходом', 'заготовка не подставилась');
       await tab.screenshot({ path: `${shots}/broadcast-admin-1280.png` });
       await dialog.getByTestId('broadcast-send').click();
@@ -73,6 +80,7 @@ async (page) => {
       check(JSON.stringify(sent?.body) === JSON.stringify({ userIds: [2, 3, 4, 5], text: 'Проверьте невыполненные задачи перед уходом' }), `тело ${JSON.stringify(sent?.body)}`);
       check((await dialog.innerText()).includes('Дошло: 3 человека'), 'нет итога «Дошло»');
       check((await dialog.getByTestId('broadcast-unreachable').innerText()).includes('Вера'), 'нет «Не дошло: Вера»');
+      check((await dialog.getByTestId('broadcast-unreachable').innerText()).includes('уведомления TasksFlow на телефоне не включены'), 'нет причины «не дошло»');
       await tab.screenshot({ path: `${shots}/broadcast-result-1280.png` });
       await dialog.getByRole('button', { name: 'Готово', exact: true }).click();
       await dialog.waitFor({ state: 'hidden' });
@@ -88,6 +96,12 @@ async (page) => {
     try {
       await tab.goto(base + '/dashboard');
       await tab.locator('button[aria-expanded]').first().click();
+      // В меню — настоящий переключатель уведомлений, отдельно от звука.
+      const pushToggle = tab.getByTestId('menu-push-toggle');
+      await pushToggle.waitFor();
+      check((await pushToggle.innerText()).includes('Уведомления на телефоне'), `${name}: нет переключателя уведомлений`);
+      check(await tab.getByRole('switch', { name: 'Звук и вибрация при «Готово»' }).count() === 1, `${name}: звук не переименован`);
+      await tab.screenshot({ path: `${shots}/broadcast-menu-${name}.png` });
       await tab.getByTestId('menu-broadcast').click();
       const dialog = tab.getByTestId('broadcast-dialog');
       await dialog.waitFor();

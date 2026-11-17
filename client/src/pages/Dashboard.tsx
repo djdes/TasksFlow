@@ -47,6 +47,7 @@ import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
 import { MotionToggle } from "@/components/MotionToggle";
+import { PushMenuToggle } from "@/components/PushMenuToggle";
 import { ReadingToggles } from "@/components/ReadingToggles";
 import { QueryError } from "@/components/QueryError";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -974,6 +975,7 @@ export default function Dashboard() {
             <div className="dropdown-divider" />
             <ReadingToggles />
             <MotionToggle />
+            <PushMenuToggle onNavigate={() => setIsMenuOpen(false)} />
             <FeedbackToggle />
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой

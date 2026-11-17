@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import type { User } from "@shared/schema";
-import { broadcastInputSchema, type BroadcastChannel, type BroadcastRecipient, type BroadcastResult } from "@shared/broadcast";
+import { broadcastInputSchema, reasonOf, type BroadcastChannel, type BroadcastReach, type BroadcastRecipient, type BroadcastResult } from "@shared/broadcast";
 import { canAssignTo, type UserAccess } from "@shared/roles";
 import type { PushMessage } from "@shared/push";
 import { storage } from "../storage";
 import { accessOf } from "../access";
-import { sendToUsers } from "../push";
+import { sendToUsers, type PushOutcome } from "../push";
+import { pushStore } from "../push/store";
 import { getTelegramRuntime } from "../telegram";
 import { escapeHtml } from "../telegram/util";
 import { getPublicTasksflowBaseUrl } from "../public-urls";
@@ -13,7 +14,9 @@ import { logger } from "../logger";
 import { requireAuth } from "./common";
 
 export type BroadcastDeps = {
-  push: (userId: number, message: PushMessage) => Promise<boolean>;
+  push: (userId: number, message: PushMessage) => Promise<PushOutcome>;
+  /** Сколько устройств подписано у каждого (для списка «Кому»). */
+  devices: (userIds: number[]) => Promise<Map<number, number>>;
   telegram: ((chatId: number, html: string, url: string) => Promise<boolean>) | null;
   dashboardUrl: string;
 };
@@ -37,9 +40,13 @@ export async function broadcast(sender: Pick<User, "id" | "name" | "phone">, tar
     await Promise.all(
       targets.slice(i, i + 8).map(async (u) => {
         const channels: BroadcastChannel[] = [];
-        if (await deps.push(u.id, message).catch(() => false)) channels.push("push");
+        // Отправка упала целиком — считаем «сервис не принял», а не «нет телефона».
+        const none = { devices: 1, sent: 0, removed: 0, failed: 1, skipped: 0 };
+        const outcome = await deps.push(u.id, message).catch(() => none);
+        if (outcome.sent > 0) channels.push("push");
         if (deps.telegram && linked(u) && (await deps.telegram(Number(u.tgChatId), html, deps.dashboardUrl).catch(() => false))) channels.push("telegram");
-        (channels.length ? delivered : unreachable).push({ id: u.id, name: nameOf(u), channels });
+        if (channels.length) delivered.push({ id: u.id, name: nameOf(u), channels });
+        else unreachable.push({ id: u.id, name: nameOf(u), channels, reason: reasonOf(outcome), telegram: linked(u) });
       }),
     );
   }
@@ -50,7 +57,12 @@ export async function broadcast(sender: Pick<User, "id" | "name" | "phone">, tar
 function defaultDeps(): BroadcastDeps {
   const runtime = getTelegramRuntime();
   return {
-    push: async (userId, message) => (await sendToUsers([userId], message)).sent > 0,
+    push: (userId, message) => sendToUsers([userId], message),
+    devices: async (userIds) => {
+      const map = new Map<number, number>();
+      for (const s of await pushStore.listForUsers(userIds)) map.set(s.userId, (map.get(s.userId) ?? 0) + 1);
+      return map;
+    },
     telegram: runtime
       ? async (chatId, html, url) => {
           await runtime.client.sendMessage({
@@ -90,6 +102,24 @@ export function resetBroadcastLimit() {
 }
 
 export function registerBroadcastRoutes(app: Express, deps: () => BroadcastDeps = defaultDeps) {
+  // Как каждый из «своих» получает уведомления — до отправки, в списке «Кому».
+  app.get("/api/notifications/reach", requireAuth, async (req, res) => {
+    try {
+      if (req.apiKey) return res.status(403).json({ message: "Недоступно по API-ключу" });
+      const me = await storage.getUserById(req.session.userId!);
+      if (!me?.companyId) return res.status(403).json({ message: "Нет доступа" });
+      const access = await accessOf(me);
+      if (!access.isAdmin && !access.manageTasks) return res.status(403).json({ message: "Нет доступа" });
+      const targets = (await storage.getAllUsers(me.companyId)).filter((u) => canNotify(access, u));
+      const devices = await deps().devices(targets.map((u) => u.id));
+      const reach: BroadcastReach[] = targets.map((u) => ({ id: u.id, devices: devices.get(u.id) ?? 0, telegram: linked(u) }));
+      res.json(reach);
+    } catch (err) {
+      logger.error({ err: err instanceof Error ? err.message : String(err) }, "[broadcast] reach");
+      res.status(500).json({ message: "Не удалось узнать, у кого включены уведомления" });
+    }
+  });
+
   app.post("/api/notifications/send", requireAuth, async (req, res) => {
     try {
       // Только из кабинета: по API-ключу рассылки закрыты, как push и Telegram.
@@ -115,7 +145,13 @@ export function registerBroadcastRoutes(app: Express, deps: () => BroadcastDeps 
 
       const result = await broadcast(me, targets, text, deps());
       logger.info(
-        { from: me.id, company: me.companyId, to: targets.length, delivered: result.delivered.length, unreachable: result.unreachable.length },
+        {
+          from: me.id,
+          company: me.companyId,
+          to: targets.length,
+          delivered: result.delivered.length,
+          unreachable: result.unreachable.map((u) => `${u.id}:${u.reason}`).join(","),
+        },
         "[broadcast] уведомление разослано",
       );
       res.json(result);
