@@ -118,7 +118,7 @@ async (page) => {
       // Аккаунт в панели — один: блок с именем внизу, он и подсвечен.
       check(await sidebar.locator('a[href="/account"]').count() === 1, 'single account link in sidebar');
       check(await sidebar.getByRole('link', { name: /^Мой аккаунт:/ }).getAttribute('aria-current') === 'page', 'account block current on /account');
-      await tab.getByRole('switch', { name: 'Звук и вибрация' }).waitFor();
+      await tab.getByRole('switch', { name: 'Звук и вибрация при «Готово»' }).waitFor();
       check(await tab.getByText('Что-то пошло не так').count() === 0, 'account page crashed');
       // Сотрудник по имени, стрелки и Enter.
       await tab.keyboard.press('Control+k');
@@ -304,7 +304,7 @@ async (page) => {
       const sheet = tab.getByRole('dialog');
       await sheet.getByRole('button', { name: 'Тариф и оплата' }).waitFor();
       await sheet.getByRole('button', { name: 'Root: компании и тарифы' }).waitFor();
-      check(await sheet.getByRole('switch', { name: 'Звук и вибрация' }).count() === 1, 'sound toggle missing in mobile menu');
+      check(await sheet.getByRole('switch', { name: 'Звук и вибрация при «Готово»' }).count() === 1, 'sound toggle missing in mobile menu');
       await sheet.getByRole('button', { name: 'Сотрудники' }).click();
       await tab.waitForURL('**/admin/users');
       check(await tab.evaluate(() => document.querySelector('#root').scrollWidth <= innerWidth), 'overflow at 390');

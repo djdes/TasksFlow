@@ -197,7 +197,7 @@ describe("рассылка", () => {
       web,
       apns,
     });
-    expect(result).toEqual({ sent: 1, removed: 1 });
+    expect(result).toEqual({ devices: 3, sent: 1, removed: 1, failed: 1, skipped: 0 });
     expect(store.listForUsers).toHaveBeenCalledWith([10]);
     expect(web).toHaveBeenCalledTimes(2);
     const payload = JSON.parse((web.mock.calls[0] as unknown as [unknown, string])[1]);
@@ -210,7 +210,7 @@ describe("рассылка", () => {
 
   it("без транспортов ничего не читает из БД", async () => {
     const store = fakeStore([]);
-    expect(await sendToUsers([10], { title: "t", body: "b", url: "/" }, { store, web: null, apns: null })).toEqual({ sent: 0, removed: 0 });
+    expect(await sendToUsers([10], { title: "t", body: "b", url: "/" }, { store, web: null, apns: null })).toEqual({ devices: 0, sent: 0, removed: 0, failed: 0, skipped: 0 });
     expect(store.listForUsers).not.toHaveBeenCalled();
   });
 

@@ -35,6 +35,7 @@ import { registerInvitationRoutes } from "./routes/invitations";
 import { registerApiKeyRoutes } from "./routes/api-keys";
 import { registerWesetupRoutes } from "./routes/wesetup";
 import { registerAdminToolRoutes } from "./routes/admin-tools";
+import { registerBroadcastRoutes } from "./routes/broadcast";
 import { guardImpersonation, registerImpersonationRoutes } from "./impersonation";
 
 // Маршруты кабинета и API по разделам — server/routes/*.ts. Порядок вызовов ниже —
@@ -140,6 +141,8 @@ export async function registerRoutes(
   registerWesetupRoutes(app);
 
   registerAdminToolRoutes(app);
+
+  registerBroadcastRoutes(app);
 
   // История выполнения и отчёты (server/history-routes.ts).
   registerHistoryRoutes(app, { requireAuthOrApiKey, getCompanyIdFromReq });

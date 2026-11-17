@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useUsers } from "@/hooks/use-users";
 import { useTasks, useDeleteTask, useCompleteTask, useUncompleteTask } from "@/hooks/use-tasks";
+import { useBonusGain } from "@/hooks/use-bonus-gain";
 import { useStreak } from "@/hooks/use-streak";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,7 @@ import { useWesetupConfiguration } from "@/hooks/use-wesetup";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { Portal } from "@/components/Portal";
 import { MotionToggle } from "@/components/MotionToggle";
+import { PushMenuToggle } from "@/components/PushMenuToggle";
 import { ReadingToggles } from "@/components/ReadingToggles";
 import { QueryError } from "@/components/QueryError";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -72,6 +74,8 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  BellRing,
+  Play,
   ChevronDown,
   Camera,
   Check,
@@ -105,6 +109,7 @@ import {
 
 // Шаблоны нужны только новой компании с пустым списком: грузим отдельным
 // чанком при первом открытии, а не в main-бандле каждого сотрудника.
+import { BroadcastDialog, notifiableUsers } from "@/components/BroadcastDialog";
 const TaskTemplatesDialog = lazy(() =>
   import("@/components/TaskTemplatesDialog").then((m) => ({ default: m.TaskTemplatesDialog })),
 );
@@ -187,6 +192,8 @@ export default function Dashboard() {
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // «Уведомление сотрудникам» — руководитель или админ пишет своим людям.
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [isBonusInfoOpen, setIsBonusInfoOpen] = useState(false);
   // На телефоне фильтры живут в шторке, на экране — только кнопка.
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -221,6 +228,8 @@ export default function Dashboard() {
   // Все хуки должны быть до любых условных операций
   const deleteTask = useDeleteTask();
   const completeTask = useCompleteTask();
+  // Прибавка премии для анимации у баланса в шапке.
+  const bonusGain = useBonusGain(user && !user.isAdmin ? ((user as { bonusBalance?: number }).bonusBalance ?? 0) : null);
   const uncompleteTask = useUncompleteTask();
 
   useEffect(() => {
@@ -394,6 +403,14 @@ export default function Dashboard() {
     ),
   );
 
+  // Сотруднику: что ещё сделать сегодня, самое срочное первым (не сделано и не на проверке).
+  const workerTodo = simple
+    ? sortByUrgency(
+        scopeFilteredTasks.filter(
+          (t) => !t.isCompleted && (t as { verificationStatus?: string | null }).verificationStatus !== "submitted",
+        ) as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[],
+      )
+    : [];
   const completedCount = filteredTasks.filter(t => t.isCompleted).length;
   const totalCount = filteredTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -589,8 +606,15 @@ export default function Dashboard() {
       {
         onSuccess: (done) => {
           const submitted = (done as { verificationStatus?: string | null }).verificationStatus === "submitted";
+          const price = (done as { price?: number | null }).price ?? 0;
           toast({
-            title: submitted ? "Отправлено руководителю" : "Готово",
+            title: submitted ? "Отправлено руководителю" : price > 0 ? `Готово · премия +${price} ₽` : "Готово",
+            description:
+              price > 0
+                ? submitted
+                  ? `Премия +${price} ₽ — после проверки`
+                  : `На балансе ${((user as { bonusBalance?: number } | null)?.bonusBalance ?? 0) + price} ₽`
+                : undefined,
             duration: 5000,
             action: (
               <ToastAction altText="Отменить выполнение" onClick={() => uncompleteTask.mutate(taskId)} data-testid="undo-complete">
@@ -849,24 +873,39 @@ export default function Dashboard() {
               как нажимаемое. Меняем на <button>, чтобы VoiceOver/TalkBack
               корректно произносили «кнопка, подробнее о премии», а
               Tab/Enter работали для пользователей без мыши. */}
-          {/* Премия в шапке — только если она вообще релевантна сотруднику:
-              есть начисленный баланс ИЛИ есть задача с премией (price>0).
-              Нет задач с премией и баланс 0 → блок не показываем. */}
-          {!user.isAdmin &&
-            (((user as any).bonusBalance ?? 0) > 0 ||
-              tasks.some((t) => ((t.price as number | null | undefined) ?? 0) > 0)) && (
+          {/* Баланс премии сотрудника — всегда, даже 0 ₽: видно, что копится. */}
+          {!user.isAdmin && (
               <button
                 type="button"
-                className="bonus-badge"
+                className={`bonus-badge${bonusGain ? " bonus-badge--gain" : ""}`}
                 onClick={() => setIsBonusInfoOpen(true)}
+                data-testid="bonus-badge"
                 aria-label="Премия — подробнее"
               >
                 <Coins className="w-5 h-5 text-yellow-300" />
-                <span className="bonus-badge-text">{(user as any).bonusBalance ?? 0} ₽</span>
+                <span className="bonus-badge-text" key={bonusGain?.key ?? "balance"}>{(user as any).bonusBalance ?? 0} ₽</span>
+                {/* Выполнил задачу с премией — «+30 ₽» взлетает над балансом. */}
+                {bonusGain && (
+                  <span className="bonus-gain" key={bonusGain.key} role="status" data-testid="bonus-gain">
+                    +{bonusGain.gain} ₽
+                  </span>
+                )}
               </button>
             )}
           <div className="header-desktop-actions">
             <span className="header-wordmark"><BrandMark onColor className="header-wordmark-mark" />TasksFlow</span>
+            {canManageTasks && (
+              <button
+                type="button"
+                className="header-broadcast"
+                onClick={() => setIsBroadcastOpen(true)}
+                aria-label="Уведомление сотрудникам"
+                title="Уведомление сотрудникам"
+                data-testid="header-broadcast"
+              >
+                <BellRing className="w-4 h-4" />
+              </button>
+            )}
             {canManageTasks && <button type="button" className="header-create ui-button" onClick={() => setLocation("/tasks/new")}><Plus className="w-4 h-4" />Создать задачу</button>}
           </div>
         </div>
@@ -892,6 +931,20 @@ export default function Dashboard() {
               >
                 <Plus className="w-5 h-5 text-primary" />
                 <span className="font-medium">Создать задачу</span>
+              </button>
+            )}
+            {canManageTasks && (
+              <button
+                type="button"
+                className="dropdown-item w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsBroadcastOpen(true);
+                }}
+                data-testid="menu-broadcast"
+              >
+                <BellRing className="w-5 h-5 text-primary" />
+                <span className="font-medium">Уведомление сотрудникам</span>
               </button>
             )}
             {cabinetNav(permissions).map((item) => {
@@ -922,6 +975,7 @@ export default function Dashboard() {
             <div className="dropdown-divider" />
             <ReadingToggles />
             <MotionToggle />
+            <PushMenuToggle onNavigate={() => setIsMenuOpen(false)} />
             <FeedbackToggle />
             {/* Тема — доступно ВСЕМ сотрудникам, не только админу.
                 Лежит между общим разделом и Выходом, чтобы любой
@@ -985,26 +1039,38 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        {/* Сотруднику — только дата на подложке: без полосы прогресса и
-            «осталось N из M» (просьба владельца 06.11.2026), сразу задачи. */}
+        {/* Сотруднику сразу ясно, что делать сегодня: сколько задач на сегодня
+            и кнопка «Начните с…» — самая срочная. Без полосы прогресса и
+            «осталось N из M» (просьба владельца 06.11.2026). */}
         {simple && (
           <div className="worker-day-row">
-            <h2 className="worker-day">
-              {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+            <h2 className="worker-day" data-testid="worker-today-title">
+              {workerTodo.length > 0
+                ? `Сегодня · ${workerTodo.length} ${plural(workerTodo.length, "задача", "задачи", "задач")}`
+                : tasks.length > 0
+                  ? "Сегодня всё сделано"
+                  : new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
             </h2>
             {/* «Слушать список»: задачи на сегодня вслух, по срочности. */}
-            <SpeakButton
-              compact
-              label="Слушать список"
-              text={listSpeechText(
-                sortByUrgency(
-                  scopeFilteredTasks.filter(
-                    (t) => !t.isCompleted && (t as { verificationStatus?: string | null }).verificationStatus !== "submitted",
-                  ) as (typeof tasks[0] & { dueDate?: number | null; remindAt?: string | null })[],
-                ).map((t) => t.title),
-              )}
-            />
+            <SpeakButton compact label="Слушать список" text={listSpeechText(workerTodo.map((t) => t.title))} />
           </div>
+        )}
+        {simple && workerTodo.length > 0 && !searchQuery && (
+          <button
+            type="button"
+            className="worker-start"
+            onClick={() => handleTaskClick(workerTodo[0])}
+            data-testid="worker-start"
+          >
+            <span className="worker-start-icon" aria-hidden>
+              <Play className="w-5 h-5" fill="currentColor" />
+            </span>
+            <span className="worker-start-text">
+              <small>Начните с этой задачи</small>
+              <b>{workerTodo[0].title}</b>
+            </span>
+            <ChevronRight className="worker-start-arrow" aria-hidden />
+          </button>
         )}
 
         {/* «На проверке» баннер — для админа/руководителя. Раньше
@@ -1381,6 +1447,9 @@ export default function Dashboard() {
         }}
       />
 
+      {canManageTasks && (
+        <BroadcastDialog open={isBroadcastOpen} onOpenChange={setIsBroadcastOpen} users={notifiableUsers(users, permissions.access)} />
+      )}
       {canManageTasks && templatesMounted ? (
         <Suspense fallback={null}>
           <TaskTemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />

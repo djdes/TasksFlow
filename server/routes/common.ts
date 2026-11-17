@@ -16,6 +16,7 @@ import { companyPlan, planLimitsEnforced } from "../plan-limits";
 import { type TaskActor } from "../services/task-actor";
 import { accessOf } from "../access";
 import { canAssignTo, isTaskAdmin, parseAccessSettings, type AccessRole } from "@shared/roles";
+import { parseTaskBonus } from "@shared/task-bonus";
 
 // Настройка загрузки файлов
 export const uploadsDir = path.join(process.cwd(), "uploads");
@@ -335,6 +336,8 @@ export function toPublicCompany(company: Company, withSecrets: boolean) {
     wesetupConfigured,
     // Выполненное сотрудником уходит на проверку (shared/roles.ts).
     employeeApproval: parseAccessSettings(accessSettings).employeeApproval,
+    // Премия за задачу по умолчанию (shared/task-bonus.ts), 0 — выключено.
+    taskBonus: parseTaskBonus(accessSettings),
   };
 }
 

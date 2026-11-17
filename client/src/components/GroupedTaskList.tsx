@@ -411,12 +411,6 @@ export function GroupedTaskList(props: Props) {
                   <span>{checklistDone}/{checklistTotal}</span>
                 </div>
               )}
-              {hasPrice && (
-                <div className="task-badge price">
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>+{priceValue} ₽</span>
-                </div>
-              )}
               {journalBonus !== null && !hasPrice && (
                 <div className="task-badge bonus" title="Премия за журнал">
                   <Sparkles className="w-3.5 h-3.5" />
@@ -473,6 +467,21 @@ export function GroupedTaskList(props: Props) {
               </div>
             )}
           </div>
+
+          {/* Премия — справа, крупно: видно, сколько принесёт задача. Выполнена —
+              «получено», на проверке — придёт после «Принять». */}
+          {hasPrice && (
+            <span
+              className={`task-reward${isCompleted ? " task-reward--earned" : isSubmitted ? " task-reward--wait" : ""}`}
+              title={isCompleted ? `Премия ${priceValue} ₽ начислена` : isSubmitted ? `Премия ${priceValue} ₽ — после проверки` : `Премия за выполнение: ${priceValue} ₽`}
+              aria-label={isCompleted ? `Премия ${priceValue} рублей начислена` : `Премия ${priceValue} рублей`}
+              data-testid="task-reward"
+            >
+              {isCompleted ? <Check className="task-reward-icon" strokeWidth={3} aria-hidden /> : <Coins className="task-reward-icon" aria-hidden />}
+              <span className="task-reward-sum">+{priceValue}</span>
+              <span className="task-reward-cur">₽</span>
+            </span>
+          )}
 
           {examplePhoto && <img className="task-thumb" src={examplePhoto} alt="" loading="lazy" decoding="async" />}
 

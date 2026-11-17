@@ -235,6 +235,11 @@ async (page) => {
       check(!(await consent.isChecked()), 'recurring consent checked by default');
       check(await tab.locator('.billing-consent a').getAttribute('href') === '/offer#avtoprodlenie', 'consent link');
       check(await tab.locator('.billing-legal a[href="/offer"]').count() === 1, 'offer link');
+      // Выгода длинного срока: 12 × 990 = 11 880 ₽ против 9 900 ₽ → −16 %, экономия 1 980 ₽; у месяца метки нет.
+      const year = tab.getByRole('radio', { name: /12 месяцев/ });
+      check((await year.locator('.billing-period-badge').textContent()) === '−16%', 'year savings badge');
+      { const t = await year.locator('.billing-period-saving').textContent(); check(/Выгоднее всего · экономия 1\s980\s₽/.test(t), 'year savings rub: ' + JSON.stringify(t)); }
+      check(await tab.getByRole('radio', { name: /1 месяц/ }).locator('.billing-period-badge').count() === 0, 'month has badge');
       await tab.screenshot({ path: 'output/playwright/billing-form.png', fullPage: true });
 
       await tab.getByRole('radio', { name: /12 месяцев/ }).click();

@@ -1,6 +1,7 @@
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { ScheduleSettings } from "@/components/ScheduleSettings";
 import { PhotoSettingsPanel } from "@/components/PhotoSettingsPanel";
+import { TaskBonusPanel } from "@/components/TaskBonusPanel";
 import { QueryError } from "@/components/QueryError";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
@@ -519,6 +520,9 @@ export default function CompanySettings() {
 
           {/* Фото-отчёты: время на фото, «только камера» */}
           {company && <PhotoSettingsPanel company={company} />}
+
+          {/* Премия за каждую задачу: сумма по умолчанию и расчёт на месяц */}
+          {company && <TaskBonusPanel company={company} />}
 
           {/* Настройки администратора */}
           <div className="content-panel">

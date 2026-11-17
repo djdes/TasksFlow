@@ -8,8 +8,49 @@ import { detectPlatform, nativeBridge } from "./pwa";
  *   iOS-приложение — APNs через мост WebViewController (push.register);
  *   Safari на iPhone без установки — только после «На экран Домой».
  */
-export type PushSupport = "web" | "native-ios" | "ios-needs-install" | "unsupported";
-export type PushStatus = "loading" | "unsupported" | "needs-install" | "server-off" | "denied" | "off" | "on";
+export type PushSupport = "web" | "native-ios" | "ios-needs-install" | "ios-update" | "unsupported";
+export type PushStatus = "loading" | "unsupported" | "needs-install" | "ios-update" | "server-off" | "denied" | "off" | "on";
+
+/** Что умеет это устройство — для выбора подсказки и строки «для поддержки». */
+export type DeviceInfo = {
+  ios: boolean;
+  /** «18.1» из User-Agent; null — не iPhone или не распознали. */
+  iosVersion: string | null;
+  /** Открыто с иконки на экране «Домой» (без адресной строки). */
+  standalone: boolean;
+  /** Есть Notification, PushManager и service worker. */
+  webPush: boolean;
+  /** Не Safari на iPhone: Chrome, Firefox, Яндекс… */
+  otherIosBrowser: boolean;
+};
+
+export function readDeviceInfo(): DeviceInfo {
+  const ua = navigator.userAgent;
+  const ios = detectPlatform(ua, navigator.maxTouchPoints || 0) === "ios";
+  const m = /OS (\d+)[_.](\d+)/.exec(ua);
+  return {
+    ios,
+    iosVersion: ios && m ? `${m[1]}.${m[2]}` : null,
+    standalone:
+      (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches) ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    webPush: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+    otherIosBrowser: ios && /CriOS|FxiOS|EdgiOS|YaBrowser|OPiOS/.test(ua),
+  };
+}
+
+/**
+ * Чистая классификация (тесты — tests/push-support.test.ts):
+ *   есть Web Push → web;
+ *   iPhone с иконки, но Web Push нет → старая iOS (нужна 16.4+) — раньше тут
+ *   ошибочно говорили «добавьте на экран Домой», хотя человек уже открыл с иконки;
+ *   iPhone во вкладке браузера → ios-needs-install.
+ */
+export function classifyPushSupport(d: Pick<DeviceInfo, "ios" | "standalone" | "webPush">): Exclude<PushSupport, "native-ios"> {
+  if (d.webPush) return "web";
+  if (d.ios) return d.standalone ? "ios-update" : "ios-needs-install";
+  return "unsupported";
+}
 
 type JsonInit = { method: "POST" | "DELETE"; body?: unknown };
 
@@ -28,11 +69,8 @@ async function json<T>(url: string, init?: JsonInit): Promise<T> {
 export function pushSupport(): PushSupport {
   if (typeof window === "undefined") return "unsupported";
   if (nativeBridge()) return "native-ios";
-  const hasWebPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-  if (hasWebPush) return "web";
-  // Safari на iPhone даёт Web Push только установленному на экран «Домой» сайту.
-  if (detectPlatform(navigator.userAgent, navigator.maxTouchPoints || 0) === "ios") return "ios-needs-install";
-  return "unsupported";
+  // Safari на iPhone даёт Web Push только установленному на экран «Домой» сайту (iOS 16.4+).
+  return classifyPushSupport(readDeviceInfo());
 }
 
 function base64UrlToBytes(value: string): Uint8Array {
@@ -54,6 +92,7 @@ async function readStatus(config: PushConfig): Promise<PushStatus> {
   const support = pushSupport();
   if (support === "unsupported") return "unsupported";
   if (support === "ios-needs-install") return "needs-install";
+  if (support === "ios-update") return "ios-update";
   if (support === "native-ios") {
     if (!config.apns.enabled) return "server-off";
     const status = (await nativeBridge()!.call("push.status")) as NativePushStatus;
@@ -101,6 +140,46 @@ export async function enablePush(): Promise<void> {
   await json("/api/push/subscriptions", { method: "POST", body: { kind: "web", subscription: sub.toJSON() } });
 }
 
+const SYNC_KEY = "tf_push_synced";
+const SYNC_EVERY_MS = 6 * 3600 * 1000;
+
+/**
+ * Тихо напомнить серверу подписку этого устройства — при каждом входе в
+ * кабинет, не чаще раза в 6 часов. Уведомления в телефоне разрешены, а
+ * сервер подписку потерял (устройство на время отписалось, общий планшет
+ * перешёл к другому, ошибки доставки) — человек считает, что «всё
+ * включено», а ничего не приходит. Разрешение уже дано — нового вопроса
+ * браузер не задаёт; не дано — ничего не делаем.
+ */
+export async function syncPushSubscription(userId: number): Promise<void> {
+  if (pushSupport() !== "web" || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try {
+    const last = JSON.parse(localStorage.getItem(SYNC_KEY) || "null") as { userId: number; at: number } | null;
+    if (last && last.userId === userId && Date.now() - last.at < SYNC_EVERY_MS) return;
+  } catch {
+    /* битое значение — синхронизируем */
+  }
+  const config = await json<PushConfig>("/api/push/config");
+  if (!config.web.enabled || !config.web.publicKey) return;
+  const reg = await swRegistration();
+  if (!reg) return;
+  await navigator.serviceWorker.ready;
+  const key = base64UrlToBytes(config.web.publicKey);
+  let sub = await reg.pushManager.getSubscription();
+  const current = sub?.options?.applicationServerKey;
+  if (sub && current && new Uint8Array(current).join() !== key.join()) {
+    await sub.unsubscribe().catch(() => {});
+    sub = null;
+  }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as BufferSource });
+  await json("/api/push/subscriptions", { method: "POST", body: { kind: "web", subscription: sub.toJSON() } });
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ userId, at: Date.now() }));
+  } catch {
+    /* приватный режим — синхронизируем при следующем входе */
+  }
+}
+
 /** Выключить на этом устройстве. Сервер забывает подписку, браузер — тоже. */
 export async function disablePush(): Promise<void> {
   const support = pushSupport();
@@ -109,6 +188,11 @@ export async function disablePush(): Promise<void> {
     localStorage.removeItem(NATIVE_FLAG);
     if (token) await json("/api/push/subscriptions", { method: "DELETE", body: { token } });
     return;
+  }
+  try {
+    localStorage.removeItem(SYNC_KEY);
+  } catch {
+    /* нет хранилища — не страшно */
   }
   const reg = await swRegistration();
   const sub = await reg?.pushManager.getSubscription();
@@ -122,7 +206,8 @@ export async function disablePush(): Promise<void> {
  * получать уведомления предыдущего. Не дольше 2 секунд — выход важнее.
  */
 export async function forgetThisDevice(): Promise<void> {
-  if (pushSupport() === "unsupported" || pushSupport() === "ios-needs-install") return;
+  const support = pushSupport();
+  if (support === "unsupported" || support === "ios-needs-install" || support === "ios-update") return;
   await Promise.race([disablePush().catch(() => {}), new Promise((r) => setTimeout(r, 2000))]);
 }
 

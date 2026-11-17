@@ -1,4 +1,5 @@
 import type { Express, Request, RequestHandler } from "express";
+import { mergeAccessJson } from "@shared/task-bonus";
 import { z } from "zod";
 import {
   accessSettingsSchema,
@@ -61,7 +62,9 @@ export function registerRoleRoutes(app: Express, deps: Deps): void {
       const companyId = await deps.getCompanyIdFromReq(req);
       if (!companyId) return res.status(404).json({ message: "Компания не найдена" });
       const settings = accessSettingsSchema.parse(req.body);
-      await storage.updateCompany(companyId, { accessSettings: JSON.stringify(settings) });
+      // Сливаем: в том же JSON живёт премия за задачу (shared/task-bonus.ts).
+      const company = await storage.getCompanyById(companyId);
+      await storage.updateCompany(companyId, { accessSettings: mergeAccessJson(company?.accessSettings, settings) });
       res.json(await payload(companyId));
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json(zodError(err));

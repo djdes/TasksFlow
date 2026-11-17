@@ -19,6 +19,7 @@ import {
 } from "@shared/notify";
 import { forgetCompanyClock } from "../push/quiet";
 import { photoSettingsSchema } from "@shared/photo-settings";
+import { mergeAccessJson, taskBonusInputSchema } from "@shared/task-bonus";
 import { seatProblem } from "../plan-limits";
 import {
   requireAuth,
@@ -164,6 +165,26 @@ export function registerCompanyMeRoutes(app: Express): void {
     } catch (err: any) {
       console.error('Error fetching company:', err);
       res.status(500).json({ message: 'Ошибка' });
+    }
+  });
+
+  // Премия за задачу по умолчанию (только админ). Зарегистрирован отдельным
+  // путём: общий PUT /api/companies/me требует название и всё остальное.
+  app.put("/api/companies/me/task-bonus", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const companyId = await getCompanyIdFromReq(req);
+      if (!companyId) return res.status(404).json({ message: "Компания не найдена" });
+      const parsed = taskBonusInputSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Проверьте сумму" });
+      const { amount, applyToExisting } = parsed.data;
+      const company = await storage.getCompanyById(companyId);
+      if (!company) return res.status(404).json({ message: "Компания не найдена" });
+      await storage.updateCompany(companyId, { accessSettings: mergeAccessJson(company.accessSettings, { taskBonus: amount }) });
+      const applied = applyToExisting && amount > 0 ? await storage.applyTaskBonus(companyId, amount) : { open: 0, credited: 0 };
+      res.json({ taskBonus: amount, ...applied });
+    } catch (err) {
+      console.error("[task-bonus]", err);
+      res.status(500).json({ message: "Не удалось сохранить премию" });
     }
   });
 

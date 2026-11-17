@@ -90,17 +90,27 @@ async function deliver(sub: PushSubscriptionRow, message: PushMessage, deps: Pus
   return null;
 }
 
+/**
+ * Итог рассылки: devices — сколько устройств было, sent — приняли, removed —
+ * устройство отписалось (подписка удалена), failed — сервис не принял,
+ * skipped — транспорт выключен (APNs без ключа).
+ */
+export type PushOutcome = { devices: number; sent: number; removed: number; failed: number; skipped: number };
+
 /** Разослать на все устройства людей. Возвращает, сколько доставлено и сколько подписок умерло. */
 export async function sendToUsers(
   userIds: number[],
   message: PushMessage,
   deps: PushDeps = defaultDeps(),
-): Promise<{ sent: number; removed: number }> {
+): Promise<PushOutcome> {
   const ids = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
-  if (ids.length === 0 || (!deps.web && !deps.apns)) return { sent: 0, removed: 0 };
+  // Без транспортов (push на сервере не включён) базу не трогаем.
+  if (ids.length === 0 || (!deps.web && !deps.apns)) return { devices: 0, sent: 0, removed: 0, failed: 0, skipped: 0 };
   const subs = await deps.store.listForUsers(ids);
   let sent = 0;
   let removed = 0;
+  let failed = 0;
+  let skipped = 0;
   // Не больше 8 запросов к push-сервисам одновременно.
   for (let i = 0; i < subs.length; i += 8) {
     await Promise.all(
@@ -113,12 +123,16 @@ export async function sendToUsers(
           removed++;
           await deps.store.remove(sub.id).catch(() => {});
         } else if (result === "failed") {
+          failed++;
           await deps.store.markFailed(sub.id).catch(() => {});
+        } else {
+          // Транспорт этого устройства не включён (например, APNs без ключа).
+          skipped++;
         }
       }),
     );
   }
-  return { sent, removed };
+  return { devices: subs.length, sent, removed, failed, skipped };
 }
 
 /** Не дождаться отправки и не уронить запрос, который её вызвал. */
