@@ -56,6 +56,9 @@ describe("SSR render", () => {
     expect(r.head).toContain("Блог TasksFlow");
     expect(r.appHtml).toContain("Практические статьи");
     expect(r.head).toContain("BreadcrumbList");
+    // Превью ссылки в мессенджерах: og:image — PNG, не SVG.
+    expect(r.head).toContain(`property="og:image" content="${ORIGIN}/og/default.png"`);
+    expect(r.head).not.toMatch(/og:image" content="[^"]+\.svg"/);
   });
 
   it("категория → activeCluster в данных и канонический url", async () => {
@@ -83,6 +86,6 @@ describe("buildHead", () => {
     const head = buildHead({ key: "blog-article", params: { slug: "test" } }, { post }, ORIGIN);
     expect(head).toContain("BlogPosting");
     expect(head).toContain("FAQPage");
-    expect(head).toContain(`${ORIGIN}/og/test.svg`);
+    expect(head).toContain(`${ORIGIN}/og/test.png`);
   });
 });

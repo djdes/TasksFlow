@@ -12,7 +12,7 @@ import {
   totalPosts,
   clearBlogCache,
 } from "../server/blog";
-import { coverSvg } from "../server/og-cover";
+import { coverSvg, coverPng } from "../server/og-cover";
 import { renderMarkdown, slugifyHeading, readingMinutes } from "../server/markdown";
 
 beforeEach(() => clearBlogCache());
@@ -85,5 +85,17 @@ describe("og cover", () => {
     expect(svg).toContain("</svg>");
     expect(svg).toContain("Tasks"); // вордмарк Tasks<tspan>Flow</tspan>
     expect(svg).toContain("Управление");
+  });
+
+  // og:image обязан быть растровым: Telegram, WhatsApp и VK не показывают SVG.
+  it("PNG 1200×630 с текстом заголовка", async () => {
+    const opts = { title: "Как ставить задачи", cluster: "upravlenie", slug: "x" };
+    const png = await coverPng(opts);
+    expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    expect(png.readUInt32BE(16)).toBe(1200);
+    expect(png.readUInt32BE(20)).toBe(630);
+    // Шрифт найден и кириллица нарисована: другой заголовок — другая картинка.
+    const other = await coverPng({ ...opts, title: "Контроль персонала" });
+    expect(other.equals(png)).toBe(false);
   });
 });
