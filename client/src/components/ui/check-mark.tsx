@@ -12,13 +12,13 @@ export function CheckMark({ checked, disabled = false, className }: { checked: b
     <span
       aria-hidden="true"
       className={cn(
-        "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors max-md:h-[26px] max-md:w-[26px] max-md:rounded-lg",
         checked ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40",
         disabled && "opacity-50",
         className,
       )}
     >
-      {checked && <Check className="h-3 w-3" />}
+      {checked && <Check className="h-3.5 w-3.5 max-md:h-[18px] max-md:w-[18px]" strokeWidth={3} />}
     </span>
   );
 }

@@ -25,7 +25,7 @@ export function JournalStepCard({
   children,
 }: JournalStepCardProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border/50 bg-card/70">
+    <section className="overflow-hidden rounded-2xl bg-muted/30">
       <button
         type="button"
         onClick={onToggle}

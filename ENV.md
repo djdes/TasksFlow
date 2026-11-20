@@ -141,6 +141,25 @@ CLAUDE_BIN=/usr/local/bin/claude
 TASKSFLOW_AI_MODEL=sonnet
 ```
 
+## Должностная инструкция → задачи (Codex-шлюз ProjectsFlow)
+
+В «Сотрудниках» руководитель даёт инструкцию человека текстом, Word или Excel.
+Сервер отправляет её в Codex-шлюз ProjectsFlow (`POST /api/ai/text-jobs`), задание
+исполняет диспетчер Ralph на машине владельца локальным `codex exec`, а по ответу
+TasksFlow сам создаёт сотруднику задачи. Настройка обеих сторон —
+[docs/ralph-job-description.md](docs/ralph-job-description.md).
+
+```
+# Токен агента ProjectsFlow со scope `account` (лучше — служебного аккаунта без проектов)
+CODEX_GATEWAY_TOKEN=pfat_...
+# По умолчанию https://projectsflow.ru/api
+CODEX_GATEWAY_URL=https://projectsflow.ru/api
+```
+
+Без `CODEX_GATEWAY_TOKEN` берутся `PF_AGENT_TOKEN` / `PF_API_URL` из раздела выше:
+шлюз примет их, если токен со scope `account`. Без токена вовсе инструкции ждут в
+очереди («Инструкция ждёт диспетчера») и уйдут, как только токен появится.
+
 ## Публичные адреса, WeSetup, алерты, логи
 
 Все необязательные. Подробные комментарии — в `.env.example`.

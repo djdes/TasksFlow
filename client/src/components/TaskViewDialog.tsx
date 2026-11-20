@@ -673,7 +673,7 @@ export function TaskViewDialog({
                     <CheckMark
                       checked={Boolean(item.done)}
                       className={cn(
-                        "w-7 h-7 rounded-lg border-2 [&>svg]:w-4 [&>svg]:h-4",
+                        "w-7 h-7 rounded-lg border-2 [&>svg]:w-4 [&>svg]:h-4 max-md:w-8 max-md:h-8 max-md:rounded-[10px] max-md:[&>svg]:w-[18px] max-md:[&>svg]:h-[18px]",
                         item.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30",
                       )}
                     />

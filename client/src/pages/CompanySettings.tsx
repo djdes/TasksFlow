@@ -577,7 +577,7 @@ export default function CompanySettings() {
               </Button>
             </div>
 
-            <div className="bg-card rounded-lg border p-4 mt-4">
+            <div className="bg-muted/40 rounded-xl p-4 mt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">API ключи</h3>
@@ -594,7 +594,7 @@ export default function CompanySettings() {
               </div>
             </div>
 
-            <div className="bg-card rounded-lg border p-4 mt-4">
+            <div className="bg-muted/40 rounded-xl p-4 mt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">Интеграция с WeSetup</h3>

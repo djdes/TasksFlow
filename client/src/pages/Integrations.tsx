@@ -577,7 +577,7 @@ function SyncCard({
   disabled?: boolean;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+    <div className="rounded-xl bg-muted/40 p-4 flex flex-col gap-3">
       <div>
         <div className="font-medium">{title}</div>
         <div className="text-xs text-muted-foreground mt-1">{description}</div>
@@ -607,7 +607,7 @@ function SyncCard({
 
 function SyncResultBlock({ title, data }: { title: string; data: unknown }) {
   return (
-    <details className="mt-4 rounded-lg border bg-muted/40 p-3">
+    <details className="mt-4 rounded-lg bg-muted/40 p-3">
       <summary className="text-xs font-medium cursor-pointer">{title}</summary>
       <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap break-all max-h-60 overflow-auto">
         {JSON.stringify(data, null, 2)}

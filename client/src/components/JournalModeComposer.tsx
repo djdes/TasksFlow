@@ -233,7 +233,7 @@ export function JournalModeComposer({
           )}
 
           {activeJournalData ? (
-            <div className="rounded-2xl border border-border/50 bg-muted/20 p-4">
+            <div className="rounded-2xl bg-muted/30 p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="font-medium">{activeJournalData.label}</div>
                 <div className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -350,7 +350,7 @@ export function JournalModeComposer({
                       return (
                         <div
                           key={group.document.documentId}
-                          className="rounded-2xl border border-border/50 bg-muted/10 p-3"
+                          className="rounded-2xl bg-muted/30 p-3"
                         >
                           <button
                             type="button"
@@ -637,14 +637,14 @@ export function JournalModeComposer({
         ) : (
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+              <div className="rounded-2xl bg-muted/30 p-4">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
                   Журнал
                 </div>
                 <div className="mt-1 font-medium">{activeJournalData.label}</div>
               </div>
 
-              <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+              <div className="rounded-2xl bg-muted/30 p-4">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
                   Режим
                 </div>
@@ -655,7 +655,7 @@ export function JournalModeComposer({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+              <div className="rounded-2xl bg-muted/30 p-4">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
                   {journalTaskMode === "row" && selectedRow
                     ? activeJournalUi.subjectLabel
@@ -668,7 +668,7 @@ export function JournalModeComposer({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+              <div className="rounded-2xl bg-muted/30 p-4">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
                   {activeJournalUi.titleLabel}
                 </div>
