@@ -19,6 +19,7 @@ import {
   companyLoginLinks,
   userLoginLinks,
   userPinReveal,
+  jobDescriptions,
   type Worker,
   type InsertWorker,
   type Task,
@@ -787,6 +788,8 @@ export class DatabaseStorage implements IStorage {
     // Личный QR входа и сохранённый PIN удалённого человека — тоже.
     await db.delete(userLoginLinks).where(eq(userLoginLinks.userId, id)).catch(() => {});
     await this.clearPinReveal(id);
+    // Его должностная инструкция — тоже (таблицы может не быть до миграции).
+    await db.delete(jobDescriptions).where(eq(jobDescriptions.userId, id)).catch(() => {});
     // Удаляем пользователя
     await db.delete(users).where(eq(users.id, id));
   }

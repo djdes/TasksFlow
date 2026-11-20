@@ -88,6 +88,8 @@ function demoBilling(): BillingInfo {
 const me = () => state.users.find((u) => u.id === state.meId)!;
 /** PIN, заданные руководителем в демо (для «Посмотреть PIN»). */
 const demoPins = new Map<number, string>();
+/** Инструкции, отправленные в этой вкладке демо: только статус «ждёт диспетчера». */
+const demoJobDescriptions = new Map<number, Record<string, unknown>>();
 const isAdmin = () => me().isAdmin;
 
 /** Сменить роль: админ ↔ сотрудник (Анна). */
@@ -408,6 +410,19 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     }
     demoRoles = demoRoles.map((r) => (r.id === roleId ? { ...r, name: String(body?.name ?? r.name).trim(), permissions: { ...NO_PERMISSIONS, ...(body?.permissions ?? {}) }, updatedAt: now() } : r));
     return { json: demoRoles.find((r) => r.id === roleId) ?? null };
+  }
+
+  // --- должностная инструкция → задачи: в демо её никто не разбирает, честно ждёт диспетчера ---
+  if (path === "/api/job-descriptions" && method === "GET") {
+    return { json: { gatewayReady: false, items: Array.from(demoJobDescriptions.values()) } };
+  }
+  if ((m = path.match(/^\/api\/users\/(\d+)\/job-description(\/retry)?$/)) && method === "POST") {
+    const file = body instanceof FormData ? body.get("file") : null;
+    const fileName = file instanceof File ? file.name : null;
+    const source = fileName?.toLowerCase().endsWith(".xlsx") ? "xlsx" : fileName ? "docx" : "text";
+    const jd = { userId: Number(m[1]), status: "queued", source, fileName, tasksCreated: 0, error: null, updatedAt: now() };
+    demoJobDescriptions.set(jd.userId, jd);
+    return { status: 202, json: { gatewayReady: false, state: jd } };
   }
 
   // --- люди ---

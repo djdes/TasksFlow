@@ -2387,3 +2387,69 @@ html[data-motion="reduced"] .app-layout :is(.worker-section-header, .grouped-sec
   .reports-iconbtn, .reports-date, .reports-csv { border-color: transparent; background: hsl(var(--card)); }
   html[data-contrast="high"] :is(.reports-person-day, .reports-people, .reports-kpi) { border-color: hsl(var(--border)); }
 }
+
+/* ===== Должностная инструкция (20.11.2026) =====
+   Поле в «Добавить сотрудника» и окне «Инструкция»: вкладки «Текст / Word /
+   Excel» со скользящим индикатором (как переключатель темы), под ними —
+   текст или выбор файла. Блок — заливка без обводки: он внутри панели формы. */
+.job-desc { display: grid; gap: 10px; padding: 14px; border-radius: 16px; background: hsl(var(--muted) / .45); }
+.job-desc-head { display: flex; align-items: center; gap: 10px; }
+.job-desc-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; background: hsl(var(--violet) / .14); color: hsl(var(--violet)); }
+.job-desc-icon svg { width: 17px; height: 17px; }
+.job-desc-title { font-size: 15px; font-weight: 650; color: hsl(var(--foreground)); }
+.job-desc-optional { margin-left: auto; font-size: 12px; color: hsl(var(--muted-foreground)); }
+.job-desc-hint { margin: -2px 0 2px; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.job-desc-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; background: hsl(var(--background) / .8); position: relative; isolation: isolate; }
+.dark .job-desc-tabs { background: hsl(var(--background) / .6); }
+.job-desc-tab {
+  position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px;
+  border-radius: 9px; font-size: 14px; font-weight: 600; color: hsl(var(--muted-foreground));
+  transition: color var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.job-desc-tab svg { width: 16px; height: 16px; }
+.job-desc-tab.is-active { color: white; }
+.job-desc-tab:active:not(:disabled) { scale: .96; }
+@media (hover: hover) { .job-desc-tab:not(.is-active):hover { color: hsl(var(--foreground)); } }
+.job-desc-tab:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.job-desc-text { min-height: 120px; border-radius: 12px; background: hsl(var(--card)); font-size: 15px; line-height: 1.5; resize: vertical; }
+.job-desc-drop {
+  display: grid; justify-items: center; gap: 4px; padding: 18px 14px; border: 1.5px dashed hsl(var(--border)); border-radius: 12px;
+  background: hsl(var(--card)); color: hsl(var(--muted-foreground)); text-align: center; cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-settle), background-color var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle);
+}
+.job-desc-drop svg { width: 26px; height: 26px; color: hsl(var(--primary)); }
+.job-desc-drop:hover, .job-desc-drop.is-dragging { border-color: hsl(var(--primary) / .6); background: hsl(var(--primary) / .05); }
+.job-desc-drop:active { scale: .99; }
+.job-desc-drop:focus-within { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.job-desc-drop-title { font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
+.job-desc-drop-meta { font-size: 12.5px; }
+.job-desc-file { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 6px 8px 12px; border-radius: 12px; background: hsl(var(--card)); }
+.job-desc-file > svg { width: 22px; height: 22px; flex: none; color: hsl(var(--primary)); }
+.job-desc-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; color: hsl(var(--foreground)); }
+.job-desc-file-size { flex: none; font-size: 12.5px; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.job-desc-file-remove { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; color: hsl(var(--muted-foreground)); }
+.job-desc-file-remove:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.job-desc-file-remove svg { width: 18px; height: 18px; }
+.job-desc-error { margin: 0; font-size: 13px; font-weight: 500; color: hsl(var(--destructive)); }
+.job-desc-badge-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.job-desc-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 7px; font-size: 12px; font-weight: 600; }
+.job-desc-badge svg { width: 13px; height: 13px; flex: none; }
+.job-desc-badge.is-busy { background: hsl(var(--violet) / .12); color: hsl(252 60% 48%); }
+.job-desc-badge.is-done { background: hsl(var(--emerald) / .12); color: hsl(155 72% 27%); }
+.job-desc-badge.is-failed { background: hsl(var(--destructive) / .1); color: hsl(var(--destructive)); }
+.dark .job-desc-badge.is-busy { color: hsl(252 100% 82%); }
+.dark .job-desc-badge.is-done { color: hsl(152 60% 66%); }
+.job-desc-badge-error { flex-basis: 100%; font-size: 12px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+.job-desc-retry { min-height: 30px; height: 30px; padding: 0 8px; font-size: 12px; }
+.job-desc-retry svg { width: 13px; height: 13px; margin-right: 4px; }
+@media (max-width: 767px) {
+  .job-desc { padding: 12px; }
+  .job-desc-tab { min-height: 44px; font-size: 15px; }
+  .job-desc-text { font-size: 16px; }
+  .job-desc-retry { min-height: 40px; height: 40px; }
+}
+html[data-text="large"] .job-desc-hint { font-size: 15px; }
+html[data-text="large"] .job-desc-tab { font-size: 16px; }
+html[data-contrast="high"] .job-desc { box-shadow: inset 0 0 0 1px hsl(var(--border)); }
+html[data-motion="reduced"] :is(.job-desc-tab, .job-desc-drop):active { scale: 1; }

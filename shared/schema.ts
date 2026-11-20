@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, int, boolean, text, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, int, boolean, text, bigint, mediumtext } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { consentSchema, newPinSchema, pinSchema } from "./pin";
@@ -679,6 +679,28 @@ export const userPinReveal = mysqlTable("user_pin_reveal", {
   setBy: int("set_by"),
   setAt: int("set_at").notNull(),
 });
+
+// Должностная инструкция сотрудника → задачи (shared/job-description.ts,
+// server/job-description/*). Одна строка на человека: новая инструкция
+// заменяет прежнюю. Таблицу создаёт script/create-job-descriptions-table.ts.
+export const jobDescriptions = mysqlTable("job_descriptions", {
+  userId: int("user_id").primaryKey(),
+  companyId: int("company_id").notNull(),
+  source: varchar("source", { length: 10 }).notNull(),
+  fileName: varchar("file_name", { length: 255 }),
+  content: mediumtext("content").notNull(),
+  status: varchar("status", { length: 16 }).notNull(),
+  gatewayJobId: varchar("gateway_job_id", { length: 64 }),
+  attempts: int("attempts").notNull().default(0),
+  tasksCreated: int("tasks_created").notNull().default(0),
+  taskIds: text("task_ids"),
+  error: varchar("error", { length: 500 }),
+  createdBy: int("created_by"),
+  createdAt: int("created_at").notNull(),
+  updatedAt: int("updated_at").notNull(),
+  sentAt: int("sent_at"),
+});
+export type JobDescriptionRow = typeof jobDescriptions.$inferSelect;
 
 // Приглашения сотрудников через QR-код. Админ генерит запись, отдаёт
 // сотруднику QR/ссылку вида /join/<token>. По accept'у создаётся User
