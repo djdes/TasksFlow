@@ -42,7 +42,7 @@ interface HeadInput {
 
 function renderHead(input: HeadInput): string {
   const { title, description, canonical, ogImage, type = "website", jsonLdBlocks = [], prev, next } = input;
-  const img = ogImage || `${new URL(canonical).origin}/og/default.svg`;
+  const img = ogImage || `${new URL(canonical).origin}/og/default.png`;
   return [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(description)}" />`,
@@ -55,6 +55,13 @@ function renderHead(input: HeadInput): string {
     `<meta property="og:description" content="${esc(description)}" />`,
     `<meta property="og:url" content="${esc(canonical)}" />`,
     `<meta property="og:image" content="${esc(img)}" />`,
+    ...(img.endsWith(".png")
+      ? [
+          `<meta property="og:image:type" content="image/png" />`,
+          `<meta property="og:image:width" content="1200" />`,
+          `<meta property="og:image:height" content="630" />`,
+        ]
+      : []),
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${esc(title)}" />`,
     `<meta name="twitter:description" content="${esc(description)}" />`,
@@ -156,7 +163,7 @@ export function articleLd(post: PostFull, origin: string) {
     description: post.description,
     datePublished: post.date,
     dateModified: post.date,
-    image: `${origin}/og/${post.slug}.svg`,
+    image: `${origin}/og/${post.slug}.png`,
     author: { "@type": "Organization", name: SITE_NAME },
     publisher: {
       "@type": "Organization",
@@ -249,7 +256,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: `${post.title} — TasksFlow`,
         description: post.description,
         canonical: `${origin}/blog/${post.slug}`,
-        ogImage: `${origin}/og/${post.slug}.svg`,
+        ogImage: `${origin}/og/${post.slug}.png`,
         type: "article",
         jsonLdBlocks: blocks,
       });

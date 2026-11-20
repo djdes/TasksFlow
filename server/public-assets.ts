@@ -1,6 +1,6 @@
 /**
  * Публичные ассеты/служебные эндпоинты, не требующие React-SSR:
- *   GET /og/:slug.svg  — обложка статьи (SVG)
+ *   GET /og/:slug.svg  — обложка статьи (SVG), /og/:slug.png — она же для og:image
  *   GET /sitemap.xml   — карта сайта (лендинг + блог + категории + статьи)
  *   GET /robots.txt    — robots + ссылка на sitemap
  *   GET /llms.txt      — описание сайта для ИИ-помощников (server/llms-txt.ts)
@@ -9,30 +9,50 @@
  */
 import type { Express, Request, Response } from "express";
 import { getAllPosts, getPost } from "./blog";
-import { coverSvg } from "./og-cover";
+import { coverSvg, coverPng } from "./og-cover";
 import { CLUSTERS } from "@shared/blog-clusters";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { LEGAL_DOCS } from "../client/src/public/legal";
 import { buildLlmsTxt } from "./llms-txt";
 
 export function setupPublicAssets(app: Express): void {
-  // Обложка статьи. :slug.svg — slug + расширение.
-  app.get("/og/:file", (req: Request, res: Response) => {
+  // Обложка статьи: /og/:slug.svg — для страниц сайта, /og/:slug.png — для
+  // og:image (мессенджеры и соцсети SVG в превью не показывают).
+  const pngCache = new Map<string, Buffer>();
+  app.get("/og/:file", async (req: Request, res: Response) => {
     const file = req.params.file || "";
-    const slug = file.replace(/\.svg$/, "");
+    const wantPng = /\.png$/.test(file);
+    const slug = file.replace(/\.(svg|png)$/, "");
     const post = getPost(slug);
-    const svg = coverSvg({
+    const cover = {
       title: post?.title || "TasksFlow — контроль задач для команд",
       cluster: post?.cluster || "upravlenie",
-      slug,
-    });
+      // Неизвестный адрес — общая обложка: кэш не растёт от случайных slug.
+      slug: post ? slug : "default",
+    };
+    if (wantPng) {
+      try {
+        let png = pngCache.get(cover.slug);
+        if (!png) {
+          png = await coverPng(cover);
+          pngCache.set(cover.slug, png);
+        }
+        res
+          .status(200)
+          .set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" })
+          .end(png);
+        return;
+      } catch (err) {
+        console.error("[og] PNG не собран, отдаю SVG:", err);
+      }
+    }
     res
       .status(200)
       .set({
         "Content-Type": "image/svg+xml; charset=utf-8",
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": wantPng ? "no-store" : "public, max-age=86400",
       })
-      .end(svg);
+      .end(coverSvg({ ...cover, slug }));
   });
 
   app.get("/sitemap.xml", (req: Request, res: Response) => {

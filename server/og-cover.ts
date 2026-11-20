@@ -3,6 +3,8 @@
  * растровых картинок и внешних зависимостей: градиент по кластеру +
  * вариация по slug + декоративные фигуры + заголовок + лейбл кластера.
  */
+import fs from "fs";
+import path from "path";
 import { CLUSTER_BY_KEY } from "@shared/blog-clusters";
 
 function hash(s: string): number {
@@ -67,10 +69,36 @@ export function coverSvg(opts: { title: string; cluster: string; slug: string })
   <circle cx="${cx}" cy="${cy}" r="220" fill="#ffffff" opacity="0.08"/>
   <circle cx="${cx - 120}" cy="${cy + 260}" r="160" fill="#ffffff" opacity="0.06"/>
   <circle cx="120" cy="540" r="180" fill="#000000" opacity="0.06"/>
-  <text x="80" y="90" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#ffffff">Tasks<tspan fill="#ffffff" opacity="0.7">Flow</tspan></text>
+  <text x="80" y="90" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-size="34" font-weight="800" fill="#ffffff">Tasks<tspan fill="#ffffff" opacity="0.7">Flow</tspan></text>
   <rect x="80" y="120" rx="18" ry="18" width="${Math.min(560, 60 + short.length * 22)}" height="48" fill="#ffffff" opacity="0.18"/>
-  <text x="104" y="153" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="600" fill="#ffffff">${esc(short)}</text>
-  <text x="80" y="300" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" fill="#ffffff">${titleTspans}</text>
-  <text x="80" y="585" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#ffffff" opacity="0.85">tasksflow.ru · контроль задач для команд</text>
+  <text x="104" y="153" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-size="26" font-weight="600" fill="#ffffff">${esc(short)}</text>
+  <text x="80" y="300" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-size="64" font-weight="800" fill="#ffffff">${titleTspans}</text>
+  <text x="80" y="585" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-size="26" fill="#ffffff" opacity="0.85">tasksflow.ru · контроль задач для команд</text>
 </svg>`;
+}
+
+/**
+ * PNG-версия обложки для og:image. Telegram, WhatsApp, VK и Facebook не
+ * показывают SVG в превью ссылки — им нужна растровая картинка.
+ * Шрифт — DejaVu из репозитория (кириллица есть, системные шрифты сервера
+ * не нужны). resvg подгружается лениво: без него сайт работает, а маршрут
+ * /og/*.png отдаёт SVG-фолбэк.
+ */
+
+const FONT_DIR = path.join(process.cwd(), "server", "billing", "fonts");
+const OG_FONTS = ["DejaVuSans.ttf", "DejaVuSans-Bold.ttf"]
+  .map((f) => path.join(FONT_DIR, f))
+  .filter((f) => fs.existsSync(f));
+
+export async function coverPng(opts: { title: string; cluster: string; slug: string }): Promise<Buffer> {
+  const { Resvg } = await import("@resvg/resvg-js");
+  const resvg = new Resvg(coverSvg(opts), {
+    font: {
+      fontFiles: OG_FONTS,
+      loadSystemFonts: OG_FONTS.length === 0,
+      defaultFontFamily: "DejaVu Sans",
+      sansSerifFamily: "DejaVu Sans",
+    },
+  });
+  return Buffer.from(resvg.render().asPng());
 }
