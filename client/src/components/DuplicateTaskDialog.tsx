@@ -412,7 +412,7 @@ export function DuplicateTaskDialog({ task, open, onOpenChange }: DuplicateTaskD
               control={form.control}
               name="requiresPhoto"
               render={({ field }) => (
-                <FormItem className="rounded-md border border-border/50 p-3 space-y-3">
+                <FormItem className="rounded-xl bg-muted/40 p-3 space-y-3">
                   <div className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox

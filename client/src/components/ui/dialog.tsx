@@ -84,7 +84,7 @@ const DialogContent = React.forwardRef<
         }
       }}
       className={cn(
-        "dialog-surface fixed z-[81] grid gap-4 border bg-background p-6 shadow-xl outline-none",
+        "dialog-surface fixed z-[81] grid gap-4 border border-transparent bg-background p-6 shadow-xl outline-none dark:border-white/[0.06]",
         mobile ? "mobile-sheet" : "desktop-dialog left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl max-h-[90dvh] overflow-y-auto",
         className
       )}

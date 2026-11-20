@@ -580,7 +580,7 @@ export default function AdminUsers() {
                     key={u.id}
                     data-user-row={u.id}
                     tabIndex={-1}
-                    className={`user-row p-4 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors ${highlightId === u.id ? "is-highlighted" : ""}`}
+                    className={`user-row p-4 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors ${highlightId === u.id ? "is-highlighted" : ""}`}
                   >
                     {pinUserId === u.id ? (
                       <div className="space-y-2">

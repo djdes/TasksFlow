@@ -1,13 +1,24 @@
-/* Shared motion language: immediate feedback, one settled entrance, no bounce. */
+/* Shared motion language: immediate feedback, one settled entrance, no bounce.
+   Кривые по правилам движения stageshow (benjitaylor/skills): отклик на касание
+   быстрый, как в настоящем приложении; медленнее только то, что появляется. */
 :root {
   --ease-settle: cubic-bezier(.2, .8, .2, 1);
+  /* Появление «из ниоткуда»: быстрый старт, долгое мягкое торможение. */
+  --ease-arrive: cubic-bezier(.25, .8, .25, 1);
+  /* Отклик внутри приложения (как UIKit): шторки, раскрытие строк. */
+  --ease-app: cubic-bezier(.3, .75, .1, 1);
+  /* Заливка галочки из центра и ход ручки переключателя. */
+  --ease-fill: cubic-bezier(.22, 1, .36, 1);
+  /* Прорисовка галочки. */
+  --ease-draw: cubic-bezier(.65, 0, .35, 1);
   --motion-fast: 150ms;
   --motion-enter: 280ms;
 }
 
 @keyframes page-reveal { from { opacity: 0; } to { opacity: 1; } }
 @keyframes skeleton-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-@keyframes surface-enter { from { opacity: 0; scale: .97; } to { opacity: 1; scale: 1; } }
+/* Окно приходит целиком чуть снизу и садится мягко (stageshow: «arrive whole»). */
+@keyframes surface-enter { from { opacity: 0; scale: .97; translate: 0 8px; } to { opacity: 1; scale: 1; translate: 0 0; } }
 @keyframes surface-exit { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .98; } }
 @keyframes overlay-enter { from { opacity: 0; } to { opacity: 1; } }
 @keyframes overlay-exit { from { opacity: 1; } to { opacity: 0; } }
@@ -30,16 +41,18 @@
 @media (min-width: 1024px) { .skeleton-app-header { height: 68px; padding-inline: 2rem; } }
 .skeleton-app-header .skeleton::after { background: linear-gradient(100deg, transparent, rgb(255 255 255 / .15), transparent); }
 
-.ui-button, .header-button, .dropdown-item, .quick-chip, .scope-tab, .theme-switcher-btn {
+.ui-button, .header-button, .dropdown-item, .quick-chip, .scope-tab, .theme-switcher-btn, .pick-row, .worker-picker-row, .task-schedule-day, .due-quick-chip, .group-mode-toggle {
   transition-property: color, background-color, border-color, box-shadow, opacity, scale;
   transition-duration: var(--motion-fast);
   transition-timing-function: var(--ease-settle);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.ui-button:active:not(:disabled), .header-button:active:not(:disabled), .quick-chip:active, .scope-tab:active {
+.ui-button:active:not(:disabled), .header-button:active:not(:disabled), .quick-chip:active, .scope-tab:active, .task-schedule-day:active:not(:disabled), .due-quick-chip:active, .group-mode-toggle:active {
   scale: .96;
 }
+/* Строки во всю ширину сжимаются меньше: заметно, но текст не «плывёт». */
+.pick-row:active, .worker-picker-row:active, .dropdown-item:active { scale: .985; }
 .ui-button[aria-busy="true"] { cursor: progress; }
 .button-state { display: inline-grid; align-items: center; justify-items: center; }
 .button-state > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; transition: opacity 140ms ease-out, filter 140ms ease-out; }
@@ -51,7 +64,7 @@
 
 .dialog-overlay[data-state="open"] { animation: overlay-enter 220ms ease-out; }
 .dialog-overlay[data-state="closed"] { animation: overlay-exit 180ms ease-out; }
-.desktop-dialog[data-state="open"] { animation: surface-enter var(--motion-enter) var(--ease-settle); }
+.desktop-dialog[data-state="open"] { animation: surface-enter 320ms var(--ease-arrive); }
 .desktop-dialog[data-state="closed"] { animation: surface-exit 180ms ease-out; }
 .dialog-surface { overscroll-behavior: contain; }
 
@@ -89,7 +102,7 @@
 
 .motion-toggle { display: inline-flex; align-items: center; flex-shrink: 0; width: 40px; height: 24px; border-radius: 20px; padding: 3px; background: hsl(var(--muted)); transition: background-color 180ms; }
 .motion-toggle[data-checked="true"] { background: hsl(var(--primary)); }
-.motion-toggle > span { width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0002; transform: translateX(0); transition: transform 260ms var(--ease-settle), width 150ms; }
+.motion-toggle > span { width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0002; transform: translateX(0); transition: transform 250ms var(--ease-fill), width 150ms var(--ease-fill); }
 .motion-toggle[data-checked="true"] > span { transform: translateX(16px); }
 [role="switch"]:active .motion-toggle > span { width: 21px; }
 [role="switch"]:active .motion-toggle[data-checked="true"] > span { transform: translateX(13px); }
@@ -120,7 +133,7 @@ html[data-motion="reduced"] .reveal-ready [data-reveal],
 html.reveal-ready[data-motion="reduced"] [data-reveal] { opacity: 1 !important; transform: none !important; }
 /* Completion stays celebratory without perpetual movement or particle bursts. */
 .all-done-emoji, .empty-state-emoji { animation: none; }
-html[data-motion="reduced"] :is(.ui-button, .header-button, .quick-chip, .scope-tab):active { scale: 1; }
+html[data-motion="reduced"] :is(.ui-button, .header-button, .quick-chip, .scope-tab, .pick-row, .worker-picker-row, .dropdown-item, .task-schedule-day, .due-quick-chip, .group-mode-toggle):active { scale: 1; }
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after { display: none; }
   [data-vaul-drawer], [data-vaul-overlay] { animation-duration: .01ms !important; transition-duration: .01ms !important; }

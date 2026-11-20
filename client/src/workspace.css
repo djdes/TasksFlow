@@ -2,6 +2,7 @@
    Loaded only by the SPA so marketing pages keep their own visual language. */
 :root {
   --workspace-shadow: 0 1px 2px rgb(16 24 40 / .03), 0 8px 24px rgb(16 24 40 / .035);
+  --task-card-shadow: 0 1px 2px rgb(16 24 40 / .04);
   /* «Смена под контролем»: indigo-подложка с violet-подмесом. */
   --band-surface:
     radial-gradient(70% 140% at 8% -20%, rgb(124 92 255 / .6), transparent 62%),
@@ -16,6 +17,7 @@
 }
 .dark {
   --workspace-shadow: 0 1px 2px rgb(0 0 0 / .12), 0 8px 24px rgb(0 0 0 / .08);
+  --task-card-shadow: none;
   --band-surface:
     radial-gradient(70% 140% at 8% -20%, rgb(124 92 255 / .32), transparent 62%),
     radial-gradient(55% 120% at 96% -10%, rgb(85 102 246 / .36), transparent 60%),
@@ -150,16 +152,37 @@
 /* Активный таб лежит на сплошном indigo-индикаторе (motion.css) — текст белый в обеих темах. */
 .app-layout .scope-tab.scope-tab-active { color: white; border-color: transparent; }
 
-/* List hierarchy: section > person > task. Only the actual task is a card. */
-.app-layout .grouped-section { padding: 16px; border-radius: 20px; background: hsl(var(--card)); border-color: hsl(var(--border)); box-shadow: var(--workspace-shadow); }
-.app-layout .grouped-section--completed, .app-layout .grouped-section--claimed { background: hsl(var(--card) / .55); box-shadow: none; }
+/* List hierarchy: section > person > task. Only the actual task is a surface.
+   Секции «Активные», «Выполненные», «Сделано другими» и группы сотрудников —
+   без своей рамки, подложки и отступа (просьба владельца 20.11.2026): рамка
+   в рамке тяжелит экран и съедает ширину. Заголовок секции лежит на фоне
+   страницы, задачи идут во всю ширину контента, строка сотрудника и задача —
+   поверхности одним цветом без обводки, их отделяет фон. */
+.app-layout .grouped-task-list:not(.grouped-task-list--simple) { gap: 24px; }
+.app-layout .grouped-section, .app-layout .grouped-section--completed, .app-layout .grouped-section--claimed {
+  padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.app-layout .grouped-section-header { padding: 0 2px 12px; }
+.app-layout .grouped-section-header--toolbar { min-height: 44px; }
+/* Свёрнутая секция — строка-кнопка во всю ширину, как строка сотрудника. */
+.app-layout .grouped-section-header--clickable {
+  min-height: 56px; padding: 0 16px; margin-bottom: 0; border-radius: 16px; background: hsl(var(--card) / .7);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle);
+}
+.app-layout .grouped-section-header--clickable + * { margin-top: 12px; }
 .app-layout .grouped-section-title { font-size: 15px; font-weight: 650; letter-spacing: -.015em; color: hsl(var(--foreground)); }
 .app-layout .grouped-section-count, .app-layout .worker-section-count { background: hsl(var(--primary) / .08); color: hsl(var(--primary)); font-weight: 600; }
-.app-layout .group-mode-toggle { min-height: 34px; padding-inline: 12px; background: hsl(var(--background)); color: hsl(var(--muted-foreground)); border-color: hsl(var(--border)); transition: color 150ms, border-color 150ms, background-color 150ms; }
-.app-layout .worker-section { border: 0; border-radius: 12px; background: hsl(var(--background) / .7); box-shadow: none; }
-.app-layout .worker-section[open] { background: transparent; box-shadow: none; }
-.app-layout .worker-section-header { min-height: 52px; padding: 10px 12px; }
-.app-layout .worker-section-body { padding: 4px 0 0; }
+.app-layout .group-mode-toggle { min-height: 34px; padding-inline: 12px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); border-color: transparent; transition: color 150ms, border-color 150ms, background-color 150ms, scale 150ms; }
+.app-layout .worker-section, .app-layout .worker-section[open] { border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+.app-layout .worker-section-header { min-height: 56px; padding: 10px 14px; background: hsl(var(--card)); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.app-layout .worker-section-body { padding: 10px 0 8px; }
+.dark .app-layout :is(.worker-section-header, .grouped-section-header--clickable) { background: var(--dk-surface); }
+.dark .app-layout .group-mode-toggle { background: var(--dk-surface); border-color: transparent; }
+/* Пустая секция — подсказка заливкой, без пунктирной рамки (в тёмной теме
+   раньше оставался светлый фон из index.css). */
+.app-layout .grouped-empty { border: 0; border-radius: 16px; background: hsl(var(--muted) / .5); color: hsl(var(--muted-foreground)); }
+.dark .app-layout .grouped-empty { background: rgb(22 28 51 / .55); }
 .worker-section-empty { margin: 0; padding: 6px 12px 10px; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
 .group-current { display: grid; gap: 16px; }
 .group-current .group-day { border-left: 0; padding-left: 0; }
@@ -180,11 +203,17 @@
 .worker-progress-track { width: 56px; height: 5px; border-radius: 4px; background: hsl(var(--muted)); overflow: hidden; }
 .worker-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, hsl(152 62% 46%), hsl(160 72% 36%)); transform-origin: left; transition: transform 500ms var(--ease-settle); }
 .bonus-badge-text { white-space: nowrap; }
-.app-layout .worker-section-header { border-radius: 12px; transition: background-color 150ms var(--ease-settle); }
-@media (hover: hover) { .app-layout .worker-section-header:hover { background: hsl(var(--muted) / .45); } }
+.app-layout .worker-section-header { border-radius: 16px; transition: background-color var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle); }
+@media (hover: hover) {
+  .app-layout :is(.worker-section-header, .grouped-section-header--clickable):hover { background: hsl(var(--muted) / .7); }
+  .dark .app-layout :is(.worker-section-header, .grouped-section-header--clickable):hover { background: var(--dk-surface-hover); }
+}
 .app-layout .worker-section-name { color: hsl(var(--foreground)); }
+/* Карточка задачи — заливка без обводки: её отделяет фон страницы. Рамка
+   (прозрачная, чтобы не прыгала вёрстка) проявляется на наведении, фокусе,
+   у возвращённой задачи и в режиме «Контраст». */
 .app-layout .task-card {
-  background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 16px; padding: 16px; box-shadow: none; will-change: auto;
+  background: hsl(var(--card)); border: 1px solid var(--task-card-edge, transparent); border-radius: 16px; padding: 16px; box-shadow: var(--task-card-shadow); will-change: auto;
   transition: border-color 180ms var(--ease-settle), background-color 180ms var(--ease-settle), box-shadow 240ms var(--ease-settle), transform 240ms var(--ease-settle);
 }
 .app-layout .task-card:active { transform: none; }
@@ -194,7 +223,9 @@
 }
 html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .task-list { position: relative; }
-.app-layout .task-card.completed { background: hsl(var(--background) / .55); opacity: .8; }
+.app-layout .task-card.completed { background: hsl(var(--card) / .6); box-shadow: none; opacity: .8; }
+.dark .app-layout .task-card.completed { background: rgb(22 28 51 / .55); }
+html[data-contrast="high"] .app-layout { --task-card-edge: hsl(var(--border)); }
 .app-layout .task-card--returned { border-color: hsl(var(--destructive) / .45); }
 .app-layout .task-title { margin-top: 2px; font-size: 15px; line-height: 1.45; font-weight: 600; letter-spacing: -.015em; }
 .task-title-button { text-align: left; color: inherit; border-radius: 4px; overflow-wrap: anywhere; }
@@ -207,31 +238,39 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .dark .app-layout .task-badge.price { background: hsl(var(--emerald) / .16); color: hsl(152 60% 66%); }
 .dark .app-layout .task-badge:is(.category,.schedule) { background: hsl(var(--muted) / .7); color: hsl(var(--muted-foreground)); }
 
-/* Чекбокс: скруглённый квадрат, галочка прорисовывается, свежая отметка
-   даёт один короткий пульс. Базовое состояние — финальное, поэтому при
-   выключенной анимации галочка сразу видна. */
+/* Чекбокс: скруглённый квадрат. Отметка по stageshow (parts/Check): зелёный
+   диск растёт из центра поверх рамки, когда он почти на месте — прорисовывается
+   галочка; без отскока и без кольца-пульса. Снятая отметка гаснет целиком, а не
+   «стирается». Базовое состояние — финальное: при выключенной анимации галочка
+   видна сразу. Поле касания шире квадрата (::before) — не меньше 44px. */
 .app-layout .task-checkbox {
-  position: relative; width: 28px; height: 28px; border-radius: 9px; margin-top: 1px;
+  position: relative; display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 9px; margin-top: 1px;
   border: 2px solid hsl(var(--muted-foreground) / .35); background: hsl(var(--card));
-  transition: border-color 150ms var(--ease-settle), background-color 150ms var(--ease-settle), box-shadow 150ms var(--ease-settle), scale 150ms var(--ease-settle);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: border-color 150ms var(--ease-settle), background-color 150ms var(--ease-settle), box-shadow 200ms var(--ease-settle), scale 150ms var(--ease-settle);
 }
-.app-layout .task-checkbox::before { content: ""; position: absolute; inset: -8px; }
+.app-layout .task-checkbox::before { content: ""; position: absolute; inset: -9px; }
+.app-layout .task-checkbox::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(145deg, hsl(152 62% 46%), hsl(160 72% 35%));
+  opacity: 0; scale: .35; transition: opacity 200ms ease, scale 200ms ease;
+}
+.app-layout .task-checkbox > svg { position: relative; z-index: 1; }
 .app-layout .task-checkbox:not(.checked):hover { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .08); }
-.app-layout .task-checkbox:active { scale: .9; }
+.app-layout .task-checkbox:active { scale: .88; }
 .app-layout .task-checkbox.checked, .app-layout .task-checkbox.checked:hover {
-  border-color: transparent; background: linear-gradient(145deg, hsl(152 62% 46%), hsl(160 72% 35%));
-  box-shadow: 0 6px 14px -6px hsl(var(--emerald) / .7);
+  border-color: transparent; background: transparent; box-shadow: 0 6px 14px -6px hsl(var(--emerald) / .7); animation: none;
 }
+.app-layout .task-checkbox.checked::after { opacity: 1; scale: 1; }
 /* Анимируется только свежая отметка, а не каждая выполненная карточка при монтировании. */
-.app-layout .task-checkbox--fresh { animation: tf-check-pop 340ms var(--ease-settle); }
-.app-layout .task-checkbox--fresh svg path { stroke-dasharray: 24; animation: tf-check-draw 360ms var(--ease-settle) 70ms both; }
-.app-layout .task-checkbox--fresh::after {
-  content: ""; position: absolute; inset: -2px; border-radius: 11px; pointer-events: none; opacity: 0;
-  animation: tf-check-ring 640ms ease-out both;
-}
-@keyframes tf-check-pop { 0% { scale: .8; } 60% { scale: 1.08; } 100% { scale: 1; } }
-@keyframes tf-check-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-@keyframes tf-check-ring { from { opacity: 1; box-shadow: 0 0 0 0 hsl(var(--emerald) / .55); } to { opacity: 0; box-shadow: 0 0 0 12px hsl(var(--emerald) / 0); } }
+/* Короче, чем в демо stageshow (400 + 320 мс): это отклик на касание, а запрос
+   на сервер обычно короче полусекунды — отметка должна успеть дорисоваться. */
+.app-layout .task-checkbox--fresh::after { animation: tf-check-fill 300ms var(--ease-fill) both; }
+.app-layout .task-checkbox--fresh svg path { stroke-dasharray: 24; animation: tf-check-draw 240ms var(--ease-draw) 110ms both; }
+@keyframes tf-check-fill { from { opacity: 1; scale: .35; } to { opacity: 1; scale: 1; } }
+/* Путь галочки lucide идёт справа налево: отрицательный сдвиг рисует её с короткого
+   штриха, как от руки. */
+@keyframes tf-check-draw { from { stroke-dashoffset: -24; } to { stroke-dashoffset: 0; } }
 .app-layout .task-card.completed .task-title { color: hsl(var(--muted-foreground)); text-decoration-color: hsl(var(--muted-foreground) / .5); }
 .app-layout .task-action-btn { width: 36px; height: 36px; border-radius: 9px; }
 .app-layout .task-card:focus-within { border-color: hsl(var(--primary) / .6); }
@@ -246,7 +285,15 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .page-screen { background: hsl(var(--background)); }
 .page-screen .page-title { letter-spacing: -.035em; font-weight: 650; line-height: 1.15; }
 .page-screen .page-icon { background: hsl(var(--primary) / .1); color: hsl(var(--primary)); box-shadow: none; border-radius: 14px; }
-.page-screen .content-panel { background: hsl(var(--card)); box-shadow: var(--workspace-shadow); border-color: hsl(var(--border)); border-radius: 20px; }
+.page-screen .content-panel { background: hsl(var(--card)); box-shadow: var(--workspace-shadow); border-color: transparent; border-radius: 20px; }
+/* ===== Одна рамка, не две (просьба владельца 20.11.2026) =====
+   Внешняя поверхность — панель страницы, окно, блок формы — держится заливкой
+   и мягкой тенью, без обводки. Обводка остаётся у того, что внутри: полей,
+   списков, вариантов выбора. Так рамка в рамке не появляется. «Контраст»
+   возвращает обводку внешним поверхностям. */
+.content-panel .content-panel { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.content-panel .list-skeleton-row { background: hsl(var(--muted) / .45); }
+html[data-contrast="high"] :is(.page-screen .content-panel, .page-sections > section.border, .form-block) { border-color: hsl(var(--border)); }
 .page-screen :is(input,textarea) { transition: border-color 150ms, box-shadow 150ms; }
 .task-detail-header { background: transparent; }
 .task-detail-header [id] { text-align: left; }
@@ -289,7 +336,6 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
   .shift-summary .stat-tile:nth-child(3):last-child .stat-tile-value { font-size: 24px; padding-right: 0; }
   .shift-summary .stat-tile:nth-child(3):last-child .stat-tile-hint { display: none; }
   .app-layout .quick-chip { min-height: 44px; }
-  .app-layout .grouped-section { padding: 12px; border-radius: 18px; }
   .app-layout .group-mode-toggle { min-height: 40px; }
   .worker-progress-text { display: none; }
   .worker-progress-track { width: 36px; }
@@ -406,7 +452,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .templates-subtitle { font-size: 14px; line-height: 1.5; }
 .templates-industries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-bottom: 24px; }
 .templates-industry {
-  display: grid; gap: 4px; justify-items: start; min-height: 112px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 16px;
+  display: grid; gap: 4px; justify-items: start; min-height: 112px; padding: 14px; border: 1px solid transparent; border-radius: 16px;
   background: hsl(var(--card)); text-align: left;
   transition: border-color 150ms var(--ease-settle), box-shadow 200ms var(--ease-settle), background-color 150ms var(--ease-settle);
 }
@@ -422,7 +468,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .templates-toggle-all:hover { background: hsl(var(--primary) / .08); }
 .templates-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .templates-item {
-  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 14px;
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 12px; border: 1px solid transparent; border-radius: 14px;
   background: hsl(var(--card)); text-align: left;
   transition: border-color 150ms var(--ease-settle), background-color 150ms var(--ease-settle);
 }
@@ -506,7 +552,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .page-sections > section { margin: 0; }
 .page-sections > section.border {
   border-radius: 20px; padding: clamp(16px, 2.4vw, 24px);
-  border-color: hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--workspace-shadow);
+  border-color: transparent; background: hsl(var(--card)); box-shadow: var(--workspace-shadow);
 }
 /* Аккаунт: оформление, формы и отдельная «опасная зона». */
 .account-appearance { display: grid; gap: 12px; }
@@ -524,7 +570,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 
 /* Приглашения и прочие списки страниц: строка = карточка. */
 .invite-list { display: grid; gap: 8px; }
-.invite-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--background) / .6); }
+.invite-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 0; border-radius: 14px; background: hsl(var(--muted) / .45); }
 .invite-row-icon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
 .invite-row-icon svg { width: 18px; height: 18px; }
 .invite-row-text { flex: 1; min-width: 0; }
@@ -602,7 +648,7 @@ html[data-motion="reduced"] .app-layout .task-card:hover { transform: none; }
 .verify-shot figcaption span { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .verify-shot-frame {
   position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; padding: 0;
-  border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--muted) / .6); cursor: zoom-in;
+  border: 0; border-radius: 16px; background: hsl(var(--muted) / .6); cursor: zoom-in;
 }
 /* Доказательство не обрезаем: фото целиком, поля — фоном рамки. Снимки с
    телефона обычно вертикальные, поэтому на узком экране рамки 3:4. */
@@ -1322,7 +1368,7 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .dark .root-cashbox-docs.is-ok > svg { color: hsl(152 60% 62%); }
 .root-promos { margin-top: 8px; }
 .root-promo-code { padding: 2px 8px; border-radius: 6px; background: hsl(var(--muted)); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
-.root-promo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; }
+.root-promo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: hsl(var(--muted) / .4); }
 .root-promo-form .root-price-input { width: 100%; }
 .root-promo-value { display: flex; gap: 6px; }
 .root-promo-value .reports-select { width: 76px; flex: none; }
@@ -1333,8 +1379,8 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .root-balance-row:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 .root-balance-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 14px; }
 .root-balance-find .billing-field { width: 160px; }
-.root-balance-detail { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 14px; }
-.root-balance-detail .root-promo-form { margin-top: 0; padding: 0; border: 0; }
+.root-balance-detail { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: hsl(var(--muted) / .4); }
+.root-balance-detail .root-promo-form { margin-top: 0; padding: 0; border: 0; background: transparent; }
 
 @media (max-width: 760px) {
   .billing-seats { flex: 1 1 100%; }
@@ -1505,7 +1551,7 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .cabinet-main:focus { outline: none; }
 
 /* ===== Форма задачи: «Когда задача видна» ===== */
-.task-schedule { display: grid; gap: 16px; padding: 18px; border: 1px solid hsl(var(--border) / .7); border-radius: 16px; }
+.task-schedule { display: grid; gap: 16px; padding: 18px; border: 0; border-radius: 16px; background: hsl(var(--muted) / .4); }
 .task-schedule-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
 .task-schedule-title svg { width: 18px; height: 18px; color: hsl(var(--primary)); }
 .task-schedule-summary {
@@ -1531,7 +1577,7 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .task-schedule-day {
   min-height: 44px; border-radius: 12px; border: 1px solid hsl(var(--input)); background: hsl(var(--background));
   font-size: 15px; font-weight: 600; color: hsl(var(--muted-foreground));
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, scale 150ms var(--ease-settle);
 }
 .task-schedule-day:hover:not(:disabled) { border-color: hsl(var(--primary) / .5); color: hsl(var(--foreground)); }
 .task-schedule-day[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
@@ -1659,7 +1705,7 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .due-quick-chip {
   min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border));
   background: hsl(var(--background)); font-size: 13.5px; font-weight: 500; color: hsl(var(--foreground));
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, scale 150ms var(--ease-settle);
 }
 .due-quick-chip:hover { border-color: hsl(var(--primary) / .5); }
 .due-quick-chip[aria-pressed="true"] { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
@@ -1732,6 +1778,8 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .app-layout .grouped-task-list--simple .task-returned-banner { margin: -2px 0 12px; }
 /* «Сделано» и «Сделано другими» — строка-переключатель на всю ширину. */
 .app-layout .grouped-task-list--simple .grouped-section-header { min-height: 52px; padding: 12px 16px; }
+.app-layout .grouped-task-list--simple .grouped-section-header--clickable, .dark .app-layout .grouped-task-list--simple .grouped-section-header--clickable { border-radius: 0; background: transparent; }
+.app-layout .grouped-task-list--simple .grouped-section-header--clickable + * { margin-top: 0; }
 .app-layout .grouped-task-list--simple .grouped-section-title { font-size: 16px; color: hsl(var(--muted-foreground)); }
 .grouped-task-list--simple .grouped-empty { margin-inline: 16px; }
 @media (max-width: 767px) {
@@ -1762,16 +1810,18 @@ button.billing-plan:hover { border-color: hsl(var(--primary) / .45); }
 .quick-task-form, .task-detail-body { --qf-fs: 17px; }
 @media (min-width: 768px) { .quick-task-form, .task-detail-body { --qf-fs: 16px; } }
 .quick-task-form { gap: 14px; }
-.quick-task-form .task-schedule { padding: 0; border: 0; border-radius: 0; gap: 12px; }
+.quick-task-form .task-schedule { padding: 0; border: 0; border-radius: 0; background: transparent; gap: 12px; }
 /* Форма без общей карточки: карточки — сами блоки. На ПК — не шире 760px. */
 .page-screen .content-panel.quick-task-panel { max-width: 760px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 
 .form-block {
   --tone: var(--primary);
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0;
-  padding: 12px; border: 1px solid hsl(var(--border) / .7); border-radius: 18px;
+  padding: 12px; border: 1px solid transparent; border-radius: 18px;
   background: hsl(var(--card)); box-shadow: 0 1px 2px rgb(16 24 40 / .04);
 }
+/* В окне блок лежит на сером фоне шторки: заливки хватает, тень лишняя. */
+.dialog-surface .form-block { box-shadow: none; }
 .form-block[data-tone="people"] { --tone: 174 62% 38%; }
 .form-block[data-tone="time"] { --tone: 30 90% 46%; }
 .form-block[data-tone="question"] { --tone: 262 70% 58%; }
@@ -2231,7 +2281,7 @@ html[data-text="large"] .worker-start-text b { font-size: 19px; }
 .header-broadcast:hover { background: rgb(255 255 255 / .26); }
 .header-broadcast:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 .broadcast-form, .broadcast-result { display: grid; gap: 12px; min-width: 0; }
-.broadcast-people { display: grid; gap: 8px; padding: 10px; border: 1px solid hsl(var(--border)); border-radius: 14px; min-width: 0; }
+.broadcast-people { display: grid; gap: 8px; padding: 10px; border: 0; border-radius: 14px; background: hsl(var(--muted) / .45); min-width: 0; }
 .broadcast-people-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
 .broadcast-people-head b { color: hsl(var(--primary)); }
 .broadcast-people-head button { min-height: 32px; padding: 0 12px; border-radius: 999px; font-weight: 600; color: hsl(var(--primary)); }
@@ -2267,3 +2317,73 @@ html[data-text="large"] .worker-start-text b { font-size: 19px; }
 .push-menu-help-link { margin-top: 8px; min-height: 36px; font-size: 13px; font-weight: 600; color: hsl(var(--primary)); }
 .push-menu-help-note { margin-bottom: 8px; }
 .push-menu-help-tech { margin-top: 8px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+
+/* ===== Касание как в приложении (просьба владельца 20.11.2026) =====
+   Галочки, переключатели и строки выбора во всех кабинетах (руководитель,
+   сотрудник, root) одного вида; на телефоне они крупнее, поле касания не
+   меньше 44px. Системный квадрат браузера заменён своим: та же форма, что у
+   галочки задачи, отметка заливкой с галочкой. Нажатие сжимает контрол сразу. */
+:root { --check-size: 22px; --check-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.6 8.4 6.6 11.3 12.4 4.8'/%3E%3C/svg%3E"); }
+:is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]) {
+  -webkit-appearance: none; appearance: none; position: relative; display: inline-block; flex: none;
+  width: var(--check-size); height: var(--check-size); border: 2px solid hsl(var(--muted-foreground) / .4);
+  border-radius: calc(var(--check-size) * .3); background: hsl(var(--card)) var(--check-icon) center / 0 no-repeat;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms var(--ease-settle), background-size 320ms var(--ease-fill), border-color 150ms var(--ease-settle), scale 150ms var(--ease-settle);
+}
+:is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]):checked {
+  border-color: transparent; background-color: hsl(var(--primary)); background-size: 70%;
+}
+@media (hover: hover) {
+  :is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]):not(:checked):not(:disabled):hover { border-color: hsl(var(--primary)); }
+}
+:is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]):active:not(:disabled) { scale: .88; }
+:is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]):disabled { opacity: .5; cursor: default; }
+:is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input[type="checkbox"], .billing-points > input[type="checkbox"]):focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+html[data-contrast="high"] :is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input, .billing-points > input):not(:checked) { border-color: hsl(var(--foreground) / .7); }
+html[data-motion="reduced"] :is(.schedule-check, .pick-checkbox, .app-check, .billing-consent > input, .billing-points > input):active { scale: 1; }
+
+@media (max-width: 767px) {
+  :root { --check-size: 26px; }
+  /* Галочка задачи у руководителя: 34px вместо 28, у сотрудника — 36 вместо 32. */
+  .app-layout .task-main { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+  .app-layout .task-checkbox { width: 34px; height: 34px; border-radius: 11px; margin-top: 0; }
+  .app-layout .task-checkbox > svg { width: 18px; height: 18px; }
+  .app-layout .grouped-task-list--simple .task-main { grid-template-columns: 36px minmax(0, 1fr); gap: 14px; }
+  .app-layout .grouped-task-list--simple .task-checkbox { width: 36px; height: 36px; border-radius: 12px; }
+  .app-layout .grouped-task-list--simple .task-checkbox > svg { width: 20px; height: 20px; }
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-main { grid-template-columns: 40px minmax(0, 1fr); }
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-checkbox { width: 40px; height: 40px; border-radius: 13px; }
+  html[data-text="large"] .app-layout .grouped-task-list--simple .task-checkbox > svg { width: 22px; height: 22px; }
+  /* Переключатели в меню и «Моём аккаунте»: 50×30, как системные. */
+  .motion-toggle { width: 50px; height: 30px; }
+  .motion-toggle > span { width: 24px; height: 24px; }
+  .motion-toggle[data-checked="true"] > span { transform: translateX(20px); }
+  [role="switch"]:active .motion-toggle > span { width: 28px; }
+  [role="switch"]:active .motion-toggle[data-checked="true"] > span { transform: translateX(16px); }
+  /* Строки выбора — по высоте пальца. */
+  :is(.pick-row, .worker-picker-row) { min-height: 52px; }
+  .worker-picker-row { font-size: 16px; }
+  .schedule-slot { min-height: 56px; }
+  .billing-consent, .billing-points { padding-block: 14px; }
+  .app-layout .worker-section-header:active, .app-layout .grouped-section-header--clickable:active { scale: .985; }
+}
+html[data-motion="reduced"] .app-layout :is(.worker-section-header, .grouped-section-header--clickable):active { scale: 1; }
+
+/* Раскрытие сотрудника: строки задач проявляются чуть сверху, пока открывается
+   группа, — ничего не «выскакивает» (stageshow: nothing pops). Стрелка
+   поворачивается той же кривой, что и ход переключателя. */
+@keyframes tf-rows-in { from { opacity: 0; translate: 0 -6px; } to { opacity: 1; translate: 0 0; } }
+.app-layout .worker-section[open] > .worker-section-body { animation: tf-rows-in 300ms var(--ease-app) both; }
+.app-layout .group-chevron { transition: transform 240ms var(--ease-fill); }
+
+/* Отчёты на телефоне: как список задач — без панели вокруг, карточки людей
+   во всю ширину контента и заливкой, без обводки (рамка в рамке съедала
+   по 16px с каждой стороны). На ПК панель остаётся. */
+@media (max-width: 767px) {
+  .page-screen .content-panel.reports-panel { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .reports-person-day, .reports-people { border-color: transparent; background: hsl(var(--card)); }
+  .reports-kpi { border-color: transparent; background: hsl(var(--card)); }
+  .reports-iconbtn, .reports-date, .reports-csv { border-color: transparent; background: hsl(var(--card)); }
+  html[data-contrast="high"] :is(.reports-person-day, .reports-people, .reports-kpi) { border-color: hsl(var(--border)); }
+}

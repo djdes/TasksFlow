@@ -5,7 +5,7 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <div className="space-y-3" role="status" aria-label="Загрузка списка" aria-busy="true">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex gap-4 rounded-2xl border border-border bg-card p-5" aria-hidden="true">
+        <div key={i} className="list-skeleton-row flex gap-4 rounded-2xl bg-card p-5" aria-hidden="true">
           <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
           <div className="flex-1 space-y-3 py-1">
             <Skeleton className={i % 2 ? "h-4 w-2/3" : "h-4 w-4/5"} />
