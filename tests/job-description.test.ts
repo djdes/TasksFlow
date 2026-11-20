@@ -14,7 +14,10 @@ import {
 } from "../server/job-description/office-text";
 import { enqueueTextJob, GatewayError, getTextJob, loadGatewayConfig } from "../server/job-description/gateway";
 import { buildJobDescriptionInput, JOB_DESCRIPTION_INSTRUCTIONS } from "../server/job-description/prompt";
-import { jobDescriptionLabel, JOB_DESCRIPTION_MAX_CHARS, sourceFromFileName } from "../shared/job-description";
+import { jobDescriptionLabel, JOB_DESCRIPTION_MAX_CHARS, proposalScheduleLabel, sourceFromFileName, titleKey } from "../shared/job-description";
+import { pdfToText, parseToUnicode } from "../server/job-description/pdf-text";
+import { extractSegmentsJson, normalizeProposals, parseCreatedTasks } from "../server/job-description/proposals";
+import fs from "node:fs";
 
 /** Минимальный ZIP-писатель: этого хватает, чтобы собрать .docx/.xlsx в тесте. */
 export function zip(files: Record<string, string | Buffer>, store = false): Buffer {
@@ -136,12 +139,14 @@ describe("текст и лимиты", () => {
     expect(sourceFromFileName("Инструкция.DOCX")).toBe("docx");
     expect(sourceFromFileName("a.xlsx")).toBe("xlsx");
     expect(sourceFromFileName("a.doc")).toBe("legacy");
-    expect(sourceFromFileName("a.pdf")).toBeNull();
+    expect(sourceFromFileName("a.pdf")).toBe("pdf");
+    expect(sourceFromFileName("a.png")).toBeNull();
   });
   it("подписи статуса", () => {
     expect(jobDescriptionLabel({ status: "done", tasksCreated: 7 })).toBe("Задач из инструкции: 7");
     expect(jobDescriptionLabel({ status: "done", tasksCreated: 0 })).toBe("Новых задач в инструкции нет");
     expect(jobDescriptionLabel({ status: "queued", tasksCreated: 0 }, false)).toBe("Инструкция ждёт диспетчера");
+    expect(jobDescriptionLabel({ status: "review", tasksCreated: 0, proposalsCount: 8 })).toBe("Проверьте задачи: 8");
   });
 });
 
@@ -193,12 +198,99 @@ describe("шлюз ProjectsFlow", () => {
   });
 });
 
-// ---- создание задач по ответу диспетчера ----
+// ---- PDF ----
 
-const patches: Array<Record<string, unknown>> = [];
+describe("pdfToText", () => {
+  it("PDF из браузера: кириллица через ToUnicode, слова целиком, строки по порядку", () => {
+    const text = pdfToText(fs.readFileSync("tests/fixtures/job-description-chromium.pdf"));
+    expect(text.split("\n")).toEqual([
+      "ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ ПОВАРА",
+      "1. Общие положения. Повар подчиняется заведующему производством.",
+      "2. Должностные обязанности:",
+      "Ежедневно проверять сроки годности продукции на витрине и в холодильниках.",
+      "По пятницам мыть холодильник: полки, дверцу, уплотнитель.",
+      "Следить, чтобы температура в холодильниках была 2–6 °C, записывать в журнал.",
+      "Смена 08:00–20:00",
+      "English line: Clean the grill №5 — 100%.",
+    ]);
+  });
+
+  it("скан без текстового слоя — пустой текст (маршрут скажет «похоже, это скан»)", () => {
+    expect(pdfToText(fs.readFileSync("tests/fixtures/job-description-scan.pdf"))).toBe("");
+  });
+
+  it("простой PDF без сжатия: литеральные строки, TJ с пробелом, T*", () => {
+    const content = "BT /F1 12 Tf 10 700 Td (Wash the floor) Tj T* [(every) -300 (day)] TJ ET";
+    const pdf = [
+      "%PDF-1.4",
+      "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+      "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+      "3 0 obj << /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj",
+      `4 0 obj << /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj`,
+      "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
+      "trailer << /Root 1 0 R >>",
+      "%%EOF",
+    ].join("\n");
+    expect(pdfToText(Buffer.from(pdf, "latin1"))).toBe("Wash the floor\nevery day");
+  });
+
+  it("не PDF и защищённый PDF — понятные ошибки", () => {
+    expect(() => pdfToText(Buffer.from("hello"))).toThrow(/Это не PDF/);
+    expect(() => pdfToText(Buffer.from("%PDF-1.4\n1 0 obj << >> endobj\ntrailer << /Encrypt 5 0 R /Root 1 0 R >>\n%%EOF", "latin1"))).toThrow(/паролем/);
+  });
+
+  it("ToUnicode: bfchar и bfrange, двухбайтовые коды", () => {
+    const cmap = parseToUnicode("1 begincodespacerange <0000> <FFFF> endcodespacerange 2 beginbfchar <0003> <0020> <0010> <041F> endbfchar 1 beginbfrange <0020> <0022> <0430> endbfrange");
+    expect(cmap.bytes).toBe(2);
+    expect(cmap.map.get(0x10)).toBe("П");
+    expect(cmap.map.get(0x22)).toBe("в");
+  });
+});
+
+// ---- предложения задач ----
+
+describe("normalizeProposals", () => {
+  it("вопросы — только у регулярных, срок первой недели делает задачу разовой, дубли и лишнее — прочь", () => {
+    const raw = extractSegmentsJson("Вот:\n```json\n" + JSON.stringify({ segments: [
+      { id: "s1", title: "Проверить холодильники", isRecurring: true, checklist: ["Записать в журнал", { title: "Температура 2–6 °C?", options: ["Да", "Нет", "Да"] }, { title: "Один вариант?", options: ["Да"] }] },
+      { id: "s2", title: "Пройти инструктаж", isRecurring: true, weekDays: [1], dueInDays: 40, checklist: [{ title: "Подпись?", options: ["Да", "Нет"] }] },
+      { id: "s1", title: "проверить холодильники" },
+      { title: "  " },
+      { title: "Протирать столы", requiresPhoto: "нет", weekDays: [0, 1, 2, 3, 4, 5, 6], monthDay: 40 },
+    ] }) + "\n```");
+    expect(raw).not.toBeNull();
+    const p = normalizeProposals(raw!.segments);
+    expect(p.map((x) => x.title)).toEqual(["Проверить холодильники", "Пройти инструктаж", "Протирать столы"]);
+    expect(p[0].checklist).toEqual([{ title: "Записать в журнал" }, { title: "Температура 2–6 °C?", options: ["Да", "Нет"] }, { title: "Один вариант?" }]);
+    expect(p[1]).toMatchObject({ isRecurring: false, weekDays: null, dueInDays: 14, checklist: [{ title: "Подпись?" }] });
+    expect(p[2]).toMatchObject({ requiresPhoto: false, isRecurring: true, weekDays: null, monthDay: null });
+    expect(new Set(p.map((x) => x.id)).size).toBe(3);
+  });
+
+  it("не больше 12 предложений; список созданных — и новый формат, и старый", () => {
+    expect(normalizeProposals(Array.from({ length: 20 }, (_, i) => ({ title: `Задача ${i}` })))).toHaveLength(12);
+    expect(parseCreatedTasks("[5, {\"id\": 7, \"title\": \"Мыть пол\"}, {\"id\": \"x\"}]")).toEqual([{ id: 5, title: null }, { id: 7, title: "Мыть пол" }]);
+  });
+
+  it("расписание словами", () => {
+    const base = { isRecurring: true, weekDays: null, monthDay: null, dueInDays: null };
+    expect(proposalScheduleLabel(base)).toBe("Каждый день");
+    expect(proposalScheduleLabel({ ...base, weekDays: [1, 2, 3, 4, 5] })).toBe("По будням");
+    expect(proposalScheduleLabel({ ...base, weekDays: [5, 1] })).toBe("По пн, пт");
+    expect(proposalScheduleLabel({ ...base, monthDay: 5 })).toBe("Каждое 5 число");
+    expect(proposalScheduleLabel({ ...base, isRecurring: false, dueInDays: 3 })).toBe("Разово · за 3 дня");
+    expect(titleKey("Помыть  ХОЛОДИЛЬНИК, ёлка!")).toBe("помыть холодильник елка");
+  });
+});
+
+// ---- проверка перед созданием: ответ → предложения → «Создать выбранные» ----
+
+let current: Record<string, unknown> | null = null;
 vi.mock("../server/db", () => ({
   db: {
-    update: () => ({ set: (set: Record<string, unknown>) => ({ where: async () => { patches.push(set); } }) }),
+    select: () => ({ from: () => ({ where: async () => (current ? [{ ...current }] : []) }) }),
+    update: () => ({ set: (set: Record<string, unknown>) => ({ where: async () => { if (current) Object.assign(current, set); } }) }),
+    delete: () => ({ where: async () => { current = null; } }),
   },
 }));
 const storage = {
@@ -209,65 +301,128 @@ const storage = {
 vi.mock("../server/storage", () => ({ storage }));
 const createTaskForActor = vi.fn();
 vi.mock("../server/services/task-create", () => ({ createTaskForActor }));
+const removeTask = vi.fn();
+vi.mock("../server/services/task-delete", () => ({ removeTask }));
 
-describe("createTasksFromAnswer", () => {
-  const row = {
+describe("предложения и «Создать выбранные»", () => {
+  const baseRow = () => ({
     userId: 7, companyId: 42, source: "text", fileName: null, content: "Повар\nМыть пол", status: "processing",
-    gatewayJobId: "j1", attempts: 1, tasksCreated: 0, taskIds: null, error: null, createdBy: 10, createdAt: 1, updatedAt: 1, sentAt: 1,
-  };
+    gatewayJobId: "j1", attempts: 1, tasksCreated: 0, taskIds: null as string | null, proposals: null as string | null, autoApply: false,
+    error: null, createdBy: 10, createdAt: 1, updatedAt: 1, sentAt: 1,
+  });
+  let workerTasks: Array<{ id: number; workerId: number; title: string; category?: string | null }>;
   beforeEach(() => {
-    patches.length = 0;
+    current = baseRow();
     createTaskForActor.mockReset();
+    removeTask.mockReset();
+    workerTasks = [{ id: 1, workerId: 7, title: "Помыть  ХОЛОДИЛЬНИК!" }, { id: 2, workerId: 8, title: "Мыть пол" }];
     storage.getUserById.mockImplementation(async (id: number) => ({ id, companyId: 42, name: id === 7 ? "Олег" : "Анна" }));
     storage.getCompanyById.mockResolvedValue({ id: 42, accessSettings: JSON.stringify({ taskBonus: 30 }) });
-    storage.getTasks.mockResolvedValue([{ id: 1, workerId: 7, title: "Помыть  ХОЛОДИЛЬНИК!" }, { id: 2, workerId: 8, title: "Мыть пол" }]);
+    storage.getTasks.mockImplementation(async () => workerTasks);
     let next = 100;
-    createTaskForActor.mockImplementation(async () => ({ id: next++ }));
+    createTaskForActor.mockImplementation(async ({ input }: { input: { title: string } }) => ({ id: next++, title: input.title }));
   });
 
-  it("задачи — этому сотруднику, с премией по умолчанию, без дублей, исполнителя из ответа не берём", async () => {
-    const { createTasksFromAnswer } = await import("../server/job-description/service");
-    const answer = "Вот результат:\n```json\n" + JSON.stringify({
-      segments: [
-        { title: "Мыть пол", workerId: 999, isRecurring: true, requiresPhoto: true, checklist: ["зал", "кухня"] },
-        { title: "Помыть холодильник", isRecurring: true, weekDays: [5] },
-        { title: "Позвонить поставщику", requiresPhoto: false, isRecurring: true, weekDays: [1], checklist: ["заказ"] },
-        { title: "мыть пол" },
-      ],
-    }) + "\n```";
-    await createTasksFromAnswer(row as never, answer);
-    expect(createTaskForActor).toHaveBeenCalledTimes(2);
-    const first = createTaskForActor.mock.calls[0][0];
-    expect(first.actor).toEqual({ kind: "session", userId: 10 });
-    expect(first.companyId).toBe(42);
-    expect(first.input).toMatchObject({ title: "Мыть пол", workerId: 7, price: 30, isRecurring: true, dueDate: null, requiresPhoto: true });
-    expect(first.input.checklist.map((c: { title: string }) => c.title)).toEqual(["зал", "кухня"]);
-    expect(first.input.checklist[0].requiresPhoto).toBeUndefined();
-    const call = createTaskForActor.mock.calls[1][0];
-    expect(call.input).toMatchObject({ title: "Позвонить поставщику", requiresPhoto: false, weekDays: [1] });
-    expect(call.input.checklist[0].requiresPhoto).toBe(false);
-    expect(patches.at(-1)).toMatchObject({ status: "done", tasksCreated: 2, taskIds: "[100,101]", error: null });
-  });
+  const answer = JSON.stringify({ segments: [
+    { id: "a", title: "Мыть пол", isRecurring: true, checklist: ["зал", { title: "Пол сухой?", options: ["Да", "Нет"] }] },
+    { id: "b", title: "Помыть холодильник", isRecurring: true, weekDays: [5] },
+    { id: "c", title: "Пройти инструктаж", requiresPhoto: false, dueInDays: 2 },
+  ] });
 
-  it("пустой список обязанностей — готово, 0 задач; не JSON — ошибка с повтором", async () => {
-    const { createTasksFromAnswer } = await import("../server/job-description/service");
-    await createTasksFromAnswer(row as never, '{"segments": []}');
-    expect(patches.at(-1)).toMatchObject({ status: "done", tasksCreated: 0 });
-    await createTasksFromAnswer(row as never, "Не могу помочь");
-    expect(patches.at(-1)).toMatchObject({ status: "failed" });
+  it("ответ диспетчера — предложения на проверку, задачи пока не создаются", async () => {
+    const { storeAnswer, getJobDescriptionDetails } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
     expect(createTaskForActor).not.toHaveBeenCalled();
+    expect(current).toMatchObject({ status: "review" });
+    const details = await getJobDescriptionDetails(current as never);
+    expect(details.state).toMatchObject({ status: "review", proposalsCount: 3 });
+    expect(details.proposals.map((p) => [p.title, p.exists])).toEqual([["Мыть пол", false], ["Помыть холодильник", true], ["Пройти инструктаж", false]]);
   });
 
-  it("автора нет — права компании (как у API-ключа)", async () => {
-    const { createTasksFromAnswer } = await import("../server/job-description/service");
-    storage.getUserById.mockImplementation(async (id: number) => (id === 7 ? { id, companyId: 42 } : undefined));
-    await createTasksFromAnswer(row as never, '{"segments":[{"title":"Принять поставку"}]}');
-    expect(createTaskForActor.mock.calls[0][0].actor).toEqual({ kind: "apiKey", companyId: 42 });
+  it("создаются отмеченные, с поправленным названием, премией по умолчанию, вопросом и сроком первой недели", async () => {
+    const { storeAnswer, applyJobDescription } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
+    const r = await applyJobDescription(current as never, { include: ["a", "b", "c"], titles: { a: "  Мыть пол в зале " } }, { kind: "session", userId: 10 });
+    expect(r).toMatchObject({ created: 2, skipped: 1, removed: 0 });
+    const [first, second] = createTaskForActor.mock.calls.map((c) => c[0]);
+    expect(first.actor).toEqual({ kind: "session", userId: 10 });
+    expect(first.input).toMatchObject({ title: "Мыть пол в зале", workerId: 7, price: 30, isRecurring: true, dueDate: null });
+    expect(first.input.checklist[1]).toMatchObject({ title: "Пол сухой?", options: ["Да", "Нет"], requiresPhoto: false });
+    expect(second.input).toMatchObject({ title: "Пройти инструктаж", isRecurring: false, requiresPhoto: false });
+    const due = new Date(second.input.dueDate * 1000);
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 2);
+    expect(due.getDate()).toBe(expected.getDate());
+    expect(current).toMatchObject({ status: "done", tasksCreated: 2 });
+    expect(JSON.parse(String(current?.taskIds))).toEqual([{ id: 100, title: "Мыть пол в зале", proposal: "Мыть пол" }, { id: 101, title: "Пройти инструктаж" }]);
   });
 
-  it("причины отказа шлюза — словами", async () => {
-    const { describeGatewayFailure, titleKey } = await import("../server/job-description/service");
+  it("новая инструкция: предлагаем убрать задачи прошлой, которых в ней нет; чужие задачи не трогаем", async () => {
+    workerTasks.push({ id: 50, workerId: 7, title: "Протирать витрину" }, { id: 51, workerId: 7, title: "Мыть пол" }, { id: 52, workerId: 7, title: "Своя задача руководителя" });
+    current!.taskIds = JSON.stringify([{ id: 50, title: "Протирать витрину" }, { id: 51, title: "Мыть пол" }, { id: 99, title: "Удалённая" }]);
+    const { storeAnswer, getJobDescriptionDetails, applyJobDescription } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
+    const details = await getJobDescriptionDetails(current as never);
+    expect(details.stale).toEqual([{ taskId: 50, title: "Протирать витрину" }]);
+    expect(details.created.map((c) => c.state)).toEqual(["active", "active", "deleted"]);
+    await applyJobDescription(current as never, { include: [], remove: [50, 52, 1] }, { kind: "session", userId: 10 });
+    expect(removeTask).toHaveBeenCalledTimes(1);
+    expect(removeTask.mock.calls[0][0]).toMatchObject({ id: 50 });
+    expect(JSON.parse(String(current?.taskIds))).toEqual([{ id: 51, title: "Мыть пол" }]);
+  });
+
+  it("название, поправленное при создании, — следующая инструкция узнаёт задачу по исходному", async () => {
+    workerTasks.push({ id: 61, workerId: 7, title: "Протирать столы в зале" });
+    current!.taskIds = JSON.stringify([{ id: 61, title: "Протирать столы в зале", proposal: "Мыть пол" }]);
+    const { storeAnswer, getJobDescriptionDetails } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
+    const details = await getJobDescriptionDetails(current as never);
+    expect(details.stale).toEqual([]);
+    expect(details.proposals.find((p) => p.id === "a")?.exists).toBe(true);
+  });
+
+  it("переименованная задача прошлой инструкции — не «устаревшая» и не создаётся второй раз", async () => {
+    workerTasks.push({ id: 60, workerId: 7, title: "Мыть пол в зале" });
+    current!.taskIds = JSON.stringify([{ id: 60, title: "Мыть пол" }]);
+    const { storeAnswer, getJobDescriptionDetails, applyJobDescription } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
+    const details = await getJobDescriptionDetails(current as never);
+    expect(details.stale).toEqual([]);
+    expect(details.proposals.find((p) => p.id === "a")?.exists).toBe(true);
+    const r = await applyJobDescription(current as never, { include: ["a"] }, { kind: "session", userId: 10 });
+    expect(r).toMatchObject({ created: 0, skipped: 1 });
+  });
+
+  it("«Создать сразу»: всё новое создаётся без проверки; пустой ответ — готово, 0 задач; мусор — ошибка", async () => {
+    current!.autoApply = true;
+    const { storeAnswer } = await import("../server/job-description/service");
+    await storeAnswer(current as never, answer);
+    expect(createTaskForActor).toHaveBeenCalledTimes(2);
+    expect(current).toMatchObject({ status: "done", tasksCreated: 2 });
+    current = baseRow();
+    await storeAnswer(current as never, '{"segments": []}');
+    expect(current).toMatchObject({ status: "done", tasksCreated: 0 });
+    await storeAnswer(current as never, "Не могу помочь");
+    expect(current).toMatchObject({ status: "failed" });
+  });
+
+  it("правки после создания видны: переименована и удалена", async () => {
+    const { createdViews, describeGatewayFailure } = await import("../server/job-description/service");
+    expect(createdViews([{ id: 1, title: "Мыть пол" }, { id: 2, title: "Протереть столы" }], [{ id: 1, title: "Мыть пол в зале" }])).toEqual([
+      { taskId: 1, title: "Мыть пол", state: "edited", currentTitle: "Мыть пол в зале" },
+      { taskId: 2, title: "Протереть столы", state: "deleted", currentTitle: null },
+    ]);
     expect(describeGatewayFailure("dispatcher_timeout")).toMatch(/Ralph не взял/);
-    expect(titleKey("Помыть  ХОЛОДИЛЬНИК, ёлка!")).toBe("помыть холодильник елка");
+  });
+});
+
+describe("статистика для root", () => {
+  it("чужой или пустой ответ не роняет страницу — пустая статистика", async () => {
+    const { toFeedback } = await import("../client/src/components/RootJobDescriptionStats");
+    expect(toFeedback([])).toMatchObject({ instructions: 0, bySource: {}, topDeleted: [] });
+    expect(toFeedback(null).created).toBe(0);
+    expect(toFeedback({ instructions: 3, bySource: { pdf: 2, bad: "x" }, topDeleted: [{ title: "Мыть пол", count: 2 }, 5] })).toMatchObject({
+      instructions: 3, bySource: { pdf: 2 }, topDeleted: [{ title: "Мыть пол", count: 2 }],
+    });
   });
 });

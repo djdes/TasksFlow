@@ -18,6 +18,8 @@ async function main() {
       attempts INT NOT NULL DEFAULT 0,
       tasks_created INT NOT NULL DEFAULT 0,
       task_ids TEXT NULL,
+      proposals MEDIUMTEXT NULL,
+      auto_apply TINYINT(1) NOT NULL DEFAULT 0,
       error VARCHAR(500) NULL,
       created_by INT NULL,
       created_at INT NOT NULL,
@@ -27,6 +29,20 @@ async function main() {
       KEY job_descriptions_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `));
+  // Колонки второй волны (проверка перед созданием) — для баз, где таблица уже
+  // есть. ER_DUP_FIELDNAME = колонка на месте.
+  for (const [name, ddl] of [
+    ["proposals", "ALTER TABLE job_descriptions ADD COLUMN proposals MEDIUMTEXT NULL AFTER task_ids"],
+    ["auto_apply", "ALTER TABLE job_descriptions ADD COLUMN auto_apply TINYINT(1) NOT NULL DEFAULT 0 AFTER proposals"],
+  ] as const) {
+    try {
+      await db.execute(sql.raw(ddl));
+      console.log(`[migrate] job_descriptions.${name} added`);
+    } catch (err: any) {
+      const code = err?.code ?? err?.cause?.code;
+      if (code !== "ER_DUP_FIELDNAME") throw err;
+    }
+  }
   console.log("[migrate] job_descriptions ready");
   process.exit(0);
 }

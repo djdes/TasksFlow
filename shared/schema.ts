@@ -682,7 +682,8 @@ export const userPinReveal = mysqlTable("user_pin_reveal", {
 
 // Должностная инструкция сотрудника → задачи (shared/job-description.ts,
 // server/job-description/*). Одна строка на человека: новая инструкция
-// заменяет прежнюю. Таблицу создаёт script/create-job-descriptions-table.ts.
+// заменяет прежнюю (список созданных задач переносится — для разницы).
+// Таблицу создаёт script/create-job-descriptions-table.ts.
 export const jobDescriptions = mysqlTable("job_descriptions", {
   userId: int("user_id").primaryKey(),
   companyId: int("company_id").notNull(),
@@ -693,7 +694,13 @@ export const jobDescriptions = mysqlTable("job_descriptions", {
   gatewayJobId: varchar("gateway_job_id", { length: 64 }),
   attempts: int("attempts").notNull().default(0),
   tasksCreated: int("tasks_created").notNull().default(0),
+  // Созданные из инструкции задачи: [{ id, title }] — для разницы со следующей
+  // инструкцией и учёта, какие задачи руководитель потом удалил или переименовал.
   taskIds: text("task_ids"),
+  // Предложения разбора (shared/job-description.ts JobProposal[]) до создания.
+  proposals: mediumtext("proposals"),
+  // «Создать сразу, без проверки».
+  autoApply: boolean("auto_apply").notNull().default(false),
   error: varchar("error", { length: 500 }),
   createdBy: int("created_by"),
   createdAt: int("created_at").notNull(),

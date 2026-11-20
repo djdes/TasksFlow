@@ -6,6 +6,7 @@ import { PLAN_IDS, PLANS, type PlanId } from "@shared/plans";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton, ListSkeleton } from "@/components/PageSkeleton";
 import { RootBillingPanel } from "@/components/RootBillingPanel";
+import { RootJobDescriptionStats } from "@/components/RootJobDescriptionStats";
 import { RootPeopleDialog, RootPeopleSearch, type RootPerson } from "@/components/RootPeople";
 import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export default function RootCompanies() {
         <div className="page-sections">
           <RootPeopleSearch onOpen={(p) => openPeople({ companyId: p.companyId, companyName: p.companyName, person: p })} />
           <RootBillingPanel />
+          <RootJobDescriptionStats />
           <section className="content-panel">
             {query.isLoading ? (
               <ListSkeleton rows={4} />

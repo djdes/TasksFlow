@@ -50,6 +50,12 @@ export async function handleCallback(
       })
       .catch(() => null);
 
+  // «Чья это инструкция?» — своя ветка, к черновикам задач не относится.
+  if (query.data?.startsWith("jd:")) {
+    const { handleJobDescriptionCallback } = await import("./job-description");
+    if (await handleJobDescriptionCallback(query, runtime)) return;
+  }
+
   const action = parseCallback(query.data);
   if (!action) {
     await answer("Кнопка устарела");

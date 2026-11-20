@@ -19,6 +19,7 @@ import type { TgMessage, TgUpdate } from "./client";
 import { extractAttachment, type DraftAttachment } from "./attachments";
 import { startComposing, loadAssignableWorkers } from "./composer";
 import { handleCallback } from "./handle-callback";
+import { handleJobDescriptionDocument, isJobDescriptionDocument } from "./job-description";
 import {
   handleTasksCommand,
   handleIncomingTaskPhoto,
@@ -217,6 +218,13 @@ async function handleMessage(
   if (text.startsWith("/tasks")) {
     await handleTasksCommand(chatId, user, runtime, replyTo);
     return;
+  }
+
+  // Файл Word, Excel или PDF от руководителя — должностная инструкция
+  // сотрудника: бот спросит, чья она, и отправит на разбор (job-description.ts).
+  if (message.document && isJobDescriptionDocument(message)) {
+    const handled = await handleJobDescriptionDocument(message, user, runtime);
+    if (handled) return;
   }
 
   // Фото без подписи — это, скорее всего, отчёт по задаче, а не новая

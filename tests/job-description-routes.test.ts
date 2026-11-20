@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deflateRawSync } from "node:zlib";
+import fs from "node:fs";
 
 const storage = {
   getApiKeyByHash: vi.fn(),
@@ -25,7 +26,12 @@ const service = {
   retryJobDescription: vi.fn(),
   runJobDescription: vi.fn(async () => {}),
   saveJobDescription: vi.fn(),
-  toState: (row: { userId: number; status: string }) => ({ userId: row.userId, status: row.status, source: "text", fileName: null, tasksCreated: 0, error: null, updatedAt: 1 }),
+  applyJobDescription: vi.fn(),
+  findPositionTemplate: vi.fn(),
+  getJobDescription: vi.fn(),
+  getJobDescriptionDetails: vi.fn(),
+  jobDescriptionFeedback: vi.fn(),
+  toState: (row: { userId: number; status: string }) => ({ userId: row.userId, status: row.status, source: "text", fileName: null, tasksCreated: 0, proposalsCount: 0, autoApply: false, error: null, updatedAt: 1 }),
 };
 vi.mock("../server/job-description/service", () => service);
 
@@ -96,14 +102,51 @@ describe("POST /api/users/:id/job-description", () => {
     expect(short.body.message).toMatch(/обязанност/);
   });
 
-  it("старый .doc — 400 «сохраните как .docx», PDF — 400", async () => {
+  it("старый .doc и картинка — 400 с подсказкой, скан PDF — «похоже, это скан»", async () => {
     const app = await buildApp(10);
     const doc = await request(app).post("/api/users/7/job-description").attach("file", Buffer.from("old"), "old.doc");
     expect(doc.status).toBe(400);
     expect(doc.body.message).toMatch(/\.docx/);
-    const pdf = await request(app).post("/api/users/7/job-description").attach("file", Buffer.from("%PDF"), "a.pdf");
-    expect(pdf.status).toBe(400);
+    const png = await request(app).post("/api/users/7/job-description").attach("file", Buffer.from("x"), "a.png");
+    expect(png.status).toBe(400);
+    const scan = await request(app).post("/api/users/7/job-description").attach("file", fs.readFileSync("tests/fixtures/job-description-scan.pdf"), "Скан.pdf");
+    expect(scan.status).toBe(400);
+    expect(scan.body.message).toMatch(/скан/);
     expect(service.saveJobDescription).not.toHaveBeenCalled();
+  });
+
+  it("PDF с текстом принимается; «Создать сразу» передаётся", async () => {
+    const app = await buildApp(10);
+    const res = await request(app).post("/api/users/7/job-description")
+      .field("autoApply", "true")
+      .attach("file", fs.readFileSync("tests/fixtures/job-description-chromium.pdf"), "Инструкция.pdf");
+    expect(res.status).toBe(202);
+    expect(service.saveJobDescription).toHaveBeenCalledWith(expect.objectContaining({ source: "pdf", autoApply: true, fileName: "Инструкция.pdf" }));
+    expect(service.saveJobDescription.mock.calls[0][0].content).toContain("Ежедневно проверять сроки годности");
+  });
+
+  it("«по должности»: берём должность из формы или из профиля; без должности — 400", async () => {
+    const app = await buildApp(10);
+    const res = await request(app).post("/api/users/7/job-description").send({ mode: "position" });
+    expect(res.status).toBe(202);
+    expect(service.saveJobDescription).toHaveBeenLastCalledWith(expect.objectContaining({ source: "position", content: "повар" }));
+    users.set(9, { ...WORKER, id: 9, position: null });
+    const none = await request(app).post("/api/users/9/job-description").send({ mode: "position" });
+    expect(none.status).toBe(400);
+    users.delete(9);
+  });
+
+  it("«как у коллеги»: копия предложений без разбора; у коллеги ничего — 404", async () => {
+    const app = await buildApp(10);
+    service.findPositionTemplate.mockResolvedValueOnce({ row: { userId: 3, content: "текст" }, proposals: [{ id: "a", title: "Мыть пол" }] });
+    users.set(3, { ...WORKER, id: 3, name: "Анна" });
+    const ok = await request(app).post("/api/users/7/job-description").send({ copyFromUserId: 3 });
+    expect(ok.status).toBe(201);
+    expect(service.saveJobDescription).toHaveBeenLastCalledWith(expect.objectContaining({ source: "copy", fileName: "Как у коллеги: Анна", proposals: [{ id: "a", title: "Мыть пол" }] }));
+    expect(service.runJobDescription).not.toHaveBeenCalled();
+    service.findPositionTemplate.mockResolvedValueOnce(null);
+    expect((await request(app).post("/api/users/7/job-description").send({ copyFromUserId: 3 })).status).toBe(404);
+    users.delete(3);
   });
 
   it("сотрудник без права на людей — 403; чужая компания — 404; без входа — 401", async () => {
@@ -114,6 +157,32 @@ describe("POST /api/users/:id/job-description", () => {
     const anon = await buildApp();
     expect((await request(anon).post("/api/users/7/job-description").send({ text: "x".repeat(50) })).status).toBe(401);
     expect(service.saveJobDescription).not.toHaveBeenCalled();
+  });
+});
+
+describe("проверка перед созданием", () => {
+  it("детали для окна и «Создать выбранные» от имени руководителя", async () => {
+    service.getJobDescription.mockResolvedValue({ userId: 7, status: "review", companyId: 42 });
+    service.getJobDescriptionDetails.mockResolvedValue({ state: { userId: 7, status: "review" }, proposals: [{ id: "a" }], stale: [], created: [] });
+    service.applyJobDescription.mockResolvedValue({ created: 1, removed: 0, skipped: 0, errors: [] });
+    const app = await buildApp(10);
+    const details = await request(app).get("/api/users/7/job-description");
+    expect(details.status).toBe(200);
+    expect(details.body).toMatchObject({ gatewayReady: true, proposals: [{ id: "a" }] });
+    const applied = await request(app).post("/api/users/7/job-description/apply").send({ include: ["a"], titles: { a: "Мыть пол в зале" }, remove: [5] });
+    expect(applied.status).toBe(200);
+    expect(service.applyJobDescription).toHaveBeenCalledWith(expect.objectContaining({ userId: 7 }), { include: ["a"], titles: { a: "Мыть пол в зале" }, remove: [5] }, { kind: "session", userId: 10 });
+    expect(applied.body).toMatchObject({ created: 1 });
+  });
+
+  it("применить можно только предложения на проверке; кривое тело — 400; чужому — 403", async () => {
+    service.getJobDescription.mockResolvedValue({ userId: 7, status: "done", companyId: 42 });
+    const app = await buildApp(10);
+    expect((await request(app).post("/api/users/7/job-description/apply").send({ include: ["a"] })).status).toBe(409);
+    expect((await request(app).post("/api/users/7/job-description/apply").send({ include: "a" })).status).toBe(400);
+    const asWorker = await buildApp(7);
+    expect((await request(asWorker).post("/api/users/7/job-description/apply").send({ include: [] })).status).toBe(403);
+    expect(service.applyJobDescription).not.toHaveBeenCalled();
   });
 });
 

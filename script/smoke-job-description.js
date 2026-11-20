@@ -3,7 +3,10 @@
 //     короткий текст не даёт создать человека, Excel уходит файлом после
 //     создания, тост «инструкцию разбираем», статус «Задач из инструкции: 4»;
 //  2) телефон 390 в тёмной теме: окно «Инструкция» у сотрудника — старый
-//     .doc с подсказкой, текст уходит полем text, «Повторить» у неудачной.
+//     .doc с подсказкой, текст уходит полем text, «Повторить» у неудачной;
+//  3) «Проверьте задачи»: окно с предложениями — снять галочку, поправить
+//     название, убрать задачу прошлой инструкции; тело «Создать выбранные»;
+//     «По должности» в форме добавления.
 // API подменён фикстурами — сервер, БД и диспетчер Ralph не участвуют.
 async (page) => {
   const base = new URL(page.url()).origin;
@@ -16,7 +19,8 @@ async (page) => {
   const person = (id, name, extra = {}) => ({ id, name, phone: `+7999000${String(id).padStart(4, '0')}`, isAdmin: false, isRoot: false, companyId: 1, bonusBalance: 0, createdAt: now - 86400 * 20, managedWorkerIds: null, position: null, hasPin: true, locationId: null, roleId: null, email: null, ...extra });
   const admin = person(1, 'Денис', { isAdmin: true, access });
   const people = [admin, person(3, 'Анна', { position: 'Повар' }), person(4, 'Борис', { position: 'Мойщик' })];
-  const state = (userId, status, extra = {}) => ({ userId, status, source: 'text', fileName: null, tasksCreated: 0, error: null, updatedAt: now, ...extra });
+  const state = (userId, status, extra = {}) => ({ userId, status, source: 'text', fileName: null, tasksCreated: 0, proposalsCount: 0, autoApply: false, error: null, updatedAt: now, ...extra });
+  const proposal = (id, title, extra = {}) => ({ id, title, description: null, requiresPhoto: true, category: null, isRecurring: true, weekDays: null, monthDay: null, dueInDays: null, checklist: [], confidence: 0.8, exists: false, ...extra });
 
   async function open(viewport, theme, jobStates) {
     const context = await browser.newContext({ viewport, serviceWorkers: 'block', isMobile: viewport.width < 500, hasTouch: viewport.width < 500 });
@@ -43,6 +47,15 @@ async (page) => {
       if (p === '/api/companies/me') return route.fulfill({ json: { id: 1, name: 'Кафе', planInfo: { id: 'team', name: 'Стандарт', maxUsers: 30, locations: false, until: null, enforced: true }, photo: { stamp: true, cameraOnly: false }, wesetupConfigured: false, taskBonus: 0 } });
       if (p === '/api/roles') return route.fulfill({ json: { roles: [], employeeApproval: false } });
       if (p === '/api/job-descriptions') return route.fulfill({ json: { gatewayReady: true, items: jobStates() } });
+      if (p === '/api/users/4/job-description' && req.method() === 'GET') {
+        return route.fulfill({ json: { gatewayReady: true, state: state(4, 'review', { proposalsCount: 3 }), proposals: [
+          proposal('a', 'Мыть посуду', { checklist: [{ title: 'Вода горячая?', options: ['Да', 'Нет'] }] }),
+          proposal('b', 'Протирать столы', { weekDays: [1, 3, 5] }),
+          proposal('c', 'Пройти инструктаж', { isRecurring: false, dueInDays: 2, requiresPhoto: false }),
+          proposal('d', 'Вынести мусор', { exists: true }),
+        ], stale: [{ taskId: 55, title: 'Чистить гриль' }], created: [] } });
+      }
+      if (p === '/api/users/4/job-description/apply') return route.fulfill({ json: { created: 2, removed: 1, skipped: 0, errors: [], state: state(4, 'done', { tasksCreated: 2 }) } });
       const m = p.match(/^\/api\/users\/(\d+)\/job-description(\/retry)?$/);
       if (m && req.method() === 'POST') return route.fulfill({ status: m[2] ? 200 : 202, json: { gatewayReady: true, state: state(Number(m[1]), 'queued') } });
       if (p === '/api/push/config') return route.fulfill({ json: { web: { enabled: false, publicKey: null }, apns: { enabled: false } } });
@@ -63,8 +76,11 @@ async (page) => {
       await tab.goto(base + '/admin/users');
       const field = tab.getByTestId('job-description');
       await field.waitFor();
-      check(await field.getByRole('tab').count() === 3, 'нет трёх вкладок');
-      check((await field.innerText()).includes('сами поставим сотруднику задачи'), 'нет пояснения');
+      check(await field.getByRole('tab').count() === 4, 'нет четырёх вкладок: Текст, Word, Excel, PDF');
+      check((await field.innerText()).includes('предложим сотруднику задачи'), 'нет пояснения');
+      // Должность в форме → чип «По должности «повар»».
+      await tab.locator('input[name="position"]').fill('повар');
+      check((await tab.getByTestId('job-description-by-position').innerText()).includes('повар'), 'нет «По должности «повар»»');
       await tab.locator('input[placeholder="Телефон сотрудника"]').fill('+79995556677');
       await tab.locator('input[name="name"]').fill('Галина');
       await tab.getByTestId('job-description-text').fill('мыть');
@@ -119,6 +135,36 @@ async (page) => {
     }
   }
 
+  // ---------- 3. «Проверьте задачи»: окно с предложениями ----------
+  {
+    const { context, tab, errors, calls } = await open({ width: 390, height: 844 }, 'light', () => [state(4, 'review', { proposalsCount: 3 })]);
+    try {
+      await tab.goto(base + '/admin/users');
+      await tab.getByText('Проверьте задачи: 3').click();
+      const dialog = tab.getByTestId('job-description-review');
+      await dialog.waitFor();
+      await dialog.getByTestId('jd-proposal-a').waitFor();
+      check((await dialog.getByTestId('jd-proposal-a').innerText()).includes('1 вопрос'), 'не видно вопроса у «Мыть посуду»');
+      check((await dialog.getByTestId('jd-proposal-c').innerText()).includes('Разово · за 2 дня'), 'не видно срока первой недели');
+      check((await dialog.getByTestId('jd-proposal-d').innerText()).includes('уже есть'), 'не видно «уже есть»');
+      check((await dialog.getByTestId('jd-apply').innerText()).includes('Создать 3 задачи, убрать 1'), `кнопка: ${await dialog.getByTestId('jd-apply').innerText()}`);
+      await dialog.getByTestId('jd-proposal-b').getByRole('checkbox').click();
+      await dialog.getByRole('button', { name: 'Поправить название: Мыть посуду' }).click();
+      await dialog.getByLabel('Название задачи').fill('Мыть посуду после смены');
+      await dialog.getByTestId('jd-stale-55').click();
+      check(await noOverflow(tab), 'горизонтальная прокрутка в окне проверки 390');
+      await tab.screenshot({ path: `${shots}/job-description-review-390.png` });
+      await dialog.getByTestId('jd-apply').click();
+      await dialog.waitFor({ state: 'detached' });
+      const sent = calls.find((c) => c.p === '/api/users/4/job-description/apply');
+      const body = sent ? JSON.parse(sent.body) : null;
+      check(JSON.stringify(body) === JSON.stringify({ include: ['a', 'c'], titles: { a: 'Мыть посуду после смены' }, remove: [] }), `тело apply: ${sent?.body}`);
+      check(errors.length === 0, `проверка: ${errors.join('; ')}`);
+    } finally {
+      await context.close();
+    }
+  }
+
   if (failures.length) throw new Error(failures.join('\n'));
-  return { checks: 'tabs + hint, short text blocks create, xlsx after create (multipart) + toast + done badge, 390 dark: failed reason + retry, dialog .doc hint, text field, no overflow', failures };
+  return { checks: 'four tabs + hint + by-position chip, short text blocks create, xlsx after create (multipart) + toast + done badge, 390 dark: failed reason + retry, dialog .doc hint, text field, review dialog: question/onboarding/exists, uncheck + rename + keep stale → apply body, no overflow', failures };
 }

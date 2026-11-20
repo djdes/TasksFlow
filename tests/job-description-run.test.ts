@@ -38,7 +38,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   current = {
     userId: 7, companyId: 42, source: "text", fileName: null, content: "Мыть пол каждый день", status: "queued",
-    gatewayJobId: null, attempts: 0, tasksCreated: 0, taskIds: null, error: null, createdBy: null, createdAt: 1, updatedAt: 1, sentAt: null,
+    gatewayJobId: null, attempts: 0, tasksCreated: 0, taskIds: null, proposals: null, autoApply: false, error: null, createdBy: null, createdAt: 1, updatedAt: 1, sentAt: null,
   };
   gateway.enqueueTextJob.mockReset().mockResolvedValue("j1");
   gateway.getTextJob.mockReset();
@@ -62,8 +62,10 @@ describe("runJobDescription", () => {
     const sent = gateway.enqueueTextJob.mock.calls[0][1];
     expect(sent.input).toContain("Мыть пол каждый день");
     expect(sent.instructions).toContain("segments");
-    expect(createTaskForActor).toHaveBeenCalledTimes(1);
-    expect(current).toMatchObject({ status: "done", tasksCreated: 1, gatewayJobId: "j1" });
+    // Ответ — предложения на проверку: задачи создаёт руководитель кнопкой.
+    expect(createTaskForActor).not.toHaveBeenCalled();
+    expect(current).toMatchObject({ status: "review", gatewayJobId: "j1" });
+    expect(JSON.parse(String(current?.proposals))[0]).toMatchObject({ title: "Мыть пол", isRecurring: true });
   });
 
   it("токен не подходит — сразу ошибка с подсказкой, без повторов", async () => {
@@ -89,6 +91,18 @@ describe("runJobDescription", () => {
     await runJobDescription(7, config);
     expect(current).toMatchObject({ status: "failed" });
     expect(String(current?.error)).toMatch(/Ralph не взял/);
+  });
+
+  it("«по должности»: в задании — режим подбора по должности, а не инструкция", async () => {
+    current!.source = "position";
+    current!.content = "Бариста";
+    gateway.getTextJob.mockResolvedValue({ id: "j1", status: "succeeded", text: answer, error: null });
+    const { runJobDescription } = await import("../server/job-description/service");
+    await runJobDescription(7, config);
+    const sent = gateway.enqueueTextJob.mock.calls[0][1];
+    expect(sent.input).toContain("Режим «по должности»");
+    expect(sent.input).toContain("Бариста");
+    expect(sent.instructions).toContain("Режим «по должности»");
   });
 
   it("без шлюза ничего не делаем — инструкция ждёт в очереди", async () => {

@@ -42,6 +42,8 @@ import {
   JobDescriptionBadge,
   JobDescriptionDialog,
   JobDescriptionField,
+  JobDescriptionReviewDialog,
+  type JobDescriptionTemplate,
   jobDescriptionProblem,
   JOB_DESCRIPTIONS_KEY,
   uploadedToast,
@@ -52,6 +54,7 @@ import {
 import { useRoles } from "@/hooks/use-roles";
 import { usePermissions } from "@/hooks/use-permissions";
 import { canGrantRole, canManageUser, type CompanyRole } from "@shared/roles";
+import { positionKey } from "@shared/job-description";
 
 /** Поиск по списку — когда людей больше, чем видно на экране. */
 const SEARCH_FROM = 6;
@@ -142,8 +145,9 @@ export default function AdminUsers() {
   // Должностная инструкция в форме добавления: уходит на разбор после создания сотрудника.
   const [jobDesc, setJobDesc] = useState<JobDescriptionValue>(emptyJobDescription);
   const [jobDescError, setJobDescError] = useState<string | null>(null);
-  const pendingJobDesc = useRef<JobDescriptionValue | null>(null);
-  const [jobDescUser, setJobDescUser] = useState<{ id: number; name: string } | null>(null);
+  const pendingJobDesc = useRef<{ value: JobDescriptionValue; position: string | null } | null>(null);
+  const [jobDescUser, setJobDescUser] = useState<{ id: number; name: string; position: string | null } | null>(null);
+  const [reviewUser, setReviewUser] = useState<{ id: number; name: string } | null>(null);
   const [query, setQuery] = useState("");
   const [confirm, setConfirm] = useState<{ kind: "delete" | "reset"; user: ListUser } | null>(null);
   // ?add=1 — сразу к форме (быстрый переход «Добавить сотрудника»),
@@ -165,6 +169,16 @@ export default function AdminUsers() {
   // Должностные инструкции: статус разбора у каждого человека.
   const jobDescriptions = useJobDescriptions(permissions.canManageUsers);
   const jobStates = useMemo(() => new Map((jobDescriptions.data?.items ?? []).map((s) => [s.userId, s])), [jobDescriptions.data]);
+  // «Как у Олега (повар)»: коллеги на той же должности, у которых уже есть задачи из инструкции.
+  const templatesFor = (position: string | null | undefined, exceptId?: number): JobDescriptionTemplate[] => {
+    const key = positionKey(position);
+    if (!key) return [];
+    return users
+      .filter((u) => u.id !== exceptId && positionKey(u.position) === key)
+      .map((u) => ({ u, s: jobStates.get(u.id) }))
+      .filter(({ s }) => s && s.proposalsCount > 0 && (s.status === "review" || s.status === "done"))
+      .map(({ u, s }) => ({ userId: u.id, name: u.name || formatPhoneDisplay(u.phone), count: s!.proposalsCount }));
+  };
   const retryJobDesc = useMutation({
     mutationFn: async (userId: number) => {
       const res = await fetchOrFriendlyError(`/api/users/${userId}/job-description/retry`, { method: "POST", credentials: "include", signal: AbortSignal.timeout(20_000) });
@@ -229,7 +243,7 @@ export default function AdminUsers() {
       }
       setJobDesc(emptyJobDescription());
       try {
-        const r = await uploadJobDescription(newUser.id, desc);
+        const r = await uploadJobDescription(newUser.id, desc.value, desc.position);
         await queryClient.invalidateQueries({ queryKey: [JOB_DESCRIPTIONS_KEY] });
         const next = uploadedToast(r);
         toast({ title: `Сотрудник добавлен · ${next.title.toLowerCase()}`, description: next.description });
@@ -330,13 +344,15 @@ export default function AdminUsers() {
       pin: generatePin(),
     },
   });
+  // Должность из формы — для «Подобрать по должности» и «Как у коллеги».
+  const watchedPosition = form.watch("position") ?? "";
 
   const onSubmit = (values: FormValues) => {
     // Ошибку в инструкции показываем до создания: иначе человек появится, а инструкция — нет.
-    const problem = jobDescriptionProblem(jobDesc);
+    const problem = jobDescriptionProblem(jobDesc, values.position);
     setJobDescError(problem);
     if (problem) return;
-    pendingJobDesc.current = hasJobDescription(jobDesc) ? jobDesc : null;
+    pendingJobDesc.current = hasJobDescription(jobDesc) ? { value: jobDesc, position: values.position?.trim() || null } : null;
     createUserMutation.mutate(values);
   };
 
@@ -373,6 +389,16 @@ export default function AdminUsers() {
     const timer = window.setTimeout(() => setHighlightId(null), 2400);
     return () => window.clearTimeout(timer);
   }, [highlightId]);
+  // ?review=ID — ссылка «Проверить задачи» из Telegram: сразу окно «Задачи из инструкции».
+  const reviewParam = Number(params.get("review")) || null;
+  const reviewOpened = useRef<number | null>(null);
+  useEffect(() => {
+    if (!reviewParam || !listReady || reviewOpened.current === reviewParam) return;
+    const u = users.find((x) => x.id === reviewParam);
+    if (!u) return;
+    reviewOpened.current = reviewParam;
+    setReviewUser({ id: u.id, name: personLabel(u) });
+  }, [reviewParam, listReady, users]);
 
   // Проверка загрузки авторизации
   if (authLoading) return <PageSkeleton />;
@@ -569,6 +595,8 @@ export default function AdminUsers() {
                 )}
 
                 <JobDescriptionField
+                  position={watchedPosition}
+                  templates={templatesFor(watchedPosition)}
                   value={jobDesc}
                   onChange={(v) => { setJobDesc(v); setJobDescError(null); }}
                   disabled={createUserMutation.isPending}
@@ -763,6 +791,7 @@ export default function AdminUsers() {
                                 gatewayReady={jobDescriptions.data?.gatewayReady ?? true}
                                 onRetry={canEditUser(u) ? () => retryJobDesc.mutate(u.id) : undefined}
                                 retrying={retryJobDesc.isPending && retryJobDesc.variables === u.id}
+                                onOpen={canEditUser(u) ? () => setReviewUser({ id: u.id, name: label }) : undefined}
                               />
                             </div>
                           )}
@@ -826,7 +855,7 @@ export default function AdminUsers() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setJobDescUser({ id: u.id, name: label })}
+                              onClick={() => setJobDescUser({ id: u.id, name: label, position: u.position ?? null })}
                               className="text-xs"
                               aria-label={`Должностная инструкция: ${label}`}
                               title="Должностная инструкция → задачи сотрудника"
@@ -896,8 +925,18 @@ export default function AdminUsers() {
         <JobDescriptionDialog
           userId={jobDescUser.id}
           name={jobDescUser.name}
+          position={jobDescUser.position}
+          templates={templatesFor(jobDescUser.position, jobDescUser.id)}
           open
           onOpenChange={(open) => { if (!open) setJobDescUser(null); }}
+        />
+      )}
+      {reviewUser && (
+        <JobDescriptionReviewDialog
+          userId={reviewUser.id}
+          name={reviewUser.name}
+          open
+          onOpenChange={(open) => { if (!open) setReviewUser(null); }}
         />
       )}
       {confirm && (() => {

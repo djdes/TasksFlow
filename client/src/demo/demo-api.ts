@@ -420,9 +420,14 @@ async function route(method: string, url: URL, rawBody: BodyInit | null | undefi
     const file = body instanceof FormData ? body.get("file") : null;
     const fileName = file instanceof File ? file.name : null;
     const source = fileName?.toLowerCase().endsWith(".xlsx") ? "xlsx" : fileName ? "docx" : "text";
-    const jd = { userId: Number(m[1]), status: "queued", source, fileName, tasksCreated: 0, error: null, updatedAt: now() };
+    const jd = { userId: Number(m[1]), status: "queued", source, fileName, tasksCreated: 0, proposalsCount: 0, autoApply: false, error: null, updatedAt: now() };
     demoJobDescriptions.set(jd.userId, jd);
     return { status: 202, json: { gatewayReady: false, state: jd } };
+  }
+  if ((m = path.match(/^\/api\/users\/(\d+)\/job-description$/)) && method === "GET") {
+    const jd = demoJobDescriptions.get(Number(m[1]));
+    if (!jd) return { status: 404, json: { message: "Инструкции нет" } };
+    return { json: { gatewayReady: false, state: jd, proposals: [], stale: [], created: [] } };
   }
 
   // --- люди ---

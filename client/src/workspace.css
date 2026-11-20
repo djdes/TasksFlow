@@ -2399,7 +2399,7 @@ html[data-motion="reduced"] .app-layout :is(.worker-section-header, .grouped-sec
 .job-desc-title { font-size: 15px; font-weight: 650; color: hsl(var(--foreground)); }
 .job-desc-optional { margin-left: auto; font-size: 12px; color: hsl(var(--muted-foreground)); }
 .job-desc-hint { margin: -2px 0 2px; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
-.job-desc-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; background: hsl(var(--background) / .8); position: relative; isolation: isolate; }
+.job-desc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; background: hsl(var(--background) / .8); position: relative; isolation: isolate; }
 .dark .job-desc-tabs { background: hsl(var(--background) / .6); }
 .job-desc-tab {
   position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px;
@@ -2453,3 +2453,74 @@ html[data-text="large"] .job-desc-hint { font-size: 15px; }
 html[data-text="large"] .job-desc-tab { font-size: 16px; }
 html[data-contrast="high"] .job-desc { box-shadow: inset 0 0 0 1px hsl(var(--border)); }
 html[data-motion="reduced"] :is(.job-desc-tab, .job-desc-drop):active { scale: 1; }
+
+/* Вторая волна инструкций (20.11.2026): «по должности», «как у коллеги»,
+   «создать сразу» и окно «Задачи из инструкции» — проверить перед созданием. */
+.job-desc-alts { display: flex; flex-wrap: wrap; gap: 6px; }
+.job-desc-alts .due-quick-chip { display: inline-flex; align-items: center; gap: 6px; height: auto; min-height: 36px; padding: 6px 12px; font-size: 13.5px; text-align: left; }
+.job-desc-alts .due-quick-chip svg { width: 15px; height: 15px; flex: none; color: hsl(var(--primary)); }
+.job-desc-file > svg:is(.lucide-briefcase, .lucide-copy) { color: hsl(var(--violet)); }
+.job-desc-auto { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14px; color: hsl(var(--foreground)); cursor: pointer; }
+.job-desc-badge.is-button { cursor: pointer; transition: filter var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle); touch-action: manipulation; }
+.job-desc-badge.is-button:hover { filter: brightness(.96); }
+.job-desc-badge.is-button:active { scale: .97; }
+.job-desc-badge.is-button:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.job-desc-badge.is-review { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+.job-desc-badge.is-done.is-button::after, .job-desc-badge.is-review::after { content: "›"; margin-left: 2px; font-weight: 700; }
+
+.jd-proposals, .jd-stale ul, .jd-created { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.jd-proposal { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; border-radius: 14px; background: hsl(var(--card)); }
+.jd-proposal.is-existing { opacity: .6; }
+.jd-proposal-toggle {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; min-height: 56px; padding: 12px; border-radius: 14px; text-align: left;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--motion-fast) var(--ease-settle), scale var(--motion-fast) var(--ease-settle);
+}
+.jd-proposal-toggle:active:not(:disabled) { scale: .985; }
+@media (hover: hover) { .jd-proposal-toggle:hover:not(:disabled) { background: hsl(var(--muted) / .5); } }
+.jd-proposal-toggle:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: -2px; }
+.jd-proposal-toggle > span:first-child { margin-top: 1px; }
+.jd-proposal-text { display: grid; gap: 4px; min-width: 0; }
+.jd-proposal-title { font-size: 15px; font-weight: 600; line-height: 1.35; color: hsl(var(--foreground)); overflow-wrap: anywhere; }
+.jd-proposal-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.jd-proposal-meta .is-question { color: hsl(262 60% 50%); font-weight: 600; }
+.dark .jd-proposal-meta .is-question { color: hsl(262 100% 82%); }
+.jd-proposal-meta .is-existing { color: hsl(28 82% 36%); font-weight: 600; }
+.dark .jd-proposal-meta .is-existing { color: hsl(40 92% 68%); }
+.jd-proposal-edit { display: grid; place-items: center; width: 44px; height: 44px; margin: 6px 6px 0 0; border-radius: 12px; color: hsl(var(--muted-foreground)); }
+.jd-proposal-edit:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.jd-proposal-edit svg { width: 16px; height: 16px; }
+.jd-proposal-input { grid-column: 1 / -1; margin: 0 12px 12px; width: auto; }
+.jd-stale { display: grid; gap: 8px; }
+.jd-stale h3 { margin: 6px 0 0; font-size: 13px; font-weight: 650; color: hsl(var(--destructive)); }
+.jd-stale li { border-radius: 14px; background: hsl(var(--destructive) / .06); }
+.jd-review-actions { position: sticky; bottom: 0; display: grid; padding-top: 8px; background: linear-gradient(transparent, hsl(var(--background)) 30%); }
+.jd-review-actions .ui-button { min-height: 50px; border-radius: 14px; font-size: 15px; }
+.jd-created-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; padding: 12px; border-radius: 14px; background: hsl(var(--card)); }
+.jd-created-state { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.jd-created-row.is-deleted .jd-proposal-title { color: hsl(var(--muted-foreground)); text-decoration: line-through; }
+.jd-created-row.is-edited .jd-created-state { color: hsl(28 82% 36%); }
+.dark .jd-created-row.is-edited .jd-created-state { color: hsl(40 92% 68%); }
+.jd-created-empty { padding: 16px; text-align: center; font-size: 14px; color: hsl(var(--muted-foreground)); }
+.jd-review-error { display: grid; justify-items: center; gap: 10px; padding: 16px; text-align: center; color: hsl(var(--muted-foreground)); }
+@media (max-width: 767px) {
+  .job-desc-tab { font-size: 14px; gap: 4px; }
+  .job-desc-tab svg { width: 15px; height: 15px; }
+  .job-desc-alts .due-quick-chip { min-height: 44px; font-size: 15px; }
+  .job-desc-auto { min-height: 48px; font-size: 15px; }
+  .jd-proposal-title { font-size: 16px; }
+  .jd-proposal-meta { font-size: 13px; }
+}
+@media (max-width: 380px) { .job-desc-tab svg { display: none; } }
+html[data-text="large"] .jd-proposal-title { font-size: 18px; }
+html[data-text="large"] .jd-proposal-meta { font-size: 15px; }
+html[data-contrast="high"] :is(.jd-proposal, .jd-created-row) { box-shadow: inset 0 0 0 1px hsl(var(--border)); }
+html[data-motion="reduced"] :is(.jd-proposal-toggle, .job-desc-badge.is-button):active { scale: 1; }
+.jd-stats { display: grid; gap: 14px; }
+.jd-stats-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.jd-stats-kpis small { font-size: 13px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.jd-stats-line { margin: 0; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
+.jd-stats-list h3 { margin: 0 0 6px; font-size: 13px; font-weight: 650; color: hsl(var(--foreground)); }
+.jd-stats-list ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.jd-stats-list small { color: hsl(var(--muted-foreground)); }
+@media (max-width: 767px) { .jd-stats-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
