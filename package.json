@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:gate": "npm run check && npm test",
+    "promo-cache:refresh": "tsx script/refresh-promo-cache.ts",
+    "promo-cache:status": "tsx script/refresh-promo-cache.ts --status",
     "smoke": "node script/run-smoke.mjs",
     "app-icons": "tsx script/generate-app-icons.ts",
     "store-assets": "node script/store-assets.mjs",

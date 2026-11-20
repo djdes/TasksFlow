@@ -16,7 +16,7 @@ export function ArticleCard({ post, delay = 0 }: { post: PostMeta; delay?: numbe
       </div>
       <div className="post-body">
         <div className="post-meta">
-          <b>{c?.short ?? "Статьи"}</b> · {post.readingMins} мин
+          <b>{c?.short ?? "Статьи"}</b> · <time dateTime={post.date}>{post.date}</time> · {post.readingMins} мин
         </div>
         <h3 className="post-title">{post.title}</h3>
         <p className="post-desc">{post.description}</p>

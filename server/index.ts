@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { MySqlSessionStore, ensureSessionsTable } from "./session-store";
 import { apiKeyWithoutSession } from "./api-key-session";
+import { createPublicPromoSessionBypass } from "./promo-cache/session-bypass";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { existsSync, mkdirSync } from "fs";
@@ -100,11 +101,14 @@ if (!sessionSecret) {
     "[session] SESSION_SECRET не задан — using dev fallback. В prod это бы остановило старт."
   );
 }
+const effectiveSessionSecret = sessionSecret || "dev-only-fallback-do-not-use-in-prod";
 // Запросы с API-ключом — без cookie-сессии (server/api-key-session.ts).
 app.use(apiKeyWithoutSession);
+// Публичные промо-страницы, блог, /llms*.txt, *.md и /api/banners — без чтения/записи MySQL sessions.
+app.use(createPublicPromoSessionBypass(effectiveSessionSecret));
 app.use(
   session({
-    secret: sessionSecret || "dev-only-fallback-do-not-use-in-prod",
+    secret: effectiveSessionSecret,
     resave: false,
     saveUninitialized: false,
     // MySQL store (table `sessions`) — переживает рестарты сервера.
@@ -536,6 +540,16 @@ process.on("unhandledRejection", (reason, promise) => {
   }
 
   await registerRoutes(httpServer, app);
+
+  // Фоновый прогрев дисковых JSON-снимков промо-страниц при старте.
+  import("./promo-cache/datasets")
+    .then(({ refreshAllPromoDatasets }) => refreshAllPromoDatasets())
+    .catch((err: unknown) => {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "[promo-cache] начальный прогрев снимков не прошёл",
+      );
+    });
 
   // Telegram-бот. Стартует после роутов, потому что вебхук-режим ставит
   // setWebhook на уже зарегистрированный /api/telegram/webhook.

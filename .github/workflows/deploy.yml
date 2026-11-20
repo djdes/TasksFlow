@@ -295,6 +295,9 @@ jobs:
             # раньше, — шаг необязательный.
             npm run add-push-deferred || echo "push deferred migration failed (non-fatal)"
 
+            echo ">>> warm promo query cache snapshots"
+            npm run promo-cache:refresh || echo "promo-cache refresh failed (non-fatal)"
+
             echo ">>> build (в dist.next, рабочий dist не трогаем)"
             # Раньше npm run build первым делом удалял dist: на время сборки
             # работающий процесс оставался без статики и шаблона SSR, а упавшая

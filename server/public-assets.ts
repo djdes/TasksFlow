@@ -1,9 +1,11 @@
 /**
- * Публичные ассеты/служебные эндпоинты, не требующие React-SSR:
- *   GET /og/:slug.svg  — обложка статьи (SVG)
- *   GET /sitemap.xml   — карта сайта (лендинг + блог + категории + статьи)
- *   GET /robots.txt    — robots + ссылка на sitemap
- *   GET /llms.txt      — описание сайта для ИИ-помощников (server/llms-txt.ts)
+ * Публичные ассеты и ИИ-эндпоинты, не требующие React-SSR (0 SELECT к БД):
+ *   GET /og/:slug.svg      — обложка статьи (SVG)
+ *   GET /sitemap.xml       — карта сайта (лендинг + блог + категории + статьи)
+ *   GET /robots.txt        — robots + Content-Signal + ссылка на sitemap
+ *   GET /llms.txt          — краткое описание сайта для ИИ-помощников (server/llms-txt.ts)
+ *   GET /llms-full.txt     — полный справочник сайта, тарифов и статей для ИИ
+ *   GET /*.md              — чистые Markdown-версии публичных страниц
  *
  * Регистрируются и в dev, и в prod (вызываются из vite.ts / static.ts).
  */
@@ -14,6 +16,7 @@ import { CLUSTERS } from "@shared/blog-clusters";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { LEGAL_DOCS } from "../client/src/public/legal";
 import { buildLlmsTxt } from "./llms-txt";
+import { buildLlmsFullTxt, renderPromoMarkdown } from "./promo-cache/markdown";
 
 export function setupPublicAssets(app: Express): void {
   // Обложка статьи. :slug.svg — slug + расширение.
@@ -84,12 +87,50 @@ export function setupPublicAssets(app: Express): void {
       .end(body);
   });
 
+  app.get("/llms-full.txt", async (req: Request, res: Response) => {
+    const body = await buildLlmsFullTxt(getPublicTasksflowBaseUrl(req));
+    res
+      .status(200)
+      .set({ "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" })
+      .end(body);
+  });
+
+  const sendMarkdownTwin = async (req: Request, res: Response) => {
+    const result = await renderPromoMarkdown(req.path, getPublicTasksflowBaseUrl(req));
+    if (!result) {
+      res.status(404).set({ "Content-Type": "text/plain; charset=utf-8" }).end("Not Found\n");
+      return;
+    }
+    res
+      .status(result.status)
+      .set({
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+        "X-Robots-Tag": "noindex, follow",
+        Vary: "Accept",
+      })
+      .end(result.markdown);
+  };
+
+  app.get("/index.md", sendMarkdownTwin);
+  app.get("/blog.md", sendMarkdownTwin);
+  app.get("/app.md", sendMarkdownTwin);
+  for (const doc of LEGAL_DOCS) {
+    app.get(`${doc.path}.md`, sendMarkdownTwin);
+  }
+  app.get("/blog/category/:cluster.md", sendMarkdownTwin);
+  app.get("/blog/:slug.md", sendMarkdownTwin);
+
   app.get("/robots.txt", (req: Request, res: Response) => {
     const origin = getPublicTasksflowBaseUrl(req);
     const body =
       `User-agent: *\n` +
+      `Content-Signal: search=yes, ai-input=yes, ai-train=no\n` +
       `Allow: /$\n` +
       `Allow: /blog\n` +
+      `Allow: /app\n` +
+      `Allow: /llms.txt\n` +
+      `Allow: /llms-full.txt\n` +
       `Disallow: /dashboard\n` +
       `Disallow: /admin\n` +
       `Disallow: /account\n` +

@@ -1,8 +1,8 @@
 /**
  * Загрузка данных для SSR публичных страниц по ключу роута. Реальные
- * данные блога берутся из server/blog.ts (content/blog/*.md), юридические
- * документы — из content/legal/*.md. Реквизиты оператора, контактный email
- * и id счётчиков аналитики — из env (legalOperator, siteConfig).
+ * данные блога берутся из server/blog.ts (blog-index.json / blog-posts.json),
+ * юридические документы — из content/legal/*.md (с дисковым снимком legal-docs.json),
+ * цены и акции лендинга — из именованных JSON-снимков БД (0 SELECT на выдаче).
  */
 import fs from "fs";
 import path from "path";
@@ -17,11 +17,15 @@ import {
 } from "./blog";
 import { renderMarkdown } from "./markdown";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
-import { DEFAULT_CONTACT_EMAIL, LEGAL_SLUGS, OPERATOR_PLACEHOLDERS } from "../client/src/public/legal";
+import { DEFAULT_CONTACT_EMAIL, LEGAL_DOCS, LEGAL_SLUGS, OPERATOR_PLACEHOLDERS } from "../client/src/public/legal";
 import QRCode from "qrcode";
 import { appInfo } from "./app-links";
 import { DEFAULT_PRICES, pickPromotion } from "@shared/billing";
-import { billingStore } from "./billing/store";
+import { getPromoPrices, getPromoPromotions } from "./promo-cache/datasets";
+import {
+  readPromoSnapshotSync,
+  writePromoSnapshotAtomicSync,
+} from "./promo-cache/store";
 import type {
   AnalyticsIds,
   AppPageData,
@@ -83,7 +87,6 @@ export function siteConfig(env: Env = process.env): SiteConfig {
 }
 
 const LEGAL_DIR = path.join(process.cwd(), "content", "legal");
-const legalCache = new Map<string, LegalDoc>();
 
 function isoDate(v: unknown): string | null {
   if (v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString().slice(0, 10);
@@ -104,12 +107,29 @@ function escapeMarkdown(s: string): string {
   return s.replace(/[\\`*_[\]<>#|~]/g, "\\$&");
 }
 
-/**
- * Документ из content/legal/<slug>.md. В тексте доступны {{operator}},
- * {{email}} и {{site}}; плейсхолдер незаданного оператора подсвечивается.
- * Кэш по набору подстановок: env в рантайме не меняется.
- */
-export function loadLegalDoc(slug: string, env: Env = process.env): LegalDoc | null {
+interface StoredLegalEntry {
+  doc: LegalDoc;
+  markdown: string;
+}
+
+function computeLegalSignature(env: Env): string {
+  const operatorName = envValue(env, "LEGAL_OPERATOR_NAME") ?? "";
+  const contact = legalContactEmail(env);
+  const updatedEnv = isoDate(envValue(env, "LEGAL_UPDATED_AT")) ?? "";
+  const host = siteHost();
+  const stats: string[] = [];
+  for (const { slug } of LEGAL_DOCS) {
+    try {
+      const st = fs.statSync(path.join(LEGAL_DIR, `${slug}.md`));
+      stats.push(`${slug}:${st.size}:${Math.floor(st.mtimeMs)}`);
+    } catch {
+      stats.push(`${slug}:missing`);
+    }
+  }
+  return JSON.stringify([operatorName, contact, updatedEnv, host, stats.join("|")]);
+}
+
+function parseSingleLegalDoc(slug: string, env: Env): StoredLegalEntry | null {
   if (!LEGAL_SLUGS.has(slug)) return null;
   const operatorName = envValue(env, "LEGAL_OPERATOR_NAME");
   const vars: Record<string, string> = {
@@ -118,9 +138,6 @@ export function loadLegalDoc(slug: string, env: Env = process.env): LegalDoc | n
     site: siteHost(),
   };
   const updatedEnv = isoDate(envValue(env, "LEGAL_UPDATED_AT"));
-  const key = JSON.stringify([slug, vars, updatedEnv]);
-  const hit = legalCache.get(key);
-  if (hit) return hit;
 
   let raw: string;
   try {
@@ -132,21 +149,74 @@ export function loadLegalDoc(slug: string, env: Env = process.env): LegalDoc | n
   const body = content.replace(/\{\{(\w+)\}\}/g, (m, name: string) =>
     name in vars ? escapeMarkdown(vars[name]) : m,
   );
-  let { html, toc } = renderMarkdown(body);
+  const rendered = renderMarkdown(body);
+  let html = rendered.html;
+  const { toc } = rendered;
   if (!operatorName) {
     const ph = OPERATOR_PLACEHOLDERS.name;
     html = html.split(ph).join(`<span class="legal-ph" title="Задаётся в LEGAL_OPERATOR_NAME">${ph}</span>`);
   }
-  const doc: LegalDoc = {
-    slug: slug as LegalSlug,
-    title: String(data.title || slug),
-    description: String(data.description || ""),
-    html,
-    toc,
-    updatedAt: updatedEnv ?? isoDate(data.updated),
+  return {
+    doc: {
+      slug: slug as LegalSlug,
+      title: String(data.title || slug),
+      description: String(data.description || ""),
+      html,
+      toc,
+      updatedAt: updatedEnv ?? isoDate(data.updated),
+    },
+    markdown: body,
   };
-  legalCache.set(key, doc);
-  return doc;
+}
+
+function loadLegalSnapshotsMap(env: Env = process.env): Record<string, StoredLegalEntry> {
+  const cacheEnv = env === process.env ? process.env : { ...process.env, ...env };
+  const sig = computeLegalSignature(env);
+  // Записываем на диск только для рабочего окружения (process.env), чтобы
+  // синтетические env в тестах не перезаписывали боевой файл при каждом вызове.
+  if (env === process.env) {
+    const snap = readPromoSnapshotSync<Record<string, StoredLegalEntry>>("legal-docs", cacheEnv);
+    if (snap && snap.sourceSignature === sig && snap.data) {
+      return snap.data;
+    }
+  }
+  const map: Record<string, StoredLegalEntry> = {};
+  for (const { slug } of LEGAL_DOCS) {
+    const parsed = parseSingleLegalDoc(slug, env);
+    if (parsed) map[slug] = parsed;
+  }
+  if (env === process.env) {
+    try {
+      writePromoSnapshotAtomicSync("legal-docs", map, { sourceSignature: sig, env: cacheEnv });
+    } catch {
+      // ignore disk write errors in read-only sandboxes
+    }
+  }
+  return map;
+}
+
+export function warmLegalSnapshots(env: NodeJS.ProcessEnv = process.env): void {
+  const sig = computeLegalSignature(env);
+  const map: Record<string, StoredLegalEntry> = {};
+  for (const { slug } of LEGAL_DOCS) {
+    const parsed = parseSingleLegalDoc(slug, env);
+    if (parsed) map[slug] = parsed;
+  }
+  writePromoSnapshotAtomicSync("legal-docs", map, { sourceSignature: sig, env });
+}
+
+/**
+ * Документ из content/legal/<slug>.md. В тексте доступны {{operator}},
+ * {{email}} и {{site}}; плейсхолдер незаданного оператора подсвечивается.
+ */
+export function loadLegalDoc(slug: string, env: Env = process.env): LegalDoc | null {
+  if (!LEGAL_SLUGS.has(slug)) return null;
+  return loadLegalSnapshotsMap(env)[slug]?.doc ?? null;
+}
+
+export function loadLegalMarkdown(slug: string, env: Env = process.env): string | null {
+  if (!LEGAL_SLUGS.has(slug)) return null;
+  return loadLegalSnapshotsMap(env)[slug]?.markdown ?? null;
 }
 
 export function loadLegalData(slug: string, env: Env = process.env): LegalData {
@@ -160,10 +230,11 @@ export async function loadRouteData(
   switch (routeKey) {
     case "landing": {
       const featuredPosts = getAllPosts().slice(0, 3);
-      // Лендинг важнее точности цены: без БД — цены по умолчанию.
-      const prices = await billingStore.getPrices().catch(() => DEFAULT_PRICES.map((p) => ({ ...p })));
-      // Действующая акция — на карточках тарифов; без БД акции нет.
-      const promotion = pickPromotion(await billingStore.activePromotions().catch(() => []), Math.floor(Date.now() / 1000));
+      // Читаем из дисковых JSON-снимков (0 SELECT при прогретом кэше);
+      // если снимка ещё нет и БД недоступна — дефолтные цены и без акции.
+      const prices = await getPromoPrices().catch(() => DEFAULT_PRICES.map((p) => ({ ...p })));
+      const promotions = await getPromoPromotions().catch(() => []);
+      const promotion = pickPromotion(promotions, Math.floor(Date.now() / 1000));
       return { featuredPosts, totalPosts: totalPosts(), prices, promotion };
     }
     case "blog-index": {
@@ -219,4 +290,3 @@ export async function loadAppPageData(origin: string): Promise<AppPageData> {
   const qrSvg = await QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#111827", light: "#ffffff" } });
   return { info: appInfo(), qrSvg, url };
 }
-

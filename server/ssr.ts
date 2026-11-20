@@ -4,20 +4,8 @@
  * Кабинет остаётся клиентским SPA. Публичные роуты (/, /blog, /privacy, ...)
  * сервер рендерит в готовый HTML с мета-тегами и JSON-LD — для SEO и быстрого
  * первого экрана; клиент затем гидрирует интерактив (форма входа, тема).
- *
- * Dev:  модуль рендера грузится через vite.ssrLoadModule, шаблон —
- *       client/public.html, прогоняется через vite.transformIndexHtml.
- * Prod: импортируется собранный dist/server/entry-server.js, шаблон —
- *       dist/public/public.html (Vite уже вставил туда хешированные
- *       <script>/<link>).
- *
- * Аналитику сервер в <head> не вшивает: id счётчиков уходят в
- * window.__SSR_SITE__, а скрипты подключает клиент после согласия
- * посетителя (client/src/public/analytics.ts).
- *
- * Пути резолвятся от process.cwd() (= корень проекта и в dev, и в prod),
- * как и uploadsDir в routes.ts — без import.meta/__dirname, чтобы работать
- * и в ESM-tsx (dev), и в CJS-bundle (prod).
+ * При заголовке `Accept: text/markdown` те же URL отдают чистый Markdown из
+ * дисковых JSON-снимков без запуска React-рендера и без запросов к БД.
  */
 import fs from "fs";
 import path from "path";
@@ -26,6 +14,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { loadRouteData, siteConfig } from "./public-data";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { LEGAL_DOCS } from "../client/src/public/legal";
+import type { SiteConfig } from "../client/src/public/types";
+import { getPublicBannersBothPlacementsSafe } from "./promo-cache/datasets";
+import { prefersMarkdown, renderPromoMarkdown } from "./promo-cache/markdown";
+import type { PromoSessionRequest } from "./promo-cache/session-bypass";
 
 export interface SsrModule {
   matchRoute: (pathname: string) => { key: string; params: Record<string, string> };
@@ -53,20 +45,27 @@ export async function renderPublicPage(
   pathname: string,
   pageParam: string,
   origin: string,
+  siteOverrides?: Partial<SiteConfig>,
 ): Promise<{ status: number; html: string }> {
   const matched = ssr.matchRoute(pathname);
   // Пагинация блога — через ?page=N. Прокидываем в loadRouteData вместе
   // с параметрами роута (cluster/slug/doc). render() данные уже получает
   // готовыми, так что номер страницы ему не нужен.
   const data = await loadRouteData(matched.key, { ...matched.params, page: pageParam, origin });
-  const site = siteConfig();
+  const site: SiteConfig = { ...siteConfig(), ...siteOverrides };
   const { appHtml, head } = ssr.render(pathname, data, origin, site);
   // Заменители-функции: в HTML статей могут встретиться «$&», «$'» и т. п.
+  const status =
+    matched.key === "not-found" ||
+    (matched.key === "blog-article" && !(data as { post?: unknown } | null)?.post) ||
+    (matched.key === "legal" && !(data as { doc?: unknown } | null)?.doc)
+      ? 404
+      : 200;
   const html = template
     .replace("<!--app-head-->", () => head)
     .replace("<!--app-html-->", () => appHtml)
     .replace("<!--app-data-->", () => buildDataScript(data, site));
-  return { status: matched.key === "not-found" ? 404 : 200, html };
+  return { status, html };
 }
 
 async function renderAndSend(
@@ -75,17 +74,37 @@ async function renderAndSend(
   ssr: SsrModule,
   template: string,
 ): Promise<void> {
+  const origin = getPublicTasksflowBaseUrl(req);
+
+  if (prefersMarkdown(req.headers.accept)) {
+    const md = await renderPromoMarkdown(req.path, origin);
+    if (md) {
+      res
+        .status(md.status)
+        .set({
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Cache-Control": "no-cache",
+          Vary: "Accept",
+        })
+        .end(md.markdown);
+      return;
+    }
+  }
+
   const pageParam = typeof req.query.page === "string" ? req.query.page : "1";
-  const { status, html } = await renderPublicPage(
-    ssr,
-    template,
-    req.path,
-    pageParam,
-    getPublicTasksflowBaseUrl(req),
-  );
+  const hasSignedSession = Boolean((req as PromoSessionRequest).hasSignedSession);
+  const banners = await getPublicBannersBothPlacementsSafe();
+  const { status, html } = await renderPublicPage(ssr, template, req.path, pageParam, origin, {
+    ...(hasSignedSession ? { authenticated: true } : {}),
+    banners,
+  });
   res
     .status(status)
-    .set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" })
+    .set({
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-cache",
+      Vary: "Accept",
+    })
     .end(html);
 }
 
