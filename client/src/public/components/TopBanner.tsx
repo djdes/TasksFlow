@@ -1,50 +1,51 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useSite } from "../site";
+import type { PublicBannerItem } from "../types";
 import { Countdown } from "./Countdown";
-
-type Banner = {
-  id: number;
-  text: string;
-  linkUrl: string | null;
-  linkLabel: string | null;
-  bgColor: string | null;
-  textColor: string | null;
-  endsAt: number | null;
-};
 
 const dismissKey = (id: number) => "tf_banner_dismiss_" + id;
 
+function pickUndismissed(list: PublicBannerItem[]): PublicBannerItem | null {
+  return (
+    list.find((b) => {
+      try {
+        return localStorage.getItem(dismissKey(b.id)) !== "1";
+      } catch {
+        return true;
+      }
+    }) ?? null
+  );
+}
+
 /**
- * Узкая промо-полоса над шапкой (как у Ozon). Тянет активные баннеры
- * места показа "top" из /api/banners, берёт первый незакрытый. Крестик
- * закрывает и запоминает выбор в localStorage по id баннера.
- *
- * SSR безопасен: на сервере рендерится null (нет эффекта), баннер
- * появляется после гидрации — без mismatch (как loggedIn в Nav).
+ * Узкая промо-полоса над шапкой. Берёт предзагруженный SSR-список баннеров
+ * из `window.__SSR_SITE__.banners.top` (0 клиентских запросов и 0 SQL),
+ * а если его нет — запрашивает `/api/banners?placement=top` (тоже из JSON-снимка).
  */
 export function TopBanner() {
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const { banners } = useSite();
+  const [banner, setBanner] = useState<PublicBannerItem | null>(null);
 
   useEffect(() => {
+    if (banners && Array.isArray(banners.top)) {
+      setBanner(pickUndismissed(banners.top));
+      return;
+    }
+
     let alive = true;
     fetch("/api/banners?placement=top")
       .then((r) => (r.ok ? r.json() : []))
-      .then((list: Banner[]) => {
+      .then((list: PublicBannerItem[]) => {
         if (!alive || !Array.isArray(list)) return;
-        const fresh = list.find((b) => {
-          try {
-            return localStorage.getItem(dismissKey(b.id)) !== "1";
-          } catch {
-            return true;
-          }
-        });
+        const fresh = pickUndismissed(list);
         if (fresh) setBanner(fresh);
       })
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, []);
+  }, [banners]);
 
   if (!banner) return null;
 

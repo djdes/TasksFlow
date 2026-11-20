@@ -1,12 +1,20 @@
 /**
  * Загрузка статей блога из content/blog/*.md (frontmatter + Markdown).
- * Парсится один раз и кэшируется в памяти (контент статичен в рантайме).
+ *
+ * Статьи не удерживаются в куче процесса (никакого Map в RAM): разобранный
+ * индекс (`blog-index.json`) и полные статьи (`blog-posts.json`) сохраняются
+ * как атомарные JSON-снимки на диске и автоматически пересобираются по
+ * `sourceSignature` при изменении файлов в content/blog.
  */
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { renderMarkdown, readingMinutes } from "./markdown";
 import { CLUSTERS, CLUSTER_BY_KEY } from "@shared/blog-clusters";
+import {
+  readPromoSnapshotSync,
+  writePromoSnapshotAtomicSync,
+} from "./promo-cache/store";
 
 export interface FaqItem { q: string; a: string }
 export interface PostMeta {
@@ -48,24 +56,45 @@ function dateFromSlug(slug: string): string {
   return `2026-${p(month)}-${p(day)}`;
 }
 
-interface ParsedPost {
+interface StoredPost {
   meta: PostMeta;
+  markdown: string;
   html: string;
   toc: TocItem[];
   faq?: FaqItem[];
 }
 
-let cache: Map<string, ParsedPost> | null = null;
+function byDateDesc(a: PostMeta, b: PostMeta): number {
+  return a.date < b.date ? 1 : a.date > b.date ? -1 : a.title.localeCompare(b.title);
+}
 
-function loadAll(): Map<string, ParsedPost> {
-  if (cache) return cache;
-  const map = new Map<string, ParsedPost>();
-  let files: string[] = [];
+function computeBlogSourceSignature(): { files: string[]; signature: string } {
+  let files: string[];
   try {
-    files = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith(".md"));
+    files = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith(".md")).sort();
   } catch {
-    files = []; // папки ещё нет — блог пуст
+    return { files: [], signature: "empty" };
   }
+  let maxMtime = 0;
+  let totalSize = 0;
+  for (const f of files) {
+    try {
+      const st = fs.statSync(path.join(BLOG_DIR, f));
+      if (st.mtimeMs > maxMtime) maxMtime = st.mtimeMs;
+      totalSize += st.size;
+    } catch {
+      // Файл исчез между readdir и stat — пропускаем.
+    }
+  }
+  return { files, signature: `${files.length}:${totalSize}:${Math.floor(maxMtime)}` };
+}
+
+function buildBlogSnapshots(
+  files: string[],
+  signature: string,
+  env: NodeJS.ProcessEnv,
+): { index: PostMeta[]; postsBySlug: Record<string, StoredPost> } {
+  const postsBySlug: Record<string, StoredPost> = {};
   for (const file of files) {
     try {
       const raw = fs.readFileSync(path.join(BLOG_DIR, file), "utf-8");
@@ -73,7 +102,7 @@ function loadAll(): Map<string, ParsedPost> {
       const slug = String(data.slug || file.replace(/\.md$/, ""));
       const cluster = String(data.cluster || "upravlenie");
       const { html, toc } = renderMarkdown(content);
-      map.set(slug, {
+      postsBySlug[slug] = {
         meta: {
           slug,
           title: String(data.title || slug),
@@ -84,58 +113,100 @@ function loadAll(): Map<string, ParsedPost> {
           readingMins: readingMinutes(content),
           featured: Boolean(data.featured),
         },
+        markdown: content,
         html,
         toc,
         faq: Array.isArray(data.faq)
           ? data.faq.map((f: any) => ({ q: String(f.q), a: String(f.a) }))
           : undefined,
-      });
+      };
     } catch (err) {
       console.error(`[blog] не удалось разобрать ${file}:`, err);
     }
   }
-  cache = map;
-  return map;
+  const index = Object.values(postsBySlug)
+    .map((p) => p.meta)
+    .sort(byDateDesc);
+
+  try {
+    writePromoSnapshotAtomicSync("blog-index", index, { sourceSignature: signature, env });
+    writePromoSnapshotAtomicSync("blog-posts", postsBySlug, { sourceSignature: signature, env });
+  } catch (err) {
+    console.error("[blog] не удалось записать JSON-снимок блога:", err);
+  }
+
+  return { index, postsBySlug };
 }
 
-function byDateDesc(a: PostMeta, b: PostMeta): number {
-  return a.date < b.date ? 1 : a.date > b.date ? -1 : a.title.localeCompare(b.title);
+function loadBlogIndex(env: NodeJS.ProcessEnv = process.env): PostMeta[] {
+  const { files, signature } = computeBlogSourceSignature();
+  const snap = readPromoSnapshotSync<PostMeta[]>("blog-index", env);
+  if (snap && snap.sourceSignature === signature && Array.isArray(snap.data)) {
+    return snap.data;
+  }
+  return buildBlogSnapshots(files, signature, env).index;
 }
 
-export function getAllPosts(): PostMeta[] {
-  return Array.from(loadAll().values(), (p) => p.meta).sort(byDateDesc);
+function loadBlogPostsMap(env: NodeJS.ProcessEnv = process.env): Record<string, StoredPost> {
+  const { files, signature } = computeBlogSourceSignature();
+  const snap = readPromoSnapshotSync<Record<string, StoredPost>>("blog-posts", env);
+  if (snap && snap.sourceSignature === signature && snap.data && typeof snap.data === "object") {
+    return snap.data;
+  }
+  return buildBlogSnapshots(files, signature, env).postsBySlug;
 }
 
-export function getByCluster(clusterKey: string): PostMeta[] {
-  return getAllPosts().filter((p) => p.cluster === clusterKey);
+export function warmBlogSnapshots(env: NodeJS.ProcessEnv = process.env): void {
+  const { files, signature } = computeBlogSourceSignature();
+  buildBlogSnapshots(files, signature, env);
 }
 
-export function getFeatured(): PostMeta | null {
-  const all = getAllPosts();
+export function getAllPosts(env: NodeJS.ProcessEnv = process.env): PostMeta[] {
+  return loadBlogIndex(env);
+}
+
+export function getByCluster(clusterKey: string, env: NodeJS.ProcessEnv = process.env): PostMeta[] {
+  return getAllPosts(env).filter((p) => p.cluster === clusterKey);
+}
+
+export function getFeatured(env: NodeJS.ProcessEnv = process.env): PostMeta | null {
+  const all = getAllPosts(env);
   return all.find((p) => p.featured) || all[0] || null;
 }
 
-export function getRelated(slug: string, cluster: string, n = 3): PostMeta[] {
-  const all = getAllPosts().filter((p) => p.slug !== slug);
+export function getRelated(
+  slug: string,
+  cluster: string,
+  n = 3,
+  env: NodeJS.ProcessEnv = process.env,
+): PostMeta[] {
+  const all = getAllPosts(env).filter((p) => p.slug !== slug);
   const same = all.filter((p) => p.cluster === cluster);
   const rest = all.filter((p) => p.cluster !== cluster);
   return [...same, ...rest].slice(0, n);
 }
 
-export function getPost(slug: string): PostFull | null {
-  const parsed = loadAll().get(slug);
+export function getPost(slug: string, env: NodeJS.ProcessEnv = process.env): PostFull | null {
+  const parsed = loadBlogPostsMap(env)[slug];
   if (!parsed) return null;
   return {
     ...parsed.meta,
     html: parsed.html,
     toc: parsed.toc,
     faq: parsed.faq,
-    related: getRelated(parsed.meta.slug, parsed.meta.cluster),
+    related: getRelated(parsed.meta.slug, parsed.meta.cluster, 3, env),
   };
 }
 
-export function clusterStats(): { key: string; title: string; short: string; count: number }[] {
-  const all = getAllPosts();
+export function getPostMarkdown(slug: string, env: NodeJS.ProcessEnv = process.env): string | null {
+  const parsed = loadBlogPostsMap(env)[slug];
+  return parsed ? parsed.markdown : null;
+}
+
+export function clusterStats(
+  env: NodeJS.ProcessEnv = process.env,
+): { key: string; title: string; short: string; count: number }[] {
+  const all = getAllPosts(env);
   return CLUSTERS.map((c) => ({
     key: c.key,
     title: c.title,
@@ -144,11 +215,11 @@ export function clusterStats(): { key: string; title: string; short: string; cou
   }));
 }
 
-export function totalPosts(): number {
-  return loadAll().size;
+export function totalPosts(env: NodeJS.ProcessEnv = process.env): number {
+  return getAllPosts(env).length;
 }
 
-/** Для тестов / hot-reload: сбросить кэш. */
+/** Для тестов / совместимости: в памяти процесса статьи больше не удерживаются. */
 export function clearBlogCache(): void {
-  cache = null;
+  // Данные читаются с диска (из страничного кэша ОС) по sourceSignature.
 }

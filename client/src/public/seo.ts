@@ -33,6 +33,7 @@ interface HeadInput {
   title: string;
   description: string;
   canonical: string;
+  markdownHref?: string;
   ogImage?: string;
   type?: "website" | "article";
   jsonLdBlocks?: unknown[];
@@ -41,12 +42,13 @@ interface HeadInput {
 }
 
 function renderHead(input: HeadInput): string {
-  const { title, description, canonical, ogImage, type = "website", jsonLdBlocks = [], prev, next } = input;
+  const { title, description, canonical, markdownHref, ogImage, type = "website", jsonLdBlocks = [], prev, next } = input;
   const img = ogImage || `${new URL(canonical).origin}/og/default.svg`;
   return [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(description)}" />`,
     `<link rel="canonical" href="${esc(canonical)}" />`,
+    ...(markdownHref ? [`<link rel="alternate" type="text/markdown" href="${esc(markdownHref)}" />`] : []),
     ...(prev ? [`<link rel="prev" href="${esc(prev)}" />`] : []),
     ...(next ? [`<link rel="next" href="${esc(next)}" />`] : []),
     `<meta property="og:type" content="${type}" />`,
@@ -175,6 +177,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: "TasksFlow — контроль задач для выездных и линейных сотрудников",
         description: DEFAULT_DESCRIPTION,
         canonical: `${origin}/`,
+        markdownHref: `${origin}/index.md`,
         jsonLdBlocks: [organizationLd(origin), softwareApplicationLd(origin, (data as LandingData | undefined)?.prices ?? undefined)],
       });
 
@@ -190,6 +193,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         description:
           "Практические статьи о постановке и контроле задач, мотивации персонала и автоматизации выездных команд.",
         canonical: pageUrl(page),
+        markdownHref: `${origin}/blog.md`,
         prev: page > 1 ? pageUrl(page - 1) : undefined,
         next: page < totalPages ? pageUrl(page + 1) : undefined,
         jsonLdBlocks: [
@@ -213,6 +217,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: page > 1 ? `${baseTitle} — страница ${page}` : baseTitle,
         description: `Статьи раздела «${clusterTitle(key)}» в блоге TasksFlow.`,
         canonical: pageUrl(page),
+        markdownHref: `${origin}/blog/category/${key}.md`,
         prev: page > 1 ? pageUrl(page - 1) : undefined,
         next: page < totalPages ? pageUrl(page + 1) : undefined,
         jsonLdBlocks: [
@@ -249,6 +254,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: `${post.title} — TasksFlow`,
         description: post.description,
         canonical: `${origin}/blog/${post.slug}`,
+        markdownHref: `${origin}/blog/${post.slug}.md`,
         ogImage: `${origin}/og/${post.slug}.svg`,
         type: "article",
         jsonLdBlocks: blocks,
@@ -269,6 +275,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         title: `${doc.title} — TasksFlow`,
         description: doc.description,
         canonical: url,
+        markdownHref: `${origin}/${doc.slug}.md`,
         jsonLdBlocks: [
           breadcrumbLd([
             { name: "Главная", url: `${origin}/` },
@@ -284,6 +291,7 @@ export function buildHead(route: MatchedRoute, data: unknown, origin: string): s
         description:
           "Задачи смены, чек-листы и фотоотчёты в телефоне: уведомления о новых задачах, камера, работа при плохой связи. Как установить на Android и iPhone.",
         canonical: `${origin}/app`,
+        markdownHref: `${origin}/app.md`,
         jsonLdBlocks: [
           breadcrumbLd([
             { name: "Главная", url: `${origin}/` },

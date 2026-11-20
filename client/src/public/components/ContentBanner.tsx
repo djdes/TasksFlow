@@ -1,36 +1,34 @@
 import { useEffect, useState } from "react";
+import { useSite } from "../site";
+import type { PublicBannerItem } from "../types";
 import { Countdown } from "./Countdown";
 
-type Banner = {
-  id: number;
-  text: string;
-  linkUrl: string | null;
-  linkLabel: string | null;
-  bgColor: string | null;
-  textColor: string | null;
-  endsAt: number | null;
-};
-
 /**
- * Баннер-вставка в контент (та же акция, что и сверху, но крупным блоком).
- * Берёт первый активный баннер места показа "content" из /api/banners.
- * SSR безопасен: на сервере null, появляется после гидрации.
+ * Баннер-вставка в контент. Использует предзагруженный в SSR список
+ * `window.__SSR_SITE__.banners.content` (0 клиентских fetch и 0 SQL),
+ * при отсутствии обращается к `/api/banners?placement=content` (JSON-снимок).
  */
 export function ContentBanner({ className = "" }: { className?: string }) {
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const { banners } = useSite();
+  const [banner, setBanner] = useState<PublicBannerItem | null>(null);
 
   useEffect(() => {
+    if (banners && Array.isArray(banners.content)) {
+      setBanner(banners.content[0] ?? null);
+      return;
+    }
+
     let alive = true;
     fetch("/api/banners?placement=content")
       .then((r) => (r.ok ? r.json() : []))
-      .then((list: Banner[]) => {
+      .then((list: PublicBannerItem[]) => {
         if (alive && Array.isArray(list) && list[0]) setBanner(list[0]);
       })
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, []);
+  }, [banners]);
 
   if (!banner) return null;
 

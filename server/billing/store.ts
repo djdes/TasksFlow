@@ -37,6 +37,7 @@ import {
 } from "@shared/billing";
 import { db } from "../db";
 import { logger } from "../logger";
+import { refreshPromoDatasetSafe } from "../promo-cache/datasets";
 import {
   refundLedger,
   releaseEntry,
@@ -401,6 +402,7 @@ export const billingStore: BillingStore = {
       }
     });
     resetPricesCache();
+    await refreshPromoDatasetSafe("billing-prices");
   },
 
   async createOrder(order) {
@@ -1000,6 +1002,7 @@ export const billingStore: BillingStore = {
     resetPricesCache();
     const [created] = await db.select().from(pricePromotions).where(eq(pricePromotions.id, insertId(result)));
     if (!created) throw new Error("promotion was not created");
+    await refreshPromoDatasetSafe("price-promotions");
     return created;
   },
 
@@ -1007,6 +1010,7 @@ export const billingStore: BillingStore = {
     await db.update(pricePromotions).set({ ...patch, updatedAt: now }).where(eq(pricePromotions.id, id));
     resetPricesCache();
     const [row] = await db.select().from(pricePromotions).where(eq(pricePromotions.id, id));
+    await refreshPromoDatasetSafe("price-promotions");
     return row ?? null;
   },
 

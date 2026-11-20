@@ -115,6 +115,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
     <div className="landing min-h-screen bg-background text-foreground overflow-x-hidden">
       <Nav onLanding />
 
+      <main id="main-content">
       {/* ===== Hero: тезис + живое демо смены ===== */}
       <section className="hero relative isolate">
         <div className="hero-bg" aria-hidden="true">
@@ -305,6 +306,7 @@ export function LandingPage({ data }: { data: LandingData | null }) {
           </div>
         </div>
       </section>
+      </main>
 
       <Footer />
     </div>

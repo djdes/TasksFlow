@@ -38,3 +38,4 @@ mobile/ios/build/
 
 # Снимки, ответы мостика к проду, логи дев-стенда (.claude/skills/*)
 /output/
+/.cache/

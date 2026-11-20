@@ -94,10 +94,28 @@ export interface AnalyticsIds {
   ga: string | null;
 }
 
+/** Элемент публичного промо-баннера (из JSON-снимка public-banners.json). */
+export interface PublicBannerItem {
+  id: number;
+  text: string;
+  linkUrl: string | null;
+  linkLabel: string | null;
+  bgColor: string | null;
+  textColor: string | null;
+  endsAt: number | null;
+}
+
 /** Общие для всех публичных страниц настройки (window.__SSR_SITE__). */
 export interface SiteConfig {
   contactEmail: string;
   analytics: AnalyticsIds;
+  /** Признак валидно подписанной cookie сессии (проверяется в SSR без SQL). */
+  authenticated?: boolean;
+  /** Предзагруженные на сервере активные баннеры из JSON-снимка (без клиентского fetch). */
+  banners?: {
+    top: PublicBannerItem[];
+    content: PublicBannerItem[];
+  };
 }
 
 export type PageData = LandingData | BlogIndexData | ArticleData | LegalData | null;

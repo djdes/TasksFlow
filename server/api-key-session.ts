@@ -35,7 +35,7 @@ export function isDeniedForApiKey(path: string): boolean {
 const STATELESS = Symbol("stateless-session");
 
 /** Сессия-заглушка: живёт один запрос, ничего не сохраняет. */
-function statelessSession(): Record<string | symbol, unknown> {
+export function statelessSession(): Record<string | symbol, unknown> {
   const session: Record<string | symbol, unknown> = { [STATELESS]: true };
   const done = (cb?: (err?: unknown) => void) => {
     cb?.();

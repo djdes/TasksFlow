@@ -29,7 +29,7 @@ export function BlogIndex({ data }: { data: BlogIndexData | null }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-8">
+      <main id="main-content" className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-8">
         <Breadcrumbs items={crumbs} />
 
         <header className="blog-head">

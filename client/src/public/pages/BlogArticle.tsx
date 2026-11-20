@@ -15,7 +15,7 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Nav />
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-24 text-center">
+        <main id="main-content" className="flex-1 max-w-3xl mx-auto px-4 py-24 text-center">
           <h1 className="text-2xl font-bold mb-3">Статья не найдена</h1>
           <p className="text-muted-foreground mb-6">Возможно, ссылка устарела.</p>
           <a href="/blog" className="inline-flex rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold">
@@ -33,7 +33,7 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-8">
+      <main id="main-content" className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-8">
         <Breadcrumbs
           items={[
             { name: "Главная", href: "/" },
@@ -47,7 +47,7 @@ export function BlogArticle({ data }: { data: ArticleData | null }) {
           <article className="min-w-0">
             <header className="article-head">
               <div className="article-eyebrow">
-                <a href={`/blog/category/${post.cluster}`}>{cluster}</a> · {post.readingMins} мин чтения
+                <a href={`/blog/category/${post.cluster}`}>{cluster}</a> · <time dateTime={post.date}>{post.date}</time> · {post.readingMins} мин чтения
               </div>
               <h1 className="article-title">{post.title}</h1>
               <p className="article-lead">{post.description}</p>

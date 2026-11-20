@@ -22,7 +22,7 @@ export function LegalPage({ data }: { data: LegalData | null }) {
   return (
     <div className="legal min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-10">
+      <main id="main-content" className="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 sm:pt-10">
         <div className="read-grid">
           <article className="min-w-0">
             <nav aria-label="Документы" className="legal-tabs">
@@ -39,7 +39,11 @@ export function LegalPage({ data }: { data: LegalData | null }) {
             </nav>
 
             <h1 className="legal-title">{doc.title}</h1>
-            {updated && <p className="legal-meta">{`Редакция от ${updated}`}</p>}
+            {updated && (
+              <p className="legal-meta">
+                <time dateTime={doc.updatedAt ?? undefined}>{`Редакция от ${updated}`}</time>
+              </p>
+            )}
 
             <details className="legal-toc lg:hidden">
               <summary>

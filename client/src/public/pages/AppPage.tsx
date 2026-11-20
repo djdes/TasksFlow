@@ -39,7 +39,7 @@ export function AppPage({ data }: { data: AppPageData | null }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 pt-8 pb-20 sm:pt-12">
+      <main id="main-content" className="flex-1 w-full max-w-5xl mx-auto px-4 pt-8 pb-20 sm:pt-12">
         <header className="app-page-hero">
           <BrandMark className="w-14 h-14" />
           <div>
