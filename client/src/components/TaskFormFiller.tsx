@@ -421,7 +421,7 @@ export function TaskFormFiller({ taskId, open, onOpenChange, onCompleted }: Prop
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md rounded-3xl border-border/60 bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10 overflow-hidden">
+        <DialogContent className="max-w-md rounded-3xl border-transparent bg-card/95 backdrop-blur p-0 shadow-xl shadow-primary/10 overflow-hidden">
           {/* Header — иконка журнала + название + meta. Outline-стиль
               совпадает с остальными dialog'ами TasksFlow. */}
           <DialogHeader className="border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent px-6 pt-6 pb-5">

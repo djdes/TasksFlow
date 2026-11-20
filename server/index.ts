@@ -624,6 +624,17 @@ process.on("unhandledRejection", (reason, promise) => {
         );
       });
 
+    // Должностные инструкции: отправить диспетчеру то, что ждёт в очереди,
+    // и дождаться ответов, прерванных перезапуском (server/job-description).
+    import("./job-description/service")
+      .then(({ processJobDescriptions }) => processJobDescriptions())
+      .catch((err: unknown) => {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          "[job-description] тик не прошёл",
+        );
+      });
+
     // Черновики, провисевшие 10 минут без ответа, создаются сами:
     // руководитель часто пишет задачу и уходит, и терять её нельзя.
     import("./telegram/composer")

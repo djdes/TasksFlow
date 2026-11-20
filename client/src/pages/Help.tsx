@@ -181,7 +181,7 @@ export default function Help() {
             {GUIDES.map((g) => (
               <div
                 key={g.title}
-                className="rounded-2xl border bg-card p-4 flex flex-col gap-3"
+                className="rounded-2xl bg-muted/40 p-4 flex flex-col gap-3"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
@@ -219,7 +219,7 @@ export default function Help() {
               return (
                 <div
                   key={i}
-                  className="rounded-2xl border bg-card overflow-hidden"
+                  className="rounded-2xl bg-muted/40 overflow-hidden"
                 >
                   <button
                     type="button"

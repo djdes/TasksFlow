@@ -5,7 +5,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye, QrCode, BellRing } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Coins, RotateCcw, Pencil, X, Check, Trash2, KeyRound, Search, Eye, QrCode, BellRing, FileText } from "lucide-react";
 import { BroadcastDialog, notifiableUsers } from "@/components/BroadcastDialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,9 +36,25 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { matchesQuery } from "@/lib/cabinet-nav";
 import { formatPhoneDisplay, getUserInitials, personLabel, personSearchText } from "@/lib/user-display";
 import { RolesPanel } from "@/components/RolesPanel";
+import {
+  emptyJobDescription,
+  hasJobDescription,
+  JobDescriptionBadge,
+  JobDescriptionDialog,
+  JobDescriptionField,
+  JobDescriptionReviewDialog,
+  type JobDescriptionTemplate,
+  jobDescriptionProblem,
+  JOB_DESCRIPTIONS_KEY,
+  uploadedToast,
+  uploadJobDescription,
+  useJobDescriptions,
+  type JobDescriptionValue,
+} from "@/components/JobDescriptionField";
 import { useRoles } from "@/hooks/use-roles";
 import { usePermissions } from "@/hooks/use-permissions";
 import { canGrantRole, canManageUser, type CompanyRole } from "@shared/roles";
+import { positionKey } from "@shared/job-description";
 
 /** Поиск по списку — когда людей больше, чем видно на экране. */
 const SEARCH_FROM = 6;
@@ -126,6 +142,12 @@ export default function AdminUsers() {
   // Личный QR входа (UserLoginQrDialog).
   const [qrUser, setQrUser] = useState<{ id: number; name?: string | null; phone?: string | null } | null>(null);
   const [created, setCreated] = useState<{ phone: string; pin: string } | null>(null);
+  // Должностная инструкция в форме добавления: уходит на разбор после создания сотрудника.
+  const [jobDesc, setJobDesc] = useState<JobDescriptionValue>(emptyJobDescription);
+  const [jobDescError, setJobDescError] = useState<string | null>(null);
+  const pendingJobDesc = useRef<{ value: JobDescriptionValue; position: string | null } | null>(null);
+  const [jobDescUser, setJobDescUser] = useState<{ id: number; name: string; position: string | null } | null>(null);
+  const [reviewUser, setReviewUser] = useState<{ id: number; name: string } | null>(null);
   const [query, setQuery] = useState("");
   const [confirm, setConfirm] = useState<{ kind: "delete" | "reset"; user: ListUser } | null>(null);
   // ?add=1 — сразу к форме (быстрый переход «Добавить сотрудника»),
@@ -144,6 +166,29 @@ export default function AdminUsers() {
   const canGrant = (grant: "admin" | CompanyRole | null) => !!access && canGrantRole(access, grant);
   /** Руководитель меняет только обычных людей (не админов, не руководителей, не себя). */
   const canEditUser = (u: ListUser) => !!access && canManageUser(access, u, u.roleId ? roleById.get(u.roleId) : null);
+  // Должностные инструкции: статус разбора у каждого человека.
+  const jobDescriptions = useJobDescriptions(permissions.canManageUsers);
+  const jobStates = useMemo(() => new Map((jobDescriptions.data?.items ?? []).map((s) => [s.userId, s])), [jobDescriptions.data]);
+  // «Как у Олега (повар)»: коллеги на той же должности, у которых уже есть задачи из инструкции.
+  const templatesFor = (position: string | null | undefined, exceptId?: number): JobDescriptionTemplate[] => {
+    const key = positionKey(position);
+    if (!key) return [];
+    return users
+      .filter((u) => u.id !== exceptId && positionKey(u.position) === key)
+      .map((u) => ({ u, s: jobStates.get(u.id) }))
+      .filter(({ s }) => s && s.proposalsCount > 0 && (s.status === "review" || s.status === "done"))
+      .map(({ u, s }) => ({ userId: u.id, name: u.name || formatPhoneDisplay(u.phone), count: s!.proposalsCount }));
+  };
+  const retryJobDesc = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetchOrFriendlyError(`/api/users/${userId}/job-description/retry`, { method: "POST", credentials: "include", signal: AbortSignal.timeout(20_000) });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.message || "Не удалось повторить");
+      return json;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [JOB_DESCRIPTIONS_KEY] }),
+    onError: (error: Error) => toast({ title: "Ошибка", description: error.message, variant: "destructive" }),
+  });
   const impersonateMutation = useMutation({
     mutationFn: impersonate,
     onError: (error: Error) => toast({ title: "Не удалось открыть кабинет", description: error.message, variant: "destructive" }),
@@ -186,11 +231,29 @@ export default function AdminUsers() {
       }
       return response.json();
     },
-    onSuccess: async (_user, data) => {
+    onSuccess: async (newUser: { id?: number }, data) => {
       await queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
       setCreated({ phone: data.phone, pin: data.pin });
       form.reset({ phone: "+7", name: "", position: "", role: "employee", pin: generatePin() });
-      toast({ title: "Сотрудник добавлен" });
+      const desc = pendingJobDesc.current;
+      pendingJobDesc.current = null;
+      if (!desc || typeof newUser?.id !== "number") {
+        toast({ title: "Сотрудник добавлен" });
+        return;
+      }
+      setJobDesc(emptyJobDescription());
+      try {
+        const r = await uploadJobDescription(newUser.id, desc.value, desc.position);
+        await queryClient.invalidateQueries({ queryKey: [JOB_DESCRIPTIONS_KEY] });
+        const next = uploadedToast(r);
+        toast({ title: `Сотрудник добавлен · ${next.title.toLowerCase()}`, description: next.description });
+      } catch (err) {
+        toast({
+          title: "Сотрудник добавлен, инструкцию не приняли",
+          description: `${err instanceof Error ? err.message : "Ошибка сети"}. Отправьте её ещё раз кнопкой «Инструкция».`,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
@@ -281,8 +344,15 @@ export default function AdminUsers() {
       pin: generatePin(),
     },
   });
+  // Должность из формы — для «Подобрать по должности» и «Как у коллеги».
+  const watchedPosition = form.watch("position") ?? "";
 
   const onSubmit = (values: FormValues) => {
+    // Ошибку в инструкции показываем до создания: иначе человек появится, а инструкция — нет.
+    const problem = jobDescriptionProblem(jobDesc, values.position);
+    setJobDescError(problem);
+    if (problem) return;
+    pendingJobDesc.current = hasJobDescription(jobDesc) ? { value: jobDesc, position: values.position?.trim() || null } : null;
     createUserMutation.mutate(values);
   };
 
@@ -319,6 +389,16 @@ export default function AdminUsers() {
     const timer = window.setTimeout(() => setHighlightId(null), 2400);
     return () => window.clearTimeout(timer);
   }, [highlightId]);
+  // ?review=ID — ссылка «Проверить задачи» из Telegram: сразу окно «Задачи из инструкции».
+  const reviewParam = Number(params.get("review")) || null;
+  const reviewOpened = useRef<number | null>(null);
+  useEffect(() => {
+    if (!reviewParam || !listReady || reviewOpened.current === reviewParam) return;
+    const u = users.find((x) => x.id === reviewParam);
+    if (!u) return;
+    reviewOpened.current = reviewParam;
+    setReviewUser({ id: u.id, name: personLabel(u) });
+  }, [reviewParam, listReady, users]);
 
   // Проверка загрузки авторизации
   if (authLoading) return <PageSkeleton />;
@@ -514,6 +594,15 @@ export default function AdminUsers() {
                   </p>
                 )}
 
+                <JobDescriptionField
+                  position={watchedPosition}
+                  templates={templatesFor(watchedPosition)}
+                  value={jobDesc}
+                  onChange={(v) => { setJobDesc(v); setJobDescError(null); }}
+                  disabled={createUserMutation.isPending}
+                  error={jobDescError}
+                />
+
                 <FormField
                   control={form.control}
                   name="pin"
@@ -580,7 +669,7 @@ export default function AdminUsers() {
                     key={u.id}
                     data-user-row={u.id}
                     tabIndex={-1}
-                    className={`user-row p-4 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors ${highlightId === u.id ? "is-highlighted" : ""}`}
+                    className={`user-row p-4 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors ${highlightId === u.id ? "is-highlighted" : ""}`}
                   >
                     {pinUserId === u.id ? (
                       <div className="space-y-2">
@@ -695,6 +784,17 @@ export default function AdminUsers() {
                               )}
                             </div>
                           )}
+                          {jobStates.get(u.id) && (
+                            <div className="mt-1.5">
+                              <JobDescriptionBadge
+                                state={jobStates.get(u.id)!}
+                                gatewayReady={jobDescriptions.data?.gatewayReady ?? true}
+                                onRetry={canEditUser(u) ? () => retryJobDesc.mutate(u.id) : undefined}
+                                retrying={retryJobDesc.isPending && retryJobDesc.variables === u.id}
+                                onOpen={canEditUser(u) ? () => setReviewUser({ id: u.id, name: label }) : undefined}
+                              />
+                            </div>
+                          )}
                           {!u.isAdmin && u.bonusBalance > 0 && (
                             <div className="flex items-center gap-1.5 mt-2">
                               <Coins className="w-3.5 h-3.5 text-green-600" />
@@ -749,6 +849,20 @@ export default function AdminUsers() {
                             >
                               <QrCode className="w-3.5 h-3.5 mr-1" aria-hidden />
                               QR
+                            </Button>
+                          )}
+                          {canEditUser(u) && !user.impersonation && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setJobDescUser({ id: u.id, name: label, position: u.position ?? null })}
+                              className="text-xs"
+                              aria-label={`Должностная инструкция: ${label}`}
+                              title="Должностная инструкция → задачи сотрудника"
+                              data-testid={`user-job-description-${u.id}`}
+                            >
+                              <FileText className="w-3.5 h-3.5 mr-1" aria-hidden />
+                              Инструкция
                             </Button>
                           )}
                           {canEditUser(u) && (!u.isAdmin || (permissions.isAdmin && u.id !== user.id)) && (
@@ -806,6 +920,24 @@ export default function AdminUsers() {
       </div>
       {qrUser && (
         <UserLoginQrDialog user={qrUser} open onOpenChange={(open) => { if (!open) setQrUser(null); }} />
+      )}
+      {jobDescUser && (
+        <JobDescriptionDialog
+          userId={jobDescUser.id}
+          name={jobDescUser.name}
+          position={jobDescUser.position}
+          templates={templatesFor(jobDescUser.position, jobDescUser.id)}
+          open
+          onOpenChange={(open) => { if (!open) setJobDescUser(null); }}
+        />
+      )}
+      {reviewUser && (
+        <JobDescriptionReviewDialog
+          userId={reviewUser.id}
+          name={reviewUser.name}
+          open
+          onOpenChange={(open) => { if (!open) setReviewUser(null); }}
+        />
       )}
       {confirm && (() => {
         const who = personLabel(confirm.user);

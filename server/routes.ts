@@ -26,6 +26,7 @@ import { registerQuickLoginRoutes } from "./routes/quick-login";
 import { registerUserLoginLinkRoutes } from "./routes/user-login-links";
 import { registerTelegramLinkRoutes } from "./routes/telegram-link";
 import { registerCompanyMeRoutes } from "./routes/company-me";
+import { registerJobDescriptionRoutes } from "./routes/job-descriptions";
 import { registerWorkerRoutes } from "./routes/workers";
 import { registerTaskRoutes } from "./routes/tasks";
 import { registerTaskPhotoRoutes } from "./routes/task-photos";
@@ -133,6 +134,9 @@ export async function registerRoutes(
   registerTaskStatusRoutes(app);
 
   registerUserRoutes(app);
+
+  // Должностная инструкция → задачи сотрудника (диспетчер Ralph через шлюз ProjectsFlow).
+  registerJobDescriptionRoutes(app);
 
   registerInvitationRoutes(app);
 

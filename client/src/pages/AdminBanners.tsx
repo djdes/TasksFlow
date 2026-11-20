@@ -265,7 +265,7 @@ export default function AdminBannersPage() {
                     type="checkbox"
                     checked={form.active}
                     onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                    className="w-4 h-4 accent-primary"
+                    className="app-check"
                   />
                   <span className="text-sm font-medium">Включён</span>
                 </label>

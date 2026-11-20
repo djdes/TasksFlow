@@ -39,6 +39,10 @@ import { sortByUrgency } from "@/lib/task-suggestions";
 import { getDueStatus } from "@shared/task-visibility";
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
+// Кривые stageshow (motion.css: --ease-arrive, --ease-app): появление —
+// быстрый старт и мягкое торможение; раскрытие — как в приложении.
+const EASE_ARRIVE = [0.25, 0.8, 0.25, 1] as const;
+const EASE_APP = [0.3, 0.75, 0.1, 1] as const;
 
 /**
  * Staggered-вход для карточек внутри одного дня. Лёгкая каскадная
@@ -58,17 +62,30 @@ const cardVariants: Variants = {
   visible: (index = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.24, delay: Math.min(index, 4) * .025, ease: EASE_OUT_QUINT as unknown as number[] },
+    // Каскад в порядке чтения, 45 мс между карточками (stageshow: 40–80 мс).
+    transition: { duration: 0.32, delay: Math.min(index, 5) * .045, ease: EASE_ARRIVE as unknown as number[] },
   }),
 };
 
-/** Плавный коллапс секций (Выполненные / Сделано другими). */
+/** Плавный коллапс секций (Выполненные / Сделано другими). Край не режет
+ *  текст: при раскрытии содержимое проявляется, пока высота доезжает, при
+ *  сворачивании сначала гаснет, потом уходит высота (stageshow, Collapse). */
 const collapseVariants: Variants = {
-  hidden: { opacity: 0, height: 0, transition: { duration: 0.24 } },
+  hidden: {
+    opacity: 0,
+    height: 0,
+    transition: {
+      opacity: { duration: 0.12 },
+      height: { duration: 0.26, delay: 0.06, ease: EASE_APP as unknown as number[] },
+    },
+  },
   visible: {
     opacity: 1,
     height: "auto",
-    transition: { duration: 0.36, ease: EASE_OUT_QUINT as unknown as number[] },
+    transition: {
+      height: { duration: 0.36, ease: EASE_APP as unknown as number[] },
+      opacity: { duration: 0.24, delay: 0.1 },
+    },
   },
 };
 

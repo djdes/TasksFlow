@@ -294,6 +294,9 @@ jobs:
             # Ночные уведомления ждут утра. Без таблицы уходят сразу, как
             # раньше, — шаг необязательный.
             npm run add-push-deferred || echo "push deferred migration failed (non-fatal)"
+            # Должностная инструкция → задачи: код читает таблицу в «Сотрудниках»
+            # и на фоновом тике — обязательный шаг.
+            npm run create-job-descriptions-table
 
             echo ">>> build (в dist.next, рабочий dist не трогаем)"
             # Раньше npm run build первым делом удалял dist: на время сборки
