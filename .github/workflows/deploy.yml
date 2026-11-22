@@ -430,3 +430,29 @@ jobs:
             } | crontab -
             echo ">>> crontab теперь:"
             crontab -l | grep 'pm2-watchdog.sh'
+
+  indexnow:
+    # Сообщаем Яндексу и Bing об изменившихся публичных страницах (IndexNow):
+    # новая статья или цена попадают в поиск за часы, а не после планового
+    # обхода. Шлём только то, что менялось в этой выкладке; правки кабинета
+    # и сервера ничего не отправляют. Ошибка здесь выкладку не роняет.
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Submit changed pages to IndexNow
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BEFORE" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            git diff --name-only "$BEFORE" "$GITHUB_SHA" | node script/submit-indexnow.mjs
+          else
+            echo "Ручной запуск или нет прошлого коммита — список правок неизвестен, ничего не шлём."
+            echo "Всю карту сайта: node script/submit-indexnow.mjs --all"
+          fi

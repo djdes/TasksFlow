@@ -4,6 +4,7 @@
  *   GET /sitemap.xml   — карта сайта (лендинг + блог + категории + статьи)
  *   GET /robots.txt    — robots + ссылка на sitemap
  *   GET /llms.txt      — описание сайта для ИИ-помощников (server/llms-txt.ts)
+ *   GET /<ключ>.txt    — ключ IndexNow (server/indexnow.ts)
  *
  * Регистрируются и в dev, и в prod (вызываются из vite.ts / static.ts).
  */
@@ -14,6 +15,7 @@ import { CLUSTERS } from "@shared/blog-clusters";
 import { getPublicTasksflowBaseUrl } from "./public-urls";
 import { LEGAL_DOCS } from "../client/src/public/legal";
 import { buildLlmsTxt } from "./llms-txt";
+import { indexNowKey } from "./indexnow";
 
 export function setupPublicAssets(app: Express): void {
   // Обложка статьи: /og/:slug.svg — для страниц сайта, /og/:slug.png — для
@@ -102,6 +104,15 @@ export function setupPublicAssets(app: Express): void {
       .status(200)
       .set({ "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" })
       .end(body);
+  });
+
+  // Ключ IndexNow: Яндекс и Bing скачивают его, чтобы убедиться, что адреса
+  // присылает владелец сайта. Без маршрута адрес отдал бы оболочку кабинета.
+  app.get(`/${indexNowKey()}.txt`, (_req: Request, res: Response) => {
+    res
+      .status(200)
+      .set({ "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" })
+      .end(indexNowKey());
   });
 
   app.get("/robots.txt", (req: Request, res: Response) => {
