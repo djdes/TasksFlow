@@ -1281,3 +1281,6 @@ html[data-motion="reduced"] .post-featured:hover .post-cover > div { transform: 
 @media (min-width: 1024px) { .app-features { grid-template-columns: repeat(4, 1fr); } }
 .app-features li { display: flex; gap: 12px; align-items: flex-start; }
 .app-features li > svg { flex: none; margin-top: 2px; }
+/* Якорь цены под тарифом: «≈ 33 ₽ за сотрудника, если вас 30», выгода длинного срока. */
+.plan-extra { margin-top: 4px; color: hsl(var(--foreground) / 0.8); font-size: 13.5px; font-weight: 600; }
+.plan-note + .plan-extra { margin-top: 10px; }

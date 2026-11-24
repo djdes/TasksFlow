@@ -116,6 +116,45 @@ export function periodSavings(
   return percent >= 1 ? { percent, rub } : null;
 }
 
+/**
+ * Якорь цены для лендинга: «≈ 33 ₽ за сотрудника в месяц, если вас 30».
+ * Делим месячную цену (уже с акцией) на потолок тарифа — это нижняя граница
+ * цены за человека; у тарифа без потолка якоря нет. Округление вверх, чтобы
+ * не обещать меньше, чем заплатит заполненная команда.
+ */
+export function perSeatRub(monthRub: number, maxUsers: number | null): number | null {
+  if (maxUsers === null || maxUsers <= 0 || !(monthRub > 0)) return null;
+  return Math.ceil(monthRub / maxUsers);
+}
+
+/**
+ * Лучшая выгода длинного срока для подписи под ценой: «−16 % при оплате за 12 месяцев».
+ * null, если длинных сроков нет или они не дешевле помесячной оплаты.
+ */
+export function bestPeriodSavings(
+  prices: readonly PlanPrice[],
+  plan: PaidPlanId,
+): { months: BillingMonths; percent: number } | null {
+  const months = bestSavingsMonths(prices, plan);
+  if (months === null) return null;
+  const s = periodSavings(prices, plan, months);
+  return s ? { months, percent: s.percent } : null;
+}
+
+/**
+ * Подписи под ценой платного тарифа на лендинге. Цена за человека — от той же
+ * суммы, что крупно (с акцией, если она идёт); выгода срока — как на странице оплаты.
+ */
+export function planPriceExtras(prices: readonly PlanPrice[], plan: PaidPlanId, monthRub: number | null): string[] {
+  const extras: string[] = [];
+  const seats = PLANS[plan].maxUsers;
+  const seat = monthRub !== null ? perSeatRub(monthRub, seats) : null;
+  if (seat !== null) extras.push(`≈ ${formatRub(seat)} за сотрудника, если вас ${seats}`);
+  const saving = bestPeriodSavings(prices, plan);
+  if (saving) extras.push(`−${saving.percent} % при оплате за ${periodLabel(saving.months)}`);
+  return extras;
+}
+
 /** Самый выгодный срок тарифа (наибольший процент экономии) — для метки «Выгоднее всего». */
 export function bestSavingsMonths(prices: readonly PlanPrice[], plan: PaidPlanId): BillingMonths | null {
   let best: { months: BillingMonths; percent: number } | null = null;

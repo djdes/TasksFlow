@@ -15,7 +15,7 @@ import { CompareSlider } from "../landing/CompareSlider";
 import type { LandingData } from "../types";
 import { PLAN_FEATURES, PLANS, type PlanId } from "@shared/plans";
 import { LANDING_FAQ as FAQ } from "../landing-faq";
-import { DEFAULT_PRICES, formatRub, monthlyRate, promotionDiscountRub, type PlanPrice, type PricePromotion } from "@shared/billing";
+import { DEFAULT_PRICES, formatRub, monthlyRate, planPriceExtras, promotionDiscountRub, type PlanPrice, type PricePromotion } from "@shared/billing";
 
 const BEFORE = [
   "Задачи теряются в чатах и на словах",
@@ -37,6 +37,8 @@ type PricingCard = {
   /** Цена без акции — зачёркнутой рядом. */
   oldPrice: string | null;
   note: string;
+  /** Якорь: «≈ 33 ₽ за сотрудника, если вас 30» и выгода длинного срока. */
+  extras: readonly string[];
   features: readonly string[];
   cta: string;
   /** "start" — к форме входа в hero, "mail" — письмо в поддержку. */
@@ -54,6 +56,7 @@ function pricingCards(prices: readonly PlanPrice[], promotion: PricePromotion | 
     const month = rate !== null ? Math.round(rate) : null;
     const sale = month !== null && promotion ? month - promotionDiscountRub(month, promotion.percent) : null;
     return {
+      extras: planPriceExtras(prices, id, sale ?? month),
       id,
       name: PLANS[id].name,
       price: sale !== null ? formatRub(sale) : month !== null ? formatRub(month) : "по запросу",
@@ -66,7 +69,7 @@ function pricingCards(prices: readonly PlanPrice[], promotion: PricePromotion | 
     };
   };
   return [
-    { id: "start", name: PLANS.start.name, price: "0 ₽", oldPrice: null, note: "навсегда", features: PLAN_FEATURES.start, cta: "Начать бесплатно", action: "start", highlight: false },
+    { id: "start", name: PLANS.start.name, price: "0 ₽", oldPrice: null, note: "навсегда", extras: [], features: PLAN_FEATURES.start, cta: "Начать бесплатно", action: "start", highlight: false },
     paid("team", "для команды до 30 человек", true),
     paid("business", "для сети точек", false),
   ];
@@ -226,6 +229,9 @@ export function LandingPage({ data }: { data: LandingData | null }) {
                 {p.price}
               </div>
               <div className="plan-note">{p.note}</div>
+              {p.extras.map((x) => (
+                <div key={x} className="plan-extra">{x}</div>
+              ))}
               <ul className="plan-features">
                 {p.features.map((f) => (
                   <li key={f}><CheckCircle2 className="w-5 h-5 shrink-0" /><span>{f}</span></li>
